@@ -34,14 +34,20 @@ section("Loading")
 
 local framesBefore = #mock.frames
 local ns, files = mock.LoadAddon("Schnitzel", "Schnitzel")
-check(#files == 18, "TOC lists 18 Lua files (got " .. #files .. ")")
+local listed = {}
 for _, file in ipairs(files) do
+    listed[file] = true
     local handle = io.open("Schnitzel/" .. file, "r")
     check(handle ~= nil, "TOC file exists: " .. file)
     if handle then
         handle:close()
     end
 end
+local onDisk = io.popen("cd Schnitzel && find . -name '*.lua' | sed 's|^./||' | sort")
+for file in onDisk:lines() do
+    check(listed[file], "Lua file is listed in the TOC: " .. file)
+end
+onDisk:close()
 check(#mock.frames - framesBefore == 2, "loading creates only the event frame and the tween driver (got " .. (#mock.frames - framesBefore) .. ")")
 check(ns:CountActiveFeatures() == 0, "no feature runs before login")
 
@@ -80,6 +86,45 @@ for _, feature in ipairs(ns.featureList) do
         known = known or category == feature.category
     end
     check(known, "feature " .. feature.id .. " is in a known category")
+end
+
+---------------------------------------------------------------------------
+section("File layout")
+---------------------------------------------------------------------------
+-- One feature per file: Modules/<Category>/<Id>.lua, both capitalized.
+
+local function capitalize(text)
+    return text:sub(1, 1):upper() .. text:sub(2)
+end
+
+local function readFile(path)
+    local handle = io.open(path, "r")
+    if not handle then
+        return nil
+    end
+    local text = handle:read("*a")
+    handle:close()
+    return text
+end
+
+for _, feature in ipairs(ns.featureList) do
+    local file = "Modules/" .. capitalize(feature.category) .. "/" .. capitalize(feature.id) .. ".lua"
+    local source = readFile("Schnitzel/" .. file)
+    check(listed[file] and source and source:find('id = "' .. feature.id .. '"', 1, true),
+        "feature " .. feature.id .. " lives in " .. file)
+end
+-- Every other Lua file is a service: named <Name>Service.lua, it declares no
+-- feature and publishes exactly the table ns.<Name>Service.
+for _, file in ipairs(files) do
+    local source = readFile("Schnitzel/" .. file)
+    local _, declared = source:gsub("ns:NewFeature%(", "")
+    local service = file:match("([%w]+Service)%.lua$")
+    if service then
+        check(declared == 0, "service declares no feature: " .. file)
+        check(type(ns[service]) == "table", "service publishes ns." .. service)
+    elseif file:match("^Modules/") then
+        check(declared == 1, "a module file is exactly one feature or a *Service.lua: " .. file .. " (declares " .. declared .. ")")
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -402,6 +447,10 @@ check(owners == 1, "tooltip is re-anchored to the cursor")
 enable("tooltipCursor", false)
 GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
 check(owners == 1, "and left alone when switched off")
+enable("tooltipCursor")
+GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
+check(owners == 2, "switching on again does not hook twice")
+enable("tooltipCursor", false)
 
 ---------------------------------------------------------------------------
 section("Interface")
@@ -418,6 +467,75 @@ check(mock.CountOnUpdateFrames() == 0, "and not at all when switched off")
 WorldMapFrame.shown = false
 enable("mapCoords")
 
+local coordFrame
+for _, frame in ipairs(mock.frames) do
+    if frame.parent == WorldMapFrame and frame.scripts.OnUpdate then
+        coordFrame = frame
+    end
+end
+check(coordFrame and coordFrame.mouseEnabled == true, "the coordinate field takes clicks by default")
+
+local function coordWidthAt(x, y)
+    local original = C_Map.GetPlayerMapPosition
+    C_Map.GetPlayerMapPosition = function()
+        return x and { GetXY = function() return x, y end } or nil
+    end
+    coordFrame.scripts.OnShow(coordFrame)
+    C_Map.GetPlayerMapPosition = original
+    return coordFrame:GetWidth()
+end
+local wideWidth = coordWidthAt(0.4567, 0.1234)
+check(coordWidthAt(0.05, 0.07) == wideWidth and coordWidthAt(nil) == wideWidth,
+    "the field keeps its width whatever the numbers are")
+coordFrame.scripts.OnEnter(coordFrame)
+coordFrame.scripts.OnLeave(coordFrame)
+mock.reset()
+setState({})
+coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
+check(mock.count("ChatFrameUtil.OpenChat") == 1 and mock.calls[#mock.calls][2] == "Elwynn Forest 45.7, 12.3",
+    "a click opens the chat input with zone and player position")
+mock.reset()
+setState({ chatOpen = true })
+coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
+check(mock.count("ChatFrameUtil.InsertLink") == 1 and mock.count("ChatFrameUtil.OpenChat") == 0,
+    "an open chat input gets the position at its cursor")
+-- The click takes the focus from an empty chat input; the game then closes
+-- the input and resets its chat type before our click handler runs.
+mock.reset()
+setState({})
+local yellBox = CreateFrame("EditBox")
+yellBox.attributes = { chatType = "YELL" }
+coordFrame.scripts.OnEnter(coordFrame)
+EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusLost", yellBox)
+coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
+check(mock.calls[#mock.calls][1] == "ChatFrameUtil.OpenChat" and mock.calls[#mock.calls][2] == "/y Elwynn Forest 45.7, 12.3",
+    "a chat input closed by the click is reopened with its chat type (got " .. tostring(mock.calls[#mock.calls][2]) .. ")")
+coordFrame.scripts.OnLeave(coordFrame)
+local coordCallbacks = 0
+for _, owners in pairs(EventRegistry.callbacks) do
+    if owners[ns.features.mapCoords] then
+        coordCallbacks = coordCallbacks + 1
+    end
+end
+check(coordCallbacks == 0, "the field listens to the chat input only while hovered")
+mock.reset()
+coordFrame.scripts.OnEnter(coordFrame)
+coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
+check(mock.calls[#mock.calls][2] == "Elwynn Forest 45.7, 12.3", "a remembered chat type is forgotten after leaving the field")
+coordFrame.scripts.OnLeave(coordFrame)
+mock.reset()
+coordFrame.scripts.OnMouseUp(coordFrame, "RightButton")
+check(#mock.calls == 0, "only the left button inserts")
+C_ChatInfo = { InChatMessagingLockdown = function() return true end }
+coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
+check(#mock.calls == 0, "nothing is inserted during chat lockdown")
+C_ChatInfo = nil
+ns:SetOption("mapCoords", "clickToChat", false)
+check(coordFrame.mouseEnabled == false and coordFrame.scripts.OnMouseUp == nil,
+    "with the option off the field leaves clicks to the map")
+ns:SetOption("mapCoords", "clickToChat", true)
+check(coordFrame.mouseEnabled == true, "and takes them again when it is back on")
+
 check(ChatFrame1EditBox:GetAltArrowKeyMode() == false and ChatFrame2EditBox:GetAltArrowKeyMode() == false, "chat arrow keys work without Alt after login")
 ChatFrame1EditBox:SetAltArrowKeyMode(true)
 EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", ChatFrame1EditBox)
@@ -428,6 +546,13 @@ EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", whisperBox)
 check(whisperBox:GetAltArrowKeyMode() == false, "chat windows opened after login are covered as well")
 enable("chatArrowKeys", false)
 check(ChatFrame1EditBox:GetAltArrowKeyMode() == true and whisperBox:GetAltArrowKeyMode() == true, "switching off gives every touched chat box its Alt mode back")
+local chatCallbacksLeft = 0
+for _, owners in pairs(EventRegistry.callbacks) do
+    if owners[ns.features.chatArrowKeys] then
+        chatCallbacksLeft = chatCallbacksLeft + 1
+    end
+end
+check(chatCallbacksLeft == 0, "EventRegistry callbacks are removed when switched off (got " .. chatCallbacksLeft .. ")")
 whisperBox.altArrowKeyMode = true
 EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", whisperBox)
 check(whisperBox:GetAltArrowKeyMode() == true, "and focus no longer changes anything")
@@ -521,6 +646,17 @@ mock.reset()
 mock.Fire("PLAYER_LEVEL_UP", 12)
 mock.Advance(2)
 check(mock.count("Screenshot") == 1, "screenshot after level up")
+mock.reset()
+mock.Fire("PLAYER_LEVEL_UP", 13)
+enable("levelScreenshot", false)
+mock.Advance(2)
+check(mock.count("Screenshot") == 0, "a delayed call is dropped when the feature is switched off")
+enable("levelScreenshot")
+mock.Fire("PLAYER_LEVEL_UP", 14)
+enable("levelScreenshot", false)
+enable("levelScreenshot")
+mock.Advance(2)
+check(mock.count("Screenshot") == 0, "and also when it was switched off and on again in the meantime")
 enable("levelScreenshot", false)
 
 ---------------------------------------------------------------------------

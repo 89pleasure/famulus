@@ -10,13 +10,20 @@
 --   function feature:OnEnable() self:RegisterEvent("MERCHANT_SHOW") end
 --   function feature:MERCHANT_SHOW() ... end
 --
+-- Every feature lives in its own file, Modules/<Category>/<Id>.lua. Code that
+-- several features share is a service: a file <Name>Service.lua publishing
+-- the table ns.<Name>Service, in Core/ when any category may use it, in the
+-- category's folder when only that category does.
+--
 -- Rules that keep the addon cheap and predictable:
 --   * OnEnable runs only while the feature is switched on. A feature that is
 --     off has no events, no timers and no hooks.
---   * Events and tickers registered through the feature are removed
---     automatically when it is switched off; toggling never needs a reload.
---   * Hooks cannot be removed in WoW, so install them with feature:Once() and
---     check feature.enabled inside the hook.
+--   * Events, EventRegistry callbacks and tickers registered through the
+--     feature are removed automatically when it is switched off; toggling
+--     never needs a reload. Delayed calls (feature:After) are dropped.
+--   * Hooks cannot be removed in WoW. Install them with feature:HookFunction,
+--     feature:HookScript, or feature:Once plus feature:Guard; the hook then
+--     does nothing while the feature is off.
 --   * A feature whose required API is missing stays off and is shown as
 --     unavailable instead of raising errors.
 --   * Every category has a master switch. While it is off, none of its
@@ -56,6 +63,8 @@ function ns:NewFeature(def)
     def.enabled = false
     def.options = def.options or {}
     def.events = {}
+    def.callbacks = {}
+    def.generation = 0
     if def.mirror then
         def.requires = def.requires or {}
         table.insert(def.requires, "C_CVar.GetCVar")
@@ -91,6 +100,29 @@ function Feature:UnregisterEvent(event)
     end
 end
 
+-- Callback on Blizzard's EventRegistry (e.g. "ChatFrame.OnEditBoxFocusGained").
+-- handler: a function or a method name; called as handler(feature, ...).
+-- Returns false on a client without EventRegistry.
+function Feature:RegisterCallback(event, handler)
+    if not (EventRegistry and EventRegistry.RegisterCallback) then
+        return false
+    end
+    if type(handler) ~= "function" then
+        handler = self[handler]
+    end
+    assert(type(handler) == "function", "no handler for " .. event)
+    self.callbacks[event] = true
+    EventRegistry:RegisterCallback(event, handler, self)
+    return true
+end
+
+function Feature:UnregisterCallback(event)
+    if self.callbacks[event] then
+        self.callbacks[event] = nil
+        EventRegistry:UnregisterCallback(event, self)
+    end
+end
+
 function Feature:Get(key)
     return ns:GetOption(self.id, key)
 end
@@ -111,6 +143,69 @@ function Feature:Once(key, fn)
         done[key] = true
         fn(self)
     end
+end
+
+-- Wraps a hook handler so that it does nothing while the feature is off.
+function Feature:Guard(fn)
+    return function(...)
+        if self.enabled then
+            return fn(...)
+        end
+    end
+end
+
+local function MarkHooked(feature, target, name)
+    local hooks = feature.hooks
+    if not hooks then
+        hooks = {}
+        feature.hooks = hooks
+    end
+    local names = hooks[target]
+    if not names then
+        names = {}
+        hooks[target] = names
+    end
+    if names[name] then
+        return false
+    end
+    names[name] = true
+    return true
+end
+
+-- Secure post-hook, installed the first time it is asked for and active
+-- only while the feature is on. hooksecurefunc never replaces the original.
+--   feature:HookFunction("GameTooltip_SetDefaultAnchor", fn)
+--   feature:HookFunction(someTable, "Method", fn)
+function Feature:HookFunction(target, name, fn)
+    if fn == nil then
+        target, name, fn = _G, target, name
+    end
+    if MarkHooked(self, target, name) then
+        if target == _G then
+            hooksecurefunc(name, self:Guard(fn))
+        else
+            hooksecurefunc(target, name, self:Guard(fn))
+        end
+    end
+end
+
+-- Script hook on a frame, installed once per frame and script and active
+-- only while the feature is on.
+function Feature:HookScript(frame, script, fn)
+    if frame and frame.HookScript and MarkHooked(self, frame, script) then
+        frame:HookScript(script, self:Guard(fn))
+    end
+end
+
+-- Calls fn(feature) after the given seconds, but only if the feature is still
+-- on and was not switched off in the meantime.
+function Feature:After(seconds, fn)
+    local generation = self.generation
+    C_Timer.After(seconds, function()
+        if self.enabled and self.generation == generation then
+            fn(self)
+        end
+    end)
 end
 
 -- Repeating timer that stops by itself when the feature is switched off.
@@ -155,11 +250,16 @@ local function Disable(feature)
         ns:UnregisterEvent(event, feature)
     end
     wipe(feature.events)
+    for event in pairs(feature.callbacks) do
+        EventRegistry:UnregisterCallback(event, feature)
+    end
+    wipe(feature.callbacks)
     feature:StopTicker()
 end
 
 local function Enable(feature)
     feature.enabled = true
+    feature.generation = feature.generation + 1
     if feature.OnEnable and not xpcall(feature.OnEnable, geterrorhandler(), feature) then
         -- A broken feature must not take the rest of the addon down with it.
         Disable(feature)

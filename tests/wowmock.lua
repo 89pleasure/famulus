@@ -42,7 +42,7 @@ for name in
     string.gmatch(
         [[
     SetPoint ClearAllPoints SetAllPoints SetFrameStrata SetFrameLevel SetToplevel
-    SetClampedToScreen EnableMouse SetMovable RegisterForDrag RegisterForClicks
+    SetClampedToScreen SetMovable RegisterForDrag RegisterForClicks
     StartMoving StopMovingOrSizing SetColorTexture SetTexture SetTexCoord
     SetVertexColor SetFont SetShadowOffset SetShadowColor SetTextColor
     SetJustifyH SetJustifyV SetWordWrap SetSpacing SetAutoFocus SetMaxLetters
@@ -161,6 +161,9 @@ function Widget:GetEffectiveScale()
 end
 function Widget:GetFrameLevel()
     return 1
+end
+function Widget:EnableMouse(enabled)
+    self.mouseEnabled = enabled and true or false
 end
 function Widget:SetAltArrowKeyMode(altMode)
     self.altArrowKeyMode = altMode
@@ -412,6 +415,7 @@ ChatFrame1EditBox.altArrowKeyMode = true
 ChatFrame2EditBox.altArrowKeyMode = true
 SLASH_WHISPER1 = "/w"
 SLASH_SAY1 = "/s"
+SLASH_YELL1 = "/y"
 function IsSecureCmd(command)
     return command == "/cast" or command == "/target"
 end
@@ -678,12 +682,26 @@ C_Map = {
     GetBestMapForUnit = function()
         return 1
     end,
+    GetMapInfo = function(mapID)
+        return { mapID = mapID, name = "Elwynn Forest" }
+    end,
     GetPlayerMapPosition = function()
         return {
             GetXY = function()
                 return 0.4567, 0.1234
             end,
         }
+    end,
+}
+
+-- Chat input. InsertLink only succeeds while a chat input is open.
+ChatFrameUtil = {
+    InsertLink = function(text)
+        record("ChatFrameUtil.InsertLink", text)
+        return mock.state.chatOpen or false
+    end,
+    OpenChat = function(text)
+        record("ChatFrameUtil.OpenChat", text)
     end,
 }
 

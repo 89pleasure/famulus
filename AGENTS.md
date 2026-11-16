@@ -18,7 +18,8 @@ Folgendes konzentrieren und beschränken:
 5. **Mehrsprachig.** Englisch und Deutsch reichen vorerst.
 
 **Veröffentlichung:** Schnitzel soll später veröffentlicht werden (Stand 2026-11-16, Zeitpunkt und
-Plattform offen). Entscheidungen deshalb so treffen, dass sie für fremde Spieler taugen: saubere
+Plattform offen). Vorerst nicht: Feature-Set und Design sind noch lange nicht fertig und haben
+Vorrang vor Release-Arbeit und der Testrunde der Automatiken. Entscheidungen deshalb so treffen, dass sie für fremde Spieler taugen: saubere
 Versionierung, keine Annahmen über die eigene Addon-Sammlung, Verhalten neben anderen Addons im Blick.
 
 Arbeitsweise: Er schreibt Deutsch und möchte Antworten auf Deutsch. Code, Kommentare und
@@ -71,9 +72,18 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
     Schnitzels Fenster und Blizzards Spielmenü sich gegenseitig schließen zu lassen, wurde
     verworfen: Blizzards Panels aus Addon-Code zu schließen birgt Taint-Risiko, und der Live-Abgleich
     macht es unnötig. Im Spiel bestätigt: Spiegeln in beide Richtungen mit dem `mirror`-Baustein.
+  - Klick auf das Koordinatenfeld (`mapCoords.clickToChat`): Bei offener, leerer Chat-Eingabe mit
+    `/y` landete die Position als `/s`. Ursache: Der Klick nimmt der Eingabe den Fokus, Blizzards
+    `OnEditFocusLost` schließt eine leere Eingabe und setzt dabei den Chat-Typ zurück
+    (`ResetChatTypeToSticky`), bevor unser Klick ankommt. Das Signal
+    `ChatFrame.OnEditBoxFocusLost` feuert vor dem Zurücksetzen; dort liest das Feature das Ziel
+    (`ChatService.TargetPrefix`) und öffnet die Eingabe mit „/y …“ neu. Das Signal wird nur
+    abonniert, solange die Maus über dem Feld steht. Im Spiel bestätigt.
+  - Koordinatenfeld: Die Breite schwankte mit den Ziffern. Jetzt feste Spalten (Beschriftung,
+    Wert); der Wertplatz ist so breit wie „00.0, 00.0“ in der breitesten Ziffer der Schrift,
+    neu vermessen nur beim Aufbau und Sprachwechsel. Im Spiel bestätigt.
 - **Noch nicht im Spiel geprüft:** das Verhalten der Automatiken (reparieren, verkaufen, Quests,
-  Beute, Einladungen, Duelle, Zerstören), Aussehen und Position des Koordinatenfelds auf der
-  Karte, im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
+  Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
   Taint).
 
 ## Test im Spiel
@@ -145,7 +155,7 @@ Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
 | Events dauerhaft registriert, Option erst im Handler geprüft (OneForAll: ~38 Events) | Ein Feature registriert Events erst in `OnEnable` |
 | Ungedrosselte `OnUpdate`-Handler | Im Leerlauf läuft nichts pro Frame |
 | Umschalten braucht `/reload` (FlareUI-Module, OneForAll-Sprache und -Profil) | Alles wirkt sofort |
-| Hooks bleiben nach dem Abschalten aktiv | Hooks nur über `feature:Once()`, im Hook `feature.enabled` prüfen |
+| Hooks bleiben nach dem Abschalten aktiv | Hooks nur über `feature:HookFunction`/`HookScript` oder `feature:Once` plus `feature:Guard`; sie wirken nur bei eingeschaltetem Feature |
 | Megabytes an Code und Daten bei jedem Login (Polestar: 70–250 MB laut Issues) | Fenster wird erst beim ersten Öffnen gebaut; keine Bibliotheken |
 | Ersetzte Blizzard-Funktionen, überschriebene Methoden fremder Addons | Nur `hooksecurefunc`; nichts ersetzen, nichts in fremde Tabellen schreiben |
 | ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung je Aktion | Wenige Funktionen, eine Regel für Standardwerte, eine Sammelzeile je Aktion |
@@ -178,10 +188,28 @@ Entscheidungen des Auftraggebers zum Fenster (2026-11-16):
 
 Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
 
-- **Feature-Registry:** Alles Schaltbare ist ein Feature über `ns:NewFeature` in `Modules/`.
-  Was der Selbsttest lesen muss (Listen, CVar-Namen), hängt am Feature-Objekt.
-  Events über `feature:RegisterEvent`, wiederkehrende Timer über `feature:StartTicker`; beides
-  räumt die Registry beim Abschalten auf.
+- **Feature-Registry:** Alles Schaltbare ist ein Feature über `ns:NewFeature`, **eine Datei je
+  Feature** unter `Modules/<Kategorie>/<Id>.lua` (beides großgeschrieben, z. B.
+  `Modules/Interface/ChatArrowKeys.lua`); der Test prüft das. Was der Selbsttest lesen muss
+  (Listen, CVar-Namen), hängt am Feature-Objekt.
+- **Lebenszyklus über die Feature-Klasse** (`Core/Features.lua`), die Registry räumt beim
+  Abschalten auf: Events über `feature:RegisterEvent`, EventRegistry-Callbacks über
+  `feature:RegisterCallback`, wiederkehrende Timer über `feature:StartTicker`, verzögerte
+  Einzelaufrufe über `feature:After` (verfallen beim Abschalten). Hooks lassen sich nicht
+  entfernen: `feature:HookFunction` (`hooksecurefunc`) und `feature:HookScript` setzen sie einmal
+  und lassen sie nur bei eingeschaltetem Feature wirken; für andere Hook-APIs `feature:Once` plus
+  `feature:Guard`.
+- **Services für geteilten Code:** Was mehrere Features brauchen, ist ein Service statt kopiertem
+  Code. Ein Service heißt **immer** `<Name>Service`: Datei `<Name>Service.lua`, Table
+  `ns.<Name>Service`, kein Feature darin (der Test prüft das). So ist an jedem Aufruf erkennbar,
+  ob etwas ein Service (`ns.PopupService.Hide`), ein Feature (`ns.features.autoRepair`) oder eine
+  einfache Hilfsfunktion (`ns.FormatMoney`, `ns.IsSecret` in `Core/Init.lua`) ist. Für alle
+  Kategorien liegt ein Service unter `Core/` (`PopupService`: StaticPopups finden, schließen,
+  Eingabefeld lesen; `ChatService`: Text in die Chat-Eingabe setzen, Ziel als Präfix lesen, Chat-Sperre prüfen), für eine Kategorie in deren Ordner (`Modules/Quests/QuestService.lua`:
+  Quest-Sicherheitsregeln und die NPC-Questliste). Ein Service hängt sich über
+  das interne Signal `FEATURE_STATE` an den Zustand seiner Features, statt dass jedes Feature ihn
+  in `OnEnable`/`OnDisable` selbst an- und abmelden muss. In der `.toc` steht ein Service vor den
+  Features, die ihn nutzen.
 - **Kategorie-Hauptschalter:** Jede Kategorie hat einen Hauptschalter (Option `categories.<id>`,
   Standard an, Schalter rechts im Kopf der Seite). Ist er aus, läuft kein Feature der Kategorie, egal wie es
   selbst eingestellt ist: keine Events, keine Timer, Hooks bleiben stumm. Die Einzelauswahl bleibt
@@ -244,8 +272,9 @@ rm -f dist/Schnitzel-*.zip && zip -rq dist/Schnitzel-0.1.0.zip Schnitzel -x '*.D
 
 - Bei einer neuen Version: `## Version` in `Schnitzel/Schnitzel.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
-- Neue Lua-Dateien in die `.toc` eintragen; der Test zählt die Dateien (`#files == 18`) und die
-  Features (`total == 16`), beide Zahlen dann mit anpassen.
+- Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
+  dort fehlt. Er zählt außerdem die Features (`total == 16`); die Zahl bei einem neuen Feature
+  mit anpassen.
 - Repository: `github.com/89pleasure/schnitzel` (privat), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.
 - Committen und pushen nur auf ausdrücklichen Wunsch.

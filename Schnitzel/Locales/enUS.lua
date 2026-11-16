@@ -82,6 +82,8 @@ L.f_tooltipCursor_desc = "Shows tooltips next to the mouse pointer instead of th
 -- Interface
 L.f_mapCoords = "Coordinates on the world map"
 L.f_mapCoords_desc = "Shows your position and the cursor position on the world map."
+L.o_mapCoords_clickToChat = "Click to insert into chat"
+L.o_mapCoords_clickToChat_desc = "A click on the coordinates puts your position into the chat input, ready to send."
 L.f_chatArrowKeys = "Arrow keys in chat"
 L.f_chatArrowKeys_desc = "Move the text cursor with the arrow keys without holding Alt. Up and Down bring back the messages you sent since login."
 L.f_cameraZoom = "Maximum camera distance"
@@ -111,6 +113,7 @@ L.tt_item_id = "Item ID"
 L.tt_spell_id = "Spell ID"
 L.map_player = "Player"
 L.map_cursor = "Cursor"
+L.map_click_to_chat = "Click to insert your position into chat"
 
 -- Window
 L.ui_tagline = "Quality of Life"

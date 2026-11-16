@@ -80,6 +80,8 @@ L.f_tooltipCursor_desc = "Zeigt Tooltips neben dem Mauszeiger statt in der recht
 -- Interface
 L.f_mapCoords = "Koordinaten auf der Weltkarte"
 L.f_mapCoords_desc = "Zeigt deine Position und die Position des Mauszeigers auf der Weltkarte."
+L.o_mapCoords_clickToChat = "Per Klick in den Chat einfügen"
+L.o_mapCoords_clickToChat_desc = "Ein Klick auf die Koordinaten setzt deine Position in die Chat-Eingabe, bereit zum Senden."
 L.f_chatArrowKeys = "Pfeiltasten im Chat"
 L.f_chatArrowKeys_desc = "Textcursor mit den Pfeiltasten bewegen, ohne Alt zu halten. Hoch und Runter holen die Nachrichten zurück, die du seit dem Einloggen gesendet hast."
 L.f_cameraZoom = "Maximale Kameradistanz"
@@ -109,6 +111,7 @@ L.tt_item_id = "Gegenstands-ID"
 L.tt_spell_id = "Zauber-ID"
 L.map_player = "Spieler"
 L.map_cursor = "Mauszeiger"
+L.map_click_to_chat = "Klicken setzt deine Position in den Chat"
 
 -- Fenster
 L.ui_tagline = "Quality of Life"

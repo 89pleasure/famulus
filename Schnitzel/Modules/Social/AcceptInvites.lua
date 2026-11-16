@@ -1,11 +1,7 @@
--- Requests from other players.
+-- Accepts group invites from friends and guild members.
 
 local _, ns = ...
 local L = ns.L
-
----------------------------------------------------------------------------
--- Accept group invites from friends and guild members
----------------------------------------------------------------------------
 
 local invites = ns:NewFeature({
     id = "acceptInvites",
@@ -50,33 +46,5 @@ end
 
 function invites:GROUP_ROSTER_UPDATE()
     self:UnregisterEvent("GROUP_ROSTER_UPDATE")
-    StaticPopup_Hide("PARTY_INVITE")
-end
-
----------------------------------------------------------------------------
--- Decline duels
----------------------------------------------------------------------------
-
-local duels = ns:NewFeature({
-    id = "declineDuels",
-    category = "social",
-    default = false,
-    requires = { "CancelDuel" },
-})
-
-local function HideDuelPopup()
-    StaticPopup_Hide("DUEL_REQUESTED")
-end
-
-function duels:OnEnable()
-    self:RegisterEvent("DUEL_REQUESTED")
-end
-
-function duels:DUEL_REQUESTED(_, name)
-    if ns:IsPaused() then
-        return
-    end
-    CancelDuel()
-    C_Timer.After(0, HideDuelPopup)
-    ns:Notify(L.msg_duel_declined:format(ns.Label(name)))
+    ns.PopupService.Hide("PARTY_INVITE")
 end

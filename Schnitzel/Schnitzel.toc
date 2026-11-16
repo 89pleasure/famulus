@@ -17,14 +17,27 @@ Locales\deDE.lua
 Core\Database.lua
 Core\Features.lua
 Core\GameOptions.lua
+Core\PopupService.lua
+Core\ChatService.lua
 Core\SelfTest.lua
 
-Modules\Vendor.lua
-Modules\Quests.lua
-Modules\Loot.lua
-Modules\Social.lua
-Modules\Tooltip.lua
-Modules\Interface.lua
+Modules\Vendor\AutoRepair.lua
+Modules\Vendor\SellJunk.lua
+Modules\Quests\QuestService.lua
+Modules\Quests\AutoAccept.lua
+Modules\Quests\AutoTurnIn.lua
+Modules\Loot\AutoLoot.lua
+Modules\Loot\ConfirmBoP.lua
+Modules\Loot\EasyDelete.lua
+Modules\Social\AcceptInvites.lua
+Modules\Social\DeclineDuels.lua
+Modules\Tooltip\TooltipIDs.lua
+Modules\Tooltip\TooltipCursor.lua
+Modules\Interface\MapCoords.lua
+Modules\Interface\ChatArrowKeys.lua
+Modules\Interface\CameraZoom.lua
+Modules\Interface\HideErrors.lua
+Modules\Interface\LevelScreenshot.lua
 
 UI\Theme.lua
 UI\Widgets.lua

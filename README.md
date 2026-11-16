@@ -26,7 +26,7 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 | Soziales | Duelle ablehnen | aus |
 | Tooltips | Gegenstands- und Zauber-IDs | aus |
 | Tooltips | Tooltip am Mauszeiger | aus |
-| Interface | Koordinaten auf der Weltkarte | **an** |
+| Interface | Koordinaten auf der Weltkarte (Klick setzt die eigene Position in den Chat) | **an** |
 | Interface | Pfeiltasten im Chat ohne Alt | **an** |
 | Interface | Maximale Kameradistanz | aus |
 | Interface | Fehlermeldungs-Spam im Kampf ausblenden | aus |
@@ -62,10 +62,14 @@ Schnitzel/
   Core/Init.lua        Namespace, Event-Verteiler, Hilfsfunktionen
   Core/Locale.lua      Sprachumschaltung zur Laufzeit
   Core/Database.lua    Einstellungen (nur Abweichungen vom Standard werden gespeichert)
-  Core/Features.lua    Feature-Registry, Slash-Befehle
+  Core/Features.lua    Feature-Registry und Feature-Klasse, Slash-Befehle
+  Core/GameOptions.lua Schalter, die eine Spieloption spiegeln
+  Core/PopupService.lua  Service für Blizzards StaticPopup-Dialoge
+  Core/ChatService.lua   Service für die Chat-Eingabe (Text einsetzen, Chat-Sperre)
   Core/SelfTest.lua    Selbsttest gegen den echten Client (/sz test, /sz dev)
   Locales/             enUS.lua (Referenz), deDE.lua
-  Modules/             je Seite eine Datei mit ihren Features
+  Modules/<Seite>/     eine Datei je Feature, z. B. Interface/ChatArrowKeys.lua;
+                       geteilter Code heißt <Name>Service.lua, z. B. Quests/QuestService.lua
   UI/                  Theme, Widgets, Einstellungsfenster, Minikartensymbol
   Media/               vier kleine TGA-Texturen (aus tools/make_media.py)
 tests/                 nachgestellte WoW-API + Testlauf
@@ -73,6 +77,8 @@ tools/                 Texturen erzeugen, Selbsttest-Bericht lesen
 ```
 
 ### Ein Feature hinzufügen
+
+Neue Datei `Modules/Interface/MeinFeature.lua` anlegen und in der `.toc` eintragen:
 
 ```lua
 local feature = ns:NewFeature({
