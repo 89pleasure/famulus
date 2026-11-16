@@ -1,0 +1,233 @@
+-- Feature registry. A feature is the unit the player switches on or off.
+--
+--   local feature = ns:NewFeature({
+--       id = "autoRepair",            -- settings section and locale key
+--       category = "vendor",          -- page in the settings window
+--       default = false,              -- enabled on a fresh install?
+--       requires = { "RepairAllItems" },   -- client API the feature needs
+--       options = { { key = "guildFunds", type = "toggle", default = false } },
+--   })
+--   function feature:OnEnable() self:RegisterEvent("MERCHANT_SHOW") end
+--   function feature:MERCHANT_SHOW() ... end
+--
+-- Rules that keep the addon cheap and predictable:
+--   * OnEnable runs only while the feature is switched on. A feature that is
+--     off has no events, no timers and no hooks.
+--   * Events and tickers registered through the feature are removed
+--     automatically when it is switched off; toggling never needs a reload.
+--   * Hooks cannot be removed in WoW, so install them with feature:Once() and
+--     check feature.enabled inside the hook.
+--   * A feature whose required API is missing stays off and is shown as
+--     unavailable instead of raising errors.
+
+local _, ns = ...
+local L = ns.L
+
+ns.categories = { "vendor", "quests", "loot", "social", "tooltip", "interface" }
+
+local features = {}
+local featureList = {}
+ns.features = features
+ns.featureList = featureList
+
+local Feature = {}
+Feature.__index = Feature
+
+function ns:NewFeature(def)
+    assert(type(def.id) == "string" and def.category, "feature needs id and category")
+    assert(not features[def.id], "duplicate feature id")
+    setmetatable(def, Feature)
+    def.enabled = false
+    def.options = def.options or {}
+    def.events = {}
+
+    local values = { enabled = def.default and true or false }
+    for _, option in ipairs(def.options) do
+        values[option.key] = option.default
+    end
+    ns:RegisterDefaults(def.id, values)
+
+    features[def.id] = def
+    featureList[#featureList + 1] = def
+    return def
+end
+
+-- handler: a function, a method name, or nil to use the method named like
+-- the event. Handlers are called as handler(feature, event, ...).
+function Feature:RegisterEvent(event, handler)
+    if type(handler) ~= "function" then
+        handler = self[handler or event]
+    end
+    assert(type(handler) == "function", "no handler for " .. event)
+    self.events[event] = true
+    ns:RegisterEvent(event, self, handler)
+end
+
+function Feature:UnregisterEvent(event)
+    if self.events[event] then
+        self.events[event] = nil
+        ns:UnregisterEvent(event, self)
+    end
+end
+
+function Feature:Get(key)
+    return ns:GetOption(self.id, key)
+end
+
+function Feature:Set(key, value)
+    ns:SetOption(self.id, key, value)
+end
+
+-- Runs fn the first time it is called with this key and never again. Used
+-- for one-time setup such as creating frames or installing hooks.
+function Feature:Once(key, fn)
+    local done = self.done
+    if not done then
+        done = {}
+        self.done = done
+    end
+    if not done[key] then
+        done[key] = true
+        fn(self)
+    end
+end
+
+-- Repeating timer that stops by itself when the feature is switched off.
+function Feature:StartTicker(seconds, fn)
+    self:StopTicker()
+    self.ticker = C_Timer.NewTicker(seconds, fn)
+end
+
+function Feature:StopTicker()
+    if self.ticker then
+        self.ticker:Cancel()
+        self.ticker = nil
+    end
+end
+
+function Feature:IsAvailable()
+    if self.available == nil then
+        self.available = true
+        if self.requires then
+            for _, path in ipairs(self.requires) do
+                if ns.Resolve(path) == nil then
+                    self.available = false
+                    self.missing = path
+                    break
+                end
+            end
+        end
+    end
+    return self.available
+end
+
+function ns:IsOptionAvailable(option)
+    return option.requires == nil or ns.Resolve(option.requires) ~= nil
+end
+
+local function Disable(feature)
+    feature.enabled = false
+    if feature.OnDisable then
+        xpcall(feature.OnDisable, geterrorhandler(), feature)
+    end
+    for event in pairs(feature.events) do
+        ns:UnregisterEvent(event, feature)
+    end
+    wipe(feature.events)
+    feature:StopTicker()
+end
+
+local function Enable(feature)
+    feature.enabled = true
+    if feature.OnEnable and not xpcall(feature.OnEnable, geterrorhandler(), feature) then
+        -- A broken feature must not take the rest of the addon down with it.
+        Disable(feature)
+        feature.failed = true
+        ns:Print(L.msg_feature_error:format(L["f_" .. feature.id]))
+    end
+end
+
+local loggedIn = false
+
+function ns:SyncFeature(feature)
+    if not loggedIn then
+        return
+    end
+    local wanted = not feature.failed and feature:IsAvailable() and self:GetOption(feature.id, "enabled")
+    if wanted and not feature.enabled then
+        Enable(feature)
+    elseif not wanted and feature.enabled then
+        Disable(feature)
+    end
+    self:Fire("FEATURE_STATE", feature)
+end
+
+function ns:CountActiveFeatures()
+    local active = 0
+    for i = 1, #featureList do
+        if featureList[i].enabled then
+            active = active + 1
+        end
+    end
+    return active, #featureList
+end
+
+ns:On("OPTION_CHANGED", function(section, key, value)
+    local feature = features[section]
+    if not feature then
+        return
+    end
+    if key == "enabled" then
+        ns:SyncFeature(feature)
+    elseif feature.enabled and feature.OnOptionChanged then
+        feature:OnOptionChanged(key, value)
+    end
+end)
+
+ns:On("PROFILE_CHANGED", function()
+    -- A different profile can differ in every option: restart what is running.
+    for i = 1, #featureList do
+        if featureList[i].enabled then
+            Disable(featureList[i])
+        end
+    end
+    for i = 1, #featureList do
+        ns:SyncFeature(featureList[i])
+    end
+end)
+
+local loader = {}
+
+ns:RegisterEvent("PLAYER_LOGIN", loader, function()
+    ns:UnregisterEvent("PLAYER_LOGIN", loader)
+    loggedIn = true
+    for i = 1, #featureList do
+        ns:SyncFeature(featureList[i])
+    end
+    if not ns.global.seen then
+        ns.global.seen = true
+        ns:Print(L.msg_welcome)
+    end
+    ns:Fire("LOGIN")
+end)
+
+---------------------------------------------------------------------------
+-- Slash commands and addon compartment
+---------------------------------------------------------------------------
+
+SLASH_SCHNITZEL1 = "/schnitzel"
+SLASH_SCHNITZEL2 = "/sz"
+
+SlashCmdList.SCHNITZEL = function(input)
+    local command = string.lower(strtrim(input or ""))
+    if command == "status" then
+        local active, total = ns:CountActiveFeatures()
+        ns:Print(L.msg_status:format(active, total, ns:CountRegisteredEvents()))
+    else
+        ns:ToggleOptions()
+    end
+end
+
+function Schnitzel_OnAddonCompartmentClick()
+    ns:ToggleOptions()
+end
