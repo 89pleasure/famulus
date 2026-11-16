@@ -176,8 +176,9 @@ Entscheidungen des Auftraggebers zum Fenster (2026-11-16):
   „AN“ oder „AUS“. Der Untertitel beschreibt immer, was der Spieler auf der Seite findet; technische
   Hinweise (was im Hintergrund läuft oder nicht) gehören nicht ins Fenster. Eine abgeschaltete
   Kategorie ist in der Seitenleiste ausgegraut und trägt „AUS“ in Großbuchstaben.
-- Optionen eines Features (`child`) erscheinen nur, solange das Feature eingeschaltet ist; die
-  Suche zeigt sie immer.
+- Optionen eines Features (`child`) stehen immer unter ihm. Ist das Feature aus, erscheinen sie
+  eingeklappt: schmale Zeile ohne Beschreibung, ausgegraut, nicht klickbar, aber mit sichtbarem
+  Wert (Schalterstellung, gewählter Eintrag). Die Suche zeigt sie immer vollständig.
 - „Seite zurücksetzen“ fragt beim ersten Klick nach („Wirklich zurücksetzen?“) und führt erst der
   zweite Klick innerhalb von vier Sekunden aus. Steht die Seite auf den Standardwerten, ist der
   Knopf ausgegraut und nicht klickbar.

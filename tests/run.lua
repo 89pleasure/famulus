@@ -691,7 +691,20 @@ end
 
 check(window.title:GetText() == "Vendors", "first page is Vendors")
 local rows = visibleRows()
-check(#rows == 2, "vendor page shows repair and junk; the guild option stays folded away (got " .. #rows .. ")")
+check(#rows == 3, "vendor page shows repair, its guild option and junk (got " .. #rows .. ")")
+local optionRow = rows[2]
+local function isFolded(row)
+    return row.item.child and not row.desc:IsShown() and row.height < rows[1].height
+end
+check(isFolded(optionRow), "the option of a switched-off feature is a slim row without help text")
+check(optionRow.disabled and optionRow.toggle:IsShown() and not optionRow.toggle.on, "it is greyed out but shows its value")
+ns:SetOption("autoRepair", "guildFunds", true)
+mock.Advance(0.3)
+check(optionRow.toggle.on and isFolded(optionRow), "a chosen value shows while folded as well")
+mock.Click(optionRow)
+check(ns:GetOption("autoRepair", "guildFunds") == true, "and clicks on it do nothing")
+ns:SetOption("autoRepair", "guildFunds", false)
+mock.Advance(0.3)
 check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the page is on its defaults")
 mock.Click(window.resetButton)
 check(window.resetButton.label:GetText() == "Reset page", "and a click on it does nothing")
@@ -703,7 +716,8 @@ check(window.subtitle:GetText() == ns.L.cat_vendor_desc, "the subtitle describes
 mock.Click(rows[1])
 check(ns.features.autoRepair.enabled, "clicking a row switches the feature on")
 mock.Advance(0.3)
-check(#visibleRows() == 3 and visibleRows()[2].item.child, "its option unfolds below it (got " .. #visibleRows() .. ")")
+check(#visibleRows() == 3 and not isFolded(optionRow) and optionRow.desc:IsShown(), "its option unfolds with its help text")
+check(not optionRow.disabled, "and can be used")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
 
 -- Master switch: everything on the page stops, the choices stay.
@@ -735,7 +749,7 @@ check(master.toggle.on and master.caption:GetText() == "ON", "as is the header")
 mock.Click(rows[1])
 check(not ns.features.autoRepair.enabled, "and off again")
 mock.Advance(0.3)
-check(#visibleRows() == 2, "which folds the option away again")
+check(#visibleRows() == 3 and isFolded(optionRow) and optionRow.disabled, "which folds the option again")
 check(window.resetButton.disabled, "back on defaults, reset is greyed out again")
 mock.Click(master)
 mock.Advance(0.3)

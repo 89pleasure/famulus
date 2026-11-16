@@ -70,10 +70,10 @@ local function OptionItem(feature, option)
         kind = option.type,
         child = true,
         section = feature.id,
-        -- An option only shows while its feature is switched on; search
-        -- lists it regardless.
-        visible = function()
-            return ns:GetOption(feature.id, "enabled") == true
+        -- While its feature is switched off, an option stays listed as a
+        -- slim row without help text; search always shows it in full.
+        compact = function()
+            return ns:GetOption(feature.id, "enabled") ~= true
         end,
         label = function()
             return L[prefix]
@@ -275,21 +275,29 @@ local function RowSetItem(row, item, index, flat)
     end
 
     local indent = (item.child and not flat) and 40 or 16
+    local compact = not flat and item.compact ~= nil and item.compact()
+    local padding = compact and 9 or 13
     local controlWidth = (kind == "toggle" and 30) or (kind == "select" and 150) or 0
     local textWidth = ROW_WIDTH - indent - 16 - controlWidth - (controlWidth > 0 and 24 or 0)
 
     row.label:ClearAllPoints()
-    row.label:SetPoint("TOPLEFT", indent, -13)
+    row.label:SetPoint("TOPLEFT", indent, -padding)
     row.label:SetWidth(textWidth)
     row.label:SetText(item.label())
 
     local note = item.note and item.note()
+    row.desc:SetShown(not compact)
     row.desc:SetWidth(textWidth)
-    row.desc:SetText(note or item.desc())
+    row.desc:SetText(compact and "" or (note or item.desc()))
     row.desc:SetTextColor(UI.Color(note and "warning" or "textMuted"))
 
-    local height = 13 + row.label:GetStringHeight() + 5 + row.desc:GetStringHeight() + 13
-    row.height = math.max(46, math.floor(height + 0.5))
+    local height
+    if compact then
+        height = math.max(32, padding * 2 + row.label:GetStringHeight())
+    else
+        height = math.max(46, padding * 2 + row.label:GetStringHeight() + 5 + row.desc:GetStringHeight())
+    end
+    row.height = math.floor(height + 0.5)
     row:SetHeight(row.height)
     row.divider:SetShown(index > 1)
     row.hover:Hide()
@@ -463,12 +471,7 @@ function Render()
             window.subtitle:SetText(L.ui_search_none:format(searchText))
         end
     else
-        items = {}
-        for _, item in ipairs(pages[currentPage].items) do
-            if not item.visible or item.visible() then
-                items[#items + 1] = item
-            end
-        end
+        items = pages[currentPage].items
     end
     RefreshHeader(false)
 
@@ -492,7 +495,7 @@ function Render()
     window.panel:SetHeight(math.max(1, offset))
     window.panel:SetShown(#items > 0)
     window.scroll:SetContentHeight(offset + 12)
-    -- Rows that appear or disappear on the same page must not make it jump.
+    -- Rows that fold or unfold on the same page must not make it jump.
     local key = searching and ("search:" .. searchText) or currentPage
     if key ~= renderedKey then
         renderedKey = key
@@ -827,7 +830,7 @@ ns:On("OPTION_CHANGED", function(section, key)
     if section == "general" and key == "windowScale" then
         ApplyScale()
     end
-    -- Switching a feature shows or hides its options, which moves rows.
+    -- Switching a feature folds or unfolds its options, which moves rows.
     local feature = ns.features[section]
     if key == "enabled" and feature and #feature.options > 0 then
         RequestRefresh("layout")
