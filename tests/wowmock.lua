@@ -48,6 +48,7 @@ for name in
     SetJustifyH SetJustifyV SetWordWrap SetSpacing SetAutoFocus SetMaxLetters
     SetFocus ClearFocus EnableMouseWheel SetScrollChild AddMessage AddLine
     AddDoubleLine SetOwner SetAltArrowKeyMode TryDisplayMessage
+    SetGradient SetClampRectInsets
     ]],
         "%S+"
     )
@@ -160,6 +161,9 @@ function Widget:GetEffectiveScale()
 end
 function Widget:GetFrameLevel()
     return 1
+end
+function Widget:SetScale(scale)
+    self.scale = scale
 end
 function Widget:SetAlpha(alpha)
     self.alpha = alpha
@@ -347,7 +351,15 @@ function hooksecurefunc(name, hook)
     end
 end
 function InCombatLockdown()
-    return false
+    return mock.state.inCombat or false
+end
+function GetBuildInfo()
+    return "1.60.1", "66666", "Nov 10 2026", 16001
+end
+date = os.date
+
+function CreateColor(r, g, b, a)
+    return { r = r, g = g, b = b, a = a }
 end
 
 STANDARD_TEXT_FONT = "Fonts\\FRIZQT__.TTF"
@@ -552,6 +564,13 @@ function IsInGroup()
 end
 
 -- Popups
+StaticPopupDialogs = {
+    LOOT_BIND = {},
+    PARTY_INVITE = {},
+    DUEL_REQUESTED = {},
+    QUEST_ACCEPT = {},
+    DELETE_GOOD_ITEM = {},
+}
 function StaticPopup_Hide(which)
     record("StaticPopup_Hide", which)
 end

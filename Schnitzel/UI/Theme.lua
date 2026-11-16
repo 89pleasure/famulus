@@ -19,7 +19,7 @@ UI.font = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 -- Grounds are opaque colours; lines and states are translucent white
 -- "washes" on top of them, so they work on every ground.
 local colors = {
-    window = { 0.086, 0.098, 0.141, 0.97 },
+    window = { 0.086, 0.098, 0.141, 1 },
     sidebar = { 0.063, 0.072, 0.106, 1 },
     panel = { 0.108, 0.123, 0.174, 1 },
     control = { 0.145, 0.162, 0.221, 1 },
@@ -27,12 +27,16 @@ local colors = {
     field = { 0, 0, 0, 0.30 },
 
     text = { 0.95, 0.96, 0.98, 1 },
-    textDim = { 0.76, 0.79, 0.86, 1 },
-    textMuted = { 0.58, 0.61, 0.70, 1 },
+    textDim = { 0.84, 0.86, 0.92, 1 },
+    textMuted = { 0.70, 0.73, 0.81, 1 },
 
     accent = { 0.96, 0.70, 0.33, 1 },
     onAccent = { 0.10, 0.08, 0.05, 1 },
     warning = { 0.98, 0.75, 0.30, 1 },
+
+    -- Outer window frame, shading from top to bottom.
+    frameTop = { 0.93, 0.68, 0.34, 1 },
+    frameBottom = { 0.36, 0.22, 0.15, 1 },
 
     border = { 1, 1, 1, 0.10 },
     divider = { 1, 1, 1, 0.06 },

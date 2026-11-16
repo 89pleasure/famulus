@@ -171,6 +171,9 @@ local camera = ns:NewFeature({
 local ZOOM_CVAR = "cameraDistanceMaxZoomFactor"
 -- Game versions cap this at different values; take the highest one accepted.
 local ZOOM_CANDIDATES = { 4.0, 2.6 }
+-- Read by the self-test.
+camera.zoomCVar = ZOOM_CVAR
+camera.zoomCandidates = ZOOM_CANDIDATES
 
 function camera:OnEnable()
     local current = tonumber(C_CVar.GetCVar(ZOOM_CVAR))
@@ -242,6 +245,8 @@ local BLOCKED_GLOBALS = {
     "SPELL_FAILED_ITEM_NOT_READY",
     "SPELL_FAILED_NOT_READY",
 }
+-- Read by the self-test.
+errors.blockedGlobals = BLOCKED_GLOBALS
 
 local blocked
 

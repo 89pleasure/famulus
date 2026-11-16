@@ -19,11 +19,25 @@
 --     check feature.enabled inside the hook.
 --   * A feature whose required API is missing stays off and is shown as
 --     unavailable instead of raising errors.
+--   * Every category has a master switch. While it is off, none of its
+--     features run, whatever their own setting says; the settings are kept.
 
 local _, ns = ...
 local L = ns.L
 
 ns.categories = { "vendor", "quests", "loot", "social", "tooltip", "interface" }
+
+-- Master switches are ordinary options (section "categories"), so they are
+-- saved per profile and only while they differ from the default "on".
+local categoryDefaults = {}
+for _, category in ipairs(ns.categories) do
+    categoryDefaults[category] = true
+end
+ns:RegisterDefaults("categories", categoryDefaults)
+
+function ns:IsCategoryEnabled(category)
+    return self:GetOption("categories", category) ~= false
+end
 
 local features = {}
 local featureList = {}
@@ -153,7 +167,10 @@ function ns:SyncFeature(feature)
     if not loggedIn then
         return
     end
-    local wanted = not feature.failed and feature:IsAvailable() and self:GetOption(feature.id, "enabled")
+    local wanted = not feature.failed
+        and feature:IsAvailable()
+        and self:IsCategoryEnabled(feature.category)
+        and self:GetOption(feature.id, "enabled")
     if wanted and not feature.enabled then
         Enable(feature)
     elseif not wanted and feature.enabled then
@@ -173,6 +190,14 @@ function ns:CountActiveFeatures()
 end
 
 ns:On("OPTION_CHANGED", function(section, key, value)
+    if section == "categories" then
+        for i = 1, #featureList do
+            if featureList[i].category == key then
+                ns:SyncFeature(featureList[i])
+            end
+        end
+        return
+    end
     local feature = features[section]
     if not feature then
         return
@@ -223,6 +248,10 @@ SlashCmdList.SCHNITZEL = function(input)
     if command == "status" then
         local active, total = ns:CountActiveFeatures()
         ns:Print(L.msg_status:format(active, total, ns:CountRegisteredEvents()))
+    elseif command == "test" then
+        ns:RunSelfTest()
+    elseif command == "dev" then
+        ns:SetDevMode(not ns:IsDevMode())
     else
         ns:ToggleOptions()
     end

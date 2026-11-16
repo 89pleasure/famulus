@@ -32,6 +32,9 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 | Interface | Fehlermeldungs-Spam im Kampf ausblenden | aus |
 | Interface | Screenshot beim Stufenaufstieg | aus |
 
+Jede Seite hat oben rechts einen **Hauptschalter für die ganze Kategorie**. Ist er aus, läuft auf der
+Seite nichts und nichts lauscht auf das Spiel; die Auswahl der einzelnen Funktionen bleibt erhalten.
+
 Grundregel für die Standardwerte: Alles, was in deinem Namen handelt (Gold ausgibt, Gegenstände
 verkauft, Quests oder Einladungen annimmt), ist anfangs aus. Die **Pausentaste** (Standard:
 Umschalt) überspringt jede Automatik einmalig.
@@ -60,11 +63,13 @@ Schnitzel/
   Core/Locale.lua      Sprachumschaltung zur Laufzeit
   Core/Database.lua    Einstellungen (nur Abweichungen vom Standard werden gespeichert)
   Core/Features.lua    Feature-Registry, Slash-Befehle
+  Core/SelfTest.lua    Selbsttest gegen den echten Client (/sz test, /sz dev)
   Locales/             enUS.lua (Referenz), deDE.lua
   Modules/             je Seite eine Datei mit ihren Features
   UI/                  Theme, Widgets, Einstellungsfenster, Minikartensymbol
   Media/               vier kleine TGA-Texturen (aus tools/make_media.py)
 tests/                 nachgestellte WoW-API + Testlauf
+tools/                 Texturen erzeugen, Selbsttest-Bericht lesen
 ```
 
 ### Ein Feature hinzufügen
@@ -95,3 +100,15 @@ luajit tests/run.lua
 Lädt das Addon gegen eine nachgestellte Client-API und prüft jedes Feature, das
 Einstellungsfenster und die Vollständigkeit der Übersetzungen. Das ersetzt keinen Test im
 Spiel: Ob der echte Client jede API genauso liefert, zeigt nur das Spiel selbst.
+
+### Im Spiel
+
+`/sz test` prüft im laufenden Spiel, ob der Client alles bereitstellt, was Schnitzel annimmt, und
+meldet Auffälligkeiten im Chat. Nach `/reload` steht der Bericht in den gespeicherten Variablen:
+
+```bash
+luajit tools/read_selftest.lua
+```
+
+`/sz dev` schaltet den Entwicklermodus um: Der Selbsttest läuft dann nach jedem Login von selbst,
+und blockierte Aktionen des Addons werden mitgeschrieben.

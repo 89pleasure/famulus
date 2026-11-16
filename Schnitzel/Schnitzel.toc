@@ -16,6 +16,7 @@ Locales\enUS.lua
 Locales\deDE.lua
 Core\Database.lua
 Core\Features.lua
+Core\SelfTest.lua
 
 Modules\Vendor.lua
 Modules\Quests.lua

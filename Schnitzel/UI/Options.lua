@@ -17,11 +17,14 @@ local NAV_ROW = 34
 
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
 local MODIFIERS = { "SHIFT", "CTRL", "ALT", "NONE" }
+local WINDOW_SCALES = { 80, 90, 100, 110, 120, 130, 140 }
 
 local window
 local pages, pageOrder = {}, {}
 local currentPage, searchText = nil, ""
 local rows, navButtons = {}, {}
+local renderedKey -- page or search the rows were last laid out for
+local resetArmed, resetToken = false, 0
 local Render -- forward declaration
 
 ---------------------------------------------------------------------------
@@ -48,7 +51,10 @@ local function FeatureItem(feature)
                 return L.ui_failed
             end
         end,
-        disabled = unusable,
+        disabled = function()
+            return unusable() or not ns:IsCategoryEnabled(feature.category)
+        end,
+        -- Shows the player's own choice even while the category is off.
         get = function()
             return not unusable() and ns:GetOption(feature.id, "enabled")
         end,
@@ -64,6 +70,11 @@ local function OptionItem(feature, option)
         kind = option.type,
         child = true,
         section = feature.id,
+        -- An option only shows while its feature is switched on; search
+        -- lists it regardless.
+        visible = function()
+            return ns:GetOption(feature.id, "enabled") == true
+        end,
         label = function()
             return L[prefix]
         end,
@@ -122,8 +133,8 @@ local function InfoItem(key, value)
     }
 end
 
-local function AddPage(id, items)
-    pages[id] = { id = id, items = items }
+local function AddPage(id, items, isCategory)
+    pages[id] = { id = id, items = items, isCategory = isCategory }
     pageOrder[#pageOrder + 1] = id
 end
 
@@ -140,7 +151,7 @@ local function BuildPages()
                 end
             end
         end
-        AddPage(category, items)
+        AddPage(category, items, true)
     end
 
     local profileItem = GeneralItem("charProfile", "toggle")
@@ -169,6 +180,13 @@ local function BuildPages()
         end),
         GeneralItem("chatOutput", "toggle"),
         GeneralItem("minimapButton", "toggle"),
+        GeneralItem("windowScale", "select", function()
+            local list = {}
+            for i, percent in ipairs(WINDOW_SCALES) do
+                list[i] = { value = percent, text = percent .. "%" }
+            end
+            return list
+        end),
         profileItem,
     })
 
@@ -345,13 +363,78 @@ local function RefreshSidebar()
         button.label:SetText(L["cat_" .. id])
         button.label:SetTextColor(UI.Color(selected and "text" or "textDim"))
         if button.count then
-            local active, total = CategoryCount(id)
-            button.count:SetText(active .. "/" .. total)
-            button.count:SetTextColor(UI.Color(active > 0 and "accent" or "textMuted"))
+            -- A switched-off category is greyed out here as well.
+            button.label:SetAlpha(ns:IsCategoryEnabled(id) and 1 or 0.45)
+            if ns:IsCategoryEnabled(id) then
+                local active, total = CategoryCount(id)
+                button.count:SetText(active .. "/" .. total)
+                button.count:SetTextColor(UI.Color(active > 0 and "accent" or "textMuted"))
+            else
+                button.count:SetText(L.ui_category_off)
+                button.count:SetTextColor(UI.Color("textMuted"))
+            end
         end
     end
     local active, total = ns:CountActiveFeatures()
     window.status:SetText("v" .. ns.version .. "\n" .. L.ui_active_count:format(active, total))
+end
+
+-- Title, subtitle and, on category pages, the master switch at the right
+-- of the header.
+local function RefreshHeader(animate)
+    local master = window.master
+    if searchText ~= "" then
+        master:Hide()
+        return
+    end
+    local page = pages[currentPage]
+    local enabled = not page.isCategory or ns:IsCategoryEnabled(currentPage)
+    window.title:SetText(L["cat_" .. currentPage])
+    window.subtitle:SetText(L["cat_" .. currentPage .. "_desc"])
+    master:SetShown(page.isCategory == true)
+    if page.isCategory then
+        master.caption:SetText(enabled and L.ui_category_on or L.ui_category_off)
+        master:SetWidth(master.caption:GetStringWidth() + 10 + 30)
+        master.toggle:Set(enabled, animate)
+    end
+end
+
+-- True if "reset page" would change anything on the current page.
+local function PageDiffersFromDefaults()
+    local page = pages[currentPage]
+    if page.isCategory and not ns:IsCategoryEnabled(currentPage) then
+        return true
+    end
+    for _, item in ipairs(page.items) do
+        if item.section and not ns:IsSectionDefault(item.section) then
+            return true
+        end
+    end
+    return false
+end
+
+local function UpdateResetButton()
+    local button = window.resetButton
+    local usable = searchText == "" and PageDiffersFromDefaults()
+    if not usable then
+        resetArmed = false
+    end
+    button:SetDisabled(not usable)
+    button:SetLabel(resetArmed and L.ui_reset_confirm or L.ui_reset_page)
+    button.label:SetTextColor(UI.Color(resetArmed and "warning" or "text"))
+end
+
+local function DisarmReset()
+    if resetArmed then
+        resetArmed = false
+        UpdateResetButton()
+    end
+end
+
+local function ApplyScale()
+    if window then
+        window:SetScale((tonumber(ns:GetOption("general", "windowScale")) or 100) / 100)
+    end
 end
 
 -- Refreshes switches and counters without touching the layout.
@@ -361,6 +444,8 @@ local function RefreshState(animate)
             RowRefresh(rows[i], animate)
         end
     end
+    RefreshHeader(animate)
+    UpdateResetButton()
     RefreshSidebar()
 end
 
@@ -378,10 +463,14 @@ function Render()
             window.subtitle:SetText(L.ui_search_none:format(searchText))
         end
     else
-        items = pages[currentPage].items
-        window.title:SetText(L["cat_" .. currentPage])
-        window.subtitle:SetText(L["cat_" .. currentPage .. "_desc"])
+        items = {}
+        for _, item in ipairs(pages[currentPage].items) do
+            if not item.visible or item.visible() then
+                items[#items + 1] = item
+            end
+        end
     end
+    RefreshHeader(false)
 
     local offset = 0
     for index, item in ipairs(items) do
@@ -403,10 +492,15 @@ function Render()
     window.panel:SetHeight(math.max(1, offset))
     window.panel:SetShown(#items > 0)
     window.scroll:SetContentHeight(offset + 12)
-    window.scroll:ScrollToTop()
+    -- Rows that appear or disappear on the same page must not make it jump.
+    local key = searching and ("search:" .. searchText) or currentPage
+    if key ~= renderedKey then
+        renderedKey = key
+        window.scroll:ScrollToTop()
+    end
 
     -- "Reset page" only where the page has something to reset.
-    local resettable = false
+    local resettable = not searching and pages[currentPage].isCategory == true
     if not searching then
         for _, item in ipairs(items) do
             if item.section then
@@ -416,7 +510,7 @@ function Render()
         end
     end
     window.resetButton:SetShown(resettable)
-    window.resetButton:SetLabel(L.ui_reset_page)
+    UpdateResetButton()
     window.closeButton:SetLabel(L.ui_close)
     window.search.placeholder:SetText(L.ui_search)
     window.tagline:SetText(L.ui_tagline)
@@ -425,6 +519,7 @@ function Render()
 end
 
 local function SelectPage(id)
+    DisarmReset()
     currentPage = id
     if searchText ~= "" then
         window.search.edit:SetText("") -- triggers Render through the search callback
@@ -443,6 +538,28 @@ local function ResetPage()
         end
     end
     ns:ResetSections(sections)
+    if pages[currentPage].isCategory then
+        ns:SetOption("categories", currentPage, true)
+    end
+end
+
+-- The first click asks, the second one within a few seconds resets.
+local function ResetClicked()
+    if resetArmed then
+        resetArmed = false
+        UpdateResetButton()
+        ResetPage()
+        return
+    end
+    resetArmed = true
+    resetToken = resetToken + 1
+    local token = resetToken
+    UpdateResetButton()
+    C_Timer.After(4, function()
+        if token == resetToken then
+            DisarmReset()
+        end
+    end)
 end
 
 ---------------------------------------------------------------------------
@@ -509,8 +626,11 @@ local function Build()
     window:SetMovable(true)
     window:RegisterForDrag("LeftButton")
     window:Hide()
+    ApplyScale()
     UI.Fill(window, "window")
-    UI.Border(window)
+    local frameSize = UI.GradientFrame(window, "frameTop", "frameBottom", 3)
+    -- The frame lies outside the window; keep it on screen as well.
+    window:SetClampRectInsets(-frameSize, frameSize, frameSize, -frameSize)
 
     local saved = ns.global.window
     if saved and saved.point then
@@ -577,7 +697,27 @@ local function Build()
 
     window.subtitle = UI.Text(window, 12, "textMuted")
     window.subtitle:SetPoint("TOPLEFT", window.title, "BOTTOMLEFT", 0, -8)
-    window.subtitle:SetWidth(ROW_WIDTH - 40)
+    window.subtitle:SetWidth(ROW_WIDTH - 190)
+
+    -- Master switch of the category, in line with the switches of the rows.
+    local master = CreateFrame("Button", nil, window)
+    master:SetHeight(24)
+    master:SetPoint("TOPRIGHT", -(PAD + 16), -38)
+    master.toggle = UI.Toggle(master)
+    master.toggle:SetPoint("RIGHT")
+    master.caption = UI.Text(master, 12, "textDim")
+    master.caption:SetPoint("RIGHT", master.toggle, "LEFT", -10, 0)
+    master.caption:SetJustifyV("MIDDLE")
+    master:SetScript("OnEnter", function(self)
+        self.caption:SetTextColor(UI.Color("text"))
+    end)
+    master:SetScript("OnLeave", function(self)
+        self.caption:SetTextColor(UI.Color("textDim"))
+    end)
+    master:SetScript("OnClick", function()
+        ns:SetOption("categories", currentPage, not ns:IsCategoryEnabled(currentPage))
+    end)
+    window.master = master
 
     local close = CreateFrame("Button", nil, window)
     close:SetSize(28, 28)
@@ -620,7 +760,7 @@ local function Build()
     footerLine:SetPoint("TOPLEFT")
     footerLine:SetPoint("TOPRIGHT")
 
-    window.resetButton = UI.Button(footer, ResetPage)
+    window.resetButton = UI.Button(footer, ResetClicked)
     window.resetButton:SetPoint("LEFT", PAD, 0)
 
     window.closeButton = UI.Button(footer, function()
@@ -637,6 +777,8 @@ local function Build()
     end)
     window:SetScript("OnHide", function()
         UI.CloseMenu()
+        DisarmReset()
+        renderedKey = nil
         window.search.edit:ClearFocus()
     end)
 end
@@ -680,8 +822,17 @@ local function RequestRefresh(mode)
     end
 end
 
-ns:On("OPTION_CHANGED", function()
-    RequestRefresh("state")
+ns:On("OPTION_CHANGED", function(section, key)
+    if section == "general" and key == "windowScale" then
+        ApplyScale()
+    end
+    -- Switching a feature shows or hides its options, which moves rows.
+    local feature = ns.features[section]
+    if key == "enabled" and feature and #feature.options > 0 then
+        RequestRefresh("layout")
+    else
+        RequestRefresh("state")
+    end
 end)
 ns:On("FEATURE_STATE", function()
     RequestRefresh("state")
@@ -690,6 +841,7 @@ ns:On("LOCALE_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("PROFILE_CHANGED", function()
+    ApplyScale()
     RequestRefresh("layout")
 end)
 

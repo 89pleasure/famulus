@@ -77,6 +77,8 @@ local easyDelete = ns:NewFeature({
 })
 
 local DELETE_POPUPS = { "DELETE_GOOD_ITEM", "DELETE_GOOD_QUEST_ITEM" }
+-- Read by the self-test.
+easyDelete.popups = DELETE_POPUPS
 
 -- Only types the word. Nothing is written into the popup's own tables (that
 -- would taint Blizzard's popup code) and the click stays with the player.

@@ -14,6 +14,7 @@ local defaults = {
         language = "auto",
         minimapButton = true,
         minimapAngle = 215,
+        windowScale = 100,
     },
 }
 ns.defaults = defaults
@@ -70,6 +71,12 @@ end
 
 function ns:IsDefault(section, key)
     return self:GetOption(section, key) == self:GetDefault(section, key)
+end
+
+-- True while nothing in the section differs from its defaults. Only
+-- differences are stored, so an untouched section is simply absent.
+function ns:IsSectionDefault(section)
+    return profile == nil or profile[section] == nil
 end
 
 -- Puts every option of the given sections (or of all sections) back to its

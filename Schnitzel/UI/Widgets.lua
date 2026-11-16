@@ -46,6 +46,54 @@ function UI.Border(frame, colorName)
     return edges
 end
 
+-- Shades a texture vertically between two theme colours. Returns false if
+-- the client has no gradient support; the caller then keeps a plain colour.
+function UI.ApplyGradient(texture, bottomName, topName)
+    if not (texture.SetGradient and CreateColor) then
+        return false
+    end
+    texture:SetColorTexture(1, 1, 1, 1)
+    local ok = pcall(texture.SetGradient, texture, "VERTICAL", CreateColor(UI.Color(bottomName)), CreateColor(UI.Color(topName)))
+    return ok
+end
+
+-- Thick frame drawn just outside a window, shading from one colour at the
+-- top to another at the bottom. thickness is in UI units and is snapped to
+-- whole screen pixels.
+function UI.GradientFrame(frame, topName, bottomName, thickness)
+    local pixel = UI.Pixel(frame)
+    local size = math.max(pixel, math.floor(thickness / pixel + 0.5) * pixel)
+
+    local top = frame:CreateTexture(nil, "BORDER")
+    top:SetColorTexture(UI.Color(topName))
+    top:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", -size, 0)
+    top:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", size, 0)
+    top:SetHeight(size)
+
+    local bottom = frame:CreateTexture(nil, "BORDER")
+    bottom:SetColorTexture(UI.Color(bottomName))
+    bottom:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", -size, 0)
+    bottom:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", size, 0)
+    bottom:SetHeight(size)
+
+    local left = frame:CreateTexture(nil, "BORDER")
+    left:SetPoint("TOPRIGHT", frame, "TOPLEFT")
+    left:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT")
+    left:SetWidth(size)
+
+    local right = frame:CreateTexture(nil, "BORDER")
+    right:SetPoint("TOPLEFT", frame, "TOPRIGHT")
+    right:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT")
+    right:SetWidth(size)
+
+    for _, side in ipairs({ left, right }) do
+        if not UI.ApplyGradient(side, bottomName, topName) then
+            side:SetColorTexture(UI.Color(topName))
+        end
+    end
+    return size
+end
+
 function UI.Line(frame, colorName)
     local line = frame:CreateTexture(nil, "BORDER")
     line:SetColorTexture(UI.Color(colorName or "divider"))
@@ -96,19 +144,38 @@ function UI.Button(parent, onClick)
         self:SetWidth(math.max(84, label:GetStringWidth() + 32))
     end
 
-    button:SetScript("OnEnter", function()
-        hover:Show()
+    -- A disabled button is greyed out and ignores hover and clicks.
+    function button:SetDisabled(disabled)
+        disabled = disabled and true or false
+        self.disabled = disabled
+        self:SetAlpha(disabled and 0.4 or 1)
+        if disabled then
+            hover:Hide()
+            label:SetPoint("CENTER", 0, 0)
+        end
+    end
+
+    button:SetScript("OnEnter", function(self)
+        if not self.disabled then
+            hover:Show()
+        end
     end)
     button:SetScript("OnLeave", function()
         hover:Hide()
     end)
-    button:SetScript("OnMouseDown", function()
-        label:SetPoint("CENTER", 0, -1)
+    button:SetScript("OnMouseDown", function(self)
+        if not self.disabled then
+            label:SetPoint("CENTER", 0, -1)
+        end
     end)
     button:SetScript("OnMouseUp", function()
         label:SetPoint("CENTER", 0, 0)
     end)
-    button:SetScript("OnClick", onClick)
+    button:SetScript("OnClick", function(self, ...)
+        if not self.disabled then
+            onClick(self, ...)
+        end
+    end)
     return button
 end
 
@@ -264,6 +331,8 @@ function UI.OpenMenu(owner, values, current, onSelect)
     for i = #values + 1, #menu.rows do
         menu.rows[i]:Hide()
     end
+    -- The menu hangs off UIParent; give it the size of the scaled window.
+    menu:SetScale(owner:GetEffectiveScale() / UIParent:GetEffectiveScale())
     menu:ClearAllPoints()
     menu:SetPoint("TOPRIGHT", owner, "BOTTOMRIGHT", 0, -4)
     menu:SetSize(owner:GetWidth(), #values * MENU_ROW + 4)
@@ -301,7 +370,7 @@ function UI.SearchBox(parent, onChange)
 
     local edit = CreateFrame("EditBox", nil, box)
     edit:SetPoint("TOPLEFT", 10, 0)
-    edit:SetPoint("BOTTOMRIGHT", -10, 0)
+    edit:SetPoint("BOTTOMRIGHT", -28, 0)
     edit:SetAutoFocus(false)
     edit:SetFont(UI.font, 12, "")
     edit:SetTextColor(UI.Color("text"))
@@ -312,9 +381,29 @@ function UI.SearchBox(parent, onChange)
     placeholder:SetPoint("LEFT", 10, 0)
     box.placeholder = placeholder
 
+    -- Clears the field and ends the search; only there while there is text.
+    local clear = CreateFrame("Button", nil, box)
+    clear:SetSize(22, 22)
+    clear:SetPoint("RIGHT", -4, 0)
+    clear:Hide()
+    local clearIcon = UI.Icon(clear, "close", 10, "textMuted")
+    clearIcon:SetPoint("CENTER")
+    clear:SetScript("OnEnter", function()
+        clearIcon:SetVertexColor(UI.Color("text"))
+    end)
+    clear:SetScript("OnLeave", function()
+        clearIcon:SetVertexColor(UI.Color("textMuted"))
+    end)
+    clear:SetScript("OnClick", function()
+        edit:SetText("")
+        edit:ClearFocus()
+    end)
+    box.clear = clear
+
     edit:SetScript("OnTextChanged", function(self)
         local text = self:GetText() or ""
         placeholder:SetShown(text == "")
+        clear:SetShown(text ~= "")
         onChange(text)
     end)
     edit:SetScript("OnEscapePressed", function(self)

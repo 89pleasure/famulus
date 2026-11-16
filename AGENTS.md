@@ -24,18 +24,57 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 
 - `luajit tests/run.lua` lädt das Addon gegen eine nachgestellte Client-API (`tests/wowmock.lua`)
   und prüft jedes Feature, das Fenster und die Übersetzungen. Muss vor jedem Commit grün sein.
-- **Im echten Spiel wurde noch nichts getestet.** Auf dem Entwicklungsrechner (Mac) ist WoW nicht
-  installiert. Der Mock beweist die eigene Logik, nicht das Verhalten des Clients.
-- Stellen, die im Spiel am ehesten abweichen:
-  - Die vier TGA-Texturen in `Schnitzel/Media/` (selbst erzeugt, unkomprimiert, 32 Bit). Grüne
-    Flächen im Spiel bedeuten: Format oder Pfad stimmt nicht.
-  - `cameraZoom`: Der Maximalwert von `cameraDistanceMaxZoomFactor` ist unbestätigt; der Code
-    probiert 4,0 und dann 2,6.
-  - `easyDelete` und `acceptInvites` greifen auf Blizzards Popups zu (`StaticPopup_FindVisible`,
-    `dialog:GetEditBox()`, `StaticPopup_Hide("PARTY_INVITE")`).
-  - `mapCoords`: Position und Ebene des Koordinatenfelds auf der Weltkarte.
-  - `hideErrors`: Die Liste der Fehlertext-Globals (`BLOCKED_GLOBALS`) ist aus dem Gedächtnis
-    zusammengestellt; nicht vorhandene Namen werden übersprungen.
+- Der Mock beweist die eigene Logik, nicht das Verhalten des Clients. Dafür gibt es den Selbsttest
+  im Spiel, siehe „Test im Spiel“.
+- **Erster Selbsttest im Spiel am 2026-11-16** (Client 1.60.1, Build 70938, deDE): 54 Prüfungen ok,
+  1 Warnung, 0 fehlgeschlagen; keine blockierten Aktionen, keine Lua-Warnungen. Bestätigt:
+  - Das Addon lädt, das Fenster öffnet sich, Einstellungen und Fensterposition werden gespeichert.
+  - Alle 16 Features finden ihre benötigte API.
+  - Die vier TGA-Texturen laden (`SetTexture` liefert wahr) und sehen im Fenster richtig aus
+    (Screenshot geprüft).
+  - `Texture:SetGradient("VERTICAL", CreateColor(...), CreateColor(...))` funktioniert; der
+    Fensterrahmen zeigt den Verlauf.
+  - `cameraZoom`: Der CVar `cameraDistanceMaxZoomFactor` nimmt 4,0 an (Standard 1,0). Ob die Kamera
+    dann wirklich weiter herauszoomt als bei 2,6, ist nicht geprüft.
+  - Popups: Alle benutzten Namen existieren in `StaticPopupDialogs` (`LOOT_BIND`, `PARTY_INVITE`,
+    `DUEL_REQUESTED`, `QUEST_ACCEPT`, `DELETE_GOOD_ITEM`, `DELETE_GOOD_QUEST_ITEM`); der Dialog hat
+    `GetEditBox()`.
+  - `hideErrors`: Alle 27 Fehlertext-Globals aus `BLOCKED_GLOBALS` existieren.
+  - `mapCoords`: `WorldMapFrame.ScrollContainer:GetNormalizedCursorPosition` existiert, die
+    Spielerposition ist lesbar.
+  - Speicher: 360 KB bei 6 aktiven Features und 5 Spielereignissen.
+- **Noch nicht im Spiel geprüft:** das Verhalten der Automatiken (reparieren, verkaufen, Quests,
+  Beute, Einladungen, Duelle, Zerstören), Aussehen und Position des Koordinatenfelds auf der
+  Karte, im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
+  Taint).
+
+## Test im Spiel
+
+WoW Forever ist auf dem Entwicklungsrechner installiert: `/Applications/World of Warcraft/_forever_`.
+`Interface/AddOns/Schnitzel` ist dort ein Symlink auf den Ordner `Schnitzel/` dieses Repos, jede
+Änderung ist also nach `/reload` im Spiel.
+
+- `/sz test` prüft gegen den echten Client: benötigte API je Feature, die oben genannten unsicheren
+  Stellen (Texturen, Kamerazoom, Popup-Namen, Karte, Fehlertext-Globals) und die Annahmen aus
+  „WoW Forever: was man wissen muss“. Der Bericht landet in `SchnitzelDB.selfTest`.
+- `/sz dev` schaltet den Entwicklermodus um: Der Selbsttest läuft dann drei Sekunden nach jedem
+  Login, und blockierte Aktionen (`ADDON_ACTION_BLOCKED`/`_FORBIDDEN`) sowie `LUA_WARNING` des Addons
+  werden in `SchnitzelDB.devLog` gesammelt. Standard ist aus; dann kostet das nichts.
+- Das Spiel setzt beim Start alle Dateien im Addon-Ordner auf Modus 777, durch den Symlink also
+  auch im Repo. Deshalb ist hier lokal `git config core.fileMode false` gesetzt; nach einem neuen
+  Clone wieder setzen, sonst erscheinen alle Dateien als geändert.
+- Das Spiel schreibt die Daten erst bei `/reload` oder beim Ausloggen auf die Platte. Danach liest
+  `luajit tools/read_selftest.lua` den Bericht (mit `--all` auch die bestandenen Prüfungen).
+- Ablauf einer Runde: Der Auftraggeber startet das Spiel, loggt ein und macht `/reload`; der
+  Assistent liest den Bericht. Der Assistent kann das Spiel nicht selbst bedienen, und Eingaben ins
+  Spiel zu automatisieren ist tabu (Nutzungsbedingungen).
+- Lua-Fehler schreibt Blizzards Fehlerbehandlung über `C_Log.LogErrorMessage` in die Client-Logs
+  unter `_forever_/Logs/`; in welche Datei, ist noch unbestätigt. `AddLuaErrorHandler` ist nur für
+  sicheren Code (`assert(issecure())`), `seterrorhandler` ersetzen wir nicht.
+- Screenshots des Spiels liegen in `_forever_/Screenshots/` und sind die Grundlage für
+  Layout-Arbeit.
+- Was der Selbsttest nicht abdeckt: das Verhalten der Automatiken (verkaufen, reparieren, Quests,
+  Einladungen). Das zeigt nur das Spielen selbst.
 
 ## WoW Forever: was man wissen muss
 
@@ -55,8 +94,9 @@ Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
   `C_Container`, `C_AddOns`, `C_Item`, `C_Spell`, `C_GossipInfo`, `C_QuestLog`, `C_Map`,
   `TooltipDataProcessor`, `Settings.*`, `MenuUtil` und `AddonCompartmentFunc` existieren.
 - Entfernt: die Globals `GetItemInfo` und `GetSpellInfo` (stattdessen `C_Item.GetItemInfo`,
-  `C_Spell.GetSpellInfo`) sowie `ChatFrame_AddMessageEventFilter` (stattdessen
-  `ChatFrameUtil.AddMessageEventFilter`).
+  `C_Spell.GetSpellInfo`). `ChatFrame_AddMessageEventFilter` existiert im Client entgegen der
+  Recherche noch (Selbsttest 2026-11-16), ebenso `ChatFrameUtil.AddMessageEventFilter`; für neuen
+  Code die `ChatFrameUtil`-Variante nehmen.
 - **Addon-Beschränkungen wie in Midnight:**
   - „Secret Values“: Solche Werte dürfen nicht verglichen, auf wahr/falsch geprüft, als
     Tabellenschlüssel benutzt oder verrechnet werden. Weiterreichen und `string.format` sind
@@ -88,13 +128,36 @@ Navigation, rechts Kopfzeile, ein umrandetes Feld mit Zeilen, Fußzeile; Pillens
 flache Flächen mit Haarlinien. Farbpalette und Texturen sind eigene (`UI/Theme.lua`), es werden
 keine Schriften mitgeliefert.
 
+Entscheidungen des Auftraggebers zum Fenster (2026-11-16):
+
+- Feste Fensterhöhe; längere Seiten scrollen. Keine Höhe, die sich dem Inhalt anpasst.
+- Deckender Hintergrund, außen ein 3 Einheiten breiter Rahmen mit Verlauf (`UI.GradientFrame`).
+- Die Seite für Addon-eigene Einstellungen heißt „Einstellungen“ (intern weiter `general`); dort
+  sammelt sich alles, was nur das Addon und nicht das Spiel betrifft.
+- Der Hauptschalter einer Kategorie sitzt rechtsbündig im Kopf der Seite, beschriftet nur mit
+  „AN“ oder „AUS“. Der Untertitel beschreibt immer, was der Spieler auf der Seite findet; technische
+  Hinweise (was im Hintergrund läuft oder nicht) gehören nicht ins Fenster. Eine abgeschaltete
+  Kategorie ist in der Seitenleiste ausgegraut und trägt „AUS“ in Großbuchstaben.
+- Optionen eines Features (`child`) erscheinen nur, solange das Feature eingeschaltet ist; die
+  Suche zeigt sie immer.
+- „Seite zurücksetzen“ fragt beim ersten Klick nach („Wirklich zurücksetzen?“) und führt erst der
+  zweite Klick innerhalb von vier Sekunden aus. Steht die Seite auf den Standardwerten, ist der
+  Knopf ausgegraut und nicht klickbar.
+- Die Fenstergröße ist auf der Seite „Einstellungen“ wählbar (`general.windowScale`, 80 bis 140 %).
+- Das Theming ist vorläufig; ein richtiges Theme folgt später.
+
 ## Regeln für neuen Code
 
 Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
 
 - **Feature-Registry:** Alles Schaltbare ist ein Feature über `ns:NewFeature` in `Modules/`.
+  Was der Selbsttest lesen muss (Listen, CVar-Namen), hängt am Feature-Objekt.
   Events über `feature:RegisterEvent`, wiederkehrende Timer über `feature:StartTicker`; beides
   räumt die Registry beim Abschalten auf.
+- **Kategorie-Hauptschalter:** Jede Kategorie hat einen Hauptschalter (Option `categories.<id>`,
+  Standard an, Schalter rechts im Kopf der Seite). Ist er aus, läuft kein Feature der Kategorie, egal wie es
+  selbst eingestellt ist: keine Events, keine Timer, Hooks bleiben stumm. Die Einzelauswahl bleibt
+  gespeichert. Die Prüfung sitzt in `ns:SyncFeature`; ein Feature muss dafür nichts tun.
 - **`requires`:** Jede benötigte Client-API als Pfad angeben (`"C_Container.UseContainerItem"`).
   Fehlt sie, bleibt das Feature aus und erscheint als „nicht verfügbar“.
 - **Standardwerte:** Was im Namen des Spielers handelt (Gold ausgeben, verkaufen, Quests oder
@@ -133,6 +196,10 @@ luajit tests/run.lua
 ```
 
 ```bash
+luajit tools/read_selftest.lua
+```
+
+```bash
 python3 tools/make_media.py
 ```
 
@@ -142,7 +209,7 @@ rm -f dist/Schnitzel-*.zip && zip -rq dist/Schnitzel-0.1.0.zip Schnitzel -x '*.D
 
 - Bei einer neuen Version: `## Version` in `Schnitzel/Schnitzel.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
-- Neue Lua-Dateien in die `.toc` eintragen; der Test zählt die Dateien (`#files == 16`) und die
+- Neue Lua-Dateien in die `.toc` eintragen; der Test zählt die Dateien (`#files == 17`) und die
   Features (`total == 16`), beide Zahlen dann mit anpassen.
 - Repository: `github.com/89pleasure/schnitzel` (privat), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.

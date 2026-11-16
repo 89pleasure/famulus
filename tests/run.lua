@@ -34,7 +34,7 @@ section("Loading")
 
 local framesBefore = #mock.frames
 local ns, files = mock.LoadAddon("Schnitzel", "Schnitzel")
-check(#files == 16, "TOC lists 16 Lua files (got " .. #files .. ")")
+check(#files == 17, "TOC lists 17 Lua files (got " .. #files .. ")")
 for _, file in ipairs(files) do
     local handle = io.open("Schnitzel/" .. file, "r")
     check(handle ~= nil, "TOC file exists: " .. file)
@@ -457,15 +457,64 @@ end
 
 check(window.title:GetText() == "Vendors", "first page is Vendors")
 local rows = visibleRows()
-check(#rows == 3, "vendor page shows repair, its guild option and junk (got " .. #rows .. ")")
+check(#rows == 2, "vendor page shows repair and junk; the guild option stays folded away (got " .. #rows .. ")")
+check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the page is on its defaults")
+mock.Click(window.resetButton)
+check(window.resetButton.label:GetText() == "Reset page", "and a click on it does nothing")
+local master = window.master
+check(master:IsShown() and master.toggle.on and master.caption:GetText() == "ON", "the header carries the category's master switch, labelled ON")
+check(window.subtitle:GetText() == ns.L.cat_vendor_desc, "the subtitle describes the page")
 
 -- Toggle through the row itself.
 mock.Click(rows[1])
 check(ns.features.autoRepair.enabled, "clicking a row switches the feature on")
 mock.Advance(0.3)
+check(#visibleRows() == 3 and visibleRows()[2].item.child, "its option unfolds below it (got " .. #visibleRows() .. ")")
+check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
+
+-- Master switch: everything on the page stops, the choices stay.
+local eventsWithRepair = ns:CountRegisteredEvents()
+mock.Click(master)
+mock.Advance(0.3)
+check(not ns:IsCategoryEnabled("vendor") and not ns.features.autoRepair.enabled, "the master switch stops the features of its category")
+check(ns:CountRegisteredEvents() == eventsWithRepair - 1, "and their game events are unregistered")
+check(ns:GetOption("autoRepair", "enabled") == true, "the feature's own setting is kept")
+check(not master.toggle.on and master.caption:GetText() == "OFF", "the switch in the header reads OFF")
+check(window.subtitle:GetText() == ns.L.cat_vendor_desc, "the subtitle keeps describing the page")
+check(rows[1].disabled and rows[1].toggle.on, "feature rows are greyed out but still show the choice")
+check(navButton("Vendors").count:GetText() == "OFF", "the sidebar shows the category as OFF")
+check(navButton("Vendors").label:GetAlpha() < 1 and navButton("Quests").label:GetAlpha() == 1, "and greys out its entry, but no other")
+check(SchnitzelDB.profile.categories.vendor == false, "the switch is saved")
+setState({ canRepair = true, repairCost = 1200, money = 5000 })
+mock.Fire("MERCHANT_SHOW")
+check(mock.count("RepairAllItems") == 0, "nothing of a switched-off category reacts to the game")
+enable("sellJunk")
+check(not ns.features.sellJunk.enabled, "a feature cannot be started while its category is off")
+enable("sellJunk", false)
+check(ns.features.fastLoot.enabled, "other categories keep running")
+mock.Click(master)
+mock.Advance(0.3)
+check(ns.features.autoRepair.enabled and SchnitzelDB.profile.categories == nil, "switching the category on again resumes the features")
+check(navButton("Vendors").count:GetText() == "1/2" and navButton("Vendors").label:GetAlpha() == 1, "and the sidebar entry is back to normal")
+check(master.toggle.on and master.caption:GetText() == "ON", "as is the header")
+
 mock.Click(rows[1])
 check(not ns.features.autoRepair.enabled, "and off again")
 mock.Advance(0.3)
+check(#visibleRows() == 2, "which folds the option away again")
+check(window.resetButton.disabled, "back on defaults, reset is greyed out again")
+mock.Click(master)
+mock.Advance(0.3)
+check(not window.resetButton.disabled, "a switched-off category alone makes the page resettable")
+mock.Click(master)
+mock.Advance(0.3)
+window.scroll:SetVerticalScroll(30)
+mock.Click(rows[1])
+mock.Advance(0.3)
+check(window.scroll:GetVerticalScroll() == 30, "unfolding does not make the page jump")
+mock.Click(rows[1])
+mock.Advance(0.3)
+window.scroll:SetVerticalScroll(0)
 
 -- Every page renders, in both languages.
 for _, language in ipairs({ "enUS", "deDE" }) do
@@ -482,14 +531,18 @@ for _, language in ipairs({ "enUS", "deDE" }) do
     end
 end
 check(window.title:GetText() == "Über", "language switch applies immediately, without reload")
+check(not window.master:IsShown(), "pages without features have no master switch")
 
 -- Search across pages.
 window.search.edit:SetText("repar")
 check(window.title:GetText() == "Suche" and #visibleRows() >= 1, "search finds the repair feature in German")
+check(window.search.clear:IsShown(), "the search field offers a clear button while it has text")
+check(not window.master:IsShown(), "search results have no master switch")
 window.search.edit:SetText("zzzz")
 check(#visibleRows() == 0, "search with no hit shows no rows")
-window.search.edit:SetText("")
-check(window.title:GetText() == "Über", "clearing the search returns to the page")
+mock.Click(window.search.clear)
+check(window.search.edit:GetText() == "" and window.title:GetText() == "Über", "the clear button empties the field and returns to the page")
+check(not window.search.clear:IsShown(), "and disappears again")
 
 -- Reset page.
 ns:SetOption("general", "language", "enUS")
@@ -498,12 +551,27 @@ mock.Click(navButton("Vendors"))
 enable("autoRepair")
 enable("sellJunk")
 mock.Advance(0.1)
+ns:SetOption("categories", "vendor", false)
+mock.Advance(0.1)
 mock.Click(window.resetButton)
 mock.Advance(0.1)
-check(not ns.features.autoRepair.enabled and not ns.features.sellJunk.enabled, "reset page puts the page back to defaults")
+check(ns.features.sellJunk ~= nil and ns:GetOption("sellJunk", "enabled") == true, "the first click on reset changes nothing")
+check(window.resetButton.label:GetText() == "Really reset?", "it asks for confirmation instead")
+mock.Advance(4.1)
+check(window.resetButton.label:GetText() == "Reset page", "the question goes away by itself")
+mock.Click(window.resetButton)
+mock.Click(navButton("Quests"))
+mock.Click(navButton("Vendors"))
+check(window.resetButton.label:GetText() == "Reset page", "and when the page is left")
+mock.Click(window.resetButton)
+mock.Click(window.resetButton)
+mock.Advance(4.1)
+check(not ns.features.autoRepair.enabled and not ns.features.sellJunk.enabled, "the second click puts the page back to defaults")
+check(window.resetButton.disabled and window.resetButton.label:GetText() == "Reset page", "after which reset is greyed out")
+check(ns:IsCategoryEnabled("vendor"), "including the category's master switch")
 
 -- Dropdown menu.
-mock.Click(navButton("General"))
+mock.Click(navButton("Settings"))
 local generalRows = visibleRows()
 mock.Click(generalRows[2]) -- pause key
 mock.Advance(0.05)
@@ -518,13 +586,20 @@ end
 check(picked and ns:GetOption("general", "pauseModifier") == "CTRL", "dropdown changes the pause key")
 ns:SetOption("general", "pauseModifier", "SHIFT")
 
+-- Window size.
+check(generalRows[5].label:GetText() == "Window size" and generalRows[5].dropdown.text:GetText() == "100%", "the settings page offers the window size")
+ns:SetOption("general", "windowScale", 120)
+check(window.scale == 1.2, "changing it rescales the window at once")
+ns:SetOption("general", "windowScale", 100)
+check(window.scale == 1 and (SchnitzelDB.profile.general or {}).windowScale == nil, "and the default size is not saved")
+
 -- Character profile.
 enable("declineDuels")
-mock.Click(generalRows[5])
+mock.Click(generalRows[6])
 mock.Advance(0.1)
 check(ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "character profile starts as a copy")
 enable("declineDuels", false)
-mock.Click(generalRows[5])
+mock.Click(generalRows[6])
 mock.Advance(0.1)
 check(not ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "switching back restores the account settings")
 enable("declineDuels", false)
@@ -540,6 +615,92 @@ check(not window:IsShown(), "/sz closes the window again")
 mock.reset()
 SlashCmdList.SCHNITZEL("status")
 check(lastChat():find("3 of 16", 1, true) ~= nil, "/sz status reports: " .. lastChat())
+
+---------------------------------------------------------------------------
+section("Self-test")
+---------------------------------------------------------------------------
+
+local function findCheck(result, group, name)
+    for _, entry in ipairs(result.checks) do
+        if entry.group == group and entry.name == name then
+            return entry
+        end
+    end
+end
+
+check(SchnitzelDB.selfTest == nil and SchnitzelDB.dev == nil, "nothing is tested or logged unless asked for")
+local eventsBefore, framesBeforeTest = ns:CountRegisteredEvents(), #mock.frames
+setState({})
+SlashCmdList.SCHNITZEL("test")
+local result = SchnitzelDB.selfTest
+check(type(result) == "table" and result.schema == 1, "/sz test stores a report")
+check(result.client.toc == "16001" and result.client.version == "1.60.1", "report names the client build")
+check(mock.chat[1]:find("Self-test", 1, true) ~= nil, "summary line in chat: " .. tostring(mock.chat[1]))
+check(#mock.chat <= 9, "chat output is capped (got " .. #mock.chat .. " lines)")
+check(result.summary.ok + result.summary.warn + result.summary.fail == #result.checks, "summary counts every check")
+check(result.summary.fail == 0, "no check fails against the mock (got " .. result.summary.fail .. ")")
+for _, feature in ipairs(ns.featureList) do
+    check(findCheck(result, "feature", feature.id) ~= nil, "report covers feature " .. feature.id)
+end
+check(findCheck(result, "api", "C_Container").status == "ok", "present API is reported ok")
+check(findCheck(result, "api", "MenuUtil").status == "warn", "API missing from the client is a warning")
+check(findCheck(result, "api", "GetItemInfo").status == "ok", "removed API is confirmed as removed")
+check(findCheck(result, "hideErrors", "error strings").detail:find("2 of 27", 1, true) ~= nil, "counts the error strings the client knows")
+check(findCheck(result, "popup", "PARTY_INVITE").status == "ok", "known popup name is ok")
+check(findCheck(result, "popup", "DELETE_GOOD_QUEST_ITEM").status == "warn", "unknown popup name is a warning")
+check(findCheck(result, "camera", "cameraDistanceMaxZoomFactor").detail:find("4 -> 1.9; 2.6 -> 2.6", 1, true) ~= nil, "camera probe records what the client accepts")
+check(mock.cvars.cameraDistanceMaxZoomFactor == "1.9", "camera probe restores the player's value")
+check(result.idle.events == eventsBefore and ns:CountRegisteredEvents() == eventsBefore, "the test registers no events")
+check(#mock.frames - framesBeforeTest == 1, "the test creates one hidden probe frame")
+SlashCmdList.SCHNITZEL("test")
+check(#mock.frames - framesBeforeTest == 1, "and reuses it on the next run")
+
+-- A feature that needs API the client lacks is a failure in the report.
+local needy = ns:NewFeature({ id = "fastLootProbe", category = "loot", requires = { "C_Nope.Missing" } })
+mock.reset()
+result = ns:RunSelfTest()
+check(findCheck(result, "feature", "fastLootProbe").status == "fail" and result.summary.fail == 1, "missing required API fails the feature")
+ns.features.fastLootProbe = nil
+table.remove(ns.featureList)
+check(needy.enabled == false, "the probe feature never ran")
+
+-- Camera probe is skipped in combat.
+setState({ inCombat = true })
+mock.reset()
+result = ns:RunSelfTest()
+check(mock.count("SetCVar") == 0, "no CVar is touched in combat")
+setState({})
+
+-- Developer mode.
+mock.reset()
+SlashCmdList.SCHNITZEL("dev")
+check(SchnitzelDB.dev == true and ns:CountRegisteredEvents() == eventsBefore + 3, "/sz dev starts listening for blocked actions")
+mock.Fire("ADDON_ACTION_BLOCKED", "OtherAddon", "UseAction()")
+check(SchnitzelDB.devLog == nil, "other addons' blocked actions are ignored")
+mock.Fire("ADDON_ACTION_BLOCKED", "Schnitzel", "StaticPopup_Hide()")
+mock.Fire("LUA_WARNING", 0, "Interface/AddOns/Schnitzel/Core/Init.lua:1: something")
+mock.Fire("LUA_WARNING", 0, "Interface/AddOns/Other/x.lua:1: something")
+check(#SchnitzelDB.devLog == 2 and SchnitzelDB.devLog[1].text == "StaticPopup_Hide()", "own blocked actions and warnings are logged")
+for i = 1, 150 do
+    mock.Fire("ADDON_ACTION_FORBIDDEN", "Schnitzel", "call " .. i)
+end
+check(#SchnitzelDB.devLog == 100 and SchnitzelDB.devLog[100].text == "call 150", "the log keeps the newest 100 entries")
+result = ns:RunSelfTest()
+check(result.loggedProblems == 100, "the report says how many problems were logged")
+SlashCmdList.SCHNITZEL("dev")
+check(SchnitzelDB.dev == nil and SchnitzelDB.devLog == nil and ns:CountRegisteredEvents() == eventsBefore, "/sz dev again stops and clears the log")
+SchnitzelDB.selfTest = nil
+
+-- With developer mode saved from the last session, login starts both.
+SchnitzelDB.dev = true
+mock.reset()
+ns:Fire("LOGIN")
+check(ns:CountRegisteredEvents() == eventsBefore + 3 and SchnitzelDB.selfTest == nil, "login in developer mode listens, test waits for the UI")
+mock.Advance(3.1)
+check(type(SchnitzelDB.selfTest) == "table" and mock.ActiveTimers() == 0, "the self-test runs once, three seconds after login")
+SlashCmdList.SCHNITZEL("dev")
+SchnitzelDB.selfTest = nil
+check(ns:CountRegisteredEvents() == eventsBefore, "idle cost is back to normal afterwards")
 
 ---------------------------------------------------------------------------
 section("Saved settings")
