@@ -3,37 +3,17 @@
 local _, ns = ...
 
 ---------------------------------------------------------------------------
--- Faster auto-loot
+-- Auto-loot: a second switch for the game's own option
 ---------------------------------------------------------------------------
+-- The client's auto-loot is already instant, so the switch only mirrors the
+-- game's setting (see Core/GameOptions.lua). No code of its own.
 
-local fastLoot = ns:NewFeature({
-    id = "fastLoot",
+ns:NewFeature({
+    id = "autoLoot",
     category = "loot",
-    default = true,
-    requires = { "GetNumLootItems", "LootSlot", "GetCVarBool", "IsModifiedClick" },
+    default = false,
+    mirror = { cvar = "autoLootDefault" },
 })
-
-local lastLoot = 0
-
-function fastLoot:OnEnable()
-    self:RegisterEvent("LOOT_READY")
-end
-
-function fastLoot:LOOT_READY()
-    -- Only when the player wants auto-loot for this corpse: the setting and
-    -- the auto-loot modifier key cancel each other out.
-    if GetCVarBool("autoLootDefault") == IsModifiedClick("AUTOLOOTTOGGLE") then
-        return
-    end
-    local now = GetTime()
-    if now - lastLoot < 0.3 then
-        return
-    end
-    lastLoot = now
-    for slot = GetNumLootItems(), 1, -1 do
-        LootSlot(slot)
-    end
-end
 
 ---------------------------------------------------------------------------
 -- Confirm bind-on-pickup loot while solo

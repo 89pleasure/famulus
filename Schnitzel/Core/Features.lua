@@ -21,6 +21,8 @@
 --     unavailable instead of raising errors.
 --   * Every category has a master switch. While it is off, none of its
 --     features run, whatever their own setting says; the settings are kept.
+--   * A feature with `mirror = { cvar = ... }` is a second switch for one of
+--     the game's options; Core/GameOptions.lua does all of the work.
 
 local _, ns = ...
 local L = ns.L
@@ -54,6 +56,11 @@ function ns:NewFeature(def)
     def.enabled = false
     def.options = def.options or {}
     def.events = {}
+    if def.mirror then
+        def.requires = def.requires or {}
+        table.insert(def.requires, "C_CVar.GetCVar")
+        table.insert(def.requires, "C_CVar.SetCVar")
+    end
 
     local values = { enabled = def.default and true or false }
     for _, option in ipairs(def.options) do

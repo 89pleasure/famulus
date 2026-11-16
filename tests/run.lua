@@ -34,7 +34,7 @@ section("Loading")
 
 local framesBefore = #mock.frames
 local ns, files = mock.LoadAddon("Schnitzel", "Schnitzel")
-check(#files == 17, "TOC lists 17 Lua files (got " .. #files .. ")")
+check(#files == 18, "TOC lists 18 Lua files (got " .. #files .. ")")
 for _, file in ipairs(files) do
     local handle = io.open("Schnitzel/" .. file, "r")
     check(handle ~= nil, "TOC file exists: " .. file)
@@ -95,9 +95,10 @@ mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
 check(total == 16, "16 features registered (got " .. total .. ")")
-check(active == 3, "3 features on by default (got " .. active .. ")")
-check(ns.features.fastLoot.enabled and ns.features.mapCoords.enabled and ns.features.chatArrowKeys.enabled, "the default-on features are the harmless ones")
-check(ns:CountRegisteredEvents() == 1, "only LOOT_READY is registered after login (got " .. ns:CountRegisteredEvents() .. ")")
+check(active == 2, "2 features on by default (got " .. active .. ")")
+check(ns.features.mapCoords.enabled and ns.features.chatArrowKeys.enabled, "the default-on features are the harmless ones")
+check(ns:CountRegisteredEvents() == 0, "no game event is registered after login (got " .. ns:CountRegisteredEvents() .. ")")
+check(mock.cvars.autoLootDefault == "0" and mock.count("SetCVar") == 0, "a fresh install changes no game setting")
 check(lastChat():find("/sz", 1, true) ~= nil, "first login prints the hint")
 check(next(SchnitzelDB.profile) == nil, "nothing is saved while everything is on default")
 check(mock.CountOnUpdateFrames() == 0, "no OnUpdate handler runs while idle (got " .. mock.CountOnUpdateFrames() .. ")")
@@ -156,7 +157,7 @@ check(mock.count("RepairAllItems") == 1 and #mock.chat == 0, "chat feedback can 
 ns:SetOption("general", "chatOutput", true)
 
 enable("autoRepair", false)
-check(ns:CountRegisteredEvents() == 1, "switching off removes the event again")
+check(ns:CountRegisteredEvents() == 0, "switching off removes the event again")
 
 ---------------------------------------------------------------------------
 section("Vendor: sell junk")
@@ -279,26 +280,46 @@ mock.Fire("QUEST_COMPLETE")
 check(mock.count("GetQuestReward") == 0, "leaves the reward choice to the player")
 
 enable("autoAccept", false)
-check(ns:CountRegisteredEvents() == 5, "turn-in alone keeps the shared quest list events (got " .. ns:CountRegisteredEvents() .. ")")
+check(ns:CountRegisteredEvents() == 4, "turn-in alone keeps the shared quest list events (got " .. ns:CountRegisteredEvents() .. ")")
 enable("autoTurnIn", false)
-check(ns:CountRegisteredEvents() == 1, "all quest events are gone when both are off (got " .. ns:CountRegisteredEvents() .. ")")
+check(ns:CountRegisteredEvents() == 0, "all quest events are gone when both are off (got " .. ns:CountRegisteredEvents() .. ")")
 
 ---------------------------------------------------------------------------
 section("Loot and items")
 ---------------------------------------------------------------------------
 
-setState({ lootItems = 4 })
-mock.Advance(1)
-mock.Fire("LOOT_READY")
-check(mock.count("LootSlot") == 4, "fast loot takes every slot")
-mock.Fire("LOOT_READY")
-check(mock.count("LootSlot") == 4, "a repeated LOOT_READY within 0.3 s is ignored")
-mock.reset()
 mock.cvars.autoLootDefault = "0"
-mock.Advance(1)
-mock.Fire("LOOT_READY")
-check(mock.count("LootSlot") == 0, "fast loot respects the auto-loot setting")
+local eventsBeforeLoot = ns:CountRegisteredEvents()
+enable("autoLoot")
+check(mock.cvars.autoLootDefault == "1", "auto loot switches on the game's option")
+check(ns:CountRegisteredEvents() == eventsBeforeLoot, "and listens to nothing")
+enable("autoLoot", false)
+check(mock.cvars.autoLootDefault == "0", "switching off clears the game's option as well")
+
+-- Changed in the game's options: the switch follows when the window opens
+-- (and at login), without writing the option back.
 mock.cvars.autoLootDefault = "1"
+mock.reset()
+ns:Fire("OPTIONS_SHOWN")
+check(ns.features.autoLoot.enabled and ns:GetOption("autoLoot", "enabled") == true, "the switch shows the game's option once it was switched on there")
+check(mock.count("SetCVar") == 0, "following the game writes nothing")
+mock.cvars.autoLootDefault = "0"
+ns:Fire("OPTIONS_SHOWN")
+check(not ns.features.autoLoot.enabled and ns:GetOption("autoLoot", "enabled") == false, "and once it was switched off there")
+check(mock.count("SetCVar") == 0, "still without writing")
+mock.SetGameOption("autoLootDefault", "1")
+check(ns.features.autoLoot.enabled, "the switch follows the game's options at once, with the window open")
+mock.SetGameOption("autoLootDefault", "0")
+check(not ns.features.autoLoot.enabled and mock.count("SetCVar") == 0, "both ways, without writing")
+
+-- The category switch stops the feature but leaves the game's option alone.
+enable("autoLoot")
+ns:SetOption("categories", "loot", false)
+check(not ns.features.autoLoot.enabled and mock.cvars.autoLootDefault == "1", "switching the loot category off keeps the game's auto loot")
+ns:SetOption("categories", "loot", true)
+check(ns.features.autoLoot.enabled and mock.cvars.autoLootDefault == "1", "switching it on again changes nothing either")
+enable("autoLoot", false)
+check(mock.cvars.autoLootDefault == "0", "only the feature's own switch clears it")
 
 enable("confirmBoP")
 mock.reset()
@@ -397,6 +418,83 @@ check(mock.CountOnUpdateFrames() == 0, "and not at all when switched off")
 WorldMapFrame.shown = false
 enable("mapCoords")
 
+check(ChatFrame1EditBox:GetAltArrowKeyMode() == false and ChatFrame2EditBox:GetAltArrowKeyMode() == false, "chat arrow keys work without Alt after login")
+ChatFrame1EditBox:SetAltArrowKeyMode(true)
+EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", ChatFrame1EditBox)
+check(ChatFrame1EditBox:GetAltArrowKeyMode() == false, "a reset mode is fixed again when the chat box gets focus")
+local whisperBox = CreateFrame("EditBox", "ChatFrame11EditBox")
+whisperBox.altArrowKeyMode = true
+EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", whisperBox)
+check(whisperBox:GetAltArrowKeyMode() == false, "chat windows opened after login are covered as well")
+enable("chatArrowKeys", false)
+check(ChatFrame1EditBox:GetAltArrowKeyMode() == true and whisperBox:GetAltArrowKeyMode() == true, "switching off gives every touched chat box its Alt mode back")
+whisperBox.altArrowKeyMode = true
+EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", whisperBox)
+check(whisperBox:GetAltArrowKeyMode() == true, "and focus no longer changes anything")
+enable("chatArrowKeys")
+check(ChatFrame2EditBox:GetAltArrowKeyMode() == false, "switching on again applies at once")
+
+-- Chat history: Enter remembers the line, Up and Down step through it.
+local chatBox = ChatFrame1EditBox
+local function press(key)
+    chatBox.scripts.OnKeyDown(chatBox, key)
+end
+local function send(text, attributes)
+    chatBox.attributes = attributes or { chatType = "SAY" }
+    chatBox:SetText(text)
+    press("ENTER")
+    mock.Advance(0.1)
+    chatBox:SetText("")
+end
+press("UP")
+check(chatBox:GetText() == "", "Up does nothing while nothing was sent")
+send("hello there")
+send("/cast Fireball")
+send("/dance")
+send("see you", { chatType = "WHISPER", tellTarget = "Thrall" })
+check((chatBox.historyCleared or 0) > 0, "the client's own history is emptied so it cannot compete")
+chatBox:SetText("half typed")
+press("UP")
+check(chatBox:GetText() == "/w Thrall see you", "Up brings back the last line with its whisper target")
+check(chatBox.cursor == #"/w Thrall see you", "with the cursor at the end")
+press("UP")
+check(chatBox:GetText() == "/dance", "harmless commands are kept")
+press("UP")
+check(chatBox:GetText() == "/s hello there", "secure commands such as /cast are skipped")
+press("UP")
+check(chatBox:GetText() == "/s hello there", "Up stops at the oldest line")
+press("DOWN")
+press("DOWN")
+press("DOWN")
+check(chatBox:GetText() == "half typed", "Down past the newest line gives back what was typed")
+chatBox.attributes = { chatType = "SAY" }
+chatBox:SetText("from the game")
+EventRegistry:TriggerEvent("ChatFrame.OnEditBoxPreSendText", chatBox)
+mock.Advance(0.1)
+chatBox:SetText("")
+press("UP")
+check(chatBox:GetText() == "/s from the game", "a send announced by the game is remembered as well")
+EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusLost", chatBox)
+send("twice")
+send("twice")
+press("UP")
+press("UP")
+check(chatBox:GetText() == "/s from the game", "the same line twice in a row is kept once")
+EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusLost", chatBox)
+chatBox:SetText("")
+AutoCompleteBox.shown, AutoCompleteBox.parent = true, chatBox
+press("UP")
+check(chatBox:GetText() == "", "the arrows belong to the name list while it is open")
+AutoCompleteBox.shown, AutoCompleteBox.parent = false, nil
+enable("chatArrowKeys", false)
+press("UP")
+check(chatBox:GetText() == "", "switched off, the hook stays silent")
+enable("chatArrowKeys")
+press("UP")
+check(chatBox:GetText() ~= "", "switched on again, the lines are still there")
+chatBox:SetText("")
+chatBox.attributes = nil
+
 mock.reset()
 enable("cameraZoom")
 check(mock.cvars.cameraDistanceMaxZoomFactor == "2.6", "camera takes the highest factor the client accepts")
@@ -491,7 +589,7 @@ check(mock.count("RepairAllItems") == 0, "nothing of a switched-off category rea
 enable("sellJunk")
 check(not ns.features.sellJunk.enabled, "a feature cannot be started while its category is off")
 enable("sellJunk", false)
-check(ns.features.fastLoot.enabled, "other categories keep running")
+check(ns.features.mapCoords.enabled, "other categories keep running")
 mock.Click(master)
 mock.Advance(0.3)
 check(ns.features.autoRepair.enabled and SchnitzelDB.profile.categories == nil, "switching the category on again resumes the features")
@@ -614,7 +712,7 @@ SlashCmdList.SCHNITZEL("")
 check(not window:IsShown(), "/sz closes the window again")
 mock.reset()
 SlashCmdList.SCHNITZEL("status")
-check(lastChat():find("3 of 16", 1, true) ~= nil, "/sz status reports: " .. lastChat())
+check(lastChat():find("2 of 16", 1, true) ~= nil, "/sz status reports: " .. lastChat())
 
 ---------------------------------------------------------------------------
 section("Self-test")
@@ -647,6 +745,11 @@ check(findCheck(result, "api", "MenuUtil").status == "warn", "API missing from t
 check(findCheck(result, "api", "GetItemInfo").status == "ok", "removed API is confirmed as removed")
 check(findCheck(result, "hideErrors", "error strings").detail:find("2 of 27", 1, true) ~= nil, "counts the error strings the client knows")
 check(findCheck(result, "popup", "PARTY_INVITE").status == "ok", "known popup name is ok")
+check(findCheck(result, "chat", "arrow keys").status == "ok", "the chat boxes match the arrow key feature")
+ChatFrame2EditBox:SetAltArrowKeyMode(true)
+check(findCheck(ns:RunSelfTest(), "chat", "arrow keys").detail:find("ChatFrame2", 1, true) ~= nil, "a chat box out of line is named in the report")
+ChatFrame2EditBox:SetAltArrowKeyMode(false)
+mock.reset()
 check(findCheck(result, "popup", "DELETE_GOOD_QUEST_ITEM").status == "warn", "unknown popup name is a warning")
 check(findCheck(result, "camera", "cameraDistanceMaxZoomFactor").detail:find("4 -> 1.9; 2.6 -> 2.6", 1, true) ~= nil, "camera probe records what the client accepts")
 check(mock.cvars.cameraDistanceMaxZoomFactor == "1.9", "camera probe restores the player's value")

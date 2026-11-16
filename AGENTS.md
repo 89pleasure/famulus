@@ -17,6 +17,10 @@ Folgendes konzentrieren und beschränken:
 4. **Performance-optimiert.**
 5. **Mehrsprachig.** Englisch und Deutsch reichen vorerst.
 
+**Veröffentlichung:** Schnitzel soll später veröffentlicht werden (Stand 2026-11-16, Zeitpunkt und
+Plattform offen). Entscheidungen deshalb so treffen, dass sie für fremde Spieler taugen: saubere
+Versionierung, keine Annahmen über die eigene Addon-Sammlung, Verhalten neben anderen Addons im Blick.
+
 Arbeitsweise: Er schreibt Deutsch und möchte Antworten auf Deutsch. Code, Kommentare und
 Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 
@@ -43,6 +47,30 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   - `mapCoords`: `WorldMapFrame.ScrollContainer:GetNormalizedCursorPosition` existiert, die
     Spielerposition ist lesbar.
   - Speicher: 360 KB bei 6 aktiven Features und 5 Spielereignissen.
+- **Spielrunde 2026-11-16:**
+  - `autoRepair` funktioniert.
+  - `chatArrowKeys` wirkte nicht. Blizzards Chat-Eingabefeld (`ChatFrameEditBoxTemplate`) setzt
+    `ignoreArrows="true"`, und Blizzards Autovervollständigung (`AutoComplete.lua`) schaltet den
+    Alt-Modus beim Ein- und Ausblenden um. Das Feature setzt den Modus deshalb zusätzlich bei jedem
+    Fokus neu (`EventRegistry`-Callback `ChatFrame.OnEditBoxFocusGained`); der Selbsttest prüft
+    den Modus aller Chatfelder. Danach bewegte sich der Cursor (bestätigt), aber Hoch/Runter holte
+    keine gesendeten Nachrichten: Der eingebaute Verlauf des Clients reagiert in Forever nicht
+    (OneForAll vermerkt dasselbe, FlareUI baut ihn ebenfalls nach). Schnitzel führt deshalb eine
+    eigene Liste nach FlareUIs Muster: Zeile beim Enter (`OnKeyDown`-Hook) und bei
+    `ChatFrame.OnEditBoxPreSendText` merken, mit Ziel als Präfix (`/w Name …`, `/2 …`) statt
+    Attribute zu setzen; sichere Befehle (`IsSecureCmd`) nie, weil sie aus Addon-Code blockiert
+    werden; Blizzards Liste nach dem Senden leeren; nicht bei offener Namensliste
+    (`AutoCompleteBox`) oder Chat-Sperre. Nur im Speicher, 30 Zeilen; Zustand je Feld in lokalen
+    Tabellen, nichts auf Blizzards Frames. Im Spiel bestätigt: Cursor und Blättern funktionieren.
+  - `fastLoot` brachte in diesem Client nichts: Blizzards automatisches Plündern ist von sich aus
+    schnell. Ersetzt durch `autoLoot`. Zuerst stellte es beim Abschalten den vorherigen Wert
+    wieder her; das wirkte im Spiel wie ein Fehler (Option blieb an). Auf Wunsch des Auftraggebers
+    spiegelt der Schalter jetzt `autoLootDefault` wie bei OneForAll: an setzt „1“, aus setzt „0“,
+    und Änderungen in Blizzards Menü übernimmt der Schalter sofort, ohne zu schreiben. Daraus
+    wurde der allgemeine Baustein `mirror` (siehe „Gespiegelte Spieloptionen“ unten). Der Kategorie-Hauptschalter lässt die Spieloption unberührt. Die Idee,
+    Schnitzels Fenster und Blizzards Spielmenü sich gegenseitig schließen zu lassen, wurde
+    verworfen: Blizzards Panels aus Addon-Code zu schließen birgt Taint-Risiko, und der Live-Abgleich
+    macht es unnötig. Im Spiel bestätigt: Spiegeln in beide Richtungen mit dem `mirror`-Baustein.
 - **Noch nicht im Spiel geprüft:** das Verhalten der Automatiken (reparieren, verkaufen, Quests,
   Beute, Einladungen, Duelle, Zerstören), Aussehen und Position des Koordinatenfelds auf der
   Karte, im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
@@ -158,6 +186,13 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   Standard an, Schalter rechts im Kopf der Seite). Ist er aus, läuft kein Feature der Kategorie, egal wie es
   selbst eingestellt ist: keine Events, keine Timer, Hooks bleiben stumm. Die Einzelauswahl bleibt
   gespeichert. Die Prüfung sitzt in `ns:SyncFeature`; ein Feature muss dafür nichts tun.
+- **Gespiegelte Spieloptionen:** Ist ein Schalter nur eine zweite Bedienung für eine Blizzard-Option,
+  wird er als Feature mit `mirror = { cvar = "<Name>" }` deklariert (optional `on`/`off`, Standard
+  „1“/„0“), ohne eigenen Code. `Core/GameOptions.lua` erledigt alles: Die Spieloption ist die
+  Wahrheit (Abgleich beim Login, über `CVarCallbackRegistry` sofort bei jeder Änderung und beim
+  Öffnen des Fensters, ohne zurückzuschreiben); der Schalter des Features setzt sie an und aus;
+  der Kategorie-Hauptschalter fasst sie nicht an. Nicht für Fälle, in denen das Addon eine
+  Spieleinstellung nur vorübergehend ändert und den alten Wert zurückstellen muss (`cameraZoom`).
 - **`requires`:** Jede benötigte Client-API als Pfad angeben (`"C_Container.UseContainerItem"`).
   Fehlt sie, bleibt das Feature aus und erscheint als „nicht verfügbar“.
 - **Standardwerte:** Was im Namen des Spielers handelt (Gold ausgeben, verkaufen, Quests oder
@@ -170,7 +205,7 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   `Schnitzel_OnAddonCompartmentClick` sowie die benannten Frames `SchnitzelOptionsFrame` und
   `SchnitzelMinimapButton`.
 - **Kosten im Leerlauf**, vom Test festgeschrieben: Laden erzeugt zwei Frames; nach dem Login mit
-  Standardwerten ist ein Spielereignis registriert (`LOOT_READY`), kein `OnUpdate`, kein Timer.
+  Standardwerten ist kein Spielereignis registriert, kein `OnUpdate`, kein Timer.
 - **Texte:** Jeder Schlüssel in `Locales/enUS.lua` **und** `Locales/deDE.lua`, mit denselben
   Platzhaltern. Schema: `cat_<seite>`, `f_<feature>`, `o_<feature>_<option>`, `g_<allgemein>`,
   `msg_<chat>`, `ui_<fenster>`; Hilfetext mit Endung `_desc`. Texte erst zur Laufzeit über `ns.L`
@@ -209,7 +244,7 @@ rm -f dist/Schnitzel-*.zip && zip -rq dist/Schnitzel-0.1.0.zip Schnitzel -x '*.D
 
 - Bei einer neuen Version: `## Version` in `Schnitzel/Schnitzel.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
-- Neue Lua-Dateien in die `.toc` eintragen; der Test zählt die Dateien (`#files == 17`) und die
+- Neue Lua-Dateien in die `.toc` eintragen; der Test zählt die Dateien (`#files == 18`) und die
   Features (`total == 16`), beide Zahlen dann mit anpassen.
 - Repository: `github.com/89pleasure/schnitzel` (privat), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.

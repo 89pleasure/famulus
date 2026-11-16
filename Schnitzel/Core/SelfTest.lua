@@ -41,6 +41,8 @@ local EXPECT_PRESENT = {
     "StaticPopup_Hide",
     "StaticPopup_FindVisible",
     "StaticPopupDialogs",
+    "EventRegistry.RegisterCallback",
+    "CVarCallbackRegistry.RegisterCallback",
 }
 
 local EXPECT_ABSENT = {
@@ -253,6 +255,32 @@ local function CheckGradient()
     end
 end
 
+-- chatArrowKeys: every chat edit box should follow the feature's state.
+local function CheckChatArrows()
+    local feature = ns.features.chatArrowKeys
+    if not feature then
+        return
+    end
+    local expected = not feature.enabled
+    local boxes, wrong = 0, {}
+    for i = 1, NUM_CHAT_WINDOWS or 10 do
+        local editBox = _G["ChatFrame" .. i .. "EditBox"]
+        if editBox and editBox.GetAltArrowKeyMode then
+            boxes = boxes + 1
+            if editBox:GetAltArrowKeyMode() ~= expected then
+                wrong[#wrong + 1] = "ChatFrame" .. i
+            end
+        end
+    end
+    if boxes == 0 then
+        Add("chat", "arrow keys", "warn", "no chat edit box with GetAltArrowKeyMode found")
+    elseif #wrong == 0 then
+        Add("chat", "arrow keys", "ok", boxes .. " edit boxes, Alt needed: " .. tostring(expected))
+    else
+        Add("chat", "arrow keys", "warn", "Alt mode differs from the feature in " .. table.concat(wrong, ", "))
+    end
+end
+
 local function CheckCamera()
     local feature = ns.features.cameraZoom
     if not (feature and feature.zoomCVar and C_CVar and C_CVar.GetCVar and C_CVar.SetCVar) then
@@ -347,6 +375,7 @@ local CHECKS = {
     CheckPopups,
     CheckMedia,
     CheckGradient,
+    CheckChatArrows,
     CheckCamera,
     CheckMap,
     CheckIdleCost,

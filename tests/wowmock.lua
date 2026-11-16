@@ -7,7 +7,7 @@ local mock = {
     chat = {}, -- lines printed to the chat frame
     calls = {}, -- { "RepairAllItems", arg1, ... } for API calls worth asserting
     frames = {}, -- every frame created
-    cvars = { autoLootDefault = "1", cameraDistanceMaxZoomFactor = "1.9" },
+    cvars = { autoLootDefault = "0", cameraDistanceMaxZoomFactor = "1.9" },
     state = {}, -- per-test game state
     undefinedGlobals = {},
     now = 0,
@@ -161,6 +161,30 @@ function Widget:GetEffectiveScale()
 end
 function Widget:GetFrameLevel()
     return 1
+end
+function Widget:SetAltArrowKeyMode(altMode)
+    self.altArrowKeyMode = altMode
+end
+function Widget:GetAltArrowKeyMode()
+    return self.altArrowKeyMode
+end
+function Widget:HookScript(script, hook)
+    local original = self.scripts[script]
+    self.scripts[script] = function(...)
+        if original then
+            original(...)
+        end
+        hook(...)
+    end
+end
+function Widget:GetAttribute(name)
+    return self.attributes and self.attributes[name]
+end
+function Widget:SetCursorPosition(position)
+    self.cursor = position
+end
+function Widget:ClearHistory()
+    self.historyCleared = (self.historyCleared or 0) + 1
 end
 function Widget:SetScale(scale)
     self.scale = scale
@@ -383,6 +407,49 @@ WorldMapFrame.shown = false
 WorldMapFrame.ScrollContainer = CreateFrame("ScrollFrame", nil, WorldMapFrame)
 ChatFrame1EditBox = CreateFrame("EditBox", "ChatFrame1EditBox")
 ChatFrame2EditBox = CreateFrame("EditBox", "ChatFrame2EditBox")
+-- The game's chat template sets ignoreArrows: Alt is needed by default.
+ChatFrame1EditBox.altArrowKeyMode = true
+ChatFrame2EditBox.altArrowKeyMode = true
+SLASH_WHISPER1 = "/w"
+SLASH_SAY1 = "/s"
+function IsSecureCmd(command)
+    return command == "/cast" or command == "/target"
+end
+AutoCompleteBox = CreateFrame("Frame", "AutoCompleteBox")
+AutoCompleteBox.shown = false
+
+-- Blizzard's CVar registry: callbacks keyed by the CVar's name.
+CVarCallbackRegistry = { callbacks = {} }
+function CVarCallbackRegistry:RegisterCallback(event, fn, owner)
+    self.callbacks[event] = self.callbacks[event] or {}
+    self.callbacks[event][owner] = fn
+end
+function CVarCallbackRegistry:TriggerEvent(event, ...)
+    for owner, fn in pairs(self.callbacks[event] or {}) do
+        fn(owner, ...)
+    end
+end
+-- The player changes a game option in the game's own settings.
+function mock.SetGameOption(name, value)
+    mock.cvars[name] = value
+    CVarCallbackRegistry:TriggerEvent(name, value)
+end
+
+EventRegistry = { callbacks = {} }
+function EventRegistry:RegisterCallback(event, fn, owner)
+    self.callbacks[event] = self.callbacks[event] or {}
+    self.callbacks[event][owner] = fn
+end
+function EventRegistry:UnregisterCallback(event, owner)
+    if self.callbacks[event] then
+        self.callbacks[event][owner] = nil
+    end
+end
+function EventRegistry:TriggerEvent(event, ...)
+    for owner, fn in pairs(self.callbacks[event] or {}) do
+        fn(owner, ...)
+    end
+end
 
 DEFAULT_CHAT_FRAME = {
     AddMessage = function(_, text)

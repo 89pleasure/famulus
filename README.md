@@ -19,7 +19,7 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 | Händler | Plunder verkaufen | aus |
 | Quests | Quests automatisch annehmen (graue Quests optional ignorieren) | aus |
 | Quests | Quests automatisch abgeben | aus |
-| Beute | Schnelleres Plündern | **an** |
+| Beute | Automatisch plündern (spiegelt die Spieloption) | aus |
 | Beute | Beim Aufheben gebundene Beute bestätigen (nur solo) | aus |
 | Beute | Einfacheres Zerstören (Bestätigungswort eintragen) | aus |
 | Soziales | Einladungen von Freunden/Gilde annehmen | aus |
@@ -43,7 +43,7 @@ Umschalt) überspringt jede Automatik einmalig.
 
 | Beobachtung bei den Vorbildern | Umsetzung in Schnitzel |
 |---|---|
-| OneForAll registriert ~38 Events dauerhaft und prüft die Option erst im Handler; FlareUI-Untermodule ebenso | Ein Feature registriert Events erst beim Einschalten. Nach dem Login mit Standardwerten lauscht das Addon auf genau **ein** Spielereignis |
+| OneForAll registriert ~38 Events dauerhaft und prüft die Option erst im Handler; FlareUI-Untermodule ebenso | Ein Feature registriert Events erst beim Einschalten. Nach dem Login mit Standardwerten lauscht das Addon auf **kein** Spielereignis |
 | Ungedrosselte `OnUpdate`-Handler (Tooltip-Anker, Minikarten-Drag, Proximity-Scan) | Kein `OnUpdate` im Leerlauf. Kartenkoordinaten laufen nur bei offener Karte (10×/s), Animationen nur solange sie dauern |
 | FlareUI: Modul umschalten = `/reload`; OneForAll: Sprache/Profil = Reload | Jede Option, die Sprache und das Charakterprofil wirken sofort |
 | Hooks bleiben nach dem Abschalten aktiv | Hooks werden erst beim ersten Einschalten gesetzt und prüfen danach den Zustand; nie genutzte Features hooken nichts |

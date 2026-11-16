@@ -769,6 +769,7 @@ local function Build()
     window.closeButton:SetPoint("RIGHT", -PAD, 0)
 
     window:SetScript("OnShow", function(self)
+        ns:Fire("OPTIONS_SHOWN") -- lets switches that mirror game options catch up
         Render()
         self:SetAlpha(0)
         UI.Tween(self, 0.12, function(progress)
