@@ -25,6 +25,7 @@ local currentPage, searchText = nil, ""
 local rows, navButtons = {}, {}
 local renderedKey -- page or search the rows were last laid out for
 local resetArmed, resetToken = false, 0
+local aliasEditor -- input row of the aliases page, once it has been shown
 local Render -- forward declaration
 
 ---------------------------------------------------------------------------
@@ -133,6 +134,107 @@ local function InfoItem(key, value)
     }
 end
 
+---------------------------------------------------------------------------
+-- Alias list. Unlike the other rows these are data, not settings: one row
+-- to type a name and its alias into, then one row per stored alias.
+---------------------------------------------------------------------------
+
+local function Empty()
+    return ""
+end
+
+local ALIAS_EDIT_ITEM = { kind = "aliasEdit", label = Empty, desc = Empty }
+local ALIAS_EMPTY_ITEM = {
+    kind = "info",
+    label = function()
+        return L.ui_alias_empty
+    end,
+    desc = function()
+        return L.ui_alias_empty_desc
+    end,
+}
+
+local function AddAliasItems(items)
+    items[#items + 1] = ALIAS_EDIT_ITEM
+    local list = ns.AliasService.List()
+    if #list == 0 then
+        items[#items + 1] = ALIAS_EMPTY_ITEM
+        return
+    end
+    for _, entry in ipairs(list) do
+        items[#items + 1] = {
+            kind = "alias",
+            entry = entry,
+            label = function()
+                return entry.alias
+            end,
+            desc = function()
+                return entry.name
+            end,
+        }
+    end
+end
+
+local function CreateAliasEditor(row)
+    local editor = CreateFrame("Frame", nil, row)
+    editor:SetPoint("TOPLEFT", 16, -14)
+    editor:SetPoint("BOTTOMRIGHT", -16, 14)
+
+    local fieldWidth = math.floor((ROW_WIDTH - 32 - 100 - 16) / 2)
+    local name = UI.Input(editor, 48)
+    name:SetPoint("LEFT")
+    name:SetWidth(fieldWidth)
+    local alias = UI.Input(editor, 32)
+    alias:SetPoint("LEFT", name, "RIGHT", 8, 0)
+    alias:SetWidth(fieldWidth)
+    editor.name, editor.alias = name, alias
+
+    local function Save()
+        local character = strtrim(name.edit:GetText() or "")
+        local text = strtrim(alias.edit:GetText() or "")
+        if character == "" then
+            name.edit:SetFocus()
+        elseif text == "" then
+            alias.edit:SetFocus()
+        else
+            ns.AliasService.Set(character, text)
+            name.edit:SetText("")
+            alias.edit:SetText("")
+            alias.edit:ClearFocus()
+        end
+    end
+    local function FocusAlias()
+        alias.edit:SetFocus()
+    end
+    name.onEnter, name.onTab = FocusAlias, FocusAlias
+    alias.onEnter = Save
+    alias.onTab = function()
+        name.edit:SetFocus()
+    end
+
+    editor.save = UI.Button(editor, Save)
+    editor.save:SetPoint("RIGHT")
+
+    function editor:Relabel()
+        name.placeholder:SetText(L.ui_alias_name)
+        alias.placeholder:SetText(L.ui_alias_alias)
+        self.save:SetLabel(L.ui_alias_save)
+    end
+
+    -- Puts a character into the fields, ready to type or change the alias.
+    function editor:Load(character, text)
+        name.edit:SetText(character or "")
+        alias.edit:SetText(text or "")
+        alias.edit:SetFocus()
+    end
+
+    function editor:ClearFocus()
+        name.edit:ClearFocus()
+        alias.edit:ClearFocus()
+    end
+    return editor
+end
+
 local function AddPage(id, items, isCategory)
     pages[id] = { id = id, items = items, isCategory = isCategory }
     pageOrder[#pageOrder + 1] = id
@@ -153,6 +255,7 @@ local function BuildPages()
         end
         AddPage(category, items, true)
     end
+    pages.aliases.extra = AddAliasItems
 
     local profileItem = GeneralItem("charProfile", "toggle")
     profileItem.section = nil -- not part of a profile, so "reset page" leaves it alone
@@ -207,13 +310,26 @@ local function BuildPages()
     })
 end
 
+-- The rows of a page: its settings, then whatever the page lists besides.
+local function PageItems(page)
+    if not page.extra then
+        return page.items
+    end
+    local items = {}
+    for i, item in ipairs(page.items) do
+        items[i] = item
+    end
+    page.extra(items)
+    return items
+end
+
 local function SearchItems(query)
     query = string.lower(query)
     local results = {}
     for _, id in ipairs(pageOrder) do
         local category = string.lower(L["cat_" .. id])
-        for _, item in ipairs(pages[id].items) do
-            if item.kind ~= "info" then
+        for _, item in ipairs(PageItems(pages[id])) do
+            if item.kind ~= "info" and item.kind ~= "aliasEdit" then
                 local haystack = string.lower(item.label() .. " " .. item.desc()) .. " " .. category
                 if string.find(haystack, query, 1, true) then
                     results[#results + 1] = item
@@ -273,11 +389,29 @@ local function RowSetItem(row, item, index, flat)
     if row.dropdown then
         row.dropdown:SetShown(kind == "select")
     end
+    if kind == "aliasEdit" and not row.editor then
+        row.editor = CreateAliasEditor(row)
+    elseif kind == "alias" and not row.remove then
+        row.remove = UI.IconButton(row, "close", function()
+            ns.AliasService.Set(row.item.entry.name, nil)
+        end)
+        row.remove:SetPoint("RIGHT", -16, 0)
+    end
+    if row.editor then
+        row.editor:SetShown(kind == "aliasEdit")
+    end
+    if row.remove then
+        row.remove:SetShown(kind == "alias")
+    end
+    if kind == "aliasEdit" then
+        aliasEditor = row.editor
+        aliasEditor:Relabel()
+    end
 
     local indent = (item.child and not flat) and 40 or 16
     local compact = not flat and item.compact ~= nil and item.compact()
     local padding = compact and 9 or 13
-    local controlWidth = (kind == "toggle" and 30) or (kind == "select" and 150) or 0
+    local controlWidth = (kind == "toggle" and 30) or (kind == "select" and 150) or (kind == "alias" and 24) or 0
     local textWidth = ROW_WIDTH - indent - 16 - controlWidth - (controlWidth > 0 and 24 or 0)
 
     row.label:ClearAllPoints()
@@ -292,7 +426,9 @@ local function RowSetItem(row, item, index, flat)
     row.desc:SetTextColor(UI.Color(note and "warning" or "textMuted"))
 
     local height
-    if compact then
+    if kind == "aliasEdit" then
+        height = 56
+    elseif compact then
         height = math.max(32, padding * 2 + row.label:GetStringHeight())
     else
         height = math.max(46, padding * 2 + row.label:GetStringHeight() + 5 + row.desc:GetStringHeight())
@@ -309,7 +445,9 @@ local function RowClicked(row)
     if row.disabled or item.kind == "info" then
         return
     end
-    if item.kind == "toggle" then
+    if item.kind == "alias" then
+        ns:EditAlias(item.entry.name)
+    elseif item.kind == "toggle" then
         item.set(not item.get())
     elseif item.kind == "select" then
         UI.OpenMenu(row.dropdown, item.values(), item.get(), item.set)
@@ -333,7 +471,8 @@ local function CreateRow(parent)
     row.desc:SetSpacing(2)
 
     row:SetScript("OnEnter", function(self)
-        if not self.disabled and self.item.kind ~= "info" then
+        local kind = self.item.kind
+        if not self.disabled and kind ~= "info" and kind ~= "aliasEdit" then
             self.hover:Show()
         end
     end)
@@ -471,7 +610,7 @@ function Render()
             window.subtitle:SetText(L.ui_search_none:format(searchText))
         end
     else
-        items = pages[currentPage].items
+        items = PageItems(pages[currentPage])
     end
     RefreshHeader(false)
 
@@ -784,6 +923,9 @@ local function Build()
         DisarmReset()
         renderedKey = nil
         window.search.edit:ClearFocus()
+        if aliasEditor then
+            aliasEditor:ClearFocus()
+        end
     end)
 end
 
@@ -792,6 +934,24 @@ function ns:ToggleOptions()
         Build()
     end
     window:SetShown(not window:IsShown())
+end
+
+-- Opens the aliases page with the character in the input row, so that only
+-- the alias is left to type. Used by the context menu and the list itself.
+function ns:EditAlias(name)
+    if not window then
+        Build()
+    end
+    if not window:IsShown() then
+        window:Show()
+    end
+    if currentPage ~= "aliases" or searchText ~= "" then
+        SelectPage("aliases")
+    end
+    window.scroll:ScrollToTop()
+    if aliasEditor then
+        aliasEditor:Load(name, ns.AliasService.Get(name))
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -842,6 +1002,9 @@ ns:On("FEATURE_STATE", function()
     RequestRefresh("state")
 end)
 ns:On("LOCALE_CHANGED", function()
+    RequestRefresh("layout")
+end)
+ns:On("ALIASES_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("PROFILE_CHANGED", function()

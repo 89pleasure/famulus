@@ -34,7 +34,7 @@
 local _, ns = ...
 local L = ns.L
 
-ns.categories = { "vendor", "quests", "loot", "social", "tooltip", "interface" }
+ns.categories = { "vendor", "quests", "loot", "social", "aliases", "tooltip", "interface" }
 
 -- Master switches are ordinary options (section "categories"), so they are
 -- saved per profile and only while they differ from the default "on".

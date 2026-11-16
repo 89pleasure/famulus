@@ -35,6 +35,9 @@ local EXPECT_PRESENT = {
     "Settings.RegisterCanvasLayoutCategory",
     "MenuUtil",
     "ChatFrameUtil.AddMessageEventFilter",
+    "ChatFrameUtil.AddSenderNameFilter",
+    "Menu.ModifyMenu",
+    "UnitNameUnmodified",
     "ChatFrameUtil.InsertLink",
     "ChatFrameUtil.OpenChat",
     "C_Map.GetMapInfo",
@@ -350,6 +353,33 @@ local function CheckMap()
     end
 end
 
+-- The alias features match characters by name. Records how this client
+-- spells names, without storing anybody's name in the report.
+local function CheckNames()
+    local consts = Constants and Constants.CharacterNameSeparatorConsts
+    if consts then
+        Add("names", "separators", "ok", string.format("surname %q, realm %q",
+            Describe(consts.CHARACTERNAME_SURNAME_SEPARATOR), Describe(consts.CHARACTERNAME_REALMNAME_SEPARATOR)))
+    else
+        Add("names", "separators", "warn", "Constants.CharacterNameSeparatorConsts is missing")
+    end
+    if UnitName then
+        local name, second = UnitName("player")
+        local shape = "name " .. (ns.IsSecret(name) and "secret" or type(name))
+        if not ns.IsSecret(name) and type(name) == "string" then
+            shape = shape .. (string.find(name, "[%s%-]") and " (contains a separator)" or " (one word)")
+        end
+        shape = shape .. ", second value " .. (ns.IsSecret(second) and "secret" or type(second))
+        Add("names", "UnitName(player)", "ok", shape)
+    end
+    local menu = ns.features.aliasMenu
+    if menu and Menu and Menu.GetOpenMenuTags then
+        Add("names", "context menu", "ok", #menu.TAGS .. " menu tags hooked while the feature is on")
+    elseif menu then
+        Add("names", "context menu", "warn", "Menu.GetOpenMenuTags is missing; the menu API may differ")
+    end
+end
+
 local function CheckIdleCost()
     local active, total = ns:CountActiveFeatures()
     local memory
@@ -381,6 +411,7 @@ local CHECKS = {
     CheckChatArrows,
     CheckCamera,
     CheckMap,
+    CheckNames,
     CheckIdleCost,
 }
 

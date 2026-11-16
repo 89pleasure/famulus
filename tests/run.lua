@@ -139,9 +139,12 @@ check(type(SchnitzelDB) == "table" and type(SchnitzelDB.profile) == "table", "da
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
-check(total == 16, "16 features registered (got " .. total .. ")")
-check(active == 2, "2 features on by default (got " .. active .. ")")
-check(ns.features.mapCoords.enabled and ns.features.chatArrowKeys.enabled, "the default-on features are the harmless ones")
+check(total == 19, "19 features registered (got " .. total .. ")")
+check(active == 5, "5 features on by default (got " .. active .. ")")
+for _, feature in ipairs(ns.featureList) do
+    local harmless = feature.id == "mapCoords" or feature.id == "chatArrowKeys" or feature.category == "aliases"
+    check(feature.enabled == harmless, "only the harmless features are on by default: " .. feature.id)
+end
 check(ns:CountRegisteredEvents() == 0, "no game event is registered after login (got " .. ns:CountRegisteredEvents() .. ")")
 check(mock.cvars.autoLootDefault == "0" and mock.count("SetCVar") == 0, "a fresh install changes no game setting")
 check(lastChat():find("/sz", 1, true) ~= nil, "first login prints the hint")
@@ -416,10 +419,131 @@ check(mock.count("CancelDuel") == 1 and lastChat():find("Rival", 1, true) ~= nil
 enable("declineDuels", false)
 
 ---------------------------------------------------------------------------
+section("Aliases")
+---------------------------------------------------------------------------
+
+local Aliases = ns.AliasService
+local aliasEvents = 0
+ns:On("ALIASES_CHANGED", function()
+    aliasEvents = aliasEvents + 1
+end)
+setState({})
+check(Aliases.Count() == 0 and SchnitzelDB.aliases == nil, "a fresh install has no aliases and saves none")
+check(mock.CountSenderFilters() == 1, "the chat filter is installed while the feature is on")
+check(mock.SenderName("CHAT_MSG_SAY", "|cff3fc7ebJaina-Proudmoore|r", "Jaina-Proudmoore") == "|cff3fc7ebJaina-Proudmoore|r",
+    "without an alias a sender keeps their name")
+
+check(Aliases.Set("Jaina Proudmoore", "  Anna ") and Aliases.Count() == 1 and aliasEvents == 1, "an alias can be set and is announced")
+check(SchnitzelDB.aliases["jaina-proudmoore"].alias == "Anna" and SchnitzelDB.profile.aliases == nil,
+    "it is saved account-wide, outside the profile, without surrounding blanks")
+check(not Aliases.Set("Jaina Proudmoore", "Anna") and aliasEvents == 1, "setting the same alias again changes nothing")
+check(Aliases.Get("Jaina", "Proudmoore") == "Anna", "found by first name and surname")
+check(Aliases.Get("Jaina-Proudmoore") == "Anna" and Aliases.Get("jaina proudmoore") == "Anna", "and by the full name in any spelling")
+check(Aliases.Get("Jaina") == nil and Aliases.Get(nil) == nil and Aliases.Get("") == nil, "other names have none")
+
+check(mock.SenderName("CHAT_MSG_SAY", "|cff3fc7ebJaina-Proudmoore|r", "Jaina-Proudmoore") == "|cff3fc7ebAnna|r",
+    "chat shows the alias inside the class colour")
+check(mock.SenderName("CHAT_MSG_SAY", "Jaina-Proudmoore", "Jaina-Proudmoore") == "Anna", "and without a colour")
+check(mock.SenderName("CHAT_MSG_SAY", "Thrall", "Thrall") == "Thrall", "other senders are untouched")
+ns:SetOption("chatAliases", "style", "both")
+check(mock.SenderName("CHAT_MSG_SAY", "|cff3fc7ebJaina-Proudmoore|r", "Jaina-Proudmoore") == "|cff3fc7ebAnna (Jaina-Proudmoore)|r",
+    "the alias can be shown with the name behind it")
+ns:SetOption("chatAliases", "style", "alias")
+Ambiguate = function(name)
+    return (name:gsub("%-Proudmoore$", ""))
+end
+check(mock.SenderName("CHAT_MSG_GUILD", "|cff3fc7ebJaina|r", "Jaina-Proudmoore") == "|cff3fc7ebAnna|r",
+    "a name the chat shortened is replaced as well")
+Ambiguate = nil
+issecretvalue = function(value)
+    return value == "SECRET"
+end
+check(mock.SenderName("CHAT_MSG_SAY", "SECRET", "SECRET") == "SECRET" and Aliases.Get("SECRET") == nil, "secret names are passed through untouched")
+issecretvalue = nil
+enable("chatAliases", false)
+check(mock.CountSenderFilters() == 0, "switching off removes the chat filter")
+check(mock.SenderName("CHAT_MSG_SAY", "Jaina-Proudmoore", "Jaina-Proudmoore") == "Jaina-Proudmoore", "and names are back")
+enable("chatAliases")
+check(mock.CountSenderFilters() == 1, "switching on again installs it once")
+
+check(Aliases.Set("Thrall", "|cffff0000Bo|r|Hx|hss") and Aliases.Get("Thrall") == "cffff0000BorHxhss", "an alias cannot carry colours or links")
+check(Aliases.Set("Thrall", string.rep("ä", 40)) and #Aliases.Get("Thrall") == 48, "a long alias is cut at a whole character")
+Aliases.Set("Thrall", "Boss")
+check(Aliases.List()[1].alias == "Anna" and Aliases.List()[2].alias == "Boss" and #Aliases.List() == 2, "the list is sorted by alias")
+check(not Aliases.Set("", "x") and not Aliases.Set("  ", "x") and not Aliases.Set(nil, "x"), "an alias needs a name")
+
+-- Tooltip
+local aliasLines = {}
+GameTooltip.AddDoubleLine = function(_, left, right)
+    aliasLines[#aliasLines + 1] = left .. "=" .. right
+end
+local unitHook = TooltipDataProcessor.postCalls[1]
+check(#TooltipDataProcessor.postCalls == 1 and unitHook.dataType == Enum.TooltipDataType.Unit, "one tooltip hook for units")
+setState({ tooltipUnit = "mouseover", units = {
+    mouseover = { name = "Jaina", surname = "Proudmoore", isPlayer = true },
+    target = { name = "Thrall", isPlayer = false },
+} })
+unitHook.fn(GameTooltip, {})
+check(#aliasLines == 1 and aliasLines[1] == "Alias=Anna", "a player's tooltip gets the alias line")
+unitHook.fn(CreateFrame("GameTooltip"), {})
+check(#aliasLines == 1, "other tooltips are left alone")
+mock.state.tooltipUnit = "target"
+unitHook.fn(GameTooltip, {})
+check(#aliasLines == 1, "a creature with the same name as a player gets none")
+mock.state.tooltipUnit = "mouseover"
+enable("tooltipAliases", false)
+unitHook.fn(GameTooltip, {})
+check(#aliasLines == 1, "switched off, the tooltip hook is silent")
+enable("tooltipAliases")
+check(#TooltipDataProcessor.postCalls == 1, "switching on again does not hook twice")
+
+-- Context menu
+local function menuTexts(entries)
+    local texts = {}
+    for i, entry in ipairs(entries) do
+        texts[i] = entry.text
+    end
+    return table.concat(texts, "|")
+end
+local entries = mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Varian", surname = "Wrynn" })
+check(menuTexts(entries) == "-|Set alias", "a player without alias gets one entry: " .. menuTexts(entries))
+entries = mock.OpenMenu("MENU_UNIT_TARGET", { unit = "mouseover", name = "Jaina", surname = "Proudmoore" })
+check(menuTexts(entries) == "-|Change alias|Remove alias", "a player with alias can change or remove it: " .. menuTexts(entries))
+check(#mock.OpenMenu("MENU_UNIT_TARGET", { unit = "target", name = "Thrall" }) == 0, "creatures get no entry")
+check(#mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Someone", bnetIDAccount = 7 }) == 0, "nor do Battle.net accounts")
+check(#mock.OpenMenu("MENU_UNIT_FRIEND", {}) == 0, "nor a menu without a name")
+check(Menu.callbacks.MENU_UNIT_BN_FRIEND == nil and Menu.callbacks.MENU_UNIT_SELF == nil, "menus that are not about another character are not touched")
+mock.reset()
+entries[3].click()
+check(Aliases.Get("Jaina Proudmoore") == nil and lastChat():find("Jaina Proudmoore", 1, true) ~= nil, "removing from the menu works and is reported in one line")
+enable("aliasMenu", false)
+check(#mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Varian", surname = "Wrynn" }) == 0, "switched off, the menus stay as they are")
+enable("aliasMenu")
+
+-- The category switch stops all three; the list itself stays.
+ns:SetOption("categories", "aliases", false)
+check(mock.CountSenderFilters() == 0 and #mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Thrall" }) == 0, "the category switch stops the alias features")
+check(Aliases.Count() == 1, "but keeps the list")
+ns:SetOption("categories", "aliases", true)
+check(mock.SenderName("CHAT_MSG_SAY", "Thrall", "Thrall") == "Boss", "and everything resumes")
+
+-- Loading a saved list, including one that was edited by hand.
+SchnitzelDB.aliases = { thrall = { name = "Thrall", alias = "Boss" }, broken = "x", [5] = { name = "a", alias = "b" } }
+ns:Fire("DATABASE_READY")
+check(Aliases.Count() == 1 and Aliases.Get("Thrall") == "Boss" and SchnitzelDB.aliases.broken == nil, "a saved list is read, broken entries are dropped")
+Aliases.Set("Thrall", nil)
+check(Aliases.Count() == 0 and SchnitzelDB.aliases == nil, "an empty list is not saved")
+check(ns:CountRegisteredEvents() == 0 and mock.ActiveTimers() == 0, "the alias features need no game event and no timer")
+GameTooltip.AddDoubleLine = nil
+setState({})
+
+---------------------------------------------------------------------------
 section("Tooltips")
 ---------------------------------------------------------------------------
 
-check(#TooltipDataProcessor.postCalls == 0, "no tooltip hook is installed while the feature is off")
+-- The alias line (on by default) installed the first hook at login.
+check(#TooltipDataProcessor.postCalls == 1, "no item or spell hook is installed while the feature is off")
+table.remove(TooltipDataProcessor.postCalls, 1)
 local lines = 0
 GameTooltip.AddDoubleLine = function()
     lines = lines + 1
@@ -768,7 +892,7 @@ window.scroll:SetVerticalScroll(0)
 for _, language in ipairs({ "enUS", "deDE" }) do
     ns:SetOption("general", "language", language)
     mock.Advance(0.1)
-    for _, page in ipairs({ "vendor", "quests", "loot", "social", "tooltip", "interface", "general", "about" }) do
+    for _, page in ipairs({ "vendor", "quests", "loot", "social", "aliases", "tooltip", "interface", "general", "about" }) do
         local button = navButton(ns.L["cat_" .. page])
         check(button ~= nil, "navigation entry for " .. page .. " in " .. language)
         if button then
@@ -818,6 +942,68 @@ check(not ns.features.autoRepair.enabled and not ns.features.sellJunk.enabled, "
 check(window.resetButton.disabled and window.resetButton.label:GetText() == "Reset page", "after which reset is greyed out")
 check(ns:IsCategoryEnabled("vendor"), "including the category's master switch")
 
+-- Aliases page: three features, the input row, then the list.
+mock.Click(navButton("Aliases"))
+local aliasRows = visibleRows()
+check(#aliasRows == 6, "the aliases page shows its features, the input row and an empty hint (got " .. #aliasRows .. ")")
+local editor = aliasRows[5].editor
+check(editor ~= nil and editor:IsVisible() and aliasRows[6].item.kind == "info", "the input row comes before the hint")
+check(editor.name.placeholder:GetText() == "Character name" and editor.save.label:GetText() == "Save", "the input row is labelled")
+check(navButton("Aliases").count:GetText() == "3/3" and window.master:IsShown(), "the page is a category with a master switch")
+mock.Click(editor.save)
+check(ns.AliasService.Count() == 0 and mock.focus == editor.name.edit, "saving without a name asks for the name")
+editor.name.edit:SetText("Jaina Proudmoore")
+editor.name.edit.scripts.OnEnterPressed(editor.name.edit)
+check(mock.focus == editor.alias.edit, "Enter in the name field moves on to the alias")
+editor.alias.edit.scripts.OnEnterPressed(editor.alias.edit)
+check(ns.AliasService.Count() == 0, "saving without an alias does nothing")
+editor.alias.edit:SetText("Anna")
+editor.alias.edit.scripts.OnEnterPressed(editor.alias.edit)
+mock.Advance(0.1)
+check(ns.AliasService.Get("Jaina Proudmoore") == "Anna", "Enter in the alias field saves")
+check(editor.name.edit:GetText() == "" and editor.alias.edit:GetText() == "", "and empties the input row")
+aliasRows = visibleRows()
+check(#aliasRows == 6 and aliasRows[6].item.kind == "alias" and aliasRows[6].label:GetText() == "Anna" and aliasRows[6].desc:GetText() == "Jaina Proudmoore",
+    "the alias appears in the list with the character below it")
+check(window.resetButton.disabled, "a stored alias is not a changed setting")
+ns.AliasService.Set("Thrall", "Boss")
+mock.Advance(0.1)
+check(#visibleRows() == 7, "an alias set elsewhere shows up while the window is open")
+mock.Click(aliasRows[6])
+check(editor.name.edit:GetText() == "Jaina Proudmoore" and editor.alias.edit:GetText() == "Anna" and mock.focus == editor.alias.edit,
+    "clicking an alias loads it into the input row")
+editor.alias.edit:SetText("Annie")
+mock.Click(editor.save)
+mock.Advance(0.1)
+check(ns.AliasService.Get("Jaina Proudmoore") == "Annie" and ns.AliasService.Count() == 2, "saving then changes that alias")
+window.search.edit:SetText("annie")
+check(#visibleRows() == 1 and visibleRows()[1].item.kind == "alias", "search finds an alias")
+window.search.edit:SetText("proudm")
+check(#visibleRows() == 1, "and a character name")
+mock.Click(visibleRows()[1])
+check(window.search.edit:GetText() == "" and window.title:GetText() == "Aliases" and editor.alias.edit:GetText() == "Annie",
+    "clicking the hit opens it on the aliases page")
+mock.Click(visibleRows()[6].remove)
+mock.Advance(0.1)
+check(ns.AliasService.Get("Jaina Proudmoore") == nil and #visibleRows() == 6, "the remove button deletes the alias")
+editor:Load("", "")
+-- From the context menu: the window opens on the page with the name filled in.
+mock.Click(navButton("Vendors"))
+SlashCmdList.SCHNITZEL("")
+check(not window:IsShown(), "window closed for the menu test")
+mock.OpenMenu("MENU_UNIT_PLAYER", { name = "Varian", surname = "Wrynn" })[2].click()
+mock.Advance(0.3)
+check(window:IsShown() and window.title:GetText() == "Aliases", "\"Set alias\" in a context menu opens the aliases page")
+check(editor.name.edit:GetText() == "Varian Wrynn" and editor.alias.edit:GetText() == "" and mock.focus == editor.alias.edit,
+    "with the character filled in and the cursor in the alias field")
+mock.OpenMenu("MENU_UNIT_PLAYER", { name = "Thrall" })[2].click()
+check(editor.name.edit:GetText() == "Thrall" and editor.alias.edit:GetText() == "Boss", "\"Change alias\" brings the current alias along")
+editor:Load("", "")
+editor:ClearFocus()
+ns.AliasService.Set("Thrall", nil)
+mock.Advance(0.1)
+check(SchnitzelDB.aliases == nil, "the tests leave no alias behind")
+
 -- Dropdown menu.
 mock.Click(navButton("Settings"))
 local generalRows = visibleRows()
@@ -862,7 +1048,7 @@ SlashCmdList.SCHNITZEL("")
 check(not window:IsShown(), "/sz closes the window again")
 mock.reset()
 SlashCmdList.SCHNITZEL("status")
-check(lastChat():find("2 of 16", 1, true) ~= nil, "/sz status reports: " .. lastChat())
+check(lastChat():find("5 of 19", 1, true) ~= nil, "/sz status reports: " .. lastChat())
 
 ---------------------------------------------------------------------------
 section("Self-test")

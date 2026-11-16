@@ -31,6 +31,10 @@ Modules\Loot\ConfirmBoP.lua
 Modules\Loot\EasyDelete.lua
 Modules\Social\AcceptInvites.lua
 Modules\Social\DeclineDuels.lua
+Modules\Aliases\AliasService.lua
+Modules\Aliases\ChatAliases.lua
+Modules\Aliases\TooltipAliases.lua
+Modules\Aliases\AliasMenu.lua
 Modules\Tooltip\TooltipIDs.lua
 Modules\Tooltip\TooltipCursor.lua
 Modules\Interface\MapCoords.lua

@@ -82,7 +82,10 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   - Koordinatenfeld: Die Breite schwankte mit den Ziffern. Jetzt feste Spalten (Beschriftung,
     Wert); der Wertplatz ist so breit wie „00.0, 00.0“ in der breitesten Ziffer der Schrift,
     neu vermessen nur beim Aufbau und Sprachwechsel. Im Spiel bestätigt.
-- **Noch nicht im Spiel geprüft:** das Verhalten der Automatiken (reparieren, verkaufen, Quests,
+- **Aliase (2026-11-16, nur gegen den Mock geprüft, noch nicht im Spiel):** Kategorie `aliases` mit
+  drei Features und der Alias-Liste, siehe „Aliase“ unten.
+- **Noch nicht im Spiel geprüft:** die Aliase (Namensformat im Chat, Kontextmenü, Tooltip, Eingabezeile
+  im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
   Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
   Taint).
 
@@ -185,6 +188,43 @@ Entscheidungen des Auftraggebers zum Fenster (2026-11-16):
 - Die Fenstergröße ist auf der Seite „Einstellungen“ wählbar (`general.windowScale`, 80 bis 140 %).
 - Das Theming ist vorläufig; ein richtiges Theme folgt später.
 
+## Aliase
+
+Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
+(`github.com/Jods-GH/CustomNames`, unterstützt Forever). Entscheidungen des Assistenten vom
+2026-11-16, vom Auftraggeber noch nicht bestätigt:
+
+- **Eigene Kategorie `aliases`** mit Hauptschalter. Die Seite zeigt die drei Features, darunter eine
+  Eingabezeile (Charaktername, Alias, „Speichern“) und je Alias eine Zeile (Klick lädt sie in die
+  Eingabezeile, das Kreuz entfernt sie). Die Suche findet Aliase und Charakternamen.
+- **Daten, keine Einstellung:** `SchnitzelDB.aliases = { [schlüssel] = { name, alias } }`, accountweit,
+  außerhalb der Profile; „Seite zurücksetzen“ und Profilwechsel lassen die Liste in Ruhe. Zugriff nur
+  über `ns.AliasService` (`Modules/Aliases/AliasService.lua`); Änderungen melden sich mit dem Signal
+  `ALIASES_CHANGED`.
+- **Schlüssel:** voller Charaktername, klein geschrieben, Leerzeichen und Bindestriche zu „-“. Forever
+  hat keine Realms, sondern Vor- und Nachname (`UnitName` liefert `name, surname`); der Client
+  schreibt denselben Namen je nach Stelle mit Leerzeichen oder Bindestrich. Welche Schreibweise der
+  Chat liefert, ist unbestätigt, deshalb die Normalisierung; der Selbsttest (Gruppe `names`) hält
+  Trennzeichen und Form von `UnitName("player")` fest, ohne einen Namen zu speichern.
+- **Alias ist reiner Text:** `|` wird entfernt (keine Farben, Texturen, Links), höchstens 48 Bytes.
+- **`chatAliases`:** `ChatFrameUtil.AddSenderNameFilter` ändert nur den Text in den Klammern; das
+  Linkziel bleibt der echte Name. Der Filter lässt sich entfernen (`RemoveSenderNameFilter`), der
+  Client überspringt ihn bei secret Namen selbst. Nicht `AddMessageEventFilter` (würde auch das
+  Linkziel ändern) und kein Hook auf `AddMessage` (CustomNames ersetzt dort die Methode). Schon
+  gedruckte Zeilen ändern sich nicht. Option `style`: „Alias“ oder „Alias (Name)“.
+- **`tooltipAliases`:** eigene Zeile über `TooltipDataProcessor` (Typ `Unit`), nur für Spieler; die
+  Namenszeile des Spiels wird nicht überschrieben.
+- **`aliasMenu`:** `Menu.ModifyMenu` auf die Spieler-Menüs (`aliasMenu.TAGS`), fügt „Alias
+  festlegen/ändern/entfernen“ an. „Festlegen“ öffnet das Fenster auf der Seite mit eingetragenem Namen
+  (`ns:EditAlias`); kein eigener Dialog und kein Eintrag in `StaticPopupDialogs`. Im Forever-Client
+  trägt `contextData` `name` und `surname`, kein `server`.
+- **Alle drei sind standardmäßig an:** Sie handeln nicht im Namen des Spielers und tun ohne Alias
+  nichts; sie brauchen kein Spielereignis und keinen Timer.
+- **Bewusst nicht enthalten:** Aliase auf Blizzards Unitframes, Raidframes und Namensplaketten
+  (CustomNames überschreibt dort `SetText` auf Blizzards FontStrings, Taint-Risiko, Namen im Kampf
+  secret), Gildenliste, Battle.net-Verknüpfung (ein Alias für alle Charaktere eines Accounts),
+  Import/Export, Slash-Befehl zum Eintragen.
+
 ## Regeln für neuen Code
 
 Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
@@ -251,6 +291,7 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
 | Gossip mit nur einer Option überspringen | Risiko von Fehlauswahlen; erst mit Test im Spiel |
 | Blizzard-Fenster verschieben, Minikarten-Symbole einsammeln | Bei den Vorbildern Hauptquelle für Taint und Addon-Konflikte |
 | Alles rund um das Kampflog | Für Addons nicht nutzbar |
+| Aliase auf Unitframes, Raidframes, Namensplaketten | Text auf Blizzards FontStrings zu überschreiben birgt Taint; Namen sind im Kampf oft secret. Siehe „Aliase“ |
 | Eigene Plunderliste, Post-Helfer, „Alles lernen“ beim Lehrer, Haltbarkeitswarnung | Sinnvolle Kandidaten, in 0.1.0 aus Umfangsgründen nicht enthalten |
 
 ## Arbeitsablauf
@@ -274,7 +315,7 @@ rm -f dist/Schnitzel-*.zip && zip -rq dist/Schnitzel-0.1.0.zip Schnitzel -x '*.D
 - Bei einer neuen Version: `## Version` in `Schnitzel/Schnitzel.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
-  dort fehlt. Er zählt außerdem die Features (`total == 16`); die Zahl bei einem neuen Feature
+  dort fehlt. Er zählt außerdem die Features (`total == 19`); die Zahl bei einem neuen Feature
   mit anpassen.
 - Repository: `github.com/89pleasure/schnitzel` (privat), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.

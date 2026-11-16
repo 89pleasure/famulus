@@ -46,7 +46,7 @@ for name in
     StartMoving StopMovingOrSizing SetColorTexture SetTexture SetTexCoord
     SetVertexColor SetFont SetShadowOffset SetShadowColor SetTextColor
     SetJustifyH SetJustifyV SetWordWrap SetSpacing SetAutoFocus SetMaxLetters
-    SetFocus ClearFocus EnableMouseWheel SetScrollChild AddMessage AddLine
+    EnableMouseWheel SetScrollChild AddMessage AddLine
     AddDoubleLine SetOwner SetAltArrowKeyMode TryDisplayMessage
     SetGradient SetClampRectInsets
     ]],
@@ -206,6 +206,18 @@ function Widget:GetVerticalScroll()
 end
 function Widget:GetNormalizedCursorPosition()
     return 0.25, 0.75
+end
+function Widget:SetFocus()
+    mock.focus = self
+end
+function Widget:ClearFocus()
+    if mock.focus == self then
+        mock.focus = nil
+    end
+end
+function Widget:GetUnit()
+    local unit = mock.state.tooltipUnit
+    return unit and mock.state.units[unit].name, unit
 end
 function Widget:GetEditBox()
     return self.editBoxWidget
@@ -529,7 +541,7 @@ end
 -- Bags
 Enum = {
     ItemQuality = { Poor = 0, Common = 1 },
-    TooltipDataType = { Item = 0, Spell = 1 },
+    TooltipDataType = { Item = 0, Spell = 1, Unit = 2 },
 }
 C_Container = {
     GetContainerNumSlots = function(bag)
@@ -694,8 +706,77 @@ C_Map = {
     end,
 }
 
+-- Units: mock.state.units = { target = { name = "Jaina", surname = "Proudmoore", isPlayer = true } }
+function UnitName(unit)
+    local info = mock.state.units and mock.state.units[unit]
+    if info then
+        return info.name, info.surname
+    end
+end
+UnitNameUnmodified = UnitName
+function UnitIsPlayer(unit)
+    local info = mock.state.units and mock.state.units[unit]
+    return info ~= nil and info.isPlayer == true
+end
+Constants = {
+    CharacterNameSeparatorConsts = { CHARACTERNAME_SURNAME_SEPARATOR = " ", CHARACTERNAME_REALMNAME_SEPARATOR = "-" },
+}
+
+-- Context menus. mock.OpenMenu returns the entries addons added, as
+-- { text = ..., click = fn } with text "-" for a divider.
+Menu = { callbacks = {} }
+function Menu.ModifyMenu(tag, callback)
+    Menu.callbacks[tag] = Menu.callbacks[tag] or {}
+    table.insert(Menu.callbacks[tag], callback)
+end
+function Menu.GetOpenMenuTags()
+    return {}
+end
+function mock.OpenMenu(tag, contextData)
+    local entries = {}
+    local root = {
+        contextData = contextData,
+        CreateDivider = function()
+            entries[#entries + 1] = { text = "-" }
+        end,
+        CreateButton = function(_, text, click)
+            entries[#entries + 1] = { text = text, click = click }
+        end,
+    }
+    for _, callback in ipairs(Menu.callbacks[tag] or {}) do
+        callback(nil, root, contextData)
+    end
+    return entries
+end
+
+-- Chat. mock.SenderName runs the sender name filters the way the chat frame
+-- does before it prints "[Name]".
+local senderFilters = {}
+function mock.SenderName(event, decorated, sender)
+    for _, filter in ipairs(senderFilters) do
+        local changed = filter(event, decorated, "text", sender)
+        if changed ~= nil then
+            decorated = changed
+        end
+    end
+    return decorated
+end
+function mock.CountSenderFilters()
+    return #senderFilters
+end
+
 -- Chat input. InsertLink only succeeds while a chat input is open.
 ChatFrameUtil = {
+    AddSenderNameFilter = function(callback)
+        senderFilters[#senderFilters + 1] = callback
+    end,
+    RemoveSenderNameFilter = function(callback)
+        for i = #senderFilters, 1, -1 do
+            if senderFilters[i] == callback then
+                table.remove(senderFilters, i)
+            end
+        end
+    end,
     InsertLink = function(text)
         record("ChatFrameUtil.InsertLink", text)
         return mock.state.chatOpen or false

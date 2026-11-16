@@ -426,6 +426,78 @@ function UI.SearchBox(parent, onChange)
 end
 
 ---------------------------------------------------------------------------
+-- Text input: a bordered field with a placeholder. The owner sets
+-- input.onEnter and input.onTab; Escape gives the focus back.
+---------------------------------------------------------------------------
+
+function UI.Input(parent, maxLetters)
+    local box = CreateFrame("Frame", nil, parent)
+    box:SetHeight(28)
+    UI.Fill(box, "field")
+    local border = UI.Border(box)
+
+    local edit = CreateFrame("EditBox", nil, box)
+    edit:SetPoint("TOPLEFT", 10, 0)
+    edit:SetPoint("BOTTOMRIGHT", -10, 0)
+    edit:SetAutoFocus(false)
+    edit:SetFont(UI.font, 12, "")
+    edit:SetTextColor(UI.Color("text"))
+    edit:SetMaxLetters(maxLetters or 40)
+    box.edit = edit
+
+    local placeholder = UI.Text(box, 12, "textMuted")
+    placeholder:SetPoint("LEFT", 10, 0)
+    box.placeholder = placeholder
+
+    edit:SetScript("OnTextChanged", function(self)
+        placeholder:SetShown((self:GetText() or "") == "")
+    end)
+    edit:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+    end)
+    edit:SetScript("OnEnterPressed", function()
+        if box.onEnter then
+            box.onEnter()
+        end
+    end)
+    edit:SetScript("OnTabPressed", function()
+        if box.onTab then
+            box.onTab()
+        end
+    end)
+    edit:SetScript("OnEditFocusGained", function()
+        border:SetColor("accent")
+    end)
+    edit:SetScript("OnEditFocusLost", function()
+        border:SetColor("border")
+    end)
+    box:SetScript("OnMouseDown", function()
+        edit:SetFocus()
+    end)
+    return box
+end
+
+-- Small square button showing one of the media icons.
+function UI.IconButton(parent, media, onClick)
+    local button = CreateFrame("Button", nil, parent)
+    button:SetSize(24, 24)
+    local hover = UI.Fill(button, "hover")
+    hover:Hide()
+    local icon = UI.Icon(button, media, 12, "textMuted")
+    icon:SetPoint("CENTER")
+    button:SetScript("OnEnter", function()
+        hover:Show()
+        icon:SetVertexColor(UI.Color("text"))
+    end)
+    button:SetScript("OnLeave", function()
+        hover:Hide()
+        icon:SetVertexColor(UI.Color("textMuted"))
+    end)
+    button:SetScript("OnClick", onClick)
+    return button
+end
+
+---------------------------------------------------------------------------
 -- Scroll area with a slim position indicator
 ---------------------------------------------------------------------------
 
