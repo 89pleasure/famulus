@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the fonts Schnitzel ships (Schnitzel/Media/Fonts/*.ttf) from Inter.
+"""Builds the fonts Famulus ships (Famulus/Media/Fonts/*.ttf) from Inter.
 
 Inter (https://rsms.me/inter, SIL Open Font License 1.1) is cut down to the
 scripts the addon can show: Latin, Greek and Cyrillic plus punctuation. That
@@ -17,7 +17,7 @@ import sys
 
 from fontTools import subset
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Schnitzel", "Media", "Fonts")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Famulus", "Media", "Fonts")
 
 WEIGHTS = ["Regular", "Medium", "SemiBold"]
 

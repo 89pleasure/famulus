@@ -1276,11 +1276,11 @@ local function BuildSidebar()
     letter:SetPoint("CENTER", 0, 0)
     letter:SetJustifyH("CENTER")
     letter:SetJustifyV("MIDDLE")
-    letter:SetText("S")
+    letter:SetText("F")
 
     local wordmark = UI.Text(sidebar, 16, "text", "semibold")
     wordmark:SetPoint("TOPLEFT", logo, "TOPRIGHT", 11, -1)
-    wordmark:SetText("Schnitzel")
+    wordmark:SetText("Famulus")
 
     window.tagline = UI.Text(sidebar, 11, "textMuted")
     window.tagline:SetPoint("TOPLEFT", wordmark, "BOTTOMLEFT", 0, -3)
@@ -1388,7 +1388,7 @@ local function Build()
     BuildPages()
     currentPage = pageOrder[1]
 
-    window = CreateFrame("Frame", "SchnitzelOptionsFrame", UIParent)
+    window = CreateFrame("Frame", "FamulusOptionsFrame", UIParent)
     window:SetSize(WIDTH, HEIGHT)
     window:SetFrameStrata("HIGH")
     window:SetToplevel(true)
@@ -1422,7 +1422,7 @@ local function Build()
         self:StopMovingOrSizing()
         SavePosition()
     end)
-    table.insert(UISpecialFrames, "SchnitzelOptionsFrame") -- Escape closes it
+    table.insert(UISpecialFrames, "FamulusOptionsFrame") -- Escape closes it
 
     BuildSidebar()
     BuildHeader()
@@ -1555,7 +1555,7 @@ ns:On("LOGIN", function()
 
     local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 16, -16)
-    title:SetText("Schnitzel")
+    title:SetText("Famulus")
 
     local button = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     button:SetSize(240, 26)
@@ -1572,7 +1572,7 @@ ns:On("LOGIN", function()
         button:SetText(L.ui_open_settings)
     end)
 
-    local ok, category = pcall(Settings.RegisterCanvasLayoutCategory, panel, "Schnitzel")
+    local ok, category = pcall(Settings.RegisterCanvasLayoutCategory, panel, "Famulus")
     if ok and category then
         pcall(Settings.RegisterAddOnCategory, category)
     end

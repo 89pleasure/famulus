@@ -1,13 +1,13 @@
-# Schnitzel – Projektwissen für KI-Assistenten
+# Famulus – Projektwissen für KI-Assistenten
 
-Schnitzel ist ein Quality-of-Life-Addon für **World of Warcraft: Forever**. Diese Datei hält fest,
+Famulus ist ein Quality-of-Life-Addon für **World of Warcraft: Forever**. Diese Datei hält fest,
 was der Auftraggeber will, was entschieden wurde und was man über den Forever-Client wissen muss.
 Stand: 2026-11-18, Version 0.1.0.
 
 ## Vorgaben des Auftraggebers
 
 Der Auftraggeber spielt WoW Forever und hat drei Sammel-Addons ausprobiert, die ihm gefallen:
-**OneForAll**, **FlareUI** und **Polestar**. Schnitzel soll sich an ihnen orientieren und sich auf
+**OneForAll**, **FlareUI** und **Polestar**. Famulus soll sich an ihnen orientieren und sich auf
 Folgendes konzentrieren und beschränken:
 
 1. **Modernes, übersichtliches Layout.** Polestar gefällt ihm bisher am besten.
@@ -17,7 +17,7 @@ Folgendes konzentrieren und beschränken:
 4. **Performance-optimiert.**
 5. **Mehrsprachig.** Englisch und Deutsch reichen vorerst.
 
-**Veröffentlichung:** Schnitzel soll später veröffentlicht werden (Stand 2026-11-16, Zeitpunkt und
+**Veröffentlichung:** Famulus soll später veröffentlicht werden (Stand 2026-11-16, Zeitpunkt und
 Plattform offen). Vorerst nicht: Feature-Set und Design sind noch lange nicht fertig und haben
 Vorrang vor Release-Arbeit und der Testrunde der Automatiken. Entscheidungen deshalb so treffen, dass sie für fremde Spieler taugen: saubere
 Versionierung, keine Annahmen über die eigene Addon-Sammlung, Verhalten neben anderen Addons im Blick.
@@ -56,7 +56,7 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
     Fokus neu (`EventRegistry`-Callback `ChatFrame.OnEditBoxFocusGained`); der Selbsttest prüft
     den Modus aller Chatfelder. Danach bewegte sich der Cursor (bestätigt), aber Hoch/Runter holte
     keine gesendeten Nachrichten: Der eingebaute Verlauf des Clients reagiert in Forever nicht
-    (OneForAll vermerkt dasselbe, FlareUI baut ihn ebenfalls nach). Schnitzel führt deshalb eine
+    (OneForAll vermerkt dasselbe, FlareUI baut ihn ebenfalls nach). Famulus führt deshalb eine
     eigene Liste nach FlareUIs Muster: Zeile beim Enter (`OnKeyDown`-Hook) und bei
     `ChatFrame.OnEditBoxPreSendText` merken, mit Ziel als Präfix (`/w Name …`, `/2 …`) statt
     Attribute zu setzen; sichere Befehle (`IsSecureCmd`) nie, weil sie aus Addon-Code blockiert
@@ -69,7 +69,7 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
     spiegelt der Schalter jetzt `autoLootDefault` wie bei OneForAll: an setzt „1“, aus setzt „0“,
     und Änderungen in Blizzards Menü übernimmt der Schalter sofort, ohne zu schreiben. Daraus
     wurde der allgemeine Baustein `mirror` (siehe „Gespiegelte Spieloptionen“ unten). Der Kategorie-Hauptschalter lässt die Spieloption unberührt. Die Idee,
-    Schnitzels Fenster und Blizzards Spielmenü sich gegenseitig schließen zu lassen, wurde
+    Famuluss Fenster und Blizzards Spielmenü sich gegenseitig schließen zu lassen, wurde
     verworfen: Blizzards Panels aus Addon-Code zu schließen birgt Taint-Risiko, und der Live-Abgleich
     macht es unnötig. Im Spiel bestätigt: Spiegeln in beide Richtungen mit dem `mirror`-Baustein.
   - Klick auf das Koordinatenfeld (`mapCoords.clickToChat`): Bei offener, leerer Chat-Eingabe mit
@@ -86,11 +86,20 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   drei Features und der Alias-Liste, siehe „Aliase“ unten.
 - **Aliase im Spiel (2026-11-18):** Der Alias erscheint im normalen Chat und in Guildy (bestätigt).
 - **Neues Fenster (2026-11-18, nur gegen den Mock geprüft, noch nicht im Spiel):** siehe „Das
-  Fenster“ unten. Offen im Spiel: ob die Inter-Schriften laden (`/sz test`, Gruppe `media`, Prüfungen
+  Fenster“ unten. Offen im Spiel: ob die Inter-Schriften laden (`/fam test`, Gruppe `media`, Prüfungen
   `font …`), ob runde Ecken, Schatten und Haarlinien sauber aussehen, das Umschalten hell/dunkel und
   der Farbwelten, die gleitende Reiter-Markierung, Verläufe und Glüheffekte.
-- **„Schnitzel“ ist ein Arbeitstitel** (Auftraggeber, 2026-11-18); der Name ändert sich noch. Nichts
-  am Design oder an Texten aus dem Namen ableiten.
+- **Name (2026-11-19):** Das Addon heißt **Famulus** (lateinisch: Gehilfe eines Gelehrten oder
+  Magiers); „Schnitzel“ war der Arbeitstitel. Verworfen, weil auf CurseForge schon für WoW Forever
+  vergeben: „Wisp“ (ForeverWisp, dazu Wisp-Figuren in Wishwell und Sparky), „Ignis“
+  (Rollenspiel-Addon), „Lantern“ (Lantern – QoL Core). Für „Famulus“ fand eine Websuche kein
+  gleichnamiges Addon; vor der Veröffentlichung direkt auf CurseForge und Wago prüfen. Umbenannt
+  sind Ordner, `.toc`, gespeicherte Variablen (`FamulusDB`, `FamulusCharDB`), Frame-Namen und die
+  Befehle (`/fam`, `/famulus`) und das GitHub-Repo (`89pleasure/famulus`). Noch beim alten Namen: der
+  lokale Ordner, `dist/Schnitzel-0.1.0.zip` (veraltet) und das „S“ in `logo.tga`
+  (`tools/make_media.py` zeichnet noch ein S; ein richtiges Logo steht aus). Auf dem Mac muss der
+  Symlink im Addon-Ordner neu angelegt werden (`Famulus` statt `Schnitzel`), und die Einstellungen
+  aus `SavedVariables/Schnitzel.lua` gehen nicht von selbst über.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
   Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
   Taint).
@@ -98,17 +107,17 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 ## Test im Spiel
 
 WoW Forever ist auf dem Entwicklungsrechner installiert: `/Applications/World of Warcraft/_forever_`.
-`Interface/AddOns/Schnitzel` ist dort ein Symlink auf den Ordner `Schnitzel/` dieses Repos, jede
+`Interface/AddOns/Famulus` ist dort ein Symlink auf den Ordner `Famulus/` dieses Repos, jede
 Änderung ist also nach `/reload` im Spiel. Auf dem Windows-Rechner (seit 2026-11-18) liegt das Spiel
 unter `D:\Games\World of Warcraft\_forever_`, das Repo unter `E:\Develop\wow\schnitzel`;
-`Interface\AddOns\Schnitzel` ist dort eine Verzeichnisverknüpfung (Junction) auf `Schnitzel\`.
+`Interface\AddOns\Famulus` ist dort eine Verzeichnisverknüpfung (Junction) auf `Famulus\`.
 
-- `/sz test` prüft gegen den echten Client: benötigte API je Feature, die oben genannten unsicheren
+- `/fam test` prüft gegen den echten Client: benötigte API je Feature, die oben genannten unsicheren
   Stellen (Texturen, Kamerazoom, Popup-Namen, Karte, Fehlertext-Globals) und die Annahmen aus
-  „WoW Forever: was man wissen muss“. Der Bericht landet in `SchnitzelDB.selfTest`.
-- `/sz dev` schaltet den Entwicklermodus um: Der Selbsttest läuft dann drei Sekunden nach jedem
+  „WoW Forever: was man wissen muss“. Der Bericht landet in `FamulusDB.selfTest`.
+- `/fam dev` schaltet den Entwicklermodus um: Der Selbsttest läuft dann drei Sekunden nach jedem
   Login, und blockierte Aktionen (`ADDON_ACTION_BLOCKED`/`_FORBIDDEN`) sowie `LUA_WARNING` des Addons
-  werden in `SchnitzelDB.devLog` gesammelt. Standard ist aus; dann kostet das nichts.
+  werden in `FamulusDB.devLog` gesammelt. Standard ist aus; dann kostet das nichts.
 - Das Spiel setzt beim Start alle Dateien im Addon-Ordner auf Modus 777, durch den Symlink also
   auch im Repo. Deshalb ist hier lokal `git config core.fileMode false` gesetzt; nach einem neuen
   Clone wieder setzen, sonst erscheinen alle Dateien als geändert.
@@ -161,7 +170,7 @@ Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
 
 ## Was aus den Vorbildern gelernt wurde
 
-| Schwachstelle der Vorbilder | Regel in Schnitzel |
+| Schwachstelle der Vorbilder | Regel in Famulus |
 |---|---|
 | Events dauerhaft registriert, Option erst im Handler geprüft (OneForAll: ~38 Events) | Ein Feature registriert Events erst in `OnEnable` |
 | Ungedrosselte `OnUpdate`-Handler | Im Leerlauf läuft nichts pro Frame |
@@ -255,7 +264,7 @@ Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
   2026-11-18, siehe „Das Fenster“). Reiter „Namen“: Eingabezeile (Charaktername, Alias,
   „Speichern“) und je Alias eine Zeile (Klick lädt sie in die Eingabezeile, das Kreuz entfernt
   sie); Reiter „Anzeige“: die Features. Die Suche findet Aliase und Charakternamen.
-- **Daten, keine Einstellung:** `SchnitzelDB.aliases = { [schlüssel] = { name, alias } }`, accountweit,
+- **Daten, keine Einstellung:** `FamulusDB.aliases = { [schlüssel] = { name, alias } }`, accountweit,
   außerhalb der Profile; „Zurücksetzen“ und Profilwechsel lassen die Liste in Ruhe. Zugriff nur
   über `ns.AliasService` (`Modules/Aliases/AliasService.lua`); Änderungen melden sich mit dem Signal
   `ALIASES_CHANGED`.
@@ -279,7 +288,7 @@ Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
 - **Alle Alias-Features sind standardmäßig an:** Sie handeln nicht im Namen des Spielers und tun ohne Alias
   nichts; sie brauchen kein Spielereignis und keinen Timer.
 - **Andere Addons (Entscheidung des Auftraggebers, 2026-11-18):** gezielt unterstützen, keine
-  öffentliche Schnittstelle (Schnitzel ist zu unbekannt, als dass andere sie einbinden würden).
+  öffentliche Schnittstelle (Famulus ist zu unbekannt, als dass andere sie einbinden würden).
   Je Anbindung ein Feature `Modules/Aliases/<Addon>Aliases.lua` mit `addon = "<Ordnername>"`: Ohne
   das Addon bleibt es aus und fehlt im Fenster; `## OptionalDeps` in der `.toc` lädt das Addon
   zuerst. Nur über dessen offizielle Erweiterungspunkte, nichts ersetzen. Weitere stehen noch nicht
@@ -292,7 +301,7 @@ Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
   `UnregisterNameFormatter`, `Refresh`; Guildy fragt den Formatter in `W.ClassName`, Links behalten
   den echten Namen. Das Feature meldet dort einen Formatter an (Option `style` wie im Chat) und ruft
   bei `ALIASES_CHANGED` `Refresh`. Entscheidung des Auftraggebers (2026-11-18): Der PR wird erst
-  eingereicht, wenn Schnitzel veröffentlicht werden soll; bis dahin wird mit dem Fork gearbeitet.
+  eingereicht, wenn Famulus veröffentlicht werden soll; bis dahin wird mit dem Fork gearbeitet.
   Das installierte Guildy im Spielordner ist ein Klon des Branches (Remotes `fork` und `upstream`).
   Aktuell halten: dort `git fetch upstream && git rebase upstream/main`, Tests (`luajit
   tests/run.lua`), dann `git push --force-with-lease fork name-formatter-api`. Mit dem normalen
@@ -349,9 +358,9 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
 - **Sicherheitsregeln der Quest-Automatik:** nie eine Belohnung wählen, nie wiederholbare Quests,
   nie Quests, die Gold kosten, nie Quests, die PvP aktivieren.
 - **Chat:** Rückmeldungen über `ns:Notify` (abschaltbar), höchstens eine Zeile je Aktion.
-- **Globale Namen:** nur `SchnitzelDB`, `SchnitzelCharDB`, `SLASH_SCHNITZEL1/2`,
-  `Schnitzel_OnAddonCompartmentClick` sowie die benannten Frames `SchnitzelOptionsFrame` und
-  `SchnitzelMinimapButton`.
+- **Globale Namen:** nur `FamulusDB`, `FamulusCharDB`, `SLASH_FAMULUS1/2`,
+  `Famulus_OnAddonCompartmentClick` sowie die benannten Frames `FamulusOptionsFrame` und
+  `FamulusMinimapButton`.
 - **Kosten im Leerlauf**, vom Test festgeschrieben: Laden erzeugt zwei Frames; nach dem Login mit
   Standardwerten ist kein Spielereignis registriert, kein `OnUpdate`, kein Timer.
 - **Texte:** Jeder Schlüssel in `Locales/enUS.lua` **und** `Locales/deDE.lua`, mit denselben
@@ -395,15 +404,15 @@ python3 tools/make_fonts.py <Inter-Release>/extras/ttf   # braucht fontTools
 ```
 
 ```bash
-rm -f dist/Schnitzel-*.zip && zip -rq dist/Schnitzel-0.1.0.zip Schnitzel -x '*.DS_Store'
+rm -f dist/Famulus-*.zip && zip -rq dist/Famulus-0.1.0.zip Famulus -x '*.DS_Store'
 ```
 
-- Bei einer neuen Version: `## Version` in `Schnitzel/Schnitzel.toc`, den Zip-Namen und die
+- Bei einer neuen Version: `## Version` in `Famulus/Famulus.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
   dort fehlt. Er zählt außerdem die Features (`total == 20`); die Zahl bei einem neuen Feature
   mit anpassen.
-- Repository: `github.com/89pleasure/schnitzel` (privat), Branch `main`. Commits als
+- Repository: `github.com/89pleasure/famulus` (privat; bis 2026-11-19 `schnitzel`), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.
 - Der Auftraggeber tritt allein auf: keine `Co-Authored-By: Claude …`-Zeile in Commits und kein
   „Generated with Claude Code“ o. Ä. in PRs, Issues oder Kommentaren, auch nicht bei Beiträgen zu

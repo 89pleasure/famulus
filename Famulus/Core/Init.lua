@@ -1,4 +1,4 @@
--- Schnitzel: core namespace, event dispatcher, internal messages, helpers.
+-- Famulus: core namespace, event dispatcher, internal messages, helpers.
 -- Design rule: nothing in here runs per frame, and no event is registered
 -- with the client until a feature that needs it is actually enabled.
 
@@ -145,7 +145,7 @@ function ns.Label(value)
     return value or "?"
 end
 
-local PREFIX = "|cffffb347Schnitzel|r: "
+local PREFIX = "|cffffb347Famulus|r: "
 
 function ns:Print(text)
     local chat = DEFAULT_CHAT_FRAME

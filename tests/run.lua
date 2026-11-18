@@ -1,4 +1,4 @@
--- Loads Schnitzel against the mock client and exercises every feature.
+-- Loads Famulus against the mock client and exercises every feature.
 -- Run from the repository root:  luajit tests/run.lua
 
 package.path = "tests/?.lua;" .. package.path
@@ -33,11 +33,11 @@ section("Loading")
 ---------------------------------------------------------------------------
 
 local framesBefore = #mock.frames
-local ns, files = mock.LoadAddon("Schnitzel", "Schnitzel")
+local ns, files = mock.LoadAddon("Famulus", "Famulus")
 local listed = {}
 for _, file in ipairs(files) do
     listed[file] = true
-    local handle = io.open("Schnitzel/" .. file, "r")
+    local handle = io.open("Famulus/" .. file, "r")
     check(handle ~= nil, "TOC file exists: " .. file)
     if handle then
         handle:close()
@@ -68,7 +68,7 @@ local function luaFilesIn(directory)
     return found
 end
 
-local onDisk = luaFilesIn("Schnitzel")
+local onDisk = luaFilesIn("Famulus")
 check(#onDisk > 0, "the Lua files in the addon folder can be listed")
 for _, file in ipairs(onDisk) do
     check(listed[file] or listed[file:gsub("/", "\\")], "Lua file is listed in the TOC: " .. file)
@@ -134,14 +134,14 @@ end
 
 for _, feature in ipairs(ns.featureList) do
     local file = "Modules/" .. capitalize(feature.category) .. "/" .. capitalize(feature.id) .. ".lua"
-    local source = readFile("Schnitzel/" .. file)
+    local source = readFile("Famulus/" .. file)
     check(listed[file] and source and source:find('id = "' .. feature.id .. '"', 1, true),
         "feature " .. feature.id .. " lives in " .. file)
 end
 -- Every other Lua file is a service: named <Name>Service.lua, it declares no
 -- feature and publishes exactly the table ns.<Name>Service.
 for _, file in ipairs(files) do
-    local source = readFile("Schnitzel/" .. file)
+    local source = readFile("Famulus/" .. file)
     local _, declared = source:gsub("ns:NewFeature%(", "")
     local service = file:match("([%w]+Service)%.lua$")
     if service then
@@ -158,9 +158,9 @@ section("Login")
 
 setState({})
 mock.Fire("ADDON_LOADED", "SomeOtherAddon")
-check(SchnitzelDB == nil, "other addons' ADDON_LOADED is ignored")
-mock.Fire("ADDON_LOADED", "Schnitzel")
-check(type(SchnitzelDB) == "table" and type(SchnitzelDB.profile) == "table", "database is created")
+check(FamulusDB == nil, "other addons' ADDON_LOADED is ignored")
+mock.Fire("ADDON_LOADED", "Famulus")
+check(type(FamulusDB) == "table" and type(FamulusDB.profile) == "table", "database is created")
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
@@ -172,8 +172,8 @@ for _, feature in ipairs(ns.featureList) do
 end
 check(ns:CountRegisteredEvents() == 0, "no game event is registered after login (got " .. ns:CountRegisteredEvents() .. ")")
 check(mock.cvars.autoLootDefault == "0" and mock.count("SetCVar") == 0, "a fresh install changes no game setting")
-check(lastChat():find("/sz", 1, true) ~= nil, "first login prints the hint")
-check(next(SchnitzelDB.profile) == nil, "nothing is saved while everything is on default")
+check(lastChat():find("/fam", 1, true) ~= nil, "first login prints the hint")
+check(next(FamulusDB.profile) == nil, "nothing is saved while everything is on default")
 check(mock.CountOnUpdateFrames() == 0, "no OnUpdate handler runs while idle (got " .. mock.CountOnUpdateFrames() .. ")")
 check(mock.ActiveTimers() == 0, "no timer runs while idle")
 check(mock.count("Settings.RegisterAddOnCategory") == 1, "entry in the game options is registered")
@@ -453,13 +453,13 @@ ns:On("ALIASES_CHANGED", function()
     aliasEvents = aliasEvents + 1
 end)
 setState({})
-check(Aliases.Count() == 0 and SchnitzelDB.aliases == nil, "a fresh install has no aliases and saves none")
+check(Aliases.Count() == 0 and FamulusDB.aliases == nil, "a fresh install has no aliases and saves none")
 check(mock.CountSenderFilters() == 1, "the chat filter is installed while the feature is on")
 check(mock.SenderName("CHAT_MSG_SAY", "|cff3fc7ebJaina-Proudmoore|r", "Jaina-Proudmoore") == "|cff3fc7ebJaina-Proudmoore|r",
     "without an alias a sender keeps their name")
 
 check(Aliases.Set("Jaina Proudmoore", "  Anna ") and Aliases.Count() == 1 and aliasEvents == 1, "an alias can be set and is announced")
-check(SchnitzelDB.aliases["jaina-proudmoore"].alias == "Anna" and SchnitzelDB.profile.aliases == nil,
+check(FamulusDB.aliases["jaina-proudmoore"].alias == "Anna" and FamulusDB.profile.aliases == nil,
     "it is saved account-wide, outside the profile, without surrounding blanks")
 check(not Aliases.Set("Jaina Proudmoore", "Anna") and aliasEvents == 1, "setting the same alias again changes nothing")
 check(Aliases.Get("Jaina", "Proudmoore") == "Anna", "found by first name and surname")
@@ -547,7 +547,7 @@ enable("aliasMenu")
 
 -- Guildy: its name formatter shows the alias wherever Guildy draws a name.
 local guildy = ns.features.guildyAliases
-local Format = GuildyAPI.formatters.Schnitzel
+local Format = GuildyAPI.formatters.Famulus
 check(guildy.enabled and type(Format) == "function", "with Guildy loaded, the formatter is registered at login")
 check(Format("Thrall") == "Boss" and Format("Varian Wrynn") == nil, "Guildy shows the alias, other names stay")
 local refreshes = GuildyAPI.refreshes
@@ -559,19 +559,19 @@ Aliases.Set("Varian Wrynn", "King")
 check(Format("Varian Wrynn") == "King" and GuildyAPI.refreshes == refreshes + 1, "a new alias redraws Guildy")
 Aliases.Set("Varian Wrynn", nil)
 enable("guildyAliases", false)
-check(GuildyAPI.formatters.Schnitzel == nil, "switching off unregisters the formatter")
+check(GuildyAPI.formatters.Famulus == nil, "switching off unregisters the formatter")
 refreshes = GuildyAPI.refreshes
 Aliases.Set("Varian Wrynn", "King")
 Aliases.Set("Varian Wrynn", nil)
 check(GuildyAPI.refreshes == refreshes, "switched off, alias changes leave Guildy alone")
 enable("guildyAliases")
-check(GuildyAPI.formatters.Schnitzel ~= nil, "switching on registers it again")
+check(GuildyAPI.formatters.Famulus ~= nil, "switching on registers it again")
 -- Without Guildy the feature stays off and the window does not list it.
 mock.loadedAddons.Guildy = nil
 guildy.available = nil
 check(not guildy:IsShown() and not guildy:IsAvailable() and guildy.missing == "addon Guildy", "without Guildy the feature is not available")
 ns:SyncFeature(guildy)
-check(not guildy.enabled and GuildyAPI.formatters.Schnitzel == nil, "and does not run")
+check(not guildy.enabled and GuildyAPI.formatters.Famulus == nil, "and does not run")
 mock.loadedAddons.Guildy = true
 guildy.available = nil
 ns:SyncFeature(guildy)
@@ -580,17 +580,17 @@ check(guildy.enabled, "with Guildy back it runs again")
 -- The category switch stops all of them; the list itself stays.
 ns:SetOption("categories", "aliases", false)
 check(mock.CountSenderFilters() == 0 and #mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Thrall" }) == 0, "the category switch stops the alias features")
-check(GuildyAPI.formatters.Schnitzel == nil, "including the Guildy formatter")
+check(GuildyAPI.formatters.Famulus == nil, "including the Guildy formatter")
 check(Aliases.Count() == 1, "but keeps the list")
 ns:SetOption("categories", "aliases", true)
 check(mock.SenderName("CHAT_MSG_SAY", "Thrall", "Thrall") == "Boss", "and everything resumes")
 
 -- Loading a saved list, including one that was edited by hand.
-SchnitzelDB.aliases = { thrall = { name = "Thrall", alias = "Boss" }, broken = "x", [5] = { name = "a", alias = "b" } }
+FamulusDB.aliases = { thrall = { name = "Thrall", alias = "Boss" }, broken = "x", [5] = { name = "a", alias = "b" } }
 ns:Fire("DATABASE_READY")
-check(Aliases.Count() == 1 and Aliases.Get("Thrall") == "Boss" and SchnitzelDB.aliases.broken == nil, "a saved list is read, broken entries are dropped")
+check(Aliases.Count() == 1 and Aliases.Get("Thrall") == "Boss" and FamulusDB.aliases.broken == nil, "a saved list is read, broken entries are dropped")
 Aliases.Set("Thrall", nil)
-check(Aliases.Count() == 0 and SchnitzelDB.aliases == nil, "an empty list is not saved")
+check(Aliases.Count() == 0 and FamulusDB.aliases == nil, "an empty list is not saved")
 check(ns:CountRegisteredEvents() == 0 and mock.ActiveTimers() == 0, "the alias features need no game event and no timer")
 GameTooltip.AddDoubleLine = nil
 setState({})
@@ -845,10 +845,10 @@ enable("levelScreenshot", false)
 section("Settings window")
 ---------------------------------------------------------------------------
 
-check(SchnitzelOptionsFrame == nil, "the window does not exist before it is opened")
-SlashCmdList.SCHNITZEL("")
-local window = SchnitzelOptionsFrame
-check(window ~= nil and window:IsShown(), "/sz opens the window")
+check(FamulusOptionsFrame == nil, "the window does not exist before it is opened")
+SlashCmdList.FAMULUS("")
+local window = FamulusOptionsFrame
+check(window ~= nil and window:IsShown(), "/fam opens the window")
 mock.Advance(0.3)
 check(window:GetAlpha() == 1, "fade-in finishes")
 check(mock.CountOnUpdateFrames() == 0, "no animation keeps running afterwards (got " .. mock.CountOnUpdateFrames() .. ")")
@@ -950,7 +950,7 @@ check(window.section.desc:GetText() == ns.L.cat_vendor_desc, "the description st
 check(rows[1].disabled and rows[1].toggle.on, "feature rows are greyed out but still show the choice")
 check(tabButton("Vendors").label:GetAlpha() < 1 and tabButton("Quests").label:GetAlpha() == 1, "the tab of the category is greyed out, no other")
 check(navButton("Quality of Life").count:GetText() == "2/16", "the area keeps counting its other categories")
-check(SchnitzelDB.profile.categories.vendor == false, "the switch is saved")
+check(FamulusDB.profile.categories.vendor == false, "the switch is saved")
 setState({ canRepair = true, repairCost = 1200, money = 5000 })
 mock.Fire("MERCHANT_SHOW")
 check(mock.count("RepairAllItems") == 0, "nothing of a switched-off category reacts to the game")
@@ -960,7 +960,7 @@ enable("sellJunk", false)
 check(ns.features.mapCoords.enabled, "other categories keep running")
 mock.Click(master)
 mock.Advance(0.3)
-check(ns.features.autoRepair.enabled and SchnitzelDB.profile.categories == nil, "switching the category on again resumes the features")
+check(ns.features.autoRepair.enabled and FamulusDB.profile.categories == nil, "switching the category on again resumes the features")
 check(tabButton("Vendors").label:GetAlpha() == 1, "and the tab is back to normal")
 check(master.toggle.on and master.caption:GetText() == "ON", "as is the switch")
 
@@ -1158,7 +1158,7 @@ editor:Load("", "")
 -- From the context menu: the window opens on the list with the name filled in.
 mock.Click(tabButton("Display"))
 mock.Click(navButton("Quality of Life"))
-SlashCmdList.SCHNITZEL("")
+SlashCmdList.FAMULUS("")
 check(not window:IsShown(), "window closed for the menu test")
 mock.OpenMenu("MENU_UNIT_PLAYER", { name = "Varian", surname = "Wrynn" })[2].click()
 mock.Advance(0.3)
@@ -1171,7 +1171,7 @@ editor:Load("", "")
 editor:ClearFocus()
 ns.AliasService.Set("Thrall", nil)
 mock.Advance(0.1)
-check(SchnitzelDB.aliases == nil, "the tests leave no alias behind")
+check(FamulusDB.aliases == nil, "the tests leave no alias behind")
 
 -- Settings: general tab.
 mock.Click(navButton("Settings"))
@@ -1221,7 +1221,7 @@ check(ns:GetOption("general", "theme") == "light" and not ns.UI.isDark, "the seg
 check(ns.UI.colors.card[1] > 0.95 and lightButton.selected, "the palette follows at once")
 mock.Click(window.themeButton)
 mock.Advance(0.1)
-check(ns.UI.isDark and (SchnitzelDB.profile.general or {}).theme == nil, "the button in the header switches back, and the default is not saved")
+check(ns.UI.isDark and (FamulusDB.profile.general or {}).theme == nil, "the button in the header switches back, and the default is not saved")
 local lilac
 for _, dot in ipairs(looks[2].swatches.dots) do
     if dot.value == "lilac" then
@@ -1275,19 +1275,19 @@ check(looks[3].label:GetText() == "Window size" and looks[3].dropdown.text:GetTe
 ns:SetOption("general", "windowScale", 120)
 check(window.scale == 1.2, "changing it rescales the window at once")
 ns:SetOption("general", "windowScale", 100)
-check(window.scale == 1 and (SchnitzelDB.profile.general or {}).windowScale == nil, "and the default size is not saved")
+check(window.scale == 1 and (FamulusDB.profile.general or {}).windowScale == nil, "and the default size is not saved")
 
 -- Minimap button.
-check(SchnitzelMinimapButton ~= nil and SchnitzelMinimapButton:IsShown(), "minimap button exists")
+check(FamulusMinimapButton ~= nil and FamulusMinimapButton:IsShown(), "minimap button exists")
 ns:SetOption("general", "minimapButton", false)
-check(not SchnitzelMinimapButton:IsShown(), "and can be hidden")
+check(not FamulusMinimapButton:IsShown(), "and can be hidden")
 ns:SetOption("general", "minimapButton", true)
 
-SlashCmdList.SCHNITZEL("")
-check(not window:IsShown(), "/sz closes the window again")
+SlashCmdList.FAMULUS("")
+check(not window:IsShown(), "/fam closes the window again")
 mock.reset()
-SlashCmdList.SCHNITZEL("status")
-check(lastChat():find("6 of 20", 1, true) ~= nil, "/sz status reports: " .. lastChat())
+SlashCmdList.FAMULUS("status")
+check(lastChat():find("6 of 20", 1, true) ~= nil, "/fam status reports: " .. lastChat())
 
 ---------------------------------------------------------------------------
 section("Self-test")
@@ -1301,12 +1301,12 @@ local function findCheck(result, group, name)
     end
 end
 
-check(SchnitzelDB.selfTest == nil and SchnitzelDB.dev == nil, "nothing is tested or logged unless asked for")
+check(FamulusDB.selfTest == nil and FamulusDB.dev == nil, "nothing is tested or logged unless asked for")
 local eventsBefore, framesBeforeTest = ns:CountRegisteredEvents(), #mock.frames
 setState({})
-SlashCmdList.SCHNITZEL("test")
-local result = SchnitzelDB.selfTest
-check(type(result) == "table" and result.schema == 1, "/sz test stores a report")
+SlashCmdList.FAMULUS("test")
+local result = FamulusDB.selfTest
+check(type(result) == "table" and result.schema == 1, "/fam test stores a report")
 check(result.client.toc == "16001" and result.client.version == "1.60.1", "report names the client build")
 check(mock.chat[1]:find("Self-test", 1, true) ~= nil, "summary line in chat: " .. tostring(mock.chat[1]))
 check(#mock.chat <= 9, "chat output is capped (got " .. #mock.chat .. " lines)")
@@ -1330,7 +1330,7 @@ check(findCheck(result, "camera", "cameraDistanceMaxZoomFactor").detail:find("4 
 check(mock.cvars.cameraDistanceMaxZoomFactor == "1.9", "camera probe restores the player's value")
 check(result.idle.events == eventsBefore and ns:CountRegisteredEvents() == eventsBefore, "the test registers no events")
 check(#mock.frames - framesBeforeTest == 1, "the test creates one hidden probe frame")
-SlashCmdList.SCHNITZEL("test")
+SlashCmdList.FAMULUS("test")
 check(#mock.frames - framesBeforeTest == 1, "and reuses it on the next run")
 
 -- A feature that needs API the client lacks is a failure in the report.
@@ -1351,33 +1351,33 @@ setState({})
 
 -- Developer mode.
 mock.reset()
-SlashCmdList.SCHNITZEL("dev")
-check(SchnitzelDB.dev == true and ns:CountRegisteredEvents() == eventsBefore + 3, "/sz dev starts listening for blocked actions")
+SlashCmdList.FAMULUS("dev")
+check(FamulusDB.dev == true and ns:CountRegisteredEvents() == eventsBefore + 3, "/fam dev starts listening for blocked actions")
 mock.Fire("ADDON_ACTION_BLOCKED", "OtherAddon", "UseAction()")
-check(SchnitzelDB.devLog == nil, "other addons' blocked actions are ignored")
-mock.Fire("ADDON_ACTION_BLOCKED", "Schnitzel", "StaticPopup_Hide()")
-mock.Fire("LUA_WARNING", 0, "Interface/AddOns/Schnitzel/Core/Init.lua:1: something")
+check(FamulusDB.devLog == nil, "other addons' blocked actions are ignored")
+mock.Fire("ADDON_ACTION_BLOCKED", "Famulus", "StaticPopup_Hide()")
+mock.Fire("LUA_WARNING", 0, "Interface/AddOns/Famulus/Core/Init.lua:1: something")
 mock.Fire("LUA_WARNING", 0, "Interface/AddOns/Other/x.lua:1: something")
-check(#SchnitzelDB.devLog == 2 and SchnitzelDB.devLog[1].text == "StaticPopup_Hide()", "own blocked actions and warnings are logged")
+check(#FamulusDB.devLog == 2 and FamulusDB.devLog[1].text == "StaticPopup_Hide()", "own blocked actions and warnings are logged")
 for i = 1, 150 do
-    mock.Fire("ADDON_ACTION_FORBIDDEN", "Schnitzel", "call " .. i)
+    mock.Fire("ADDON_ACTION_FORBIDDEN", "Famulus", "call " .. i)
 end
-check(#SchnitzelDB.devLog == 100 and SchnitzelDB.devLog[100].text == "call 150", "the log keeps the newest 100 entries")
+check(#FamulusDB.devLog == 100 and FamulusDB.devLog[100].text == "call 150", "the log keeps the newest 100 entries")
 result = ns:RunSelfTest()
 check(result.loggedProblems == 100, "the report says how many problems were logged")
-SlashCmdList.SCHNITZEL("dev")
-check(SchnitzelDB.dev == nil and SchnitzelDB.devLog == nil and ns:CountRegisteredEvents() == eventsBefore, "/sz dev again stops and clears the log")
-SchnitzelDB.selfTest = nil
+SlashCmdList.FAMULUS("dev")
+check(FamulusDB.dev == nil and FamulusDB.devLog == nil and ns:CountRegisteredEvents() == eventsBefore, "/fam dev again stops and clears the log")
+FamulusDB.selfTest = nil
 
 -- With developer mode saved from the last session, login starts both.
-SchnitzelDB.dev = true
+FamulusDB.dev = true
 mock.reset()
 ns:Fire("LOGIN")
-check(ns:CountRegisteredEvents() == eventsBefore + 3 and SchnitzelDB.selfTest == nil, "login in developer mode listens, test waits for the UI")
+check(ns:CountRegisteredEvents() == eventsBefore + 3 and FamulusDB.selfTest == nil, "login in developer mode listens, test waits for the UI")
 mock.Advance(3.1)
-check(type(SchnitzelDB.selfTest) == "table" and mock.ActiveTimers() == 0, "the self-test runs once, three seconds after login")
-SlashCmdList.SCHNITZEL("dev")
-SchnitzelDB.selfTest = nil
+check(type(FamulusDB.selfTest) == "table" and mock.ActiveTimers() == 0, "the self-test runs once, three seconds after login")
+SlashCmdList.FAMULUS("dev")
+FamulusDB.selfTest = nil
 check(ns:CountRegisteredEvents() == eventsBefore, "idle cost is back to normal afterwards")
 
 ---------------------------------------------------------------------------
@@ -1385,9 +1385,9 @@ section("Saved settings")
 ---------------------------------------------------------------------------
 
 enable("sellJunk")
-check(SchnitzelDB.profile.sellJunk and SchnitzelDB.profile.sellJunk.enabled == true, "a changed option is saved")
+check(FamulusDB.profile.sellJunk and FamulusDB.profile.sellJunk.enabled == true, "a changed option is saved")
 enable("sellJunk", false)
-check(SchnitzelDB.profile.sellJunk == nil, "an option back on default is removed from the saved file")
+check(FamulusDB.profile.sellJunk == nil, "an option back on default is removed from the saved file")
 
 ---------------------------------------------------------------------------
 print("")

@@ -370,10 +370,10 @@ end)
 -- Slash commands and addon compartment
 ---------------------------------------------------------------------------
 
-SLASH_SCHNITZEL1 = "/schnitzel"
-SLASH_SCHNITZEL2 = "/sz"
+SLASH_FAMULUS1 = "/famulus"
+SLASH_FAMULUS2 = "/fam"
 
-SlashCmdList.SCHNITZEL = function(input)
+SlashCmdList.FAMULUS = function(input)
     local command = string.lower(strtrim(input or ""))
     if command == "status" then
         local active, total = ns:CountActiveFeatures()
@@ -387,6 +387,6 @@ SlashCmdList.SCHNITZEL = function(input)
     end
 end
 
-function Schnitzel_OnAddonCompartmentClick()
+function Famulus_OnAddonCompartmentClick()
     ns:ToggleOptions()
 end

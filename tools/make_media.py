@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the handful of textures Schnitzel ships (Schnitzel/Media/*.tga).
+"""Generates the handful of textures Famulus ships (Famulus/Media/*.tga).
 
 WoW wants uncompressed 32-bit TGA files with power-of-two sizes. The shapes
 are drawn from signed distances, which gives clean anti-aliased edges without
@@ -10,7 +10,7 @@ import math
 import os
 import struct
 
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Schnitzel", "Media")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Famulus", "Media")
 
 
 def write_tga(name, size, pixel):

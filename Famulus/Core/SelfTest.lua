@@ -2,14 +2,14 @@
 --
 -- The LuaJIT test suite proves the addon's own logic against a mock. This
 -- file answers the other question: does the client we are running in really
--- provide what the addon assumes? "/sz test" runs the checks and stores a
--- report in SchnitzelDB.selfTest; the client writes it to disk on /reload or
+-- provide what the addon assumes? "/fam test" runs the checks and stores a
+-- report in FamulusDB.selfTest; the client writes it to disk on /reload or
 -- logout, where it can be read with tools/read_selftest.lua.
 --
 -- Everything here is read-only except the camera probe, which changes one
 -- CVar and puts it back. Nothing runs, and no event is registered, unless
--- the player asks for it ("/sz test") or switches developer mode on
--- ("/sz dev").
+-- the player asks for it ("/fam test") or switches developer mode on
+-- ("/fam dev").
 
 local ADDON_NAME, ns = ...
 local L = ns.L

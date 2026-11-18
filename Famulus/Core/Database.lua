@@ -1,6 +1,6 @@
 -- Settings storage.
---   SchnitzelDB      account-wide: { profile = {...}, window = {...}, seen = bool }
---   SchnitzelCharDB  per character: { useCharacter = bool, profile = {...} }
+--   FamulusDB      account-wide: { profile = {...}, window = {...}, seen = bool }
+--   FamulusCharDB  per character: { useCharacter = bool, profile = {...} }
 -- A profile is { [section] = { [key] = value } }. Only values that differ
 -- from the default are stored, so the saved file stays tiny and a changed
 -- default in a later version reaches everybody who never touched the option.
@@ -116,7 +116,7 @@ local function CopyTable(source)
 end
 
 function ns:UsesCharacterProfile()
-    return SchnitzelCharDB ~= nil and SchnitzelCharDB.useCharacter == true
+    return FamulusCharDB ~= nil and FamulusCharDB.useCharacter == true
 end
 
 function ns:SetUseCharacterProfile(enabled)
@@ -125,35 +125,35 @@ function ns:SetUseCharacterProfile(enabled)
         return
     end
     if enabled then
-        if type(SchnitzelCharDB.profile) ~= "table" then
-            SchnitzelCharDB.profile = CopyTable(SchnitzelDB.profile)
+        if type(FamulusCharDB.profile) ~= "table" then
+            FamulusCharDB.profile = CopyTable(FamulusDB.profile)
         end
-        SchnitzelCharDB.useCharacter = true
-        profile = SchnitzelCharDB.profile
+        FamulusCharDB.useCharacter = true
+        profile = FamulusCharDB.profile
     else
-        SchnitzelCharDB.useCharacter = false
-        profile = SchnitzelDB.profile
+        FamulusCharDB.useCharacter = false
+        profile = FamulusDB.profile
     end
     self:Fire("PROFILE_CHANGED")
 end
 
 local function InitDatabase()
-    if type(SchnitzelDB) ~= "table" then
-        SchnitzelDB = {}
+    if type(FamulusDB) ~= "table" then
+        FamulusDB = {}
     end
-    if type(SchnitzelDB.profile) ~= "table" then
-        SchnitzelDB.profile = {}
+    if type(FamulusDB.profile) ~= "table" then
+        FamulusDB.profile = {}
     end
-    if type(SchnitzelCharDB) ~= "table" then
-        SchnitzelCharDB = {}
+    if type(FamulusCharDB) ~= "table" then
+        FamulusCharDB = {}
     end
-    if SchnitzelCharDB.useCharacter and type(SchnitzelCharDB.profile) == "table" then
-        profile = SchnitzelCharDB.profile
+    if FamulusCharDB.useCharacter and type(FamulusCharDB.profile) == "table" then
+        profile = FamulusCharDB.profile
     else
-        SchnitzelCharDB.useCharacter = false
-        profile = SchnitzelDB.profile
+        FamulusCharDB.useCharacter = false
+        profile = FamulusDB.profile
     end
-    ns.global = SchnitzelDB
+    ns.global = FamulusDB
 end
 
 local loader = {}

@@ -1,14 +1,14 @@
 ## Interface: 16001
-## Title: Schnitzel
+## Title: Famulus
 ## Notes: Lightweight quality-of-life toolkit with a clean settings window.
 ## Notes-deDE: Schlankes Quality-of-Life-Paket mit aufgeräumtem Einstellungsfenster.
 ## Author: Lenni
 ## Version: 0.1.0
 ## Category: Quality of Life
-## IconTexture: Interface\AddOns\Schnitzel\Media\logo.tga
-## SavedVariables: SchnitzelDB
-## SavedVariablesPerCharacter: SchnitzelCharDB
-## AddonCompartmentFunc: Schnitzel_OnAddonCompartmentClick
+## IconTexture: Interface\AddOns\Famulus\Media\logo.tga
+## SavedVariables: FamulusDB
+## SavedVariablesPerCharacter: FamulusCharDB
+## AddonCompartmentFunc: Famulus_OnAddonCompartmentClick
 ## OptionalDeps: Guildy
 
 Core\Init.lua

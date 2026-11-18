@@ -11,7 +11,7 @@ local _, ns = ...
 
 local AliasService = ns.AliasService
 
-local OWNER = "Schnitzel"
+local OWNER = "Famulus"
 
 local guildyAliases = ns:NewFeature({
     id = "guildyAliases",

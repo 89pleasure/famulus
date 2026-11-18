@@ -1,4 +1,4 @@
--- A small stand-in for the WoW client API, just enough to load Schnitzel in
+-- A small stand-in for the WoW client API, just enough to load Famulus in
 -- plain LuaJIT and drive it with events. It is strict where strictness finds
 -- bugs: calling a widget method that is not listed below raises an error,
 -- and every read of an undefined global is recorded for review.
@@ -484,7 +484,7 @@ C_AddOns = {
     end,
 }
 
--- The name formatter API of the addon Guildy, as far as Schnitzel uses it.
+-- The name formatter API of the addon Guildy, as far as Famulus uses it.
 GuildyAPI = {
     formatters = {},
     refreshes = 0,

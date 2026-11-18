@@ -2,10 +2,10 @@
 --
 -- An alias belongs to a character name and is only ever shown to the player
 -- who set it; nothing is sent to anyone. The list is account-wide data, not
--- a setting: it lives in SchnitzelDB.aliases, outside the profiles, so
+-- a setting: it lives in FamulusDB.aliases, outside the profiles, so
 -- "reset page" and switching profiles leave it alone.
 --
---   SchnitzelDB.aliases = { [key] = { name = "Jaina Proudmoore", alias = "Anna" } }
+--   FamulusDB.aliases = { [key] = { name = "Jaina Proudmoore", alias = "Anna" } }
 --
 -- The key is the full character name in lower case with every separator
 -- turned into "-". The client hands out the same name in several spellings

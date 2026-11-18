@@ -1,14 +1,14 @@
-# Schnitzel
+# Famulus
 
 Schlankes Quality-of-Life-Addon für **World of Warcraft: Forever** (Interface 16001) mit
 aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, keine Abhängigkeiten.
 
 ## Installation
 
-1. Den Ordner `Schnitzel/` (oder den Inhalt von `dist/Schnitzel-0.1.0.zip`) nach
+1. Den Ordner `Famulus/` (oder den Inhalt von `dist/Famulus-0.1.0.zip`) nach
    `World of Warcraft/_forever_/Interface/AddOns/` kopieren.
 2. Spiel starten bzw. `/reload`.
-3. `/sz` öffnet die Einstellungen (alternativ `/schnitzel`, das Minikartensymbol oder der
+3. `/fam` öffnet die Einstellungen (alternativ `/famulus`, das Minikartensymbol oder der
    Eintrag im Addon-Menü der Minikarte).
 
 ## Funktionen (Version 0.1.0)
@@ -36,7 +36,7 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 | Interface | Fehlermeldungs-Spam im Kampf ausblenden | aus |
 | Interface | Screenshot beim Stufenaufstieg | aus |
 
-**Das Fenster** (`/sz`): Links die Hauptfunktionen (**Quality of Life**, **Aliase**), unten die
+**Das Fenster** (`/fam`): Links die Hauptfunktionen (**Quality of Life**, **Aliase**), unten die
 Seiten **Einstellungen** und **Über**. Quality of Life teilt sich in Reiter (Händler, Quests, Beute,
 Soziales, Tooltips, Interface); die Aliase haben ihren eigenen Aufbau mit der Namensliste und einem
 Reiter „Anzeige“. Helles und dunkles Farbschema (Knopf oben rechts), fünf Farbwelten und die
@@ -58,7 +58,7 @@ Umschalt) überspringt jede Automatik einmalig.
 
 ## Was von OneForAll, FlareUI und Polestar gelernt wurde
 
-| Beobachtung bei den Vorbildern | Umsetzung in Schnitzel |
+| Beobachtung bei den Vorbildern | Umsetzung in Famulus |
 |---|---|
 | OneForAll registriert ~38 Events dauerhaft und prüft die Option erst im Handler; FlareUI-Untermodule ebenso | Ein Feature registriert Events erst beim Einschalten. Nach dem Login mit Standardwerten lauscht das Addon auf **kein** Spielereignis |
 | Ungedrosselte `OnUpdate`-Handler (Tooltip-Anker, Minikarten-Drag, Proximity-Scan) | Kein `OnUpdate` im Leerlauf. Kartenkoordinaten laufen nur bei offener Karte (10×/s), Animationen nur solange sie dauern |
@@ -74,8 +74,8 @@ Umschalt) überspringt jede Automatik einmalig.
 ## Aufbau
 
 ```
-Schnitzel/
-  Schnitzel.toc
+Famulus/
+  Famulus.toc
   Core/Init.lua        Namespace, Event-Verteiler, Hilfsfunktionen
   Core/Locale.lua      Sprachumschaltung zur Laufzeit
   Core/Database.lua    Einstellungen (nur Abweichungen vom Standard werden gespeichert)
@@ -83,7 +83,7 @@ Schnitzel/
   Core/GameOptions.lua Schalter, die eine Spieloption spiegeln
   Core/PopupService.lua  Service für Blizzards StaticPopup-Dialoge
   Core/ChatService.lua   Service für die Chat-Eingabe (Text einsetzen, Chat-Sperre)
-  Core/SelfTest.lua    Selbsttest gegen den echten Client (/sz test, /sz dev)
+  Core/SelfTest.lua    Selbsttest gegen den echten Client (/fam test, /fam dev)
   Locales/             enUS.lua (Referenz), deDE.lua
   Modules/<Seite>/     eine Datei je Feature, z. B. Interface/ChatArrowKeys.lua;
                        geteilter Code heißt <Name>Service.lua, z. B. Quests/QuestService.lua
@@ -136,12 +136,12 @@ Spiel: Ob der echte Client jede API genauso liefert, zeigt nur das Spiel selbst.
 
 ### Im Spiel
 
-`/sz test` prüft im laufenden Spiel, ob der Client alles bereitstellt, was Schnitzel annimmt, und
+`/fam test` prüft im laufenden Spiel, ob der Client alles bereitstellt, was Famulus annimmt, und
 meldet Auffälligkeiten im Chat. Nach `/reload` steht der Bericht in den gespeicherten Variablen:
 
 ```bash
 luajit tools/read_selftest.lua
 ```
 
-`/sz dev` schaltet den Entwicklermodus um: Der Selbsttest läuft dann nach jedem Login von selbst,
+`/fam dev` schaltet den Entwicklermodus um: Der Selbsttest läuft dann nach jedem Login von selbst,
 und blockierte Aktionen des Addons werden mitgeschrieben.

@@ -15,7 +15,7 @@
 --   * Switching the feature on sets the game's option; switching the feature
 --     itself off clears it.
 --   * A category switched off stops the feature but leaves the game's option
---     alone: the category is about Schnitzel, not about the game.
+--     alone: the category is about Famulus, not about the game.
 --   * Nothing is written before the switch has followed the game once, so a
 --     login never overrides what the player set in the game's options.
 

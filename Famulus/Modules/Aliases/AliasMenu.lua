@@ -2,8 +2,8 @@
 -- friends list, guild roster).
 --
 -- Menu.ModifyMenu is the client's own way for addons to add entries; it does
--- not taint the entries around ours. The entries only open Schnitzel's
--- window or change Schnitzel's list.
+-- not taint the entries around ours. The entries only open Famulus's
+-- window or change Famulus's list.
 
 local _, ns = ...
 local L = ns.L
