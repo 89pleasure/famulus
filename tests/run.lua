@@ -43,11 +43,36 @@ for _, file in ipairs(files) do
         handle:close()
     end
 end
-local onDisk = io.popen("cd Schnitzel && find . -name '*.lua' | sed 's|^./||' | sort")
-for file in onDisk:lines() do
-    check(listed[file], "Lua file is listed in the TOC: " .. file)
+-- Lists the Lua files below a directory, relative to it and with forward slashes. io.popen runs
+-- cmd.exe on Windows and sh elsewhere, so each gets its own command.
+local function luaFilesIn(directory)
+    local found = {}
+    if package.config:sub(1, 1) == "\\" then
+        -- "cd" prints the directory first; "dir /s /b" then prints absolute paths below it.
+        local pipe = io.popen('cd "' .. directory .. '" && cd && dir /s /b /a-d *.lua')
+        local root = pipe:read("*l")
+        for line in pipe:lines() do
+            if root and line:sub(1, #root + 1):lower() == (root .. "\\"):lower() then
+                found[#found + 1] = line:sub(#root + 2):gsub("\\", "/")
+            end
+        end
+        pipe:close()
+    else
+        local pipe = io.popen("cd '" .. directory .. "' && find . -name '*.lua'")
+        for line in pipe:lines() do
+            found[#found + 1] = line:gsub("^%./", "")
+        end
+        pipe:close()
+    end
+    table.sort(found)
+    return found
 end
-onDisk:close()
+
+local onDisk = luaFilesIn("Schnitzel")
+check(#onDisk > 0, "the Lua files in the addon folder can be listed")
+for _, file in ipairs(onDisk) do
+    check(listed[file] or listed[file:gsub("/", "\\")], "Lua file is listed in the TOC: " .. file)
+end
 check(#mock.frames - framesBefore == 2, "loading creates only the event frame and the tween driver (got " .. (#mock.frames - framesBefore) .. ")")
 check(ns:CountActiveFeatures() == 0, "no feature runs before login")
 
