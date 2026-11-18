@@ -1,29 +1,36 @@
 -- The settings window. Built on first open, never before: a player who
 -- does not open it pays nothing for it.
 --
--- Layout: sidebar (wordmark, search, navigation) | header, one panel of
--- rows, footer. Every row is described by an "item" (label, help text,
--- getter, setter); pages are just lists of items, so search can show rows
--- from all pages at once.
+-- Layout: sidebar (logo, search, one entry per main feature, then the
+-- addon's own pages) | header with title and window buttons, tabs, a line
+-- with the tab's description and its actions, then cards of rows.
+--
+-- A page has tabs; a tab has blocks; a block is one card of rows. Every row
+-- is described by an "item" (label, help text, getter, setter). Main
+-- features ("areas", see Core/Features.lua) get their page from a layout:
+-- by default one tab per category, or a layout of their own (aliases).
 
 local _, ns = ...
 local L = ns.L
 local UI = ns.UI
 
-local WIDTH, HEIGHT = 860, 560
-local SIDEBAR, HEADER, FOOTER, PAD = 220, 92, 52, 28
-local ROW_WIDTH = WIDTH - SIDEBAR - PAD * 2
-local NAV_ROW = 34
+local WIDTH, HEIGHT = 880, 590
+local SIDEBAR, PAD, RADIUS = 224, 28, 12
+local CONTENT_W = WIDTH - SIDEBAR - PAD * 2
+local HEADER = 84
+local NAV_ROW, NAV_TOP = 34, 128
+local BLOCK_GAP, BLOCK_TITLE = 22, 24
 
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
 local MODIFIERS = { "SHIFT", "CTRL", "ALT", "NONE" }
 local WINDOW_SCALES = { 80, 90, 100, 110, 120, 130, 140 }
+local AREA_ICONS = { qol = "sparkle", aliases = "tag" }
 
 local window
 local pages, pageOrder = {}, {}
-local currentPage, searchText = nil, ""
-local rows, navButtons = {}, {}
-local renderedKey -- page or search the rows were last laid out for
+local currentPage, selectedTabs, searchText = nil, {}, ""
+local rows, cards, navButtons = {}, {}, {}
+local renderedKey -- page, tab or search the rows were last laid out for
 local resetArmed, resetToken = false, 0
 local aliasEditor -- input row of the aliases page, once it has been shown
 local Render -- forward declaration
@@ -104,10 +111,13 @@ local function OptionItem(feature, option)
     return item
 end
 
+-- An option of the addon itself. Unlike feature rows, it resets on its own
+-- (key) instead of with its whole section.
 local function GeneralItem(key, kind, values)
     return {
         kind = kind,
         section = "general",
+        key = key,
         label = function()
             return L["g_" .. key]
         end,
@@ -134,6 +144,21 @@ local function InfoItem(key, value)
     }
 end
 
+local function FeatureItems(category)
+    local items = {}
+    for _, feature in ipairs(ns.featureList) do
+        if feature.category == category and feature:IsShown() then
+            items[#items + 1] = FeatureItem(feature)
+            for _, option in ipairs(feature.options) do
+                if ns:IsOptionAvailable(option) then
+                    items[#items + 1] = OptionItem(feature, option)
+                end
+            end
+        end
+    end
+    return items
+end
+
 ---------------------------------------------------------------------------
 -- Alias list. Unlike the other rows these are data, not settings: one row
 -- to type a name and its alias into, then one row per stored alias.
@@ -154,14 +179,9 @@ local ALIAS_EMPTY_ITEM = {
     end,
 }
 
-local function AddAliasItems(items)
-    items[#items + 1] = ALIAS_EDIT_ITEM
-    local list = ns.AliasService.List()
-    if #list == 0 then
-        items[#items + 1] = ALIAS_EMPTY_ITEM
-        return
-    end
-    for _, entry in ipairs(list) do
+local function AliasItems()
+    local items = {}
+    for _, entry in ipairs(ns.AliasService.List()) do
         items[#items + 1] = {
             kind = "alias",
             entry = entry,
@@ -173,19 +193,20 @@ local function AddAliasItems(items)
             end,
         }
     end
+    return items
 end
 
 local function CreateAliasEditor(row)
     local editor = CreateFrame("Frame", nil, row)
-    editor:SetPoint("TOPLEFT", 16, -14)
-    editor:SetPoint("BOTTOMRIGHT", -16, 14)
+    editor:SetPoint("TOPLEFT", 16, -16)
+    editor:SetPoint("BOTTOMRIGHT", -16, 16)
 
-    local fieldWidth = math.floor((ROW_WIDTH - 32 - 100 - 16) / 2)
+    local fieldWidth = math.floor((CONTENT_W - 32 - 96 - 20) / 2)
     local name = UI.Input(editor, 48)
     name:SetPoint("LEFT")
     name:SetWidth(fieldWidth)
     local alias = UI.Input(editor, 32)
-    alias:SetPoint("LEFT", name, "RIGHT", 8, 0)
+    alias:SetPoint("LEFT", name, "RIGHT", 10, 0)
     alias:SetWidth(fieldWidth)
     editor.name, editor.alias = name, alias
 
@@ -212,7 +233,8 @@ local function CreateAliasEditor(row)
         name.edit:SetFocus()
     end
 
-    editor.save = UI.Button(editor, Save)
+    editor.save = UI.Button(editor, Save, "primary")
+    editor.save:SetHeight(32)
     editor.save:SetPoint("RIGHT")
 
     function editor:Relabel()
@@ -235,30 +257,107 @@ local function CreateAliasEditor(row)
     return editor
 end
 
-local function AddPage(id, items, isCategory)
-    pages[id] = { id = id, items = items, isCategory = isCategory }
-    pageOrder[#pageOrder + 1] = id
+-- First letter of an alias for its avatar; UTF-8 aware, upper case for
+-- plain letters.
+local function Initial(text)
+    local first = string.match(text or "", "^[%z\1-\127\194-\244][\128-\191]*") or "?"
+    return string.upper(first)
 end
 
-local function BuildPages()
-    for _, category in ipairs(ns.categories) do
-        local items = {}
-        for _, feature in ipairs(ns.featureList) do
-            if feature.category == category and feature:IsShown() then
-                items[#items + 1] = FeatureItem(feature)
-                for _, option in ipairs(feature.options) do
-                    if ns:IsOptionAvailable(option) then
-                        items[#items + 1] = OptionItem(feature, option)
-                    end
-                end
-            end
-        end
-        AddPage(category, items, true)
-    end
-    pages.aliases.extra = AddAliasItems
+---------------------------------------------------------------------------
+-- Pages and tabs
+---------------------------------------------------------------------------
 
+local function CategoryTab(category)
+    local items = FeatureItems(category)
+    return {
+        id = category,
+        category = category,
+        label = function()
+            return L["cat_" .. category]
+        end,
+        desc = function()
+            return L["cat_" .. category .. "_desc"]
+        end,
+        settings = items,
+        blocks = function()
+            return { { items = items } }
+        end,
+    }
+end
+
+-- Layouts of main features. One returns the tabs of the area's page.
+local layouts = {}
+
+function layouts.default(area)
+    local tabs = {}
+    for _, category in ipairs(area.categories) do
+        tabs[#tabs + 1] = CategoryTab(category)
+    end
+    return tabs
+end
+
+-- Aliases: the list is the heart of the page; where aliases show up is the
+-- second tab. The category's master switch is the same on both.
+function layouts.aliases()
+    local display = CategoryTab("aliases")
+    display.id = "display"
+    display.label = function()
+        return L.ui_tab_display
+    end
+    display.desc = function()
+        return L.ui_tab_display_desc
+    end
+
+    local names = {
+        id = "names",
+        category = "aliases",
+        label = function()
+            return L.ui_tab_names
+        end,
+        desc = function()
+            return L.ui_tab_names_desc
+        end,
+        settings = {},
+        blocks = function()
+            local list = AliasItems()
+            return {
+                { title = L.ui_alias_new, items = { ALIAS_EDIT_ITEM } },
+                {
+                    title = L.ui_alias_list,
+                    note = tostring(#list),
+                    items = #list > 0 and list or { ALIAS_EMPTY_ITEM },
+                },
+            }
+        end,
+    }
+    return { names, display }
+end
+
+local function SimpleTab(id, items)
+    return {
+        id = id,
+        label = function()
+            return L["ui_tab_" .. id]
+        end,
+        desc = function()
+            return L["ui_tab_" .. id .. "_desc"]
+        end,
+        settings = items,
+        blocks = function()
+            return { { items = items } }
+        end,
+    }
+end
+
+local function AddPage(page)
+    pages[page.id] = page
+    pageOrder[#pageOrder + 1] = page.id
+end
+
+local function SettingsTabs()
     local profileItem = GeneralItem("charProfile", "toggle")
-    profileItem.section = nil -- not part of a profile, so "reset page" leaves it alone
+    profileItem.section, profileItem.key = nil, nil -- not part of a profile; reset leaves it alone
     profileItem.get = function()
         return ns:UsesCharacterProfile()
     end
@@ -266,7 +365,7 @@ local function BuildPages()
         ns:SetUseCharacterProfile(value)
     end
 
-    AddPage("general", {
+    local general = SimpleTab("general", {
         GeneralItem("language", "select", function()
             local list = { { value = "auto", text = L.lang_auto } }
             for _, code in ipairs(ns:GetLocaleCodes()) do
@@ -283,6 +382,20 @@ local function BuildPages()
         end),
         GeneralItem("chatOutput", "toggle"),
         GeneralItem("minimapButton", "toggle"),
+        profileItem,
+    })
+
+    local appearance = SimpleTab("appearance", {
+        GeneralItem("theme", "segment", function()
+            local list = {}
+            for i, theme in ipairs(UI.themes) do
+                list[i] = { value = theme, text = L["theme_" .. theme] }
+            end
+            return list
+        end),
+        GeneralItem("accent", "swatch", function()
+            return UI.accents
+        end),
         GeneralItem("windowScale", "select", function()
             local list = {}
             for i, percent in ipairs(WINDOW_SCALES) do
@@ -290,10 +403,41 @@ local function BuildPages()
             end
             return list
         end),
-        profileItem,
+    })
+    return { general, appearance }
+end
+
+local function BuildPages()
+    for _, area in ipairs(ns.areas) do
+        local layout = layouts[area.id] or layouts.default
+        AddPage({
+            id = area.id,
+            area = area,
+            icon = AREA_ICONS[area.id] or "sparkle",
+            title = function()
+                return L["area_" .. area.id]
+            end,
+            desc = function()
+                return L["area_" .. area.id .. "_desc"]
+            end,
+            tabs = layout(area),
+        })
+    end
+
+    AddPage({
+        id = "general",
+        icon = "gear",
+        bottom = true,
+        title = function()
+            return L.cat_general
+        end,
+        desc = function()
+            return L.cat_general_desc
+        end,
+        tabs = SettingsTabs(),
     })
 
-    AddPage("about", {
+    local about = {
         InfoItem("version", function()
             return ns.version
         end),
@@ -307,37 +451,72 @@ local function BuildPages()
         InfoItem("idea", function()
             return L.about_idea_value
         end),
+    }
+    AddPage({
+        id = "about",
+        icon = "info",
+        bottom = true,
+        title = function()
+            return L.cat_about
+        end,
+        desc = function()
+            return L.cat_about_desc
+        end,
+        tabs = {
+            {
+                id = "about",
+                settings = {},
+                blocks = function()
+                    return { { items = about } }
+                end,
+            },
+        },
     })
 end
 
--- The rows of a page: its settings, then whatever the page lists besides.
-local function PageItems(page)
-    if not page.extra then
-        return page.items
+local function CurrentTab(page)
+    page = page or pages[currentPage]
+    local wanted = selectedTabs[page.id]
+    for _, tab in ipairs(page.tabs) do
+        if tab.id == wanted then
+            return tab
+        end
     end
-    local items = {}
-    for i, item in ipairs(page.items) do
-        items[i] = item
-    end
-    page.extra(items)
-    return items
+    return page.tabs[1]
 end
 
-local function SearchItems(query)
+-- Search covers every tab of every page; hits are grouped by where they
+-- live, one card per tab.
+local function SearchBlocks(query)
     query = string.lower(query)
-    local results = {}
+    local blocks, total = {}, 0
     for _, id in ipairs(pageOrder) do
-        local category = string.lower(L["cat_" .. id])
-        for _, item in ipairs(PageItems(pages[id])) do
-            if item.kind ~= "info" and item.kind ~= "aliasEdit" then
-                local haystack = string.lower(item.label() .. " " .. item.desc()) .. " " .. category
-                if string.find(haystack, query, 1, true) then
-                    results[#results + 1] = item
+        local page = pages[id]
+        local pageTitle = page.title()
+        for _, tab in ipairs(page.tabs) do
+            local where = pageTitle
+            if #page.tabs > 1 then
+                where = pageTitle .. "  ·  " .. tab.label()
+            end
+            local context = string.lower(where)
+            local hits = {}
+            for _, block in ipairs(tab.blocks()) do
+                for _, item in ipairs(block.items) do
+                    if item.kind ~= "info" and item.kind ~= "aliasEdit" then
+                        local haystack = string.lower(item.label() .. " " .. item.desc()) .. " " .. context
+                        if string.find(haystack, query, 1, true) then
+                            hits[#hits + 1] = item
+                        end
+                    end
                 end
+            end
+            if #hits > 0 then
+                blocks[#blocks + 1] = { title = where, items = hits }
+                total = total + #hits
             end
         end
     end
-    return results
+    return blocks, total
 end
 
 ---------------------------------------------------------------------------
@@ -361,58 +540,112 @@ local function RowRefresh(row, animate)
     local alpha = disabled and 0.45 or 1
     row.label:SetAlpha(alpha)
     row.desc:SetAlpha(alpha)
-    if item.kind == "toggle" then
+    local kind = item.kind
+    if kind == "toggle" then
         row.toggle:Set(item.get(), animate)
         row.toggle:SetAlpha(alpha)
-    elseif item.kind == "select" then
+    elseif kind == "select" then
         row.dropdown.text:SetText(ValueText(item))
         row.dropdown:SetAlpha(alpha)
-    elseif item.kind == "info" then
+    elseif kind == "segment" then
+        row.segment:SetValues(item.values(), item.get())
+    elseif kind == "swatch" then
+        row.swatches:SetValues(item.values(), item.get())
+    elseif kind == "info" then
         row.desc:SetText(item.desc())
     end
 end
 
-local function RowSetItem(row, item, index, flat)
-    row.item = item
-    local kind = item.kind
-
+local function EnsureControls(row, kind)
     if kind == "toggle" and not row.toggle then
         row.toggle = UI.Toggle(row)
-        row.toggle:SetPoint("RIGHT", -16, 0)
+        row.toggle:SetPoint("RIGHT", -18, 0)
     elseif kind == "select" and not row.dropdown then
         row.dropdown = UI.Dropdown(row)
-        row.dropdown:SetPoint("RIGHT", -16, 0)
-    end
-    if row.toggle then
-        row.toggle:SetShown(kind == "toggle")
-    end
-    if row.dropdown then
-        row.dropdown:SetShown(kind == "select")
-    end
-    if kind == "aliasEdit" and not row.editor then
+        row.dropdown:SetPoint("RIGHT", -18, 0)
+    elseif kind == "segment" and not row.segment then
+        row.segment = UI.Segmented(row, function(value)
+            row.item.set(value)
+        end)
+        row.segment:SetPoint("RIGHT", -18, 0)
+    elseif kind == "swatch" and not row.swatches then
+        row.swatches = UI.Swatches(row, function(value)
+            row.item.set(value)
+        end)
+        row.swatches:SetPoint("RIGHT", -14, 0)
+    elseif kind == "aliasEdit" and not row.editor then
         row.editor = CreateAliasEditor(row)
     elseif kind == "alias" and not row.remove then
         row.remove = UI.IconButton(row, "close", function()
             ns.AliasService.Set(row.item.entry.name, nil)
         end)
-        row.remove:SetPoint("RIGHT", -16, 0)
+        row.remove:SetPoint("RIGHT", -14, 0)
+        row.avatar = row:CreateTexture(nil, "ARTWORK")
+        row.avatar:SetTexture(UI.media.circle)
+        row.avatar:SetSize(30, 30)
+        row.avatar:SetPoint("LEFT", 16, 0)
+        UI.Tint(row.avatar, "accentSoft")
+        row.initial = UI.Text(row, 13, "accent", "semibold")
+        row.initial:SetPoint("CENTER", row.avatar, "CENTER", 0, 0)
+        row.initial:SetJustifyH("CENTER")
+        row.initial:SetJustifyV("MIDDLE")
     end
-    if row.editor then
-        row.editor:SetShown(kind == "aliasEdit")
+    local controls = {
+        toggle = row.toggle,
+        select = row.dropdown,
+        segment = row.segment,
+        swatch = row.swatches,
+        aliasEdit = row.editor,
+        alias = row.remove,
+    }
+    for controlKind, control in pairs(controls) do
+        if control then
+            control:SetShown(controlKind == kind)
+        end
     end
-    if row.remove then
-        row.remove:SetShown(kind == "alias")
+    if row.avatar then
+        row.avatar:SetShown(kind == "alias")
+        row.initial:SetShown(kind == "alias")
     end
+end
+
+local function ControlWidth(row, kind)
+    if kind == "toggle" then
+        return 34
+    elseif kind == "select" then
+        return row.dropdown:GetWidth()
+    elseif kind == "segment" then
+        return row.segment:GetWidth()
+    elseif kind == "swatch" then
+        return row.swatches:GetWidth()
+    elseif kind == "alias" then
+        return 26
+    end
+    return 0
+end
+
+local function RowSetItem(row, item, index, flat)
+    row.item = item
+    local kind = item.kind
+    EnsureControls(row, kind)
     if kind == "aliasEdit" then
         aliasEditor = row.editor
         aliasEditor:Relabel()
+    elseif kind == "segment" or kind == "swatch" then
+        RowRefresh(row, false) -- sizes the control before the text is laid out
     end
 
-    local indent = (item.child and not flat) and 40 or 16
+    local child = item.child and not flat
+    local indent = (child and 44) or (kind == "alias" and 58) or 18
     local compact = not flat and item.compact ~= nil and item.compact()
-    local padding = compact and 9 or 13
-    local controlWidth = (kind == "toggle" and 30) or (kind == "select" and 150) or (kind == "alias" and 24) or 0
-    local textWidth = ROW_WIDTH - indent - 16 - controlWidth - (controlWidth > 0 and 24 or 0)
+    local padding = compact and 10 or 15
+    local controlWidth = ControlWidth(row, kind)
+    local textWidth = CONTENT_W - indent - 18 - controlWidth - (controlWidth > 0 and 24 or 0)
+
+    row.guide:SetShown(child)
+    if kind == "alias" then
+        row.initial:SetText(Initial(item.label()))
+    end
 
     row.label:ClearAllPoints()
     row.label:SetPoint("TOPLEFT", indent, -padding)
@@ -423,15 +656,15 @@ local function RowSetItem(row, item, index, flat)
     row.desc:SetShown(not compact)
     row.desc:SetWidth(textWidth)
     row.desc:SetText(compact and "" or (note or item.desc()))
-    row.desc:SetTextColor(UI.Color(note and "warning" or "textMuted"))
+    UI.Ink(row.desc, note and "warning" or "textMuted")
 
     local height
     if kind == "aliasEdit" then
-        height = 56
+        height = 64
     elseif compact then
-        height = math.max(32, padding * 2 + row.label:GetStringHeight())
+        height = math.max(36, padding * 2 + row.label:GetStringHeight())
     else
-        height = math.max(46, padding * 2 + row.label:GetStringHeight() + 5 + row.desc:GetStringHeight())
+        height = math.max(54, padding * 2 + row.label:GetStringHeight() + 4 + row.desc:GetStringHeight())
     end
     row.height = math.floor(height + 0.5)
     row:SetHeight(row.height)
@@ -442,37 +675,45 @@ end
 
 local function RowClicked(row)
     local item = row.item
-    if row.disabled or item.kind == "info" then
+    local kind = item.kind
+    if row.disabled or kind == "info" or kind == "segment" or kind == "swatch" then
         return
     end
-    if item.kind == "alias" then
+    if kind == "alias" then
         ns:EditAlias(item.entry.name)
-    elseif item.kind == "toggle" then
+    elseif kind == "toggle" then
         item.set(not item.get())
-    elseif item.kind == "select" then
+    elseif kind == "select" then
         UI.OpenMenu(row.dropdown, item.values(), item.get(), item.set)
     end
 end
 
+local HOVERLESS = { info = true, aliasEdit = true, segment = true, swatch = true }
+
 local function CreateRow(parent)
     local row = CreateFrame("Button", nil, parent)
-    row:SetWidth(ROW_WIDTH)
+    row:SetWidth(CONTENT_W)
+    row:SetFrameLevel(parent:GetFrameLevel() + 3)
 
-    row.hover = UI.Fill(row, "hover")
+    row.hover = UI.Round(row, "hover", 8, { inset = 4 })
     row.hover:Hide()
 
     row.divider = UI.Line(row)
-    row.divider:SetPoint("TOPLEFT", 16, 0)
-    row.divider:SetPoint("TOPRIGHT", -16, 0)
+    row.divider:SetPoint("TOPLEFT", 18, 0)
+    row.divider:SetPoint("TOPRIGHT", -18, 0)
 
-    row.label = UI.Text(row, 13, "text")
+    -- Options hang off their feature with a thin guide line.
+    row.guide = UI.VLine(row, "cardBorder")
+    row.guide:SetPoint("TOPLEFT", 26, 0)
+    row.guide:SetPoint("BOTTOMLEFT", 26, 0)
+
+    row.label = UI.Text(row, 13, "text", "medium")
     row.desc = UI.Text(row, 12, "textMuted")
-    row.desc:SetPoint("TOPLEFT", row.label, "BOTTOMLEFT", 0, -5)
+    row.desc:SetPoint("TOPLEFT", row.label, "BOTTOMLEFT", 0, -4)
     row.desc:SetSpacing(2)
 
     row:SetScript("OnEnter", function(self)
-        local kind = self.item.kind
-        if not self.disabled and kind ~= "info" and kind ~= "aliasEdit" then
+        if not self.disabled and not HOVERLESS[self.item.kind] then
             self.hover:Show()
         end
     end)
@@ -481,6 +722,20 @@ local function CreateRow(parent)
     end)
     row:SetScript("OnClick", RowClicked)
     return row
+end
+
+-- A card behind a block of rows, with the block's title above it.
+local function CreateCard(parent)
+    local card = CreateFrame("Frame", nil, parent)
+    card:SetWidth(CONTENT_W)
+    card:SetFrameLevel(parent:GetFrameLevel() + 1)
+    UI.Card(card, "card", "cardBorder", 10)
+    card.title = UI.Text(card, 12, "textDim", "semibold")
+    card.title:SetPoint("BOTTOMLEFT", card, "TOPLEFT", 4, 9)
+    card.note = UI.Text(card, 12, "textMuted", "medium")
+    card.note:SetPoint("BOTTOMRIGHT", card, "TOPRIGHT", -4, 9)
+    card.note:SetJustifyH("RIGHT")
+    return card
 end
 
 ---------------------------------------------------------------------------
@@ -500,61 +755,99 @@ local function CategoryCount(category)
     return active, total
 end
 
+-- Active and total features of an area, and whether any of its categories
+-- is switched on at all.
+local function AreaCount(area)
+    local active, total, anyOn = 0, 0, false
+    for _, category in ipairs(area.categories) do
+        local a, t = CategoryCount(category)
+        active, total = active + a, total + t
+        anyOn = anyOn or ns:IsCategoryEnabled(category)
+    end
+    return active, total, anyOn
+end
+
 local function RefreshSidebar()
     local searching = searchText ~= ""
     for id, button in pairs(navButtons) do
+        local page = pages[id]
         local selected = not searching and id == currentPage
         button.selected = selected
-        button.bar:SetShown(selected)
         button.fill:SetShown(selected)
-        button.label:SetText(L["cat_" .. id])
-        button.label:SetTextColor(UI.Color(selected and "text" or "textDim"))
-        if button.count then
-            -- A switched-off category is greyed out here as well.
-            button.label:SetAlpha(ns:IsCategoryEnabled(id) and 1 or 0.45)
-            if ns:IsCategoryEnabled(id) then
-                local active, total = CategoryCount(id)
+        button.label:SetText(page.title())
+        UI.Ink(button.label, selected and "text" or "textDim")
+        UI.Tint(button.icon, selected and "accent" or "textMuted")
+        if page.area then
+            local active, total, anyOn = AreaCount(page.area)
+            -- A switched-off area is greyed out here as well.
+            button.label:SetAlpha(anyOn and 1 or 0.45)
+            button.icon:SetAlpha(anyOn and 1 or 0.45)
+            if anyOn then
                 button.count:SetText(active .. "/" .. total)
-                button.count:SetTextColor(UI.Color(active > 0 and "accent" or "textMuted"))
+                UI.Ink(button.count, active > 0 and "accent" or "textMuted")
             else
                 button.count:SetText(L.ui_category_off)
-                button.count:SetTextColor(UI.Color("textMuted"))
+                UI.Ink(button.count, "textMuted")
             end
         end
     end
     local active, total = ns:CountActiveFeatures()
-    window.status:SetText("v" .. ns.version .. "\n" .. L.ui_active_count:format(active, total))
+    window.status:SetText(L.ui_active_count:format(active, total))
+    window.tagline:SetText("v" .. ns.version)
+    window.navHeading:SetText(L.ui_nav_features)
 end
 
--- Title, subtitle and, on category pages, the master switch at the right
--- of the header.
-local function RefreshHeader(animate)
+local function RefreshTabs(animate)
+    local page = pages[currentPage]
+    local list = {}
+    for i, tab in ipairs(page.tabs) do
+        list[i] = {
+            id = tab.id,
+            text = tab.label and tab.label() or "",
+            dim = tab.category ~= nil and not ns:IsCategoryEnabled(tab.category),
+        }
+    end
+    window.tabs:SetTabs(list, CurrentTab(page).id, animate)
+end
+
+-- The master switch of the tab's category, right in the line below the tabs.
+local function RefreshMaster(animate)
     local master = window.master
-    if searchText ~= "" then
+    local tab = CurrentTab()
+    if searchText ~= "" or not tab.category then
         master:Hide()
         return
     end
-    local page = pages[currentPage]
-    local enabled = not page.isCategory or ns:IsCategoryEnabled(currentPage)
-    window.title:SetText(L["cat_" .. currentPage])
-    window.subtitle:SetText(L["cat_" .. currentPage .. "_desc"])
-    master:SetShown(page.isCategory == true)
-    if page.isCategory then
-        master.caption:SetText(enabled and L.ui_category_on or L.ui_category_off)
-        master:SetWidth(master.caption:GetStringWidth() + 10 + 30)
-        master.toggle:Set(enabled, animate)
-    end
+    local enabled = ns:IsCategoryEnabled(tab.category)
+    master:Show()
+    master.caption:SetText(enabled and L.ui_category_on or L.ui_category_off)
+    master:SetWidth(master.caption:GetStringWidth() + 10 + 34)
+    master.toggle:Set(enabled, animate)
 end
 
--- True if "reset page" would change anything on the current page.
-local function PageDiffersFromDefaults()
-    local page = pages[currentPage]
-    if page.isCategory and not ns:IsCategoryEnabled(currentPage) then
+local function HasSettings(tab)
+    for _, item in ipairs(tab.settings) do
+        if item.section then
+            return true
+        end
+    end
+    return false
+end
+
+-- True if "reset" would change anything on the current tab.
+local function TabDiffersFromDefaults(tab)
+    if tab.category and not ns:IsCategoryEnabled(tab.category) and HasSettings(tab) then
         return true
     end
-    for _, item in ipairs(page.items) do
-        if item.section and not ns:IsSectionDefault(item.section) then
-            return true
+    for _, item in ipairs(tab.settings) do
+        if item.section then
+            if item.key then
+                if not ns:IsDefault(item.section, item.key) then
+                    return true
+                end
+            elseif not ns:IsSectionDefault(item.section) then
+                return true
+            end
         end
     end
     return false
@@ -562,13 +855,14 @@ end
 
 local function UpdateResetButton()
     local button = window.resetButton
-    local usable = searchText == "" and PageDiffersFromDefaults()
+    local tab = CurrentTab()
+    local usable = searchText == "" and TabDiffersFromDefaults(tab)
     if not usable then
         resetArmed = false
     end
     button:SetDisabled(not usable)
     button:SetLabel(resetArmed and L.ui_reset_confirm or L.ui_reset_page)
-    button.label:SetTextColor(UI.Color(resetArmed and "warning" or "text"))
+    button:SetTone(resetArmed and "danger" or nil)
 end
 
 local function DisarmReset()
@@ -584,6 +878,10 @@ local function ApplyScale()
     end
 end
 
+local function RefreshThemeButton()
+    window.themeButton:SetIcon(UI.isDark and "sun" or "moon")
+end
+
 -- Refreshes switches and counters without touching the layout.
 local function RefreshState(animate)
     for i = 1, #rows do
@@ -591,73 +889,144 @@ local function RefreshState(animate)
             RowRefresh(rows[i], animate)
         end
     end
-    RefreshHeader(animate)
+    if searchText == "" then
+        RefreshTabs(animate)
+    end
+    RefreshMaster(animate)
     UpdateResetButton()
     RefreshSidebar()
+    RefreshThemeButton()
 end
 
-function Render()
+-- Places the tab bar, the description line and the scroll area from top to
+-- bottom; parts a page does not need take no room.
+local function LayoutHeader(showTabs, sectionText, showActions)
+    local y = HEADER
+    window.tabs:SetShown(showTabs)
+    if showTabs then
+        window.tabs:ClearAllPoints()
+        window.tabs:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -y)
+        y = y + 34 + 16
+    end
+
+    local section = window.section
+    local hasSection = sectionText ~= nil and sectionText ~= "" or showActions
+    section:SetShown(hasSection)
+    if hasSection then
+        local actionsWidth = 0
+        if window.master:IsShown() then
+            actionsWidth = actionsWidth + window.master:GetWidth() + 8
+        end
+        if window.resetButton:IsShown() then
+            -- Room for the longer "really reset?" as well.
+            actionsWidth = actionsWidth + math.max(170, window.resetButton:GetWidth()) + 8
+        end
+        section.desc:SetWidth(CONTENT_W - actionsWidth - 16)
+        section.desc:SetText(sectionText or "")
+        local height = math.max(28, section.desc:GetStringHeight())
+        section:SetHeight(height)
+        section:ClearAllPoints()
+        section:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -y)
+        y = y + height + 16
+    end
+
+    window.scroll:ClearAllPoints()
+    window.scroll:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -y)
+    window.scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -PAD, 18)
+end
+
+-- animateTabs: let the tab bar slide (only when switching tabs).
+function Render(animateTabs)
     UI.CloseMenu()
     local searching = searchText ~= ""
-    local items
+    local page = pages[currentPage]
+    local tab = CurrentTab(page)
+    local blocks, key
 
     if searching then
-        items = SearchItems(searchText)
+        local total
+        blocks, total = SearchBlocks(searchText)
         window.title:SetText(L.ui_search_title)
-        if #items > 0 then
-            window.subtitle:SetText(L.ui_search_results:format(#items))
+        if total > 0 then
+            window.subtitle:SetText(L.ui_search_results:format(total))
         else
             window.subtitle:SetText(L.ui_search_none:format(searchText))
         end
+        key = "search:" .. searchText
     else
-        items = PageItems(pages[currentPage])
+        blocks = tab.blocks()
+        window.title:SetText(page.title())
+        window.subtitle:SetText(page.desc())
+        key = page.id .. ":" .. tab.id
+        RefreshTabs(animateTabs == true)
     end
-    RefreshHeader(false)
 
-    local offset = 0
-    for index, item in ipairs(items) do
-        local row = rows[index]
-        if not row then
-            row = CreateRow(window.panel)
-            rows[index] = row
-        end
-        RowSetItem(row, item, index, searching)
-        row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", window.panel, "TOPLEFT", 0, -offset)
-        row:Show()
-        offset = offset + row.height
+    -- Actions of the tab: reset where it has settings, the master switch
+    -- where it belongs to a category.
+    window.resetButton:SetShown(not searching and HasSettings(tab))
+    UpdateResetButton()
+    RefreshMaster(false)
+    local reset = window.resetButton
+    reset:ClearAllPoints()
+    if window.master:IsShown() then
+        reset:SetPoint("RIGHT", window.master, "LEFT", -12, 0)
+    else
+        reset:SetPoint("RIGHT", window.section, "RIGHT", -10, 0)
     end
-    for index = #items + 1, #rows do
+    local showActions = not searching and (window.master:IsShown() or window.resetButton:IsShown())
+    LayoutHeader(not searching and #page.tabs > 1, not searching and tab.desc and tab.desc() or nil, showActions)
+
+    local content = window.scroll.content
+    local y, rowCount = 0, 0
+    for blockIndex, block in ipairs(blocks) do
+        local card = cards[blockIndex]
+        if not card then
+            card = CreateCard(content)
+            cards[blockIndex] = card
+        end
+        if block.title then
+            y = y + BLOCK_TITLE
+        end
+        card.title:SetText(block.title or "")
+        card.note:SetText(block.note or "")
+        card:ClearAllPoints()
+        card:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
+
+        local offset = 0
+        for index, item in ipairs(block.items) do
+            rowCount = rowCount + 1
+            local row = rows[rowCount]
+            if not row then
+                row = CreateRow(content)
+                rows[rowCount] = row
+            end
+            RowSetItem(row, item, index, searching)
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(y + offset))
+            row:Show()
+            offset = offset + row.height
+        end
+        card:SetHeight(math.max(1, offset))
+        card:Show()
+        y = y + offset + BLOCK_GAP
+    end
+    for index = rowCount + 1, #rows do
         rows[index]:Hide()
     end
+    for index = #blocks + 1, #cards do
+        cards[index]:Hide()
+    end
 
-    window.panel:SetHeight(math.max(1, offset))
-    window.panel:SetShown(#items > 0)
-    window.scroll:SetContentHeight(offset + 12)
-    -- Rows that fold or unfold on the same page must not make it jump.
-    local key = searching and ("search:" .. searchText) or currentPage
+    window.scroll:SetContentHeight(y)
+    -- Rows that fold or unfold on the same tab must not make it jump.
     if key ~= renderedKey then
         renderedKey = key
         window.scroll:ScrollToTop()
     end
 
-    -- "Reset page" only where the page has something to reset.
-    local resettable = not searching and pages[currentPage].isCategory == true
-    if not searching then
-        for _, item in ipairs(items) do
-            if item.section then
-                resettable = true
-                break
-            end
-        end
-    end
-    window.resetButton:SetShown(resettable)
-    UpdateResetButton()
-    window.closeButton:SetLabel(L.ui_close)
     window.search.placeholder:SetText(L.ui_search)
-    window.tagline:SetText(L.ui_tagline)
-
     RefreshSidebar()
+    RefreshThemeButton()
 end
 
 local function SelectPage(id)
@@ -671,17 +1040,26 @@ local function SelectPage(id)
     end
 end
 
-local function ResetPage()
+local function SelectTab(id)
+    DisarmReset()
+    selectedTabs[currentPage] = id
+    Render(true)
+end
+
+local function ResetTab()
+    local tab = CurrentTab()
     local sections, seen = {}, {}
-    for _, item in ipairs(pages[currentPage].items) do
-        if item.section and not seen[item.section] then
+    for _, item in ipairs(tab.settings) do
+        if item.section and item.key then
+            ns:SetOption(item.section, item.key, ns:GetDefault(item.section, item.key))
+        elseif item.section and not seen[item.section] then
             seen[item.section] = true
             sections[#sections + 1] = item.section
         end
     end
     ns:ResetSections(sections)
-    if pages[currentPage].isCategory then
-        ns:SetOption("categories", currentPage, true)
+    if tab.category then
+        ns:SetOption("categories", tab.category, true)
     end
 end
 
@@ -690,7 +1068,7 @@ local function ResetClicked()
     if resetArmed then
         resetArmed = false
         UpdateResetButton()
-        ResetPage()
+        ResetTab()
         return
     end
     resetArmed = true
@@ -708,30 +1086,27 @@ end
 -- Window
 ---------------------------------------------------------------------------
 
-local function CreateNavButton(parent, id, index, withCount)
+local function CreateNavButton(parent, page)
     local button = CreateFrame("Button", nil, parent)
     button:SetHeight(NAV_ROW)
-    button:SetPoint("TOPLEFT", 8, -120 - (index - 1) * NAV_ROW)
-    button:SetPoint("TOPRIGHT", -8, -120 - (index - 1) * NAV_ROW)
+    button.navId = page.id
 
-    button.fill = UI.Fill(button, "selected")
+    button.fill = UI.Round(button, "accentSoft", 8)
     button.fill:Hide()
-    local hover = UI.Fill(button, "hover", "BORDER")
+    local hover = UI.Round(button, "hover", 8, { sublevel = 1 })
     hover:Hide()
 
-    button.bar = button:CreateTexture(nil, "ARTWORK")
-    button.bar:SetColorTexture(UI.Color("accent"))
-    button.bar:SetPoint("TOPLEFT", 0, -7)
-    button.bar:SetPoint("BOTTOMLEFT", 0, 7)
-    button.bar:SetWidth(2)
-    button.bar:Hide()
+    button.icon = UI.Icon(button, page.icon, 16, "textMuted")
+    button.icon:SetPoint("LEFT", 12, 0)
 
-    button.label = UI.Text(button, 13, "textDim")
-    button.label:SetPoint("LEFT", 14, 0)
+    button.label = UI.Text(button, 13, "textDim", "medium")
+    button.label:SetPoint("LEFT", button.icon, "RIGHT", 10, 0)
+    button.label:SetJustifyV("MIDDLE")
 
-    if withCount then
-        button.count = UI.Text(button, 11, "textMuted")
+    if page.area then
+        button.count = UI.Text(button, 11, "textMuted", "medium")
         button.count:SetPoint("RIGHT", -12, 0)
+        button.count:SetJustifyH("RIGHT")
     end
 
     button:SetScript("OnEnter", function(self)
@@ -744,15 +1119,146 @@ local function CreateNavButton(parent, id, index, withCount)
     end)
     button:SetScript("OnClick", function()
         hover:Hide()
-        SelectPage(id)
+        SelectPage(page.id)
     end)
-    navButtons[id] = button
+    navButtons[page.id] = button
     return button
 end
 
 local function SavePosition()
     local point, _, relativePoint, x, y = window:GetPoint(1)
     ns.global.window = { point = point, relativePoint = relativePoint, x = x, y = y }
+end
+
+local function BuildSidebar()
+    local sidebar = CreateFrame("Frame", nil, window)
+    sidebar:SetPoint("TOPLEFT")
+    sidebar:SetPoint("BOTTOMLEFT")
+    sidebar:SetWidth(SIDEBAR)
+    local pixel = UI.Pixel(window)
+    UI.Round(sidebar, "sidebar", RADIUS - pixel, {
+        inset = pixel,
+        sublevel = 2,
+        square = { TOPRIGHT = true, BOTTOMRIGHT = true },
+    })
+    local edge = UI.VLine(sidebar, "cardBorder")
+    edge:SetPoint("TOPRIGHT")
+    edge:SetPoint("BOTTOMRIGHT")
+
+    -- Logo: the accent colour with an "S", so it follows the chosen accent.
+    local logo = CreateFrame("Frame", nil, sidebar)
+    logo:SetSize(32, 32)
+    logo:SetPoint("TOPLEFT", 20, -22)
+    UI.Round(logo, "accent", 9, { layer = "ARTWORK" })
+    local letter = UI.Text(logo, 18, "onAccent", "semibold")
+    letter:SetPoint("CENTER", 0, 0)
+    letter:SetJustifyH("CENTER")
+    letter:SetJustifyV("MIDDLE")
+    letter:SetText("S")
+
+    local wordmark = UI.Text(sidebar, 16, "text", "semibold")
+    wordmark:SetPoint("TOPLEFT", logo, "TOPRIGHT", 11, -1)
+    wordmark:SetText("Schnitzel")
+
+    window.tagline = UI.Text(sidebar, 11, "textMuted")
+    window.tagline:SetPoint("TOPLEFT", wordmark, "BOTTOMLEFT", 0, -3)
+
+    window.search = UI.SearchBox(sidebar, function(text)
+        text = strtrim(text)
+        if text ~= searchText then
+            searchText = text
+            Render()
+        end
+    end)
+    window.search:SetPoint("TOPLEFT", 16, -72)
+    window.search:SetPoint("TOPRIGHT", -16, -72)
+
+    window.navHeading = UI.Text(sidebar, 11, "textMuted", "semibold")
+    window.navHeading:SetPoint("TOPLEFT", 28, -NAV_TOP + 22)
+
+    -- Main features from the top, the addon's own pages from the bottom.
+    local top, bottom = 0, {}
+    for _, id in ipairs(pageOrder) do
+        local page = pages[id]
+        local button = CreateNavButton(sidebar, page)
+        if page.bottom then
+            bottom[#bottom + 1] = button
+        else
+            button:SetPoint("TOPLEFT", 12, -NAV_TOP - top * (NAV_ROW + 2))
+            button:SetPoint("TOPRIGHT", -12, -NAV_TOP - top * (NAV_ROW + 2))
+            top = top + 1
+        end
+    end
+    for i, button in ipairs(bottom) do
+        local y = 52 + (#bottom - i) * (NAV_ROW + 2)
+        button:SetPoint("BOTTOMLEFT", 12, y)
+        button:SetPoint("BOTTOMRIGHT", -12, y)
+    end
+
+    local line = UI.Line(sidebar, "cardBorder")
+    line:SetPoint("BOTTOMLEFT", 20, 42)
+    line:SetPoint("BOTTOMRIGHT", -20, 42)
+
+    local dot = UI.Icon(sidebar, "circle", 6, "accent")
+    dot:SetPoint("BOTTOMLEFT", 24, 21)
+    window.status = UI.Text(sidebar, 11, "textMuted", "medium")
+    window.status:SetPoint("LEFT", dot, "RIGHT", 8, 0)
+    window.status:SetJustifyV("MIDDLE")
+end
+
+local function BuildHeader()
+    window.title = UI.Text(window, 20, "text", "semibold")
+    window.title:SetPoint("TOPLEFT", SIDEBAR + PAD, -24)
+
+    window.subtitle = UI.Text(window, 12, "textMuted")
+    window.subtitle:SetPoint("TOPLEFT", window.title, "BOTTOMLEFT", 0, -7)
+    window.subtitle:SetWidth(CONTENT_W - 90)
+
+    local close = UI.IconButton(window, "close", function()
+        window:Hide()
+    end, 28)
+    close:SetPoint("TOPRIGHT", -12, -12)
+    window.closeButton = close
+
+    window.themeButton = UI.IconButton(window, "sun", function()
+        ns:SetOption("general", "theme", UI.isDark and "light" or "dark")
+    end, 28)
+    window.themeButton:SetPoint("RIGHT", close, "LEFT", -4, 0)
+
+    window.tabs = UI.Tabs(window, SelectTab)
+    window.tabs:SetWidth(CONTENT_W)
+
+    -- Line under the tabs: what the tab is about, its actions on the right.
+    local section = CreateFrame("Frame", nil, window)
+    section:SetWidth(CONTENT_W)
+    section.desc = UI.Text(section, 12, "textMuted")
+    section.desc:SetPoint("LEFT")
+    section.desc:SetJustifyV("MIDDLE")
+    section.desc:SetSpacing(2)
+    window.section = section
+
+    -- Master switch of the category, in line with the switches of the rows.
+    local master = CreateFrame("Button", nil, section)
+    master:SetHeight(28)
+    master:SetPoint("RIGHT", -18, 0)
+    master.toggle = UI.Toggle(master)
+    master.toggle:SetPoint("RIGHT")
+    master.caption = UI.Text(master, 11, "textDim", "semibold")
+    master.caption:SetPoint("RIGHT", master.toggle, "LEFT", -10, 0)
+    master.caption:SetJustifyV("MIDDLE")
+    master:SetScript("OnEnter", function(self)
+        UI.Ink(self.caption, "text")
+    end)
+    master:SetScript("OnLeave", function(self)
+        UI.Ink(self.caption, "textDim")
+    end)
+    master:SetScript("OnClick", function()
+        local category = CurrentTab().category
+        ns:SetOption("categories", category, not ns:IsCategoryEnabled(category))
+    end)
+    window.master = master
+
+    window.resetButton = UI.Button(section, ResetClicked, "ghost", "reset")
 end
 
 local function Build()
@@ -769,10 +1275,8 @@ local function Build()
     window:RegisterForDrag("LeftButton")
     window:Hide()
     ApplyScale()
-    UI.Fill(window, "window")
-    local frameSize = UI.GradientFrame(window, "frameTop", "frameBottom", 3)
-    -- The frame lies outside the window; keep it on screen as well.
-    window:SetClampRectInsets(-frameSize, frameSize, frameSize, -frameSize)
+    UI.Shadow(window, 32, RADIUS, 10)
+    UI.Card(window, "window", "cardBorder", RADIUS)
 
     local saved = ns.global.window
     if saved and saved.point then
@@ -787,134 +1291,17 @@ local function Build()
     end)
     table.insert(UISpecialFrames, "SchnitzelOptionsFrame") -- Escape closes it
 
-    -- Sidebar
-    local sidebar = CreateFrame("Frame", nil, window)
-    sidebar:SetPoint("TOPLEFT")
-    sidebar:SetPoint("BOTTOMLEFT")
-    sidebar:SetWidth(SIDEBAR)
-    UI.Fill(sidebar, "sidebar")
+    BuildSidebar()
+    BuildHeader()
 
-    local logo = UI.Icon(sidebar, "logo", 30)
-    logo:SetPoint("TOPLEFT", 20, -22)
-
-    local wordmark = UI.Text(sidebar, 17, "text")
-    wordmark:SetPoint("TOPLEFT", logo, "TOPRIGHT", 10, 0)
-    wordmark:SetText("Schnitzel")
-
-    window.tagline = UI.Text(sidebar, 11, "textMuted")
-    window.tagline:SetPoint("TOPLEFT", wordmark, "BOTTOMLEFT", 0, -3)
-
-    window.search = UI.SearchBox(sidebar, function(text)
-        text = strtrim(text)
-        if text ~= searchText then
-            searchText = text
-            Render()
-        end
-    end)
-    window.search:SetPoint("TOPLEFT", 16, -72)
-    window.search:SetPoint("TOPRIGHT", -16, -72)
-
-    local index = 0
-    for _, id in ipairs(pageOrder) do
-        index = index + 1
-        local isCategory = id ~= "general" and id ~= "about"
-        if id == "general" then
-            -- Small gap with a hairline between features and addon pages.
-            local line = UI.Line(sidebar)
-            line:SetPoint("TOPLEFT", 20, -120 - (index - 1) * NAV_ROW - 8)
-            line:SetPoint("TOPRIGHT", -20, -120 - (index - 1) * NAV_ROW - 8)
-            index = index + 0.5
-        end
-        CreateNavButton(sidebar, id, index, isCategory)
-    end
-
-    window.status = UI.Text(sidebar, 11, "textMuted")
-    window.status:SetPoint("BOTTOMLEFT", 20, 16)
-    window.status:SetJustifyV("BOTTOM")
-    window.status:SetSpacing(3)
-
-    -- Header
-    window.title = UI.Text(window, 22, "text")
-    window.title:SetPoint("TOPLEFT", SIDEBAR + PAD, -26)
-
-    window.subtitle = UI.Text(window, 12, "textMuted")
-    window.subtitle:SetPoint("TOPLEFT", window.title, "BOTTOMLEFT", 0, -8)
-    window.subtitle:SetWidth(ROW_WIDTH - 190)
-
-    -- Master switch of the category, in line with the switches of the rows.
-    local master = CreateFrame("Button", nil, window)
-    master:SetHeight(24)
-    master:SetPoint("TOPRIGHT", -(PAD + 16), -38)
-    master.toggle = UI.Toggle(master)
-    master.toggle:SetPoint("RIGHT")
-    master.caption = UI.Text(master, 12, "textDim")
-    master.caption:SetPoint("RIGHT", master.toggle, "LEFT", -10, 0)
-    master.caption:SetJustifyV("MIDDLE")
-    master:SetScript("OnEnter", function(self)
-        self.caption:SetTextColor(UI.Color("text"))
-    end)
-    master:SetScript("OnLeave", function(self)
-        self.caption:SetTextColor(UI.Color("textDim"))
-    end)
-    master:SetScript("OnClick", function()
-        ns:SetOption("categories", currentPage, not ns:IsCategoryEnabled(currentPage))
-    end)
-    window.master = master
-
-    local close = CreateFrame("Button", nil, window)
-    close:SetSize(28, 28)
-    close:SetPoint("TOPRIGHT", -10, -10)
-    local closeHover = UI.Fill(close, "hover")
-    closeHover:Hide()
-    local closeIcon = UI.Icon(close, "close", 16, "textMuted")
-    closeIcon:SetPoint("CENTER")
-    close:SetScript("OnEnter", function()
-        closeHover:Show()
-        closeIcon:SetVertexColor(UI.Color("text"))
-    end)
-    close:SetScript("OnLeave", function()
-        closeHover:Hide()
-        closeIcon:SetVertexColor(UI.Color("textMuted"))
-    end)
-    close:SetScript("OnClick", function()
-        window:Hide()
-    end)
-
-    -- Body
     window.scroll = UI.Scroll(window)
-    window.scroll:SetPoint("TOPLEFT", SIDEBAR + PAD, -HEADER)
-    window.scroll:SetPoint("BOTTOMRIGHT", -PAD, FOOTER + 12)
-    window.scroll.content:SetWidth(ROW_WIDTH)
-
-    window.panel = CreateFrame("Frame", nil, window.scroll.content)
-    window.panel:SetPoint("TOPLEFT")
-    window.panel:SetWidth(ROW_WIDTH)
-    UI.Fill(window.panel, "panel")
-    UI.Border(window.panel)
-
-    -- Footer
-    local footer = CreateFrame("Frame", nil, window)
-    footer:SetPoint("BOTTOMLEFT", SIDEBAR, 0)
-    footer:SetPoint("BOTTOMRIGHT")
-    footer:SetHeight(FOOTER)
-    UI.Fill(footer, "footer")
-    local footerLine = UI.Line(footer, "border")
-    footerLine:SetPoint("TOPLEFT")
-    footerLine:SetPoint("TOPRIGHT")
-
-    window.resetButton = UI.Button(footer, ResetClicked)
-    window.resetButton:SetPoint("LEFT", PAD, 0)
-
-    window.closeButton = UI.Button(footer, function()
-        window:Hide()
-    end)
-    window.closeButton:SetPoint("RIGHT", -PAD, 0)
+    window.scroll.content:SetWidth(CONTENT_W)
 
     window:SetScript("OnShow", function(self)
         ns:Fire("OPTIONS_SHOWN") -- lets switches that mirror game options catch up
         Render()
         self:SetAlpha(0)
-        UI.Tween(self, 0.12, function(progress)
+        UI.Tween(self, 0.15, function(progress)
             self:SetAlpha(progress)
         end)
     end)
@@ -945,7 +1332,8 @@ function ns:EditAlias(name)
     if not window:IsShown() then
         window:Show()
     end
-    if currentPage ~= "aliases" or searchText ~= "" then
+    if currentPage ~= "aliases" or searchText ~= "" or CurrentTab().id ~= "names" then
+        selectedTabs.aliases = "names"
         SelectPage("aliases")
     end
     window.scroll:ScrollToTop()
@@ -956,7 +1344,7 @@ end
 
 ---------------------------------------------------------------------------
 -- Keeping the open window in sync. Several changes in one frame (for
--- example "reset page") are folded into a single refresh.
+-- example "reset") are folded into a single refresh.
 ---------------------------------------------------------------------------
 
 local pendingRefresh -- nil, "state" or "layout"
@@ -968,7 +1356,7 @@ local function FlushRefresh()
         return -- OnShow renders from scratch anyway
     end
     if mode == "layout" then
-        Render()
+        Render(true)
     else
         RefreshState(true)
     end
@@ -990,15 +1378,19 @@ ns:On("OPTION_CHANGED", function(section, key)
     if section == "general" and key == "windowScale" then
         ApplyScale()
     end
-    -- Switching a feature folds or unfolds its options, which moves rows.
+    -- Switching a feature folds or unfolds its options, which moves rows;
+    -- the category's master switch changes the actions next to the tabs.
     local feature = ns.features[section]
-    if key == "enabled" and feature and #feature.options > 0 then
+    if (key == "enabled" and feature and #feature.options > 0) or section == "categories" then
         RequestRefresh("layout")
     else
         RequestRefresh("state")
     end
 end)
 ns:On("FEATURE_STATE", function()
+    RequestRefresh("state")
+end)
+ns:On("THEME_CHANGED", function()
     RequestRefresh("state")
 end)
 ns:On("LOCALE_CHANGED", function()

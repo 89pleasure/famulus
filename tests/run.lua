@@ -840,21 +840,38 @@ local function visibleRows()
 end
 local function navButton(text)
     for _, frame in ipairs(mock.frames) do
-        if frame.label and frame.bar and frame.label:GetText() == text then
+        if frame.navId and frame.label:GetText() == text then
             return frame
         end
     end
 end
 
-check(window.title:GetText() == "Vendors", "first page is Vendors")
+local function tabButton(text)
+    for _, button in ipairs(window.tabs.buttons) do
+        if button:IsShown() and button.label:GetText() == text then
+            return button
+        end
+    end
+end
+
+check(window.title:GetText() == "Quality of Life" and window.subtitle:GetText() == ns.L.area_qol_desc,
+    "the first page is Quality of Life, described in the header")
+check(window.tabs:IsShown() and tabButton("Vendors") and tabButton("Interface") and tabButton("Vendors").selected,
+    "its categories are tabs, starting with Vendors")
+check(window.section.desc:GetText() == ns.L.cat_vendor_desc, "the line under the tabs describes the tab")
+check(navButton("Quality of Life") and navButton("Aliases") and navButton("Settings") and navButton("About"),
+    "the sidebar lists the main features and the addon's own pages")
+check(navButton("Quality of Life").selected and navButton("Quality of Life").count:GetText() == "2/16",
+    "the main feature is selected and counts its active features")
 local rows = visibleRows()
-check(#rows == 3, "vendor page shows repair, its guild option and junk (got " .. #rows .. ")")
+check(#rows == 3, "vendor tab shows repair, its guild option and junk (got " .. #rows .. ")")
 local optionRow = rows[2]
 local function isFolded(row)
     return row.item.child and not row.desc:IsShown() and row.height < rows[1].height
 end
 check(isFolded(optionRow), "the option of a switched-off feature is a slim row without help text")
 check(optionRow.disabled and optionRow.toggle:IsShown() and not optionRow.toggle.on, "it is greyed out but shows its value")
+check(optionRow.guide:IsShown() and not rows[1].guide:IsShown(), "options hang off their feature with a guide line")
 ns:SetOption("autoRepair", "guildFunds", true)
 mock.Advance(0.3)
 check(optionRow.toggle.on and isFolded(optionRow), "a chosen value shows while folded as well")
@@ -862,12 +879,11 @@ mock.Click(optionRow)
 check(ns:GetOption("autoRepair", "guildFunds") == true, "and clicks on it do nothing")
 ns:SetOption("autoRepair", "guildFunds", false)
 mock.Advance(0.3)
-check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the page is on its defaults")
+check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
 mock.Click(window.resetButton)
-check(window.resetButton.label:GetText() == "Reset page", "and a click on it does nothing")
+check(window.resetButton.label:GetText() == "Reset", "and a click on it does nothing")
 local master = window.master
-check(master:IsShown() and master.toggle.on and master.caption:GetText() == "ON", "the header carries the category's master switch, labelled ON")
-check(window.subtitle:GetText() == ns.L.cat_vendor_desc, "the subtitle describes the page")
+check(master:IsShown() and master.toggle.on and master.caption:GetText() == "ON", "the tab carries the category's master switch, labelled ON")
 
 -- Toggle through the row itself.
 mock.Click(rows[1])
@@ -876,19 +892,20 @@ mock.Advance(0.3)
 check(#visibleRows() == 3 and not isFolded(optionRow) and optionRow.desc:IsShown(), "its option unfolds with its help text")
 check(not optionRow.disabled, "and can be used")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
+check(navButton("Quality of Life").count:GetText() == "3/16", "the sidebar counts it")
 
--- Master switch: everything on the page stops, the choices stay.
+-- Master switch: everything on the tab stops, the choices stay.
 local eventsWithRepair = ns:CountRegisteredEvents()
 mock.Click(master)
 mock.Advance(0.3)
 check(not ns:IsCategoryEnabled("vendor") and not ns.features.autoRepair.enabled, "the master switch stops the features of its category")
 check(ns:CountRegisteredEvents() == eventsWithRepair - 1, "and their game events are unregistered")
 check(ns:GetOption("autoRepair", "enabled") == true, "the feature's own setting is kept")
-check(not master.toggle.on and master.caption:GetText() == "OFF", "the switch in the header reads OFF")
-check(window.subtitle:GetText() == ns.L.cat_vendor_desc, "the subtitle keeps describing the page")
+check(not master.toggle.on and master.caption:GetText() == "OFF", "the switch reads OFF")
+check(window.section.desc:GetText() == ns.L.cat_vendor_desc, "the description stays")
 check(rows[1].disabled and rows[1].toggle.on, "feature rows are greyed out but still show the choice")
-check(navButton("Vendors").count:GetText() == "OFF", "the sidebar shows the category as OFF")
-check(navButton("Vendors").label:GetAlpha() < 1 and navButton("Quests").label:GetAlpha() == 1, "and greys out its entry, but no other")
+check(tabButton("Vendors").label:GetAlpha() < 1 and tabButton("Quests").label:GetAlpha() == 1, "the tab of the category is greyed out, no other")
+check(navButton("Quality of Life").count:GetText() == "2/16", "the area keeps counting its other categories")
 check(SchnitzelDB.profile.categories.vendor == false, "the switch is saved")
 setState({ canRepair = true, repairCost = 1200, money = 5000 })
 mock.Fire("MERCHANT_SHOW")
@@ -900,8 +917,8 @@ check(ns.features.mapCoords.enabled, "other categories keep running")
 mock.Click(master)
 mock.Advance(0.3)
 check(ns.features.autoRepair.enabled and SchnitzelDB.profile.categories == nil, "switching the category on again resumes the features")
-check(navButton("Vendors").count:GetText() == "1/2" and navButton("Vendors").label:GetAlpha() == 1, "and the sidebar entry is back to normal")
-check(master.toggle.on and master.caption:GetText() == "ON", "as is the header")
+check(tabButton("Vendors").label:GetAlpha() == 1, "and the tab is back to normal")
+check(master.toggle.on and master.caption:GetText() == "ON", "as is the switch")
 
 mock.Click(rows[1])
 check(not ns.features.autoRepair.enabled, "and off again")
@@ -910,7 +927,7 @@ check(#visibleRows() == 3 and isFolded(optionRow) and optionRow.disabled, "which
 check(window.resetButton.disabled, "back on defaults, reset is greyed out again")
 mock.Click(master)
 mock.Advance(0.3)
-check(not window.resetButton.disabled, "a switched-off category alone makes the page resettable")
+check(not window.resetButton.disabled, "a switched-off category alone makes the tab resettable")
 mock.Click(master)
 mock.Advance(0.3)
 window.scroll:SetVerticalScroll(30)
@@ -921,40 +938,93 @@ mock.Click(rows[1])
 mock.Advance(0.3)
 window.scroll:SetVerticalScroll(0)
 
--- Every page renders, in both languages.
+-- Tabs.
+mock.Click(tabButton("Interface"))
+check(tabButton("Interface").selected and window.section.desc:GetText() == ns.L.cat_interface_desc, "a click on a tab opens it")
+check(visibleRows()[1].item.label() == ns.L.f_mapCoords, "with the features of its category")
+mock.Advance(0.3)
+check(mock.CountOnUpdateFrames() == 0, "the sliding tab bar comes to rest")
+mock.Click(navButton("Settings"))
+mock.Click(navButton("Quality of Life"))
+check(tabButton("Interface").selected, "a page remembers its tab")
+mock.Click(tabButton("Vendors"))
+
+-- Every page and tab renders, in both languages.
 for _, language in ipairs({ "enUS", "deDE" }) do
     ns:SetOption("general", "language", language)
     mock.Advance(0.1)
-    for _, page in ipairs({ "vendor", "quests", "loot", "social", "aliases", "tooltip", "interface", "general", "about" }) do
-        local button = navButton(ns.L["cat_" .. page])
+    for _, page in ipairs({ "area_qol", "area_aliases", "cat_general", "cat_about" }) do
+        local button = navButton(ns.L[page])
         check(button ~= nil, "navigation entry for " .. page .. " in " .. language)
         if button then
             mock.Click(button)
-            check(window.title:GetText() == ns.L["cat_" .. page], "page title for " .. page)
-            check(#visibleRows() > 0, "page " .. page .. " has rows")
+            check(window.title:GetText() == ns.L[page], "page title for " .. page)
+            local tabs = {}
+            for _, tab in ipairs(window.tabs.buttons) do
+                if tab:IsShown() and window.tabs:IsShown() then
+                    tabs[#tabs + 1] = tab
+                end
+            end
+            if #tabs == 0 then
+                check(#visibleRows() > 0, "page " .. page .. " has rows")
+            end
+            for _, tab in ipairs(tabs) do
+                mock.Click(tab)
+                check(#visibleRows() > 0, "tab " .. tab.label:GetText() .. " of " .. page .. " has rows")
+            end
         end
     end
 end
 check(window.title:GetText() == "Über", "language switch applies immediately, without reload")
-check(not window.master:IsShown(), "pages without features have no master switch")
+check(not window.master:IsShown() and not window.tabs:IsShown(), "the about page has neither tabs nor a master switch")
+for _, area in ipairs(ns.areas) do
+    for _, category in ipairs(area.categories) do
+        local owners = 0
+        for _, other in ipairs(ns.areas) do
+            for _, c in ipairs(other.categories) do
+                owners = owners + (c == category and 1 or 0)
+            end
+        end
+        check(owners == 1, "category " .. category .. " belongs to exactly one area")
+    end
+end
+for _, category in ipairs(ns.categories) do
+    local found = false
+    for _, area in ipairs(ns.areas) do
+        for _, c in ipairs(area.categories) do
+            found = found or c == category
+        end
+    end
+    check(found, "category " .. category .. " is shown in an area")
+end
 
 -- Search across pages.
 window.search.edit:SetText("repar")
 check(window.title:GetText() == "Suche" and #visibleRows() >= 1, "search finds the repair feature in German")
 check(window.search.clear:IsShown(), "the search field offers a clear button while it has text")
-check(not window.master:IsShown(), "search results have no master switch")
+check(not window.master:IsShown() and not window.tabs:IsShown(), "search results have neither tabs nor a master switch")
+local firstCard
+for _, frame in ipairs(mock.frames) do
+    if frame.title and frame.note and frame:IsVisible() then
+        firstCard = firstCard or frame
+    end
+end
+check(firstCard and firstCard.title:GetText() == "Quality of Life  ·  Händler", "hits are grouped by where they live")
 window.search.edit:SetText("zzzz")
 check(#visibleRows() == 0, "search with no hit shows no rows")
 mock.Click(window.search.clear)
 check(window.search.edit:GetText() == "" and window.title:GetText() == "Über", "the clear button empties the field and returns to the page")
 check(not window.search.clear:IsShown(), "and disappears again")
 
--- Reset page.
+-- Reset.
 ns:SetOption("general", "language", "enUS")
 mock.Advance(0.1)
-mock.Click(navButton("Vendors"))
+mock.Click(navButton("Quality of Life"))
+mock.Click(tabButton("Vendors"))
+check(tabButton("Vendors").selected, "back on the vendor tab")
 enable("autoRepair")
 enable("sellJunk")
+enable("autoAccept")
 mock.Advance(0.1)
 ns:SetOption("categories", "vendor", false)
 mock.Advance(0.1)
@@ -963,26 +1033,39 @@ mock.Advance(0.1)
 check(ns.features.sellJunk ~= nil and ns:GetOption("sellJunk", "enabled") == true, "the first click on reset changes nothing")
 check(window.resetButton.label:GetText() == "Really reset?", "it asks for confirmation instead")
 mock.Advance(4.1)
-check(window.resetButton.label:GetText() == "Reset page", "the question goes away by itself")
+check(window.resetButton.label:GetText() == "Reset", "the question goes away by itself")
 mock.Click(window.resetButton)
-mock.Click(navButton("Quests"))
-mock.Click(navButton("Vendors"))
-check(window.resetButton.label:GetText() == "Reset page", "and when the page is left")
+mock.Click(tabButton("Quests"))
+mock.Click(tabButton("Vendors"))
+check(window.resetButton.label:GetText() == "Reset", "and when the tab is left")
 mock.Click(window.resetButton)
 mock.Click(window.resetButton)
 mock.Advance(4.1)
-check(not ns.features.autoRepair.enabled and not ns.features.sellJunk.enabled, "the second click puts the page back to defaults")
-check(window.resetButton.disabled and window.resetButton.label:GetText() == "Reset page", "after which reset is greyed out")
+check(not ns.features.autoRepair.enabled and not ns.features.sellJunk.enabled, "the second click puts the tab back to defaults")
+check(window.resetButton.disabled and window.resetButton.label:GetText() == "Reset", "after which reset is greyed out")
 check(ns:IsCategoryEnabled("vendor"), "including the category's master switch")
+check(ns.features.autoAccept.enabled, "other tabs of the page are left alone")
+enable("autoAccept", false)
 
--- Aliases page: four features (Guildy is loaded in the mock), the input row, then the list.
+-- Aliases page: the list first, where aliases show on the second tab.
 mock.Click(navButton("Aliases"))
+mock.Click(tabButton("Names"))
+check(window.title:GetText() == "Aliases" and tabButton("Names").selected and tabButton("Display"), "the aliases page has its own tabs")
+check(window.master:IsShown() and not window.resetButton:IsShown(), "the list tab has the master switch, but no reset: aliases are data")
 local aliasRows = visibleRows()
-check(#aliasRows == 8, "the aliases page shows its features, the input row and an empty hint (got " .. #aliasRows .. ")")
-local editor = aliasRows[7].editor
-check(editor ~= nil and editor:IsVisible() and aliasRows[8].item.kind == "info", "the input row comes before the hint")
+check(#aliasRows == 2, "the list tab shows the input row and an empty hint (got " .. #aliasRows .. ")")
+local editor = aliasRows[1].editor
+check(editor ~= nil and editor:IsVisible() and aliasRows[2].item.kind == "info", "the input row comes before the hint")
 check(editor.name.placeholder:GetText() == "Character name" and editor.save.label:GetText() == "Save", "the input row is labelled")
-check(navButton("Aliases").count:GetText() == "4/4" and window.master:IsShown(), "the page is a category with a master switch")
+check(navButton("Aliases").count:GetText() == "4/4", "the sidebar counts the alias features")
+mock.Click(tabButton("Display"))
+check(#visibleRows() == 6 and window.resetButton:IsShown(), "the display tab shows the four features with their options, and reset")
+mock.Click(window.master)
+mock.Advance(0.1)
+check(navButton("Aliases").count:GetText() == "OFF" and navButton("Aliases").label:GetAlpha() < 1, "a switched-off area reads OFF in the sidebar")
+mock.Click(window.master)
+mock.Advance(0.1)
+mock.Click(tabButton("Names"))
 mock.Click(editor.save)
 check(ns.AliasService.Count() == 0 and mock.focus == editor.name.edit, "saving without a name asks for the name")
 editor.name.edit:SetText("Jaina Proudmoore")
@@ -996,13 +1079,13 @@ mock.Advance(0.1)
 check(ns.AliasService.Get("Jaina Proudmoore") == "Anna", "Enter in the alias field saves")
 check(editor.name.edit:GetText() == "" and editor.alias.edit:GetText() == "", "and empties the input row")
 aliasRows = visibleRows()
-check(#aliasRows == 8 and aliasRows[8].item.kind == "alias" and aliasRows[8].label:GetText() == "Anna" and aliasRows[8].desc:GetText() == "Jaina Proudmoore",
+check(#aliasRows == 2 and aliasRows[2].item.kind == "alias" and aliasRows[2].label:GetText() == "Anna" and aliasRows[2].desc:GetText() == "Jaina Proudmoore",
     "the alias appears in the list with the character below it")
-check(window.resetButton.disabled, "a stored alias is not a changed setting")
+check(aliasRows[2].initial:GetText() == "A" and aliasRows[2].avatar:IsShown(), "with its initial as an avatar")
 ns.AliasService.Set("Thrall", "Boss")
 mock.Advance(0.1)
-check(#visibleRows() == 9, "an alias set elsewhere shows up while the window is open")
-mock.Click(aliasRows[8])
+check(#visibleRows() == 3, "an alias set elsewhere shows up while the window is open")
+mock.Click(aliasRows[2])
 check(editor.name.edit:GetText() == "Jaina Proudmoore" and editor.alias.edit:GetText() == "Anna" and mock.focus == editor.alias.edit,
     "clicking an alias loads it into the input row")
 editor.alias.edit:SetText("Annie")
@@ -1013,20 +1096,29 @@ window.search.edit:SetText("annie")
 check(#visibleRows() == 1 and visibleRows()[1].item.kind == "alias", "search finds an alias")
 window.search.edit:SetText("proudm")
 check(#visibleRows() == 1, "and a character name")
+mock.Click(navButton("Quality of Life"))
+window.search.edit:SetText("proudm")
 mock.Click(visibleRows()[1])
-check(window.search.edit:GetText() == "" and window.title:GetText() == "Aliases" and editor.alias.edit:GetText() == "Annie",
+check(window.search.edit:GetText() == "" and window.title:GetText() == "Aliases" and tabButton("Names").selected and editor.alias.edit:GetText() == "Annie",
     "clicking the hit opens it on the aliases page")
-mock.Click(visibleRows()[8].remove)
+local annieRow
+for _, row in ipairs(visibleRows()) do
+    if row.item.kind == "alias" and row.label:GetText() == "Annie" then
+        annieRow = row
+    end
+end
+mock.Click(annieRow.remove)
 mock.Advance(0.1)
-check(ns.AliasService.Get("Jaina Proudmoore") == nil and #visibleRows() == 8, "the remove button deletes the alias")
+check(ns.AliasService.Get("Jaina Proudmoore") == nil and #visibleRows() == 2, "the remove button deletes the alias")
 editor:Load("", "")
--- From the context menu: the window opens on the page with the name filled in.
-mock.Click(navButton("Vendors"))
+-- From the context menu: the window opens on the list with the name filled in.
+mock.Click(tabButton("Display"))
+mock.Click(navButton("Quality of Life"))
 SlashCmdList.SCHNITZEL("")
 check(not window:IsShown(), "window closed for the menu test")
 mock.OpenMenu("MENU_UNIT_PLAYER", { name = "Varian", surname = "Wrynn" })[2].click()
 mock.Advance(0.3)
-check(window:IsShown() and window.title:GetText() == "Aliases", "\"Set alias\" in a context menu opens the aliases page")
+check(window:IsShown() and window.title:GetText() == "Aliases" and tabButton("Names").selected, "\"Set alias\" in a context menu opens the alias list")
 check(editor.name.edit:GetText() == "Varian Wrynn" and editor.alias.edit:GetText() == "" and mock.focus == editor.alias.edit,
     "with the character filled in and the cursor in the alias field")
 mock.OpenMenu("MENU_UNIT_PLAYER", { name = "Thrall" })[2].click()
@@ -1037,39 +1129,81 @@ ns.AliasService.Set("Thrall", nil)
 mock.Advance(0.1)
 check(SchnitzelDB.aliases == nil, "the tests leave no alias behind")
 
--- Dropdown menu.
+-- Settings: general tab.
 mock.Click(navButton("Settings"))
+mock.Click(tabButton("General"))
+check(tabButton("General").selected and tabButton("Appearance"), "the settings page has a general and an appearance tab")
 local generalRows = visibleRows()
 mock.Click(generalRows[2]) -- pause key
 mock.Advance(0.05)
 local picked = false
 for _, frame in ipairs(mock.frames) do
-    if frame.value == "CTRL" and frame:IsVisible() then
+    if frame.value == "CTRL" and frame.check and frame:IsVisible() then
         mock.Click(frame)
         picked = true
         break
     end
 end
 check(picked and ns:GetOption("general", "pauseModifier") == "CTRL", "dropdown changes the pause key")
+mock.Advance(0.1)
+check(not window.resetButton.disabled, "a changed setting makes the tab resettable")
 ns:SetOption("general", "pauseModifier", "SHIFT")
 
+-- Character profile.
+enable("declineDuels")
+mock.Click(generalRows[5])
+mock.Advance(0.1)
+check(ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "character profile starts as a copy")
+enable("declineDuels", false)
+mock.Click(generalRows[5])
+mock.Advance(0.1)
+check(not ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "switching back restores the account settings")
+enable("declineDuels", false)
+
+-- Settings: appearance tab.
+mock.Click(tabButton("Appearance"))
+local looks = visibleRows()
+check(looks[1].segment:IsShown() and looks[2].swatches:IsShown() and looks[3].dropdown:IsShown(), "theme, accent colour and window size")
+check(ns.UI.isDark and window.themeButton.icon ~= nil, "the window starts dark")
+local lightButton
+for _, button in ipairs(looks[1].segment.buttons) do
+    if button.value == "light" then
+        lightButton = button
+    end
+end
+mock.Click(lightButton)
+mock.Advance(0.1)
+check(ns:GetOption("general", "theme") == "light" and not ns.UI.isDark, "the segmented control switches to the light theme")
+check(ns.UI.colors.card[1] == 1 and lightButton.selected, "the palette follows at once")
+mock.Click(window.themeButton)
+mock.Advance(0.1)
+check(ns.UI.isDark and (SchnitzelDB.profile.general or {}).theme == nil, "the button in the header switches back, and the default is not saved")
+local violet
+for _, dot in ipairs(looks[2].swatches.dots) do
+    if dot.value == "violet" then
+        violet = dot
+    end
+end
+local amber = ns.UI.colors.accent[1]
+mock.Click(violet)
+mock.Advance(0.1)
+check(ns:GetOption("general", "accent") == "violet" and ns.UI.colors.accent[1] ~= amber, "a swatch picks the accent colour")
+check(violet.selected and violet.ring:IsShown(), "the chosen swatch wears a ring")
+mock.Click(looks[2])
+check(ns:GetOption("general", "accent") == "violet", "a click beside the swatches changes nothing")
+check(not window.resetButton.disabled, "a changed look makes the tab resettable")
+mock.Click(window.resetButton)
+mock.Click(window.resetButton)
+mock.Advance(4.1)
+check(ns:GetOption("general", "accent") == "amber", "reset brings the default look back")
+check(ns:GetOption("general", "pauseModifier") == "SHIFT" and ns:GetOption("general", "minimapAngle") == 215, "and touches nothing else")
+
 -- Window size.
-check(generalRows[5].label:GetText() == "Window size" and generalRows[5].dropdown.text:GetText() == "100%", "the settings page offers the window size")
+check(looks[3].label:GetText() == "Window size" and looks[3].dropdown.text:GetText() == "100%", "the appearance tab offers the window size")
 ns:SetOption("general", "windowScale", 120)
 check(window.scale == 1.2, "changing it rescales the window at once")
 ns:SetOption("general", "windowScale", 100)
 check(window.scale == 1 and (SchnitzelDB.profile.general or {}).windowScale == nil, "and the default size is not saved")
-
--- Character profile.
-enable("declineDuels")
-mock.Click(generalRows[6])
-mock.Advance(0.1)
-check(ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "character profile starts as a copy")
-enable("declineDuels", false)
-mock.Click(generalRows[6])
-mock.Advance(0.1)
-check(not ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "switching back restores the account settings")
-enable("declineDuels", false)
 
 -- Minimap button.
 check(SchnitzelMinimapButton ~= nil and SchnitzelMinimapButton:IsShown(), "minimap button exists")

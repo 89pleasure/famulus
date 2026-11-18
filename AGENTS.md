@@ -2,7 +2,7 @@
 
 Schnitzel ist ein Quality-of-Life-Addon für **World of Warcraft: Forever**. Diese Datei hält fest,
 was der Auftraggeber will, was entschieden wurde und was man über den Forever-Client wissen muss.
-Stand: 2026-11-16, Version 0.1.0.
+Stand: 2026-11-18, Version 0.1.0.
 
 ## Vorgaben des Auftraggebers
 
@@ -85,6 +85,10 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 - **Aliase (2026-11-16, nur gegen den Mock geprüft, noch nicht im Spiel):** Kategorie `aliases` mit
   drei Features und der Alias-Liste, siehe „Aliase“ unten.
 - **Aliase im Spiel (2026-11-18):** Der Alias erscheint im normalen Chat und in Guildy (bestätigt).
+- **Neues Fenster (2026-11-18, nur gegen den Mock geprüft, noch nicht im Spiel):** siehe „Das
+  Fenster“ unten. Offen im Spiel: ob die Inter-Schriften laden (`/sz test`, Gruppe `media`, Prüfungen
+  `font …`), ob runde Ecken, Schatten und Haarlinien sauber aussehen, das Umschalten hell/dunkel und
+  der Akzentfarben, die gleitende Reiter-Markierung.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
   Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
   Taint).
@@ -164,29 +168,51 @@ Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
 | ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung je Aktion | Wenige Funktionen, eine Regel für Standardwerte, eine Sammelzeile je Aktion |
 | FlareUI ohne Deutsch; Polestar-Sprachen als Zusatz-Addons | enUS und deDE eingebaut und per Test auf Gleichstand geprüft |
 
-Von Polestar übernommen ist die **Struktur** des Fensters: Seitenleiste mit Wortmarke, Suchfeld und
-Navigation, rechts Kopfzeile, ein umrandetes Feld mit Zeilen, Fußzeile; Pillenschalter 30×16;
-flache Flächen mit Haarlinien. Farbpalette und Texturen sind eigene (`UI/Theme.lua`), es werden
-keine Schriften mitgeliefert.
+## Das Fenster
 
-Entscheidungen des Auftraggebers zum Fenster (2026-11-16):
+**Neugestaltung 2026-11-18** auf Wunsch des Auftraggebers: Mit den Aliasen kam die erste größere
+Funktion; das Fenster soll mit weiteren Hauptfunktionen übersichtlich bleiben. Vorgaben: Hauptfunktionen
+in der Seitenleiste mit eigenem Aufbau je Funktion, Quality of Life in Reitern, modern und
+schlicht wie Polestar, helles und dunkles Design, runde Ecken, eigene Schrift. Er hat freie Hand
+gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noch nicht bestätigt.
 
-- Feste Fensterhöhe; längere Seiten scrollen. Keine Höhe, die sich dem Inhalt anpasst.
-- Deckender Hintergrund, außen ein 3 Einheiten breiter Rahmen mit Verlauf (`UI.GradientFrame`).
-- Die Seite für Addon-eigene Einstellungen heißt „Einstellungen“ (intern weiter `general`); dort
-  sammelt sich alles, was nur das Addon und nicht das Spiel betrifft.
-- Der Hauptschalter einer Kategorie sitzt rechtsbündig im Kopf der Seite, beschriftet nur mit
-  „AN“ oder „AUS“. Der Untertitel beschreibt immer, was der Spieler auf der Seite findet; technische
-  Hinweise (was im Hintergrund läuft oder nicht) gehören nicht ins Fenster. Eine abgeschaltete
-  Kategorie ist in der Seitenleiste ausgegraut und trägt „AUS“ in Großbuchstaben.
-- Optionen eines Features (`child`) stehen immer unter ihm. Ist das Feature aus, erscheinen sie
-  eingeklappt: schmale Zeile ohne Beschreibung, ausgegraut, nicht klickbar, aber mit sichtbarem
-  Wert (Schalterstellung, gewählter Eintrag). Die Suche zeigt sie immer vollständig.
-- „Seite zurücksetzen“ fragt beim ersten Klick nach („Wirklich zurücksetzen?“) und führt erst der
-  zweite Klick innerhalb von vier Sekunden aus. Steht die Seite auf den Standardwerten, ist der
-  Knopf ausgegraut und nicht klickbar.
-- Die Fenstergröße ist auf der Seite „Einstellungen“ wählbar (`general.windowScale`, 80 bis 140 %).
-- Das Theming ist vorläufig; ein richtiges Theme folgt später.
+- **Aufbau:** Seitenleiste (Logo, Suche, „Funktionen“ mit einem Eintrag je Bereich und Zähler
+  aktiv/gesamt; unten „Einstellungen“ und „Über“, darunter „x von y aktiv“) | rechts Titel und
+  Untertitel des Bereichs, oben rechts Knopf hell/dunkel und Schließen, darunter die Reiter, eine
+  Zeile mit der Beschreibung des Reiters und rechts seinen Aktionen (Zurücksetzen, Hauptschalter),
+  dann Karten mit Zeilen. Keine Fußzeile.
+- **Bereiche (`ns.areas`, `Core/Features.lua`):** Jede Kategorie gehört zu genau einem Bereich (der
+  Test prüft das). `qol` zeigt seine sechs Kategorien als Reiter; `aliases` hat einen eigenen
+  Aufbau (`layouts.aliases` in `UI/Options.lua`): Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
+  „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Anzeige“ mit den Alias-Features. Die
+  Einstellungen haben die Reiter „Allgemein“ und „Darstellung“ (Farbschema, Akzentfarbe,
+  Fenstergröße). Ein Bereich ohne eigenen Aufbau bekommt je Kategorie einen Reiter.
+- **Hauptschalter** einer Kategorie: rechts in der Zeile unter den Reitern, beschriftet nur mit
+  „AN“/„AUS“; bei den Aliasen auf beiden Reitern. Eine abgeschaltete Kategorie ist als Reiter
+  ausgegraut; sind alle Kategorien eines Bereichs aus, ist er in der Seitenleiste ausgegraut und
+  trägt „AUS“.
+- **Zurücksetzen** wirkt auf den Reiter (Features ganzer Abschnitt, Addon-Optionen nur ihr
+  Schlüssel, dazu der Hauptschalter). Erster Klick fragt („Wirklich zurücksetzen?“, rot), zweiter
+  innerhalb von vier Sekunden führt aus; auf Standardwerten ausgegraut; ohne Einstellungen (Liste
+  der Aliase, „Über“) nicht vorhanden.
+- **Suche:** über alle Seiten und Reiter, Treffer gruppiert je Reiter in Karten („Quality of Life ·
+  Händler“); keine Reiter und kein Hauptschalter in der Ergebnisansicht.
+- **Farben:** Paletten `dark` (Standard) und `light`, Akzentfarben `amber` (Standard, Markenfarbe),
+  `blue`, `green`, `violet`, `rose`, je mit eigenem Ton für hell und dunkel (`UI/Theme.lua`).
+  Gespeichert als `general.theme` und `general.accent`.
+- **Form:** runde Ecken aus Viertelkreisen von `circle.tga` plus drei Rechtecken (`UI.Round`,
+  `UI.Card` mit Haarlinien-Rand); Fenster 12, Karten 10, Bedienelemente 6–8. Weicher Schatten um
+  Fenster und Menüs (`UI.Shadow`, `shadow.tga`). Der frühere Verlaufsrahmen (`UI.GradientFrame`) ist
+  entfallen.
+- **Schrift:** Inter (SIL Open Font License 1.1) in Regular, Medium und SemiBold, mit
+  `tools/make_fonts.py` auf Latein, Griechisch, Kyrillisch und Satzzeichen gekürzt (je ~100 KB,
+  geladen erst beim Öffnen des Fensters). Auf koKR/zhCN/zhTW-Clients bleibt die Spielschrift. Lädt
+  eine Datei nicht, nimmt `UI.SetFont` die Spielschrift.
+- Unverändert aus 2026-11-16: feste Fensterhöhe, längere Seiten scrollen; die Seite für
+  Addon-eigene Einstellungen heißt „Einstellungen“ (intern `general`); Untertitel und
+  Reiterbeschreibung sagen, was der Spieler dort findet, keine technischen Hinweise; Optionen eines
+  Features (`child`) stehen eingerückt mit Führungslinie unter ihm und sind bei abgeschaltetem
+  Feature eingeklappt (schmal, ausgegraut, Wert sichtbar), die Suche zeigt sie vollständig.
 
 ## Aliase
 
@@ -194,11 +220,12 @@ Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
 (`github.com/Jods-GH/CustomNames`, unterstützt Forever). Entscheidungen des Assistenten vom
 2026-11-16, vom Auftraggeber noch nicht bestätigt:
 
-- **Eigene Kategorie `aliases`** mit Hauptschalter. Die Seite zeigt die drei Features, darunter eine
-  Eingabezeile (Charaktername, Alias, „Speichern“) und je Alias eine Zeile (Klick lädt sie in die
-  Eingabezeile, das Kreuz entfernt sie). Die Suche findet Aliase und Charakternamen.
+- **Eigene Kategorie `aliases`** mit Hauptschalter, als eigener Bereich in der Seitenleiste (seit
+  2026-11-18, siehe „Das Fenster“). Reiter „Namen“: Eingabezeile (Charaktername, Alias,
+  „Speichern“) und je Alias eine Zeile (Klick lädt sie in die Eingabezeile, das Kreuz entfernt
+  sie); Reiter „Anzeige“: die Features. Die Suche findet Aliase und Charakternamen.
 - **Daten, keine Einstellung:** `SchnitzelDB.aliases = { [schlüssel] = { name, alias } }`, accountweit,
-  außerhalb der Profile; „Seite zurücksetzen“ und Profilwechsel lassen die Liste in Ruhe. Zugriff nur
+  außerhalb der Profile; „Zurücksetzen“ und Profilwechsel lassen die Liste in Ruhe. Zugriff nur
   über `ns.AliasService` (`Modules/Aliases/AliasService.lua`); Änderungen melden sich mit dem Signal
   `ALIASES_CHANGED`.
 - **Schlüssel:** voller Charaktername, klein geschrieben, Leerzeichen und Bindestriche zu „-“. Forever
@@ -297,12 +324,15 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
 - **Kosten im Leerlauf**, vom Test festgeschrieben: Laden erzeugt zwei Frames; nach dem Login mit
   Standardwerten ist kein Spielereignis registriert, kein `OnUpdate`, kein Timer.
 - **Texte:** Jeder Schlüssel in `Locales/enUS.lua` **und** `Locales/deDE.lua`, mit denselben
-  Platzhaltern. Schema: `cat_<seite>`, `f_<feature>`, `o_<feature>_<option>`, `g_<allgemein>`,
-  `msg_<chat>`, `ui_<fenster>`; Hilfetext mit Endung `_desc`. Texte erst zur Laufzeit über `ns.L`
+  Platzhaltern. Schema: `area_<bereich>`, `cat_<kategorie>`, `f_<feature>`, `o_<feature>_<option>`,
+  `g_<allgemein>`, `msg_<chat>`, `ui_<fenster>` (Reiter: `ui_tab_<id>`); Hilfetext mit Endung `_desc`. Texte erst zur Laufzeit über `ns.L`
   lesen, nie beim Laden zwischenspeichern, sonst bricht der Sprachwechsel.
 - **Einstellungen:** Gespeichert wird nur, was vom Standard abweicht (`ns:SetOption`).
 - **Fenster:** Zeilen entstehen automatisch aus Features und deren `options`
-  (`type = "toggle"` oder `"select"`). Neue Widgets gehören nach `UI/Widgets.lua`.
+  (`type = "toggle"` oder `"select"`; Addon-Optionen auch `"segment"` und `"swatch"`). Neue Widgets
+  gehören nach `UI/Widgets.lua`. Farben nie direkt setzen, sondern über Farbnamen mit `UI.Paint`
+  (Flächen), `UI.Tint` (Bilder) oder `UI.Ink` (Text): Nur so folgt das offene Fenster dem
+  Wechsel von Farbschema und Akzentfarbe. Texte über `UI.Text` (Schrift und Fallback).
 
 ## Bewusst weggelassen
 
@@ -327,6 +357,10 @@ luajit tools/read_selftest.lua
 
 ```bash
 python3 tools/make_media.py
+```
+
+```bash
+python3 tools/make_fonts.py <Inter-Release>/extras/ttf   # braucht fontTools
 ```
 
 ```bash

@@ -1,147 +1,274 @@
 -- Building blocks of the settings window. Nothing here runs at load time;
 -- every function is called when the window is first opened.
+--
+-- Rounded shapes are drawn from quarters of circle.tga for the corners and
+-- three plain rectangles in between, so any size works without stretching
+-- and every piece follows the theme through UI.Paint / UI.Tint.
 
 local _, ns = ...
 local UI = ns.UI
 
 ---------------------------------------------------------------------------
--- Fills, borders, text
+-- Shapes
 ---------------------------------------------------------------------------
 
-function UI.Fill(frame, colorName, layer)
-    local texture = frame:CreateTexture(nil, layer or "BACKGROUND")
+local Shape = {}
+Shape.__index = Shape
+
+function Shape:SetColor(token, alpha)
+    self.token, self.alpha = token, alpha or 1
+    for _, part in ipairs(self.parts) do
+        if part.rounded then
+            UI.Tint(part, token, self.alpha)
+        else
+            UI.Paint(part, token, self.alpha)
+        end
+    end
+end
+
+function Shape:SetShown(shown)
+    for _, part in ipairs(self.parts) do
+        part:SetShown(shown)
+    end
+end
+
+function Shape:Show()
+    self:SetShown(true)
+end
+
+function Shape:Hide()
+    self:SetShown(false)
+end
+
+local CORNERS = {
+    { "TOPLEFT", 1, -1, 0, 0.5, 0, 0.5 },
+    { "TOPRIGHT", -1, -1, 0.5, 1, 0, 0.5 },
+    { "BOTTOMLEFT", 1, 1, 0, 0.5, 0.5, 1 },
+    { "BOTTOMRIGHT", -1, 1, 0.5, 1, 0.5, 1 },
+}
+
+-- A filled rectangle with rounded corners covering `frame`.
+-- opts: layer, sublevel, inset (distance from the frame's edges), square
+-- (set of corner names that stay square, e.g. { TOPRIGHT = true }).
+function UI.Round(frame, token, radius, opts)
+    opts = opts or {}
+    local layer, sublevel = opts.layer or "BACKGROUND", opts.sublevel or 0
+    local inset, r = opts.inset or 0, radius
+    local shape = setmetatable({ parts = {} }, Shape)
+
+    local function Part()
+        local texture = frame:CreateTexture(nil, layer, nil, sublevel)
+        shape.parts[#shape.parts + 1] = texture
+        return texture
+    end
+
+    for _, c in ipairs(CORNERS) do
+        local corner = Part()
+        corner:SetSize(r, r)
+        corner:SetPoint(c[1], frame, c[1], c[2] * inset, c[3] * inset)
+        if not (opts.square and opts.square[c[1]]) then
+            corner.rounded = true
+            corner:SetTexture(UI.media.circle)
+            corner:SetTexCoord(c[4], c[5], c[6], c[7])
+        end
+    end
+
+    local middle = Part()
+    middle:SetPoint("TOPLEFT", frame, "TOPLEFT", inset + r, -inset)
+    middle:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset - r, inset)
+
+    local left = Part()
+    left:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset - r)
+    left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", inset, inset + r)
+    left:SetWidth(r)
+
+    local right = Part()
+    right:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -inset, -inset - r)
+    right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset, inset + r)
+    right:SetWidth(r)
+
+    shape:SetColor(token)
+    return shape
+end
+
+-- A rounded card with a hairline border: the border colour fills the whole
+-- shape and the (opaque) fill sits one pixel inside it.
+function UI.Card(frame, fillToken, borderToken, radius, opts)
+    opts = opts or {}
+    local pixel = UI.Pixel(frame)
+    local sublevel = opts.sublevel or 0
+    local border = UI.Round(frame, borderToken, radius, {
+        layer = opts.layer,
+        sublevel = sublevel,
+        square = opts.square,
+    })
+    local fill = UI.Round(frame, fillToken, math.max(1, radius - pixel), {
+        layer = opts.layer,
+        sublevel = sublevel + 1,
+        inset = pixel,
+        square = opts.square,
+    })
+    return { border = border, fill = fill }
+end
+
+-- Soft shadow around a frame, in eight pieces of shadow.tga. The window
+-- itself covers the middle. spread: how far it reaches beyond the edges.
+function UI.Shadow(frame, spread, radius, drop)
+    local size = spread + radius
+    local pieces = {}
+    local function Piece(l, r, t, b)
+        local texture = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+        texture:SetTexture(UI.media.shadow)
+        texture:SetTexCoord(l, r, t, b)
+        UI.Tint(texture, "shadow")
+        pieces[#pieces + 1] = texture
+        return texture
+    end
+    local y = -(drop or 0)
+
+    local tl = Piece(0, 0.5, 0, 0.5)
+    tl:SetSize(size, size)
+    tl:SetPoint("TOPLEFT", frame, "TOPLEFT", -spread, spread + y)
+    local tr = Piece(0.5, 1, 0, 0.5)
+    tr:SetSize(size, size)
+    tr:SetPoint("TOPRIGHT", frame, "TOPRIGHT", spread, spread + y)
+    local bl = Piece(0, 0.5, 0.5, 1)
+    bl:SetSize(size, size)
+    bl:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", -spread, -spread + y)
+    local br = Piece(0.5, 1, 0.5, 1)
+    br:SetSize(size, size)
+    br:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", spread, -spread + y)
+
+    local top = Piece(0.49, 0.51, 0, 0.5)
+    top:SetPoint("TOPLEFT", tl, "TOPRIGHT")
+    top:SetPoint("BOTTOMRIGHT", tr, "BOTTOMLEFT")
+    local bottom = Piece(0.49, 0.51, 0.5, 1)
+    bottom:SetPoint("TOPLEFT", bl, "TOPRIGHT")
+    bottom:SetPoint("BOTTOMRIGHT", br, "BOTTOMLEFT")
+    local left = Piece(0, 0.5, 0.49, 0.51)
+    left:SetPoint("TOPLEFT", tl, "BOTTOMLEFT")
+    left:SetPoint("BOTTOMRIGHT", bl, "TOPRIGHT")
+    local right = Piece(0.5, 1, 0.49, 0.51)
+    right:SetPoint("TOPLEFT", tr, "BOTTOMLEFT")
+    right:SetPoint("BOTTOMRIGHT", br, "TOPRIGHT")
+    return pieces
+end
+
+---------------------------------------------------------------------------
+-- Fills, lines, text, icons
+---------------------------------------------------------------------------
+
+function UI.Fill(frame, token, layer, sublevel)
+    local texture = frame:CreateTexture(nil, layer or "BACKGROUND", nil, sublevel or 0)
     texture:SetAllPoints(frame)
-    texture:SetColorTexture(UI.Color(colorName))
+    UI.Paint(texture, token)
     return texture
 end
 
--- Hairline border made of four edge textures. Returns a table with
--- :SetColor(colorName).
-function UI.Border(frame, colorName)
-    local size = UI.Pixel(frame)
-    local edges = {}
-    for i = 1, 4 do
-        local edge = frame:CreateTexture(nil, "BORDER")
-        edge:SetColorTexture(UI.Color(colorName or "border"))
-        edges[i] = edge
-    end
-    edges[1]:SetPoint("TOPLEFT")
-    edges[1]:SetPoint("TOPRIGHT")
-    edges[1]:SetHeight(size)
-    edges[2]:SetPoint("BOTTOMLEFT")
-    edges[2]:SetPoint("BOTTOMRIGHT")
-    edges[2]:SetHeight(size)
-    edges[3]:SetPoint("TOPLEFT")
-    edges[3]:SetPoint("BOTTOMLEFT")
-    edges[3]:SetWidth(size)
-    edges[4]:SetPoint("TOPRIGHT")
-    edges[4]:SetPoint("BOTTOMRIGHT")
-    edges[4]:SetWidth(size)
-
-    function edges:SetColor(name)
-        for i = 1, 4 do
-            self[i]:SetColorTexture(UI.Color(name))
-        end
-    end
-    return edges
-end
-
--- Shades a texture vertically between two theme colours. Returns false if
--- the client has no gradient support; the caller then keeps a plain colour.
-function UI.ApplyGradient(texture, bottomName, topName)
-    if not (texture.SetGradient and CreateColor) then
-        return false
-    end
-    texture:SetColorTexture(1, 1, 1, 1)
-    local ok = pcall(texture.SetGradient, texture, "VERTICAL", CreateColor(UI.Color(bottomName)), CreateColor(UI.Color(topName)))
-    return ok
-end
-
--- Thick frame drawn just outside a window, shading from one colour at the
--- top to another at the bottom. thickness is in UI units and is snapped to
--- whole screen pixels.
-function UI.GradientFrame(frame, topName, bottomName, thickness)
-    local pixel = UI.Pixel(frame)
-    local size = math.max(pixel, math.floor(thickness / pixel + 0.5) * pixel)
-
-    local top = frame:CreateTexture(nil, "BORDER")
-    top:SetColorTexture(UI.Color(topName))
-    top:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", -size, 0)
-    top:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", size, 0)
-    top:SetHeight(size)
-
-    local bottom = frame:CreateTexture(nil, "BORDER")
-    bottom:SetColorTexture(UI.Color(bottomName))
-    bottom:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", -size, 0)
-    bottom:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", size, 0)
-    bottom:SetHeight(size)
-
-    local left = frame:CreateTexture(nil, "BORDER")
-    left:SetPoint("TOPRIGHT", frame, "TOPLEFT")
-    left:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT")
-    left:SetWidth(size)
-
-    local right = frame:CreateTexture(nil, "BORDER")
-    right:SetPoint("TOPLEFT", frame, "TOPRIGHT")
-    right:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT")
-    right:SetWidth(size)
-
-    for _, side in ipairs({ left, right }) do
-        if not UI.ApplyGradient(side, bottomName, topName) then
-            side:SetColorTexture(UI.Color(topName))
-        end
-    end
-    return size
-end
-
-function UI.Line(frame, colorName)
+function UI.Line(frame, token)
     local line = frame:CreateTexture(nil, "BORDER")
-    line:SetColorTexture(UI.Color(colorName or "divider"))
+    UI.Paint(line, token or "divider")
     line:SetHeight(UI.Pixel(frame))
     return line
 end
 
-function UI.Text(parent, size, colorName)
+function UI.VLine(frame, token)
+    local line = frame:CreateTexture(nil, "BORDER")
+    UI.Paint(line, token or "divider")
+    line:SetWidth(UI.Pixel(frame))
+    return line
+end
+
+-- Sets one of the window's fonts. SetFont returns false when the client
+-- cannot load the file; a font string without a font would raise errors on
+-- SetText, so it then gets the game's font instead.
+function UI.SetFont(region, size, weight)
+    if region:SetFont(UI.FontPath(weight), size, "") == false then
+        region:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, "")
+    end
+end
+
+-- weight: "regular" (default), "medium" or "semibold".
+function UI.Text(parent, size, token, weight)
     local text = parent:CreateFontString(nil, "OVERLAY")
-    text:SetFont(UI.font, size, "")
-    text:SetShadowOffset(1, -1)
-    text:SetShadowColor(0, 0, 0, 0.5)
-    text:SetTextColor(UI.Color(colorName or "text"))
+    UI.SetFont(text, size, weight)
+    UI.Ink(text, token or "text")
     text:SetJustifyH("LEFT")
     text:SetJustifyV("TOP")
     return text
 end
 
-function UI.Icon(parent, media, size, colorName)
-    local icon = parent:CreateTexture(nil, "ARTWORK")
+function UI.Icon(parent, media, size, token, layer)
+    local icon = parent:CreateTexture(nil, layer or "ARTWORK")
     icon:SetTexture(UI.media[media])
     icon:SetSize(size, size)
-    if colorName then
-        icon:SetVertexColor(UI.Color(colorName))
+    if token then
+        UI.Tint(icon, token)
     end
     return icon
 end
 
 ---------------------------------------------------------------------------
--- Button
+-- Button. variant: "primary" (accent), "secondary" (outlined) or "ghost"
+-- (no ground until hovered). Optional icon in front of the label.
 ---------------------------------------------------------------------------
 
-function UI.Button(parent, onClick)
+function UI.Button(parent, onClick, variant, icon)
+    variant = variant or "secondary"
     local button = CreateFrame("Button", nil, parent)
     button:SetHeight(28)
-    UI.Fill(button, "control")
-    UI.Border(button)
+    button.variant = variant
 
-    local hover = UI.Fill(button, "hover", "ARTWORK")
+    local ground
+    if variant == "primary" then
+        ground = UI.Round(button, "accent", 6)
+    elseif variant == "secondary" then
+        ground = UI.Card(button, "control", "controlBorder", 6)
+    end
+    local hover = UI.Round(button, variant == "primary" and "knob" or "hover", 6, { layer = "ARTWORK" })
+    hover:SetColor(variant == "primary" and "knob" or "hover", variant == "primary" and 0.12 or 1)
     hover:Hide()
 
-    local label = UI.Text(button, 12, "text")
-    label:SetPoint("CENTER")
+    local textToken = variant == "primary" and "onAccent" or (variant == "ghost" and "textDim" or "text")
+    local label = UI.Text(button, 12, textToken, "medium")
+    label:SetJustifyV("MIDDLE")
     button.label = label
+
+    if icon then
+        button.icon = UI.Icon(button, icon, 14, textToken)
+    end
+
+    local pushed = 0
+    local function Layout()
+        local labelWidth = label:GetStringWidth()
+        local iconWidth = button.icon and 20 or 0
+        local width = labelWidth + iconWidth
+        if button.icon then
+            button.icon:ClearAllPoints()
+            button.icon:SetPoint("LEFT", button, "CENTER", -width / 2, -pushed)
+            label:ClearAllPoints()
+            label:SetPoint("LEFT", button.icon, "RIGHT", 6, 0)
+        else
+            label:ClearAllPoints()
+            label:SetPoint("CENTER", 0, -pushed)
+        end
+    end
 
     function button:SetLabel(text)
         label:SetText(text)
-        self:SetWidth(math.max(84, label:GetStringWidth() + 32))
+        local padding = variant == "ghost" and 20 or 28
+        local minimum = variant == "ghost" and 0 or 84
+        self:SetWidth(math.max(minimum, label:GetStringWidth() + (self.icon and 20 or 0) + padding))
+        Layout()
+    end
+
+    -- Colour of label and icon, e.g. "danger" while asking for confirmation.
+    function button:SetTone(token)
+        token = token or textToken
+        UI.Ink(label, token)
+        if self.icon then
+            UI.Tint(self.icon, token)
+        end
     end
 
     -- A disabled button is greyed out and ignores hover and clicks.
@@ -151,7 +278,8 @@ function UI.Button(parent, onClick)
         self:SetAlpha(disabled and 0.4 or 1)
         if disabled then
             hover:Hide()
-            label:SetPoint("CENTER", 0, 0)
+            pushed = 0
+            Layout()
         end
     end
 
@@ -165,75 +293,90 @@ function UI.Button(parent, onClick)
     end)
     button:SetScript("OnMouseDown", function(self)
         if not self.disabled then
-            label:SetPoint("CENTER", 0, -1)
+            pushed = 1
+            Layout()
         end
     end)
     button:SetScript("OnMouseUp", function()
-        label:SetPoint("CENTER", 0, 0)
+        pushed = 0
+        Layout()
     end)
     button:SetScript("OnClick", function(self, ...)
         if not self.disabled then
             onClick(self, ...)
         end
     end)
+    button.ground = ground
+    return button
+end
+
+-- Small square button showing one of the media icons.
+function UI.IconButton(parent, media, onClick, size)
+    size = size or 26
+    local button = CreateFrame("Button", nil, parent)
+    button:SetSize(size, size)
+    local hover = UI.Round(button, "hover", 6)
+    hover:Hide()
+    local icon = UI.Icon(button, media, 14, "textMuted")
+    icon:SetPoint("CENTER")
+    button.icon = icon
+    function button:SetIcon(name)
+        icon:SetTexture(UI.media[name])
+    end
+    button:SetScript("OnEnter", function()
+        hover:Show()
+        UI.Tint(icon, "text")
+    end)
+    button:SetScript("OnLeave", function()
+        hover:Hide()
+        UI.Tint(icon, "textMuted")
+    end)
+    button:SetScript("OnClick", onClick)
     return button
 end
 
 ---------------------------------------------------------------------------
--- Toggle: a 30x16 pill with a sliding knob. Purely visual; the row that
+-- Toggle: a 34x20 pill with a sliding knob. Purely visual; the row that
 -- owns it handles the click, so the whole row is the hit target.
 ---------------------------------------------------------------------------
 
-local TOGGLE_W, TOGGLE_H, KNOB = 30, 16, 12
+local TOGGLE_W, TOGGLE_H, KNOB = 34, 20, 16
 local KNOB_OFF, KNOB_ON = 2, TOGGLE_W - KNOB - 2
 
 function UI.Toggle(parent)
     local toggle = CreateFrame("Frame", nil, parent)
     toggle:SetSize(TOGGLE_W, TOGGLE_H)
 
-    local half = TOGGLE_H / 2
-    local left = toggle:CreateTexture(nil, "ARTWORK")
-    left:SetTexture(UI.media.circle)
-    left:SetTexCoord(0, 0.5, 0, 1)
-    left:SetSize(half, TOGGLE_H)
-    left:SetPoint("LEFT")
+    local track = UI.Round(toggle, "track", TOGGLE_H / 2, { layer = "ARTWORK" })
 
-    local right = toggle:CreateTexture(nil, "ARTWORK")
-    right:SetTexture(UI.media.circle)
-    right:SetTexCoord(0.5, 1, 0, 1)
-    right:SetSize(half, TOGGLE_H)
-    right:SetPoint("RIGHT")
+    local knobShadow = toggle:CreateTexture(nil, "OVERLAY", nil, 0)
+    knobShadow:SetTexture(UI.media.circle)
+    knobShadow:SetSize(KNOB + 2, KNOB + 2)
+    knobShadow:SetVertexColor(0, 0, 0, 0.18)
 
-    local middle = toggle:CreateTexture(nil, "ARTWORK")
-    middle:SetPoint("TOPLEFT", half, 0)
-    middle:SetPoint("BOTTOMRIGHT", -half, 0)
-
-    local knob = toggle:CreateTexture(nil, "OVERLAY")
+    local knob = toggle:CreateTexture(nil, "OVERLAY", nil, 1)
     knob:SetTexture(UI.media.circle)
     knob:SetSize(KNOB, KNOB)
+    UI.Tint(knob, "knob")
 
     local knobX
 
     local function PlaceKnob(x)
         knobX = x
         knob:SetPoint("LEFT", toggle, "LEFT", x, 0)
+        knobShadow:SetPoint("CENTER", knob, "CENTER", 0, -1)
     end
 
     function toggle:Set(on, animate)
         on = on and true or false
         local changed = self.on ~= on
         self.on = on
-
-        local r, g, b, a = UI.Color(on and "accent" or "track")
-        left:SetVertexColor(r, g, b, a)
-        right:SetVertexColor(r, g, b, a)
-        middle:SetColorTexture(r, g, b, a)
-        knob:SetVertexColor(UI.Color(on and "onAccent" or "textDim"))
+        track:SetColor(on and "accent" or "track")
 
         local target = on and KNOB_ON or KNOB_OFF
         if animate and changed and knobX then
             local from = knobX
-            UI.Tween(self, 0.12, function(progress)
+            UI.Tween(self, 0.14, function(progress)
                 PlaceKnob(from + (target - from) * progress)
             end)
         else
@@ -246,10 +389,132 @@ function UI.Toggle(parent)
 end
 
 ---------------------------------------------------------------------------
+-- Segmented control: two or three choices side by side, the chosen one on
+-- a raised pill. values: array of { value = ..., text = "..." }.
+---------------------------------------------------------------------------
+
+function UI.Segmented(parent, onSelect)
+    local control = CreateFrame("Frame", nil, parent)
+    control:SetHeight(28)
+    UI.Card(control, "inset", "controlBorder", 7)
+    control.buttons = {}
+
+    local pill = CreateFrame("Frame", nil, control)
+    pill:SetHeight(22)
+    UI.Card(pill, "card", "controlBorder", 5)
+
+    function control:SetValues(values, current)
+        local width = 6
+        for i, entry in ipairs(values) do
+            local button = self.buttons[i]
+            if not button then
+                button = CreateFrame("Button", nil, self)
+                button:SetHeight(22)
+                button.text = UI.Text(button, 12, "textMuted", "medium")
+                button.text:SetPoint("CENTER")
+                button.text:SetJustifyV("MIDDLE")
+                button:SetScript("OnClick", function(b)
+                    onSelect(b.value)
+                end)
+                button:SetScript("OnEnter", function(b)
+                    if not b.selected then
+                        UI.Ink(b.text, "textDim")
+                    end
+                end)
+                button:SetScript("OnLeave", function(b)
+                    UI.Ink(b.text, b.selected and "text" or "textMuted")
+                end)
+                self.buttons[i] = button
+            end
+            button.value = entry.value
+            button.selected = entry.value == current
+            button.text:SetText(entry.text)
+            UI.Ink(button.text, button.selected and "text" or "textMuted")
+            local w = math.max(56, button.text:GetStringWidth() + 24)
+            button:SetWidth(w)
+            button:ClearAllPoints()
+            button:SetPoint("LEFT", self, "LEFT", width - 3, 0)
+            button:Show()
+            if button.selected then
+                pill:ClearAllPoints()
+                pill:SetPoint("LEFT", self, "LEFT", width - 3, 0)
+                pill:SetWidth(w)
+            end
+            width = width + w
+        end
+        for i = #values + 1, #self.buttons do
+            self.buttons[i]:Hide()
+        end
+        self:SetWidth(width)
+    end
+
+    return control
+end
+
+---------------------------------------------------------------------------
+-- Colour swatches: one dot per accent; the chosen one wears a ring.
+---------------------------------------------------------------------------
+
+local SWATCH, SWATCH_GAP = 18, 10
+
+function UI.Swatches(parent, onSelect)
+    local group = CreateFrame("Frame", nil, parent)
+    group:SetHeight(SWATCH + 8)
+    group.dots = {}
+
+    function group:SetValues(values, current)
+        for i, value in ipairs(values) do
+            local dot = self.dots[i]
+            if not dot then
+                dot = CreateFrame("Button", nil, self)
+                dot:SetSize(SWATCH + 8, SWATCH + 8)
+                dot.ring = dot:CreateTexture(nil, "ARTWORK", nil, 0)
+                dot.ring:SetTexture(UI.media.circle)
+                dot.ring:SetAllPoints()
+                dot.gap = dot:CreateTexture(nil, "ARTWORK", nil, 1)
+                dot.gap:SetTexture(UI.media.circle)
+                dot.gap:SetPoint("TOPLEFT", 2, -2)
+                dot.gap:SetPoint("BOTTOMRIGHT", -2, 2)
+                UI.Tint(dot.gap, "card")
+                dot.fill = dot:CreateTexture(nil, "ARTWORK", nil, 2)
+                dot.fill:SetTexture(UI.media.circle)
+                dot.fill:SetPoint("TOPLEFT", 4, -4)
+                dot.fill:SetPoint("BOTTOMRIGHT", -4, 4)
+                dot:SetScript("OnClick", function(d)
+                    onSelect(d.value)
+                end)
+                dot:SetScript("OnEnter", function(d)
+                    if not d.selected then
+                        d.ring:SetVertexColor(UI.Color("track"))
+                        d.ring:Show()
+                    end
+                end)
+                dot:SetScript("OnLeave", function(d)
+                    d.ring:SetShown(d.selected)
+                    d.ring:SetVertexColor(UI.AccentSwatch(d.value))
+                end)
+                self.dots[i] = dot
+            end
+            dot.value = value
+            dot.selected = value == current
+            dot.fill:SetVertexColor(UI.AccentSwatch(value))
+            dot.ring:SetVertexColor(UI.AccentSwatch(value))
+            dot.ring:SetShown(dot.selected)
+            dot:ClearAllPoints()
+            dot:SetPoint("LEFT", self, "LEFT", (i - 1) * (SWATCH + SWATCH_GAP), 0)
+            dot:Show()
+        end
+        self:SetWidth(#values * (SWATCH + SWATCH_GAP) - SWATCH_GAP + 8)
+    end
+
+    return group
+end
+
+---------------------------------------------------------------------------
 -- Dropdown: a value box plus one shared popup menu.
 ---------------------------------------------------------------------------
 
-local DROPDOWN_W, MENU_ROW = 150, 26
+local DROPDOWN_W, MENU_ROW, MENU_PAD = 160, 28, 4
 local menu, catcher
 
 local function CloseMenu()
@@ -273,8 +538,8 @@ local function BuildMenu()
     menu:SetFrameLevel(catcher:GetFrameLevel() + 10)
     menu:EnableMouse(true)
     menu:Hide()
-    UI.Fill(menu, "control")
-    UI.Border(menu)
+    UI.Shadow(menu, 14, 8, 3)
+    UI.Card(menu, "card", "cardBorder", 8)
     menu.rows = {}
     menu:SetScript("OnHide", function()
         catcher:Hide()
@@ -289,12 +554,15 @@ local function MenuRow(index)
     end
     row = CreateFrame("Button", nil, menu)
     row:SetHeight(MENU_ROW)
-    row:SetPoint("TOPLEFT", 0, -(index - 1) * MENU_ROW - 2)
-    row:SetPoint("TOPRIGHT", 0, -(index - 1) * MENU_ROW - 2)
-    local hover = UI.Fill(row, "hover", "ARTWORK")
+    row:SetPoint("TOPLEFT", MENU_PAD, -(index - 1) * MENU_ROW - MENU_PAD)
+    row:SetPoint("TOPRIGHT", -MENU_PAD, -(index - 1) * MENU_ROW - MENU_PAD)
+    local hover = UI.Round(row, "hover", 5)
     hover:Hide()
-    row.text = UI.Text(row, 12, "text")
-    row.text:SetPoint("LEFT", 12, 0)
+    row.text = UI.Text(row, 12, "text", "medium")
+    row.text:SetPoint("LEFT", 10, 0)
+    row.text:SetJustifyV("MIDDLE")
+    row.check = UI.Icon(row, "check", 14, "accent")
+    row.check:SetPoint("RIGHT", -8, 0)
     row:SetScript("OnEnter", function()
         hover:Show()
     end)
@@ -323,9 +591,11 @@ function UI.OpenMenu(owner, values, current, onSelect)
     menu.onSelect = onSelect
     for i = 1, #values do
         local row = MenuRow(i)
+        local selected = values[i].value == current
         row.value = values[i].value
         row.text:SetText(values[i].text)
-        row.text:SetTextColor(UI.Color(values[i].value == current and "accent" or "text"))
+        UI.Ink(row.text, selected and "accent" or "text")
+        row.check:SetShown(selected)
         row:Show()
     end
     for i = #values + 1, #menu.rows do
@@ -335,7 +605,7 @@ function UI.OpenMenu(owner, values, current, onSelect)
     menu:SetScale(owner:GetEffectiveScale() / UIParent:GetEffectiveScale())
     menu:ClearAllPoints()
     menu:SetPoint("TOPRIGHT", owner, "BOTTOMRIGHT", 0, -4)
-    menu:SetSize(owner:GetWidth(), #values * MENU_ROW + 4)
+    menu:SetSize(owner:GetWidth(), #values * MENU_ROW + MENU_PAD * 2)
     catcher:Show()
     menu:Show()
 end
@@ -343,13 +613,12 @@ end
 function UI.Dropdown(parent)
     local dropdown = CreateFrame("Frame", nil, parent)
     dropdown:SetSize(DROPDOWN_W, 28)
-    UI.Fill(dropdown, "control")
-    UI.Border(dropdown)
+    UI.Card(dropdown, "control", "controlBorder", 6)
 
     local chevron = UI.Icon(dropdown, "chevron", 12, "textMuted")
-    chevron:SetPoint("RIGHT", -9, 0)
+    chevron:SetPoint("RIGHT", -10, 0)
 
-    local text = UI.Text(dropdown, 12, "text")
+    local text = UI.Text(dropdown, 12, "text", "medium")
     text:SetPoint("LEFT", 12, 0)
     text:SetPoint("RIGHT", chevron, "LEFT", -6, 0)
     text:SetWordWrap(false)
@@ -359,45 +628,59 @@ function UI.Dropdown(parent)
 end
 
 ---------------------------------------------------------------------------
--- Search box
+-- Text fields
 ---------------------------------------------------------------------------
 
-function UI.SearchBox(parent, onChange)
+-- Shared body of the search box and the input: a rounded field whose border
+-- takes the accent colour while it has the focus.
+local function Field(parent, height, radius, maxLetters, leftInset, rightInset)
     local box = CreateFrame("Frame", nil, parent)
-    box:SetHeight(30)
-    UI.Fill(box, "field")
-    local border = UI.Border(box)
+    box:SetHeight(height)
+    local card = UI.Card(box, "field", "controlBorder", radius)
 
     local edit = CreateFrame("EditBox", nil, box)
-    edit:SetPoint("TOPLEFT", 10, 0)
-    edit:SetPoint("BOTTOMRIGHT", -28, 0)
+    edit:SetPoint("TOPLEFT", leftInset, 0)
+    edit:SetPoint("BOTTOMRIGHT", -rightInset, 0)
     edit:SetAutoFocus(false)
-    edit:SetFont(UI.font, 12, "")
+    UI.SetFont(edit, 12, "regular")
     edit:SetTextColor(UI.Color("text"))
-    edit:SetMaxLetters(40)
+    edit:SetMaxLetters(maxLetters or 40)
     box.edit = edit
 
     local placeholder = UI.Text(box, 12, "textMuted")
-    placeholder:SetPoint("LEFT", 10, 0)
+    placeholder:SetPoint("LEFT", leftInset, 0)
+    placeholder:SetJustifyV("MIDDLE")
     box.placeholder = placeholder
 
+    edit:SetScript("OnEditFocusGained", function()
+        card.border:SetColor("accent")
+    end)
+    edit:SetScript("OnEditFocusLost", function()
+        card.border:SetColor("controlBorder")
+    end)
+    box:SetScript("OnMouseDown", function()
+        edit:SetFocus()
+    end)
+    -- Edit boxes keep their own text colour; follow the theme by hand.
+    ns:On("THEME_CHANGED", function()
+        edit:SetTextColor(UI.Color("text"))
+    end)
+    return box, edit, placeholder
+end
+
+function UI.SearchBox(parent, onChange)
+    local box, edit, placeholder = Field(parent, 32, 8, 40, 32, 28)
+
+    local icon = UI.Icon(box, "search", 14, "textMuted")
+    icon:SetPoint("LEFT", 11, 0)
+
     -- Clears the field and ends the search; only there while there is text.
-    local clear = CreateFrame("Button", nil, box)
-    clear:SetSize(22, 22)
-    clear:SetPoint("RIGHT", -4, 0)
-    clear:Hide()
-    local clearIcon = UI.Icon(clear, "close", 10, "textMuted")
-    clearIcon:SetPoint("CENTER")
-    clear:SetScript("OnEnter", function()
-        clearIcon:SetVertexColor(UI.Color("text"))
-    end)
-    clear:SetScript("OnLeave", function()
-        clearIcon:SetVertexColor(UI.Color("textMuted"))
-    end)
-    clear:SetScript("OnClick", function()
+    local clear = UI.IconButton(box, "close", function()
         edit:SetText("")
         edit:ClearFocus()
-    end)
+    end, 22)
+    clear:SetPoint("RIGHT", -5, 0)
+    clear:Hide()
     box.clear = clear
 
     edit:SetScript("OnTextChanged", function(self)
@@ -413,41 +696,13 @@ function UI.SearchBox(parent, onChange)
     edit:SetScript("OnEnterPressed", function(self)
         self:ClearFocus()
     end)
-    edit:SetScript("OnEditFocusGained", function()
-        border:SetColor("accent")
-    end)
-    edit:SetScript("OnEditFocusLost", function()
-        border:SetColor("border")
-    end)
-    box:SetScript("OnMouseDown", function()
-        edit:SetFocus()
-    end)
     return box
 end
 
----------------------------------------------------------------------------
--- Text input: a bordered field with a placeholder. The owner sets
--- input.onEnter and input.onTab; Escape gives the focus back.
----------------------------------------------------------------------------
-
+-- Text input with a placeholder. The owner sets input.onEnter and
+-- input.onTab; Escape gives the focus back.
 function UI.Input(parent, maxLetters)
-    local box = CreateFrame("Frame", nil, parent)
-    box:SetHeight(28)
-    UI.Fill(box, "field")
-    local border = UI.Border(box)
-
-    local edit = CreateFrame("EditBox", nil, box)
-    edit:SetPoint("TOPLEFT", 10, 0)
-    edit:SetPoint("BOTTOMRIGHT", -10, 0)
-    edit:SetAutoFocus(false)
-    edit:SetFont(UI.font, 12, "")
-    edit:SetTextColor(UI.Color("text"))
-    edit:SetMaxLetters(maxLetters or 40)
-    box.edit = edit
-
-    local placeholder = UI.Text(box, 12, "textMuted")
-    placeholder:SetPoint("LEFT", 10, 0)
-    box.placeholder = placeholder
+    local box, edit, placeholder = Field(parent, 32, 7, maxLetters, 12, 12)
 
     edit:SetScript("OnTextChanged", function(self)
         placeholder:SetShown((self:GetText() or "") == "")
@@ -465,40 +720,101 @@ function UI.Input(parent, maxLetters)
             box.onTab()
         end
     end)
-    edit:SetScript("OnEditFocusGained", function()
-        border:SetColor("accent")
-    end)
-    edit:SetScript("OnEditFocusLost", function()
-        border:SetColor("border")
-    end)
-    box:SetScript("OnMouseDown", function()
-        edit:SetFocus()
-    end)
     return box
 end
 
--- Small square button showing one of the media icons.
-function UI.IconButton(parent, media, onClick)
-    local button = CreateFrame("Button", nil, parent)
-    button:SetSize(24, 24)
-    local hover = UI.Fill(button, "hover")
-    hover:Hide()
-    local icon = UI.Icon(button, media, 12, "textMuted")
-    icon:SetPoint("CENTER")
-    button:SetScript("OnEnter", function()
-        hover:Show()
-        icon:SetVertexColor(UI.Color("text"))
-    end)
-    button:SetScript("OnLeave", function()
-        hover:Hide()
-        icon:SetVertexColor(UI.Color("textMuted"))
-    end)
-    button:SetScript("OnClick", onClick)
-    return button
+---------------------------------------------------------------------------
+-- Tabs: labels in a row with an accent bar under the chosen one. The bar
+-- slides to a newly chosen tab.
+---------------------------------------------------------------------------
+
+local TAB_GAP = 22
+
+function UI.Tabs(parent, onSelect)
+    local tabs = CreateFrame("Frame", nil, parent)
+    tabs:SetHeight(34)
+    tabs.buttons = {}
+
+    local baseline = UI.Line(tabs, "divider")
+    baseline:SetPoint("BOTTOMLEFT")
+    baseline:SetPoint("BOTTOMRIGHT")
+
+    local bar = CreateFrame("Frame", nil, tabs)
+    bar:SetHeight(2)
+    UI.Round(bar, "accent", 1, { layer = "OVERLAY" })
+    tabs.bar = bar
+    local barX, barW
+
+    local function PlaceBar(x, w)
+        barX, barW = x, w
+        bar:ClearAllPoints()
+        bar:SetPoint("BOTTOMLEFT", tabs, "BOTTOMLEFT", x, 0)
+        bar:SetWidth(math.max(1, w))
+    end
+
+    -- list: array of { id = ..., text = "...", dim = bool }
+    function tabs:SetTabs(list, selected, animate)
+        local x = 0
+        local targetX, targetW
+        for i, entry in ipairs(list) do
+            local button = self.buttons[i]
+            if not button then
+                button = CreateFrame("Button", nil, self)
+                button:SetHeight(34)
+                button.label = UI.Text(button, 13, "textMuted", "medium")
+                button.label:SetPoint("LEFT", 0, 1)
+                button.label:SetJustifyV("MIDDLE")
+                button:SetScript("OnClick", function(b)
+                    onSelect(b.id)
+                end)
+                button:SetScript("OnEnter", function(b)
+                    if not b.selected then
+                        UI.Ink(b.label, "text")
+                    end
+                end)
+                button:SetScript("OnLeave", function(b)
+                    UI.Ink(b.label, b.selected and "text" or "textMuted")
+                end)
+                self.buttons[i] = button
+            end
+            button.id = entry.id
+            button.selected = entry.id == selected
+            button.label:SetText(entry.text)
+            button.label:SetAlpha(entry.dim and 0.5 or 1)
+            UI.Ink(button.label, button.selected and "text" or "textMuted")
+            local w = button.label:GetStringWidth()
+            button:SetWidth(w)
+            button:ClearAllPoints()
+            button:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", x, 0)
+            button:Show()
+            if button.selected then
+                targetX, targetW = x, w
+            end
+            x = x + w + TAB_GAP
+        end
+        for i = #list + 1, #self.buttons do
+            self.buttons[i]:Hide()
+        end
+        bar:SetShown(targetX ~= nil)
+        if not targetX then
+            return
+        end
+        if animate and barX and (barX ~= targetX or barW ~= targetW) then
+            local fromX, fromW = barX, barW
+            UI.Tween(bar, 0.18, function(p)
+                PlaceBar(fromX + (targetX - fromX) * p, fromW + (targetW - fromW) * p)
+            end)
+        else
+            UI.CancelTween(bar)
+            PlaceBar(targetX, targetW)
+        end
+    end
+
+    return tabs
 end
 
 ---------------------------------------------------------------------------
--- Scroll area with a slim position indicator
+-- Scroll area with a slim rounded position indicator
 ---------------------------------------------------------------------------
 
 local WHEEL_STEP = 48
@@ -510,9 +826,9 @@ function UI.Scroll(parent)
     scroll:SetScrollChild(content)
     scroll.content = content
 
-    local thumb = parent:CreateTexture(nil, "OVERLAY")
-    thumb:SetColorTexture(UI.Color("thumb"))
-    thumb:SetWidth(3)
+    local thumb = CreateFrame("Frame", nil, parent)
+    thumb:SetWidth(4)
+    UI.Round(thumb, "thumb", 2, { layer = "OVERLAY" })
     thumb:Hide()
 
     local function Range()
@@ -529,7 +845,7 @@ function UI.Scroll(parent)
         local offset = (view - length) * (self:GetVerticalScroll() / range)
         thumb:SetHeight(length)
         thumb:ClearAllPoints()
-        thumb:SetPoint("TOPRIGHT", self, "TOPRIGHT", 10, -offset)
+        thumb:SetPoint("TOPRIGHT", self, "TOPRIGHT", 12, -offset)
         thumb:Show()
     end
 

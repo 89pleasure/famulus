@@ -36,12 +36,20 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 | Interface | Fehlermeldungs-Spam im Kampf ausblenden | aus |
 | Interface | Screenshot beim Stufenaufstieg | aus |
 
-Jede Seite hat oben rechts einen **Hauptschalter für die ganze Kategorie**. Ist er aus, läuft auf der
-Seite nichts und nichts lauscht auf das Spiel; die Auswahl der einzelnen Funktionen bleibt erhalten.
+**Das Fenster** (`/sz`): Links die Hauptfunktionen (**Quality of Life**, **Aliase**), unten die
+Seiten **Einstellungen** und **Über**. Quality of Life teilt sich in Reiter (Händler, Quests, Beute,
+Soziales, Tooltips, Interface); die Aliase haben ihren eigenen Aufbau mit der Namensliste und einem
+Reiter „Anzeige“. Helles und dunkles Farbschema (Knopf oben rechts), fünf Akzentfarben und die
+Fenstergröße stehen unter Einstellungen › Darstellung. Die Suche links findet Einstellungen und
+Aliase auf allen Seiten.
+
+Jeder Reiter einer Kategorie hat rechts unter den Reitern einen **Hauptschalter für die ganze
+Kategorie**. Ist er aus, läuft dort nichts und nichts lauscht auf das Spiel; die Auswahl der
+einzelnen Funktionen bleibt erhalten.
 
 **Aliase** sind eigene Namen für andere Spieler, die nur du siehst. Du trägst sie auf der Seite
 „Aliase“ ein (Charaktername, Alias) oder per Rechtsklick auf einen Spieler. Die Liste gilt für den
-ganzen Account und bleibt von Profilen und „Seite zurücksetzen“ unberührt. Flüstern, Einladen und
+ganzen Account und bleibt von Profilen und „Zurücksetzen“ unberührt. Flüstern, Einladen und
 Links benutzen weiter den echten Namen.
 
 Grundregel für die Standardwerte: Alles, was in deinem Namen handelt (Gold ausgibt, Gegenstände
@@ -61,7 +69,7 @@ Umschalt) überspringt jede Automatik einmalig.
 | ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 20 Features auf 7 Seiten, eine klare Regel für Standardwerte, eine Sammelzeile pro Aktion (abschaltbar) |
 | FlareUI ohne Deutsch; Polestar-Sprachen als 18 Zusatz-Addons | enUS und deDE eingebaut, per Test auf Vollständigkeit geprüft |
 | Fehler in einem Teil reißen andere mit | Fehler beim Einschalten schalten nur das betroffene Feature ab; fehlt eine Client-API, wird das Feature als „nicht verfügbar“ angezeigt |
-| Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen – mit eigener Farbpalette und ohne mitgelieferte Schriften |
+| Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen und weitergedacht: Hauptfunktionen in der Seitenleiste, Reiter, helles und dunkles Farbschema, runde Ecken, eigene Schrift (Inter) |
 
 ## Aufbau
 
@@ -80,9 +88,11 @@ Schnitzel/
   Modules/<Seite>/     eine Datei je Feature, z. B. Interface/ChatArrowKeys.lua;
                        geteilter Code heißt <Name>Service.lua, z. B. Quests/QuestService.lua
   UI/                  Theme, Widgets, Einstellungsfenster, Minikartensymbol
-  Media/               vier kleine TGA-Texturen (aus tools/make_media.py)
+  Media/               kleine TGA-Texturen und Symbole (aus tools/make_media.py)
+  Media/Fonts/         Inter in drei Schnitten, auf Latein/Griechisch/Kyrillisch gekürzt
+                       (aus tools/make_fonts.py, Lizenz: SIL OFL 1.1, LICENSE.txt daneben)
 tests/                 nachgestellte WoW-API + Testlauf
-tools/                 Texturen erzeugen, Selbsttest-Bericht lesen
+tools/                 Texturen und Schriften erzeugen, Selbsttest-Bericht lesen
 ```
 
 ### Ein Feature hinzufügen
@@ -100,6 +110,14 @@ function feature:SOME_EVENT(event, ...) end
 
 Dazu `L.f_meinFeature` und `L.f_meinFeature_desc` in **beiden** Locale-Dateien. Die Zeile im
 Einstellungsfenster entsteht von selbst.
+
+### Eine Hauptfunktion hinzufügen
+
+Größere Funktionen bekommen einen eigenen Eintrag in der Seitenleiste: Kategorie in
+`ns.categories` und einen Bereich in `ns.areas` (`Core/Features.lua`) eintragen, dazu
+`L.area_<id>` und `L.area_<id>_desc`. Ohne Weiteres zeigt die Seite je Kategorie einen Reiter; ein
+eigener Aufbau ist eine Funktion in `layouts` (`UI/Options.lua`), die die Reiter liefert, wie bei
+den Aliasen. Das Symbol steht in `AREA_ICONS`.
 
 ### Eine Sprache hinzufügen
 

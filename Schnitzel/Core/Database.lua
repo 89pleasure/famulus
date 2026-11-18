@@ -15,6 +15,8 @@ local defaults = {
         minimapButton = true,
         minimapAngle = 215,
         windowScale = 100,
+        theme = "dark",
+        accent = "amber",
     },
 }
 ns.defaults = defaults

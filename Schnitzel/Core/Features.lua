@@ -40,6 +40,15 @@ local L = ns.L
 
 ns.categories = { "vendor", "quests", "loot", "social", "aliases", "tooltip", "interface" }
 
+-- Main features ("areas") each get an entry in the window's sidebar. An area
+-- with several categories shows them as tabs; a larger feature such as the
+-- aliases brings a page layout of its own (UI/Options.lua). Every category
+-- belongs to exactly one area.
+ns.areas = {
+    { id = "qol", categories = { "vendor", "quests", "loot", "social", "tooltip", "interface" } },
+    { id = "aliases", categories = { "aliases" } },
+}
+
 -- Master switches are ordinary options (section "categories"), so they are
 -- saved per profile and only while they differ from the default "on".
 local categoryDefaults = {}

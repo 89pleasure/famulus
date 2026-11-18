@@ -246,20 +246,29 @@ local function CheckMedia()
     end
 end
 
--- The window frame uses a gradient; without support it falls back to a
--- plain colour, which is worth knowing but not an error.
-local function CheckGradient()
-    if not (ns.UI and ns.UI.ApplyGradient and CreateFrame) then
+-- The window uses its own font files. SetFont returns false when the
+-- client cannot load one; the window then falls back to the game's font.
+local function CheckFonts()
+    if not (ns.UI and ns.UI.fonts and CreateFrame) then
         return
     end
     if not probeFrame then
         probeFrame = CreateFrame("Frame")
         probeFrame:Hide()
     end
-    if ns.UI.ApplyGradient(probeFrame:CreateTexture(), "frameBottom", "frameTop") then
-        Add("media", "gradient", "ok", "Texture:SetGradient with CreateColor")
-    else
-        Add("media", "gradient", "warn", "no gradient support; the window frame is drawn in one colour")
+    local names = {}
+    for name in pairs(ns.UI.fonts) do
+        names[#names + 1] = name
+    end
+    table.sort(names)
+    for i = 1, #names do
+        local text = probeFrame:CreateFontString()
+        local loaded = text:SetFont(ns.UI.fonts[names[i]], 12, "")
+        if loaded then
+            Add("media", "font " .. names[i], "ok", "loaded")
+        else
+            Add("media", "font " .. names[i], "warn", "SetFont returned " .. Describe(loaded) .. "; the window uses the game's font")
+        end
     end
 end
 
@@ -409,7 +418,7 @@ local CHECKS = {
     CheckErrorStrings,
     CheckPopups,
     CheckMedia,
-    CheckGradient,
+    CheckFonts,
     CheckChatArrows,
     CheckCamera,
     CheckMap,

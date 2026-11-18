@@ -3,6 +3,12 @@
 local _, ns = ...
 local L = ns:NewLocale("deDE")
 
+-- Hauptfunktionen in der Seitenleiste (ns.areas)
+L.area_qol = "Quality of Life"
+L.area_qol_desc = "Kleine Helfer, die dir lästige Handgriffe im Alltag abnehmen."
+L.area_aliases = "Aliase"
+L.area_aliases_desc = "Eigene Namen für andere Spieler. Nur du siehst sie."
+
 -- Kategorien
 L.cat_general = "Einstellungen"
 L.cat_general_desc = "Einstellungen für das Addon selbst, nicht für das Spiel."
@@ -34,6 +40,12 @@ L.g_minimapButton = "Minikartensymbol"
 L.g_minimapButton_desc = "Zeigt ein Symbol an der Minikarte, das dieses Fenster öffnet. /sz funktioniert immer."
 L.g_windowScale = "Fenstergröße"
 L.g_windowScale_desc = "Größe dieses Fensters, unabhängig von der Interface-Skalierung des Spiels."
+L.g_theme = "Farbschema"
+L.g_theme_desc = "Dunkles oder helles Fenster. Der Knopf oben rechts schaltet ebenfalls um."
+L.g_accent = "Akzentfarbe"
+L.g_accent_desc = "Farbe von Schaltern, Hervorhebungen und Logo."
+L.theme_dark = "Dunkel"
+L.theme_light = "Hell"
 L.g_charProfile = "Einstellungen nur für diesen Charakter"
 L.g_charProfile_desc = "Führt eigene Einstellungen für diesen Charakter. Sie beginnen als Kopie deiner accountweiten Einstellungen."
 
@@ -139,14 +151,23 @@ L.map_cursor = "Mauszeiger"
 L.map_click_to_chat = "Klicken setzt deine Position in den Chat"
 
 -- Fenster
-L.ui_tagline = "Quality of Life"
 L.ui_search = "Einstellungen durchsuchen"
 L.ui_search_title = "Suche"
 L.ui_search_results = "%d passende Einstellungen"
 L.ui_search_none = "Keine Einstellung passt zu „%s“."
-L.ui_reset_page = "Seite zurücksetzen"
+L.ui_reset_page = "Zurücksetzen"
 L.ui_reset_confirm = "Wirklich zurücksetzen?"
-L.ui_close = "Schließen"
+L.ui_nav_features = "Funktionen"
+L.ui_tab_names = "Namen"
+L.ui_tab_names_desc = "Klicke einen Eintrag an, um ihn zu ändern. Die Liste gilt für alle deine Charaktere."
+L.ui_tab_display = "Anzeige"
+L.ui_tab_display_desc = "Wo Schnitzel deine Aliase anzeigt."
+L.ui_tab_general = "Allgemein"
+L.ui_tab_general_desc = "Sprache, Rückmeldungen im Chat und Verhalten des Addons."
+L.ui_tab_appearance = "Darstellung"
+L.ui_tab_appearance_desc = "Farben und Größe dieses Fensters."
+L.ui_alias_new = "Neuer Alias"
+L.ui_alias_list = "Deine Aliase"
 L.ui_alias_name = "Charaktername"
 L.ui_alias_alias = "Alias"
 L.ui_alias_save = "Speichern"

@@ -1,5 +1,11 @@
--- Look of the settings window: palette, fonts, media paths and a tiny tween
--- driver. Flat fills, hairline borders, one warm accent colour.
+-- Look of the settings window: palettes, accent colours, fonts, media paths
+-- and a tiny tween driver.
+--
+-- Colours are named tokens ("card", "text", "accent", ...). Widgets never
+-- set a colour directly; they paint a region with a token (UI.Paint,
+-- UI.Tint, UI.Ink). The painted regions are remembered in a weak table, so
+-- switching between light and dark or picking another accent repaints the
+-- open window at once, without a reload.
 
 local ADDON_NAME, ns = ...
 
@@ -11,46 +17,210 @@ UI.media = {
     circle = MEDIA .. "circle.tga",
     chevron = MEDIA .. "chevron.tga",
     close = MEDIA .. "close.tga",
+    check = MEDIA .. "check.tga",
+    search = MEDIA .. "search.tga",
+    info = MEDIA .. "info.tga",
+    reset = MEDIA .. "reset.tga",
+    sun = MEDIA .. "sun.tga",
+    moon = MEDIA .. "moon.tga",
+    gear = MEDIA .. "gear.tga",
+    sparkle = MEDIA .. "sparkle.tga",
+    tag = MEDIA .. "tag.tga",
+    shadow = MEDIA .. "shadow.tga",
     logo = MEDIA .. "logo.tga",
 }
 
-UI.font = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+---------------------------------------------------------------------------
+-- Fonts: Inter in three weights. Clients whose own texts need glyphs that
+-- Inter lacks (Korean, Chinese) keep the game's font.
+---------------------------------------------------------------------------
 
--- Grounds are opaque colours; lines and states are translucent white
--- "washes" on top of them, so they work on every ground.
-local colors = {
-    window = { 0.086, 0.098, 0.141, 1 },
-    sidebar = { 0.063, 0.072, 0.106, 1 },
-    panel = { 0.108, 0.123, 0.174, 1 },
-    control = { 0.145, 0.162, 0.221, 1 },
-    footer = { 0.071, 0.081, 0.118, 1 },
-    field = { 0, 0, 0, 0.30 },
-
-    text = { 0.95, 0.96, 0.98, 1 },
-    textDim = { 0.84, 0.86, 0.92, 1 },
-    textMuted = { 0.70, 0.73, 0.81, 1 },
-
-    accent = { 0.96, 0.70, 0.33, 1 },
-    onAccent = { 0.10, 0.08, 0.05, 1 },
-    warning = { 0.98, 0.75, 0.30, 1 },
-
-    -- Outer window frame, shading from top to bottom.
-    frameTop = { 0.93, 0.68, 0.34, 1 },
-    frameBottom = { 0.36, 0.22, 0.15, 1 },
-
-    border = { 1, 1, 1, 0.10 },
-    divider = { 1, 1, 1, 0.06 },
-    hover = { 1, 1, 1, 0.05 },
-    selected = { 1, 1, 1, 0.09 },
-    track = { 1, 1, 1, 0.14 },
-    thumb = { 1, 1, 1, 0.22 },
+local FONT_DIR = MEDIA .. "Fonts\\"
+UI.fonts = {
+    regular = FONT_DIR .. "Inter-Regular.ttf",
+    medium = FONT_DIR .. "Inter-Medium.ttf",
+    semibold = FONT_DIR .. "Inter-SemiBold.ttf",
 }
+
+local GAME_FONT_LOCALES = { koKR = true, zhCN = true, zhTW = true }
+
+function UI.FontPath(weight)
+    if GAME_FONT_LOCALES[GetLocale and GetLocale() or ""] then
+        return STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+    end
+    return UI.fonts[weight or "regular"] or UI.fonts.regular
+end
+
+---------------------------------------------------------------------------
+-- Palettes. Grounds are opaque; "hover" and "pressed" are washes laid over
+-- them. Accent-derived tokens (accent, accentSoft, onAccent) come from the
+-- chosen accent and depend on the palette as well.
+---------------------------------------------------------------------------
+
+local function hex(value, alpha)
+    local r = tonumber(value:sub(1, 2), 16) / 255
+    local g = tonumber(value:sub(3, 4), 16) / 255
+    local b = tonumber(value:sub(5, 6), 16) / 255
+    return { r, g, b, alpha or 1 }
+end
+
+local palettes = {
+    dark = {
+        window = hex("15171c"),
+        sidebar = hex("101215"),
+        card = hex("1c1f25"),
+        cardBorder = hex("292d35"),
+        control = hex("23272e"),
+        controlBorder = hex("343943"),
+        field = hex("121418"),
+        inset = hex("121418"),
+        divider = hex("262a31"),
+        text = hex("eceef2"),
+        textDim = hex("b4bac5"),
+        textMuted = hex("7d8492"),
+        track = hex("3a3f4a"),
+        knob = hex("ffffff"),
+        hover = { 1, 1, 1, 0.045 },
+        pressed = { 1, 1, 1, 0.08 },
+        thumb = { 1, 1, 1, 0.18 },
+        shadow = { 0, 0, 0, 0.55 },
+        warning = hex("f5b14c"),
+        danger = hex("f06a6a"),
+    },
+    light = {
+        window = hex("f3f4f7"),
+        sidebar = hex("e9ebf0"),
+        card = hex("ffffff"),
+        cardBorder = hex("dfe2e8"),
+        control = hex("ffffff"),
+        controlBorder = hex("d3d7df"),
+        field = hex("ffffff"),
+        inset = hex("eceef2"),
+        divider = hex("eceef2"),
+        text = hex("161920"),
+        textDim = hex("3d4350"),
+        textMuted = hex("6b7280"),
+        track = hex("cfd4dc"),
+        knob = hex("ffffff"),
+        hover = { 0, 0, 0, 0.035 },
+        pressed = { 0, 0, 0, 0.06 },
+        thumb = { 0, 0, 0, 0.18 },
+        shadow = { 0, 0, 0, 0.22 },
+        warning = hex("b7791f"),
+        danger = hex("d64545"),
+    },
+}
+
+-- Each accent has a shade for each palette, chosen so that text in the
+-- accent colour stays readable on the cards.
+local accents = {
+    amber = { dark = "f2a93b", light = "d4850f", onDark = "1a1206", onLight = "ffffff" },
+    blue = { dark = "5b9bff", light = "2f6feb", onDark = "08142b", onLight = "ffffff" },
+    green = { dark = "3ec38f", light = "1a9466", onDark = "06190f", onLight = "ffffff" },
+    violet = { dark = "9a8cff", light = "6a5af0", onDark = "120d2b", onLight = "ffffff" },
+    rose = { dark = "f2668f", light = "d93d6a", onDark = "2b0812", onLight = "ffffff" },
+}
+
+UI.themes = { "dark", "light" }
+UI.accents = { "amber", "blue", "green", "violet", "rose" }
+
+local colors = {}
 UI.colors = colors
 
+-- Fills `colors` for a palette and accent; returns true if anything changed.
+local currentTheme, currentAccent
+local function Compose(theme, accent)
+    theme = palettes[theme] and theme or "dark"
+    accent = accents[accent] and accent or "amber"
+    if theme == currentTheme and accent == currentAccent then
+        return false
+    end
+    currentTheme, currentAccent = theme, accent
+    for token, value in pairs(palettes[theme]) do
+        colors[token] = value
+    end
+    local shades = accents[accent]
+    local base = hex(theme == "dark" and shades.dark or shades.light)
+    colors.accent = base
+    colors.accentSoft = { base[1], base[2], base[3], theme == "dark" and 0.16 or 0.12 }
+    colors.accentLine = { base[1], base[2], base[3], 0.55 }
+    colors.onAccent = hex(theme == "dark" and shades.onDark or shades.onLight)
+    UI.isDark = theme == "dark"
+    return true
+end
+Compose("dark", "amber")
+
 function UI.Color(name)
-    local c = colors[name]
+    local c = colors[name] or colors.text
     return c[1], c[2], c[3], c[4]
 end
+
+-- Colour of an accent swatch, independent of the chosen accent.
+function UI.AccentSwatch(accent)
+    local shades = accents[accent] or accents.amber
+    local c = hex(UI.isDark and shades.dark or shades.light)
+    return c[1], c[2], c[3], 1
+end
+
+---------------------------------------------------------------------------
+-- Painting. mode: "fill" (SetColorTexture), "tint" (SetVertexColor on an
+-- image) or "ink" (SetTextColor). alpha multiplies the token's alpha.
+---------------------------------------------------------------------------
+
+local painted = setmetatable({}, { __mode = "k" })
+
+local function Apply(region, entry)
+    local r, g, b, a = UI.Color(entry.token)
+    a = a * entry.alpha
+    if entry.mode == "fill" then
+        region:SetColorTexture(r, g, b, a)
+    elseif entry.mode == "tint" then
+        region:SetVertexColor(r, g, b, a)
+    else
+        region:SetTextColor(r, g, b, a)
+    end
+end
+
+local function Paint(mode, region, token, alpha)
+    local entry = painted[region]
+    if not entry then
+        entry = {}
+        painted[region] = entry
+    end
+    entry.mode, entry.token, entry.alpha = mode, token, alpha or 1
+    Apply(region, entry)
+end
+
+function UI.Paint(texture, token, alpha)
+    Paint("fill", texture, token, alpha)
+end
+
+function UI.Tint(texture, token, alpha)
+    Paint("tint", texture, token, alpha)
+end
+
+function UI.Ink(fontString, token, alpha)
+    Paint("ink", fontString, token, alpha)
+end
+
+-- Follows the saved theme and accent; repaints everything that was painted.
+function UI.ApplyTheme()
+    if not Compose(ns:GetOption("general", "theme"), ns:GetOption("general", "accent")) then
+        return
+    end
+    for region, entry in pairs(painted) do
+        Apply(region, entry)
+    end
+    ns:Fire("THEME_CHANGED")
+end
+
+ns:On("OPTION_CHANGED", function(section, key)
+    if section == "general" and (key == "theme" or key == "accent") then
+        UI.ApplyTheme()
+    end
+end)
+ns:On("PROFILE_CHANGED", UI.ApplyTheme)
+ns:On("DATABASE_READY", UI.ApplyTheme)
 
 -- Size of one physical screen pixel in the frame's coordinates, so hairlines
 -- stay crisp at every UI scale.

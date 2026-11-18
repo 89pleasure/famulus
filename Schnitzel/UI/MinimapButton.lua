@@ -36,7 +36,7 @@ local function Build()
 
     local rim = button:CreateTexture(nil, "BACKGROUND")
     rim:SetTexture(UI.media.circle)
-    rim:SetVertexColor(UI.Color("sidebar"))
+    UI.Tint(rim, "sidebar")
     rim:SetAllPoints()
 
     local icon = button:CreateTexture(nil, "ARTWORK")
