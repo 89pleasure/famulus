@@ -473,9 +473,29 @@ DEFAULT_CHAT_FRAME = {
     end,
 }
 
+mock.loadedAddons = { Guildy = true }
+
 C_AddOns = {
     GetAddOnMetadata = function(_, field)
         return field == "Version" and "0.1.0-test" or nil
+    end,
+    IsAddOnLoaded = function(name)
+        return mock.loadedAddons[name] == true, mock.loadedAddons[name] == true
+    end,
+}
+
+-- The name formatter API of the addon Guildy, as far as Schnitzel uses it.
+GuildyAPI = {
+    formatters = {},
+    refreshes = 0,
+    RegisterNameFormatter = function(owner, fn)
+        GuildyAPI.formatters[owner] = fn
+    end,
+    UnregisterNameFormatter = function(owner)
+        GuildyAPI.formatters[owner] = nil
+    end,
+    Refresh = function()
+        GuildyAPI.refreshes = GuildyAPI.refreshes + 1
     end,
 }
 

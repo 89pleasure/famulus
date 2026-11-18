@@ -27,6 +27,7 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 | Aliase | Alias statt Charaktername im Chat (wahlweise „Alias (Name)“) | **an** |
 | Aliase | Alias als Zeile im Tooltip eines Spielers | **an** |
 | Aliase | „Alias festlegen“ im Kontextmenü von Spielern | **an** |
+| Aliase | Alias statt Charaktername im Addon Guildy (nur sichtbar, wenn Guildy geladen ist) | **an** |
 | Tooltips | Gegenstands- und Zauber-IDs | aus |
 | Tooltips | Tooltip am Mauszeiger | aus |
 | Interface | Koordinaten auf der Weltkarte (Klick setzt die eigene Position in den Chat) | **an** |
@@ -57,7 +58,7 @@ Umschalt) überspringt jede Automatik einmalig.
 | Hooks bleiben nach dem Abschalten aktiv | Hooks werden erst beim ersten Einschalten gesetzt und prüfen danach den Zustand; nie genutzte Features hooken nichts |
 | Mehrere MB Daten und UI-Code bei jedem Login (Polestar-Issues: 70–250 MB RAM) | ~200 KB gesamt; das Einstellungsfenster wird erst beim ersten Öffnen gebaut |
 | Taint durch Überschreiben fremder Funktionen und Schreiben in Blizzard-Tabellen | Nur `hooksecurefunc`, keine ersetzten Globals, keine Felder auf Blizzard-Frames |
-| ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 19 Features auf 7 Seiten, eine klare Regel für Standardwerte, eine Sammelzeile pro Aktion (abschaltbar) |
+| ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 20 Features auf 7 Seiten, eine klare Regel für Standardwerte, eine Sammelzeile pro Aktion (abschaltbar) |
 | FlareUI ohne Deutsch; Polestar-Sprachen als 18 Zusatz-Addons | enUS und deDE eingebaut, per Test auf Vollständigkeit geprüft |
 | Fehler in einem Teil reißen andere mit | Fehler beim Einschalten schalten nur das betroffene Feature ab; fehlt eine Client-API, wird das Feature als „nicht verfügbar“ angezeigt |
 | Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen – mit eigener Farbpalette und ohne mitgelieferte Schriften |

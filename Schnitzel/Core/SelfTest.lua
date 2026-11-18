@@ -143,11 +143,13 @@ local function CheckFeatures()
             end
         end
         report.features[feature.id] = {
-            available = #missing == 0,
+            available = #missing == 0 and feature:IsShown(),
             enabled = feature.enabled,
             failed = feature.failed or false,
         }
-        if #missing > 0 then
+        if not feature:IsShown() then
+            Add("feature", feature.id, "ok", "addon " .. feature.addon .. " not loaded")
+        elseif #missing > 0 then
             Add("feature", feature.id, "fail", "missing API: " .. table.concat(missing, ", "))
         elseif feature.failed then
             Add("feature", feature.id, "fail", "OnEnable raised an error")

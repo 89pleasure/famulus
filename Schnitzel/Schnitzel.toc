@@ -9,6 +9,7 @@
 ## SavedVariables: SchnitzelDB
 ## SavedVariablesPerCharacter: SchnitzelCharDB
 ## AddonCompartmentFunc: Schnitzel_OnAddonCompartmentClick
+## OptionalDeps: Guildy
 
 Core\Init.lua
 Core\Locale.lua
@@ -35,6 +36,7 @@ Modules\Aliases\AliasService.lua
 Modules\Aliases\ChatAliases.lua
 Modules\Aliases\TooltipAliases.lua
 Modules\Aliases\AliasMenu.lua
+Modules\Aliases\GuildyAliases.lua
 Modules\Tooltip\TooltipIDs.lua
 Modules\Tooltip\TooltipCursor.lua
 Modules\Interface\MapCoords.lua

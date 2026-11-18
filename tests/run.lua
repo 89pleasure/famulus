@@ -139,8 +139,8 @@ check(type(SchnitzelDB) == "table" and type(SchnitzelDB.profile) == "table", "da
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
-check(total == 19, "19 features registered (got " .. total .. ")")
-check(active == 5, "5 features on by default (got " .. active .. ")")
+check(total == 20, "20 features registered (got " .. total .. ")")
+check(active == 6, "6 features on by default (got " .. active .. ")")
 for _, feature in ipairs(ns.featureList) do
     local harmless = feature.id == "mapCoords" or feature.id == "chatArrowKeys" or feature.category == "aliases"
     check(feature.enabled == harmless, "only the harmless features are on by default: " .. feature.id)
@@ -520,9 +520,42 @@ enable("aliasMenu", false)
 check(#mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Varian", surname = "Wrynn" }) == 0, "switched off, the menus stay as they are")
 enable("aliasMenu")
 
--- The category switch stops all three; the list itself stays.
+-- Guildy: its name formatter shows the alias wherever Guildy draws a name.
+local guildy = ns.features.guildyAliases
+local Format = GuildyAPI.formatters.Schnitzel
+check(guildy.enabled and type(Format) == "function", "with Guildy loaded, the formatter is registered at login")
+check(Format("Thrall") == "Boss" and Format("Varian Wrynn") == nil, "Guildy shows the alias, other names stay")
+local refreshes = GuildyAPI.refreshes
+ns:SetOption("guildyAliases", "style", "both")
+check(Format("Thrall") == "Boss (Thrall)" and GuildyAPI.refreshes == refreshes + 1, "the display option applies and redraws Guildy")
+ns:SetOption("guildyAliases", "style", "alias")
+refreshes = GuildyAPI.refreshes
+Aliases.Set("Varian Wrynn", "King")
+check(Format("Varian Wrynn") == "King" and GuildyAPI.refreshes == refreshes + 1, "a new alias redraws Guildy")
+Aliases.Set("Varian Wrynn", nil)
+enable("guildyAliases", false)
+check(GuildyAPI.formatters.Schnitzel == nil, "switching off unregisters the formatter")
+refreshes = GuildyAPI.refreshes
+Aliases.Set("Varian Wrynn", "King")
+Aliases.Set("Varian Wrynn", nil)
+check(GuildyAPI.refreshes == refreshes, "switched off, alias changes leave Guildy alone")
+enable("guildyAliases")
+check(GuildyAPI.formatters.Schnitzel ~= nil, "switching on registers it again")
+-- Without Guildy the feature stays off and the window does not list it.
+mock.loadedAddons.Guildy = nil
+guildy.available = nil
+check(not guildy:IsShown() and not guildy:IsAvailable() and guildy.missing == "addon Guildy", "without Guildy the feature is not available")
+ns:SyncFeature(guildy)
+check(not guildy.enabled and GuildyAPI.formatters.Schnitzel == nil, "and does not run")
+mock.loadedAddons.Guildy = true
+guildy.available = nil
+ns:SyncFeature(guildy)
+check(guildy.enabled, "with Guildy back it runs again")
+
+-- The category switch stops all of them; the list itself stays.
 ns:SetOption("categories", "aliases", false)
 check(mock.CountSenderFilters() == 0 and #mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Thrall" }) == 0, "the category switch stops the alias features")
+check(GuildyAPI.formatters.Schnitzel == nil, "including the Guildy formatter")
 check(Aliases.Count() == 1, "but keeps the list")
 ns:SetOption("categories", "aliases", true)
 check(mock.SenderName("CHAT_MSG_SAY", "Thrall", "Thrall") == "Boss", "and everything resumes")
@@ -942,14 +975,14 @@ check(not ns.features.autoRepair.enabled and not ns.features.sellJunk.enabled, "
 check(window.resetButton.disabled and window.resetButton.label:GetText() == "Reset page", "after which reset is greyed out")
 check(ns:IsCategoryEnabled("vendor"), "including the category's master switch")
 
--- Aliases page: three features, the input row, then the list.
+-- Aliases page: four features (Guildy is loaded in the mock), the input row, then the list.
 mock.Click(navButton("Aliases"))
 local aliasRows = visibleRows()
-check(#aliasRows == 6, "the aliases page shows its features, the input row and an empty hint (got " .. #aliasRows .. ")")
-local editor = aliasRows[5].editor
-check(editor ~= nil and editor:IsVisible() and aliasRows[6].item.kind == "info", "the input row comes before the hint")
+check(#aliasRows == 8, "the aliases page shows its features, the input row and an empty hint (got " .. #aliasRows .. ")")
+local editor = aliasRows[7].editor
+check(editor ~= nil and editor:IsVisible() and aliasRows[8].item.kind == "info", "the input row comes before the hint")
 check(editor.name.placeholder:GetText() == "Character name" and editor.save.label:GetText() == "Save", "the input row is labelled")
-check(navButton("Aliases").count:GetText() == "3/3" and window.master:IsShown(), "the page is a category with a master switch")
+check(navButton("Aliases").count:GetText() == "4/4" and window.master:IsShown(), "the page is a category with a master switch")
 mock.Click(editor.save)
 check(ns.AliasService.Count() == 0 and mock.focus == editor.name.edit, "saving without a name asks for the name")
 editor.name.edit:SetText("Jaina Proudmoore")
@@ -963,13 +996,13 @@ mock.Advance(0.1)
 check(ns.AliasService.Get("Jaina Proudmoore") == "Anna", "Enter in the alias field saves")
 check(editor.name.edit:GetText() == "" and editor.alias.edit:GetText() == "", "and empties the input row")
 aliasRows = visibleRows()
-check(#aliasRows == 6 and aliasRows[6].item.kind == "alias" and aliasRows[6].label:GetText() == "Anna" and aliasRows[6].desc:GetText() == "Jaina Proudmoore",
+check(#aliasRows == 8 and aliasRows[8].item.kind == "alias" and aliasRows[8].label:GetText() == "Anna" and aliasRows[8].desc:GetText() == "Jaina Proudmoore",
     "the alias appears in the list with the character below it")
 check(window.resetButton.disabled, "a stored alias is not a changed setting")
 ns.AliasService.Set("Thrall", "Boss")
 mock.Advance(0.1)
-check(#visibleRows() == 7, "an alias set elsewhere shows up while the window is open")
-mock.Click(aliasRows[6])
+check(#visibleRows() == 9, "an alias set elsewhere shows up while the window is open")
+mock.Click(aliasRows[8])
 check(editor.name.edit:GetText() == "Jaina Proudmoore" and editor.alias.edit:GetText() == "Anna" and mock.focus == editor.alias.edit,
     "clicking an alias loads it into the input row")
 editor.alias.edit:SetText("Annie")
@@ -983,9 +1016,9 @@ check(#visibleRows() == 1, "and a character name")
 mock.Click(visibleRows()[1])
 check(window.search.edit:GetText() == "" and window.title:GetText() == "Aliases" and editor.alias.edit:GetText() == "Annie",
     "clicking the hit opens it on the aliases page")
-mock.Click(visibleRows()[6].remove)
+mock.Click(visibleRows()[8].remove)
 mock.Advance(0.1)
-check(ns.AliasService.Get("Jaina Proudmoore") == nil and #visibleRows() == 6, "the remove button deletes the alias")
+check(ns.AliasService.Get("Jaina Proudmoore") == nil and #visibleRows() == 8, "the remove button deletes the alias")
 editor:Load("", "")
 -- From the context menu: the window opens on the page with the name filled in.
 mock.Click(navButton("Vendors"))
@@ -1048,7 +1081,7 @@ SlashCmdList.SCHNITZEL("")
 check(not window:IsShown(), "/sz closes the window again")
 mock.reset()
 SlashCmdList.SCHNITZEL("status")
-check(lastChat():find("5 of 19", 1, true) ~= nil, "/sz status reports: " .. lastChat())
+check(lastChat():find("6 of 20", 1, true) ~= nil, "/sz status reports: " .. lastChat())
 
 ---------------------------------------------------------------------------
 section("Self-test")

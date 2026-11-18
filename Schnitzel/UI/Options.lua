@@ -244,7 +244,7 @@ local function BuildPages()
     for _, category in ipairs(ns.categories) do
         local items = {}
         for _, feature in ipairs(ns.featureList) do
-            if feature.category == category then
+            if feature.category == category and feature:IsShown() then
                 items[#items + 1] = FeatureItem(feature)
                 for _, option in ipairs(feature.options) do
                     if ns:IsOptionAvailable(option) then
@@ -490,7 +490,7 @@ end
 local function CategoryCount(category)
     local active, total = 0, 0
     for _, feature in ipairs(ns.featureList) do
-        if feature.category == category then
+        if feature.category == category and feature:IsShown() then
             total = total + 1
             if feature.enabled then
                 active = active + 1

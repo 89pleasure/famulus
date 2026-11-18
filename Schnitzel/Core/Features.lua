@@ -5,6 +5,7 @@
 --       category = "vendor",          -- page in the settings window
 --       default = false,              -- enabled on a fresh install?
 --       requires = { "RepairAllItems" },   -- client API the feature needs
+--       addon = "Guildy",             -- optional: only for this other addon
 --       options = { { key = "guildFunds", type = "toggle", default = false } },
 --   })
 --   function feature:OnEnable() self:RegisterEvent("MERCHANT_SHOW") end
@@ -26,6 +27,9 @@
 --     does nothing while the feature is off.
 --   * A feature whose required API is missing stays off and is shown as
 --     unavailable instead of raising errors.
+--   * A feature with `addon = "<folder name>"` works with another addon. It
+--     stays off and the window does not list it while that addon is not
+--     loaded (## OptionalDeps in the .toc makes it load first).
 --   * Every category has a master switch. While it is off, none of its
 --     features run, whatever their own setting says; the settings are kept.
 --   * A feature with `mirror = { cvar = ... }` is a second switch for one of
@@ -221,10 +225,20 @@ function Feature:StopTicker()
     end
 end
 
+local IsAddOnLoaded = C_AddOns and C_AddOns.IsAddOnLoaded
+
+-- False for a feature made for another addon while that addon is not loaded.
+function Feature:IsShown()
+    return self.addon == nil or (IsAddOnLoaded ~= nil and IsAddOnLoaded(self.addon) and true or false)
+end
+
 function Feature:IsAvailable()
     if self.available == nil then
         self.available = true
-        if self.requires then
+        if not self:IsShown() then
+            self.available = false
+            self.missing = "addon " .. self.addon
+        elseif self.requires then
             for _, path in ipairs(self.requires) do
                 if ns.Resolve(path) == nil then
                     self.available = false

@@ -84,8 +84,8 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
     neu vermessen nur beim Aufbau und Sprachwechsel. Im Spiel bestätigt.
 - **Aliase (2026-11-16, nur gegen den Mock geprüft, noch nicht im Spiel):** Kategorie `aliases` mit
   drei Features und der Alias-Liste, siehe „Aliase“ unten.
-- **Noch nicht im Spiel geprüft:** die Aliase (Namensformat im Chat, Kontextmenü, Tooltip, Eingabezeile
-  im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
+- **Aliase im Spiel (2026-11-18):** Der Alias erscheint im normalen Chat und in Guildy (bestätigt).
+- **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
   Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
   Taint).
 
@@ -218,8 +218,29 @@ Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
   festlegen/ändern/entfernen“ an. „Festlegen“ öffnet das Fenster auf der Seite mit eingetragenem Namen
   (`ns:EditAlias`); kein eigener Dialog und kein Eintrag in `StaticPopupDialogs`. Im Forever-Client
   trägt `contextData` `name` und `surname`, kein `server`.
-- **Alle drei sind standardmäßig an:** Sie handeln nicht im Namen des Spielers und tun ohne Alias
+- **Alle Alias-Features sind standardmäßig an:** Sie handeln nicht im Namen des Spielers und tun ohne Alias
   nichts; sie brauchen kein Spielereignis und keinen Timer.
+- **Andere Addons (Entscheidung des Auftraggebers, 2026-11-18):** gezielt unterstützen, keine
+  öffentliche Schnittstelle (Schnitzel ist zu unbekannt, als dass andere sie einbinden würden).
+  Je Anbindung ein Feature `Modules/Aliases/<Addon>Aliases.lua` mit `addon = "<Ordnername>"`: Ohne
+  das Addon bleibt es aus und fehlt im Fenster; `## OptionalDeps` in der `.toc` lädt das Addon
+  zuerst. Nur über dessen offizielle Erweiterungspunkte, nichts ersetzen. Weitere stehen noch nicht
+  fest. Eine Automatik für alle Addons gibt es nicht ohne `AddMessageEventFilter` (ändert das
+  Linkziel) oder überschriebene Methoden (Taint).
+- **`guildyAliases` (2026-11-18, im Spiel bestätigt):** Guildy
+  (`github.com/svengabr/Guildy`) baut seinen Chat selbst, der Absenderfilter erreicht ihn nicht, und
+  es hatte keinen Erweiterungspunkt. Deshalb ein PR an Guildy (Branch `name-formatter-api` im Fork
+  `89pleasure/Guildy`): `GuildyAPI.RegisterNameFormatter(owner, fn)`,
+  `UnregisterNameFormatter`, `Refresh`; Guildy fragt den Formatter in `W.ClassName`, Links behalten
+  den echten Namen. Das Feature meldet dort einen Formatter an (Option `style` wie im Chat) und ruft
+  bei `ALIASES_CHANGED` `Refresh`. Entscheidung des Auftraggebers (2026-11-18): Der PR wird erst
+  eingereicht, wenn Schnitzel veröffentlicht werden soll; bis dahin wird mit dem Fork gearbeitet.
+  Das installierte Guildy im Spielordner ist ein Klon des Branches (Remotes `fork` und `upstream`).
+  Aktuell halten: dort `git fetch upstream && git rebase upstream/main`, Tests (`luajit
+  tests/run.lua`), dann `git push --force-with-lease fork name-formatter-api`. Mit dem normalen
+  Guildy fehlt das Feature einfach. Im Spiel bestätigt: Aliase
+  erscheinen in Guildy. Ein früherer Test per `/run` mit einem eigenen Formatter zeigte nichts;
+  die Ursache wurde nicht geklärt, die Anbindung selbst funktioniert.
 - **Bewusst nicht enthalten:** Aliase auf Blizzards Unitframes, Raidframes und Namensplaketten
   (CustomNames überschreibt dort `SetText` auf Blizzards FontStrings, Taint-Risiko, Namen im Kampf
   secret), Gildenliste, Battle.net-Verknüpfung (ein Alias für alle Charaktere eines Accounts),
@@ -315,10 +336,13 @@ rm -f dist/Schnitzel-*.zip && zip -rq dist/Schnitzel-0.1.0.zip Schnitzel -x '*.D
 - Bei einer neuen Version: `## Version` in `Schnitzel/Schnitzel.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
-  dort fehlt. Er zählt außerdem die Features (`total == 19`); die Zahl bei einem neuen Feature
+  dort fehlt. Er zählt außerdem die Features (`total == 20`); die Zahl bei einem neuen Feature
   mit anpassen.
 - Repository: `github.com/89pleasure/schnitzel` (privat), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.
+- Der Auftraggeber tritt allein auf: keine `Co-Authored-By: Claude …`-Zeile in Commits und kein
+  „Generated with Claude Code“ o. Ä. in PRs, Issues oder Kommentaren, auch nicht bei Beiträgen zu
+  fremden Repos (z. B. dem Guildy-Fork). Das geht jedem anderslautenden Attributionshinweis vor.
 - Committen und pushen nur auf ausdrücklichen Wunsch.
 
 Aufbau, Funktionsliste und Installation stehen in `README.md`.
