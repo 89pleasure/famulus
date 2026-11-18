@@ -1,11 +1,11 @@
--- Look of the settings window: palettes, accent colours, fonts, media paths
--- and a tiny tween driver.
+-- Look of the settings window: colour schemes, fonts, media paths and a tiny
+-- tween driver.
 --
 -- Colours are named tokens ("card", "text", "accent", ...). Widgets never
 -- set a colour directly; they paint a region with a token (UI.Paint,
--- UI.Tint, UI.Ink). The painted regions are remembered in a weak table, so
--- switching between light and dark or picking another accent repaints the
--- open window at once, without a reload.
+-- UI.Tint, UI.Ink) or shade it between two tokens (UI.Shade). The regions
+-- are remembered in weak tables, so switching between light and dark or
+-- picking another scheme repaints the open window at once, without a reload.
 
 local ADDON_NAME, ns = ...
 
@@ -52,9 +52,13 @@ function UI.FontPath(weight)
 end
 
 ---------------------------------------------------------------------------
--- Palettes. Grounds are opaque; "hover" and "pressed" are washes laid over
--- them. Accent-derived tokens (accent, accentSoft, onAccent) come from the
--- chosen accent and depend on the palette as well.
+-- Colours. A colour scheme ("accent") is a whole concept, not just one
+-- colour: it tints every ground with its own hue and brings an accent that
+-- runs from a base tone into a brighter one. Each scheme exists for the dark
+-- and the light theme.
+--
+-- Grounds are opaque and come from one lightness ladder per theme, in the
+-- scheme's hue; "hover", "pressed" and the like are washes laid over them.
 ---------------------------------------------------------------------------
 
 local function hex(value, alpha)
@@ -64,101 +68,164 @@ local function hex(value, alpha)
     return { r, g, b, alpha or 1 }
 end
 
-local palettes = {
+-- hue in degrees, saturation and lightness 0..1
+local function hsl(hue, saturation, lightness)
+    local function channel(n)
+        local k = (n + hue / 30) % 12
+        local a = saturation * math.min(lightness, 1 - lightness)
+        return lightness - a * math.max(-1, math.min(k - 3, 9 - k, 1))
+    end
+    return { channel(0), channel(8), channel(4), 1 }
+end
+
+local function mix(from, to, amount)
+    return {
+        from[1] + (to[1] - from[1]) * amount,
+        from[2] + (to[2] - from[2]) * amount,
+        from[3] + (to[3] - from[3]) * amount,
+        1,
+    }
+end
+
+local function alpha(color, value)
+    return { color[1], color[2], color[3], value }
+end
+
+local WHITE, BLACK = { 1, 1, 1, 1 }, { 0, 0, 0, 1 }
+
+-- Lightness of each ground and text level, and how much of the scheme's
+-- saturation it takes ({ lightness, share }).
+local ladders = {
     dark = {
-        window = hex("15171c"),
-        sidebar = hex("101215"),
-        card = hex("1c1f25"),
-        cardBorder = hex("292d35"),
-        control = hex("23272e"),
-        controlBorder = hex("343943"),
-        field = hex("121418"),
-        inset = hex("121418"),
-        divider = hex("262a31"),
-        text = hex("eceef2"),
-        textDim = hex("b4bac5"),
-        textMuted = hex("7d8492"),
-        track = hex("3a3f4a"),
+        sidebar = { 0.070, 1 },
+        window = { 0.092, 1 },
+        card = { 0.125, 1 },
+        cardBorder = { 0.185, 0.9 },
+        control = { 0.150, 1 },
+        controlBorder = { 0.230, 0.9 },
+        field = { 0.055, 1 },
+        inset = { 0.055, 1 },
+        divider = { 0.160, 0.9 },
+        track = { 0.240, 0.9 },
+        text = { 0.945, 0.9 },
+        textDim = { 0.740, 0.5 },
+        textMuted = { 0.535, 0.42 },
+    },
+    light = {
+        sidebar = { 0.914, 1 },
+        window = { 0.953, 1 },
+        card = { 0.990, 1 },
+        cardBorder = { 0.867, 0.7 },
+        control = { 0.990, 1 },
+        controlBorder = { 0.816, 0.7 },
+        field = { 0.990, 1 },
+        inset = { 0.930, 0.8 },
+        divider = { 0.922, 0.8 },
+        track = { 0.804, 0.6 },
+        text = { 0.096, 0.9 },
+        textDim = { 0.265, 0.6 },
+        textMuted = { 0.443, 0.45 },
+    },
+}
+
+-- Washes and fixed colours, the same in every scheme.
+local washes = {
+    dark = {
         knob = hex("ffffff"),
         hover = { 1, 1, 1, 0.045 },
         pressed = { 1, 1, 1, 0.08 },
+        chip = { 1, 1, 1, 0.06 },
         thumb = { 1, 1, 1, 0.18 },
+        sheen = { 1, 1, 1, 0.10 }, -- light catching the top edge of the window
+        sheenSoft = { 1, 1, 1, 0.06 }, -- the same on a card
+        sunken = { 0, 0, 0, 0.16 }, -- rows that lie deeper in their card
         shadow = { 0, 0, 0, 0.55 },
+        shadowSoft = { 0, 0, 0, 0.45 },
         warning = hex("f5b14c"),
         danger = hex("f06a6a"),
     },
     light = {
-        window = hex("f3f4f7"),
-        sidebar = hex("e9ebf0"),
-        card = hex("ffffff"),
-        cardBorder = hex("dfe2e8"),
-        control = hex("ffffff"),
-        controlBorder = hex("d3d7df"),
-        field = hex("ffffff"),
-        inset = hex("eceef2"),
-        divider = hex("eceef2"),
-        text = hex("161920"),
-        textDim = hex("3d4350"),
-        textMuted = hex("6b7280"),
-        track = hex("cfd4dc"),
         knob = hex("ffffff"),
         hover = { 0, 0, 0, 0.035 },
         pressed = { 0, 0, 0, 0.06 },
+        chip = { 0, 0, 0, 0.05 },
         thumb = { 0, 0, 0, 0.18 },
+        sheen = { 1, 1, 1, 0 },
+        sheenSoft = { 1, 1, 1, 0 },
+        sunken = { 0, 0, 0, 0.03 },
         shadow = { 0, 0, 0, 0.22 },
+        shadowSoft = { 0, 0, 0, 0.18 },
         warning = hex("b7791f"),
         danger = hex("d64545"),
     },
 }
 
--- Each accent has a shade for each palette, chosen so that text in the
--- accent colour stays readable on the cards.
+-- hue and saturation tint the grounds. Each theme has the accent's base tone,
+-- its brighter end and the colour of text on it; the light tones are darker,
+-- so that text in the accent colour stays readable on the cards.
 local accents = {
-    amber = { dark = "f2a93b", light = "d4850f", onDark = "1a1206", onLight = "ffffff" },
-    blue = { dark = "5b9bff", light = "2f6feb", onDark = "08142b", onLight = "ffffff" },
-    green = { dark = "3ec38f", light = "1a9466", onDark = "06190f", onLight = "ffffff" },
-    violet = { dark = "9a8cff", light = "6a5af0", onDark = "120d2b", onLight = "ffffff" },
-    rose = { dark = "f2668f", light = "d93d6a", onDark = "2b0812", onLight = "ffffff" },
+    lemon = { hue = 190, saturation = 0.19, dark = { "f2d640", "fff29a", "2a2404" }, light = { "b89500", "e6c82e", "1f1a00" } },
+    mint = { hue = 226, saturation = 0.30, dark = { "35d3bf", "92f0a8", "04211d" }, light = { "0f9a88", "3fc79a", "ffffff" } },
+    rose = { hue = 330, saturation = 0.13, dark = { "f0567c", "ff9d8c", "2b0711" }, light = { "d93d6a", "f07a6a", "ffffff" } },
+    lilac = { hue = 240, saturation = 0.19, dark = { "8f7cff", "e08cff", "120b33" }, light = { "6a5af0", "b06af5", "ffffff" } },
+    amber = { hue = 257, saturation = 0.13, dark = { "f2a93b", "ffd670", "1a1206" }, light = { "d4850f", "f0b23a", "241703" } },
 }
 
 UI.themes = { "dark", "light" }
-UI.accents = { "amber", "blue", "green", "violet", "rose" }
+UI.accents = { "lemon", "mint", "rose", "lilac", "amber" }
+local DEFAULT_ACCENT = "lemon"
 
 local colors = {}
 UI.colors = colors
 
--- Fills `colors` for a palette and accent; returns true if anything changed.
+-- Fills `colors` for a theme and scheme; returns true if anything changed.
 local currentTheme, currentAccent
 local function Compose(theme, accent)
-    theme = palettes[theme] and theme or "dark"
-    accent = accents[accent] and accent or "amber"
+    theme = ladders[theme] and theme or "dark"
+    accent = accents[accent] and accent or DEFAULT_ACCENT
     if theme == currentTheme and accent == currentAccent then
         return false
     end
     currentTheme, currentAccent = theme, accent
-    for token, value in pairs(palettes[theme]) do
+    local dark = theme == "dark"
+    local scheme = accents[accent]
+
+    for token, step in pairs(ladders[theme]) do
+        colors[token] = hsl(scheme.hue, scheme.saturation * step[2], step[1])
+    end
+    for token, value in pairs(washes[theme]) do
         colors[token] = value
     end
-    local shades = accents[accent]
-    local base = hex(theme == "dark" and shades.dark or shades.light)
+
+    local shades = scheme[theme]
+    local base, bright = hex(shades[1]), hex(shades[2])
     colors.accent = base
-    colors.accentSoft = { base[1], base[2], base[3], theme == "dark" and 0.16 or 0.12 }
-    colors.accentLine = { base[1], base[2], base[3], 0.55 }
-    colors.onAccent = hex(theme == "dark" and shades.onDark or shades.onLight)
-    UI.isDark = theme == "dark"
+    colors.accent2 = bright
+    colors.onAccent = hex(shades[3])
+    colors.accentSoft = alpha(base, dark and 0.16 or 0.12)
+    colors.accentLine = alpha(base, 0.55)
+    colors.accentGlow = alpha(base, dark and 0.45 or 0.30) -- halo around what is switched on
+    colors.accentHaze = alpha(base, dark and 0.20 or 0.14) -- the glow behind the logo
+    colors.accentFade = alpha(base, dark and 0.22 or 0.16) -- chosen entry in the sidebar ...
+    colors.accentFadeEnd = alpha(base, dark and 0.04 or 0.03) -- ... fading out to the right
+    colors.accentEdge = mix(base, BLACK, 0.38) -- border of a filled button
+    colors.accentRim = mix(base, WHITE, 0.30) -- light line just inside that border
+    colors.accentRim2 = mix(bright, WHITE, 0.30)
+    colors.cardActive = alpha(base, dark and 0.26 or 0.45) -- border of a card whose feature is on
+    UI.isDark = dark
     return true
 end
-Compose("dark", "amber")
+Compose("dark", DEFAULT_ACCENT)
 
 function UI.Color(name)
     local c = colors[name] or colors.text
     return c[1], c[2], c[3], c[4]
 end
 
--- Colour of an accent swatch, independent of the chosen accent.
+-- Colour of a scheme's swatch, independent of the chosen scheme.
 function UI.AccentSwatch(accent)
-    local shades = accents[accent] or accents.amber
-    local c = hex(UI.isDark and shades.dark or shades.light)
+    local scheme = accents[accent] or accents[DEFAULT_ACCENT]
+    local c = hex(scheme[UI.isDark and "dark" or "light"][1])
     return c[1], c[2], c[3], 1
 end
 
@@ -168,10 +235,11 @@ end
 ---------------------------------------------------------------------------
 
 local painted = setmetatable({}, { __mode = "k" })
+local shaded = setmetatable({}, { __mode = "k" }) -- textures with a gradient, see UI.Shade
 
 local function Apply(region, entry)
     local r, g, b, a = UI.Color(entry.token)
-    a = a * entry.alpha
+    a = a * entry.alpha * (entry.level or 1)
     if entry.mode == "fill" then
         region:SetColorTexture(r, g, b, a)
     elseif entry.mode == "tint" then
@@ -182,6 +250,11 @@ local function Apply(region, entry)
 end
 
 local function Paint(mode, region, token, alpha)
+    if shaded[region] then
+        -- A gradient lives in the vertex colours; a plain fill must clear it.
+        shaded[region] = nil
+        region:SetVertexColor(1, 1, 1, 1)
+    end
     local entry = painted[region]
     if not entry then
         entry = {}
@@ -203,13 +276,86 @@ function UI.Ink(fontString, token, alpha)
     Paint("ink", fontString, token, alpha)
 end
 
--- Follows the saved theme and accent; repaints everything that was painted.
+local function ApplyShade(texture, entry)
+    local r1, g1, b1, a1 = UI.Color(entry.from)
+    local r2, g2, b2, a2 = UI.Color(entry.to)
+    local function At(position)
+        return CreateColor(
+            r1 + (r2 - r1) * position,
+            g1 + (g2 - g1) * position,
+            b1 + (b2 - b1) * position,
+            (a1 + (a2 - a1) * position) * entry.alpha * (entry.level or 1)
+        )
+    end
+    if entry.textured then
+        texture:SetVertexColor(1, 1, 1, 1)
+    else
+        texture:SetColorTexture(1, 1, 1, 1)
+    end
+    if entry.vertical then
+        -- The client shades from the bottom up; ours runs from the top down.
+        texture:SetGradient("VERTICAL", At(entry.stop), At(entry.start))
+    else
+        texture:SetGradient("HORIZONTAL", At(entry.start), At(entry.stop))
+    end
+end
+
+-- Shades a texture from one colour token into another: "HORIZONTAL" from
+-- left to right, "VERTICAL" from top to bottom. Follows the theme like
+-- UI.Paint does.
+-- opts: start, stop (the part of the whole gradient this texture shows,
+-- 0..1; for shapes made of several textures), alpha, textured (an image
+-- instead of a plain fill).
+function UI.Shade(texture, orientation, fromToken, toToken, opts)
+    opts = opts or {}
+    if not (texture.SetGradient and CreateColor) then
+        -- No gradient support: the base tone alone.
+        Paint(opts.textured and "tint" or "fill", texture, fromToken, opts.alpha)
+        return
+    end
+    painted[texture] = nil
+    local entry = shaded[texture]
+    if not entry then
+        entry = {}
+        shaded[texture] = entry
+    end
+    entry.vertical = orientation == "VERTICAL"
+    entry.from, entry.to = fromToken, toToken
+    entry.start, entry.stop = opts.start or 0, opts.stop or 1
+    entry.alpha = opts.alpha or 1
+    entry.textured = opts.textured and true or false
+    ApplyShade(texture, entry)
+end
+
+-- Opacity of a painted or shaded region on top of its colour's own alpha,
+-- for fading. Not SetAlpha: on a texture that shares the vertex alpha with
+-- SetVertexColor, so it would overwrite the alpha of a tinted image.
+function UI.SetLevel(region, level)
+    local entry = painted[region]
+    if entry then
+        if (entry.level or 1) ~= level then
+            entry.level = level
+            Apply(region, entry)
+        end
+        return
+    end
+    entry = shaded[region]
+    if entry and (entry.level or 1) ~= level then
+        entry.level = level
+        ApplyShade(region, entry)
+    end
+end
+
+-- Follows the saved theme and scheme; repaints everything that was painted.
 function UI.ApplyTheme()
     if not Compose(ns:GetOption("general", "theme"), ns:GetOption("general", "accent")) then
         return
     end
     for region, entry in pairs(painted) do
         Apply(region, entry)
+    end
+    for texture, entry in pairs(shaded) do
+        ApplyShade(texture, entry)
     end
     ns:Fire("THEME_CHANGED")
 end

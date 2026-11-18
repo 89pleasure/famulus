@@ -88,7 +88,9 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 - **Neues Fenster (2026-11-18, nur gegen den Mock geprüft, noch nicht im Spiel):** siehe „Das
   Fenster“ unten. Offen im Spiel: ob die Inter-Schriften laden (`/sz test`, Gruppe `media`, Prüfungen
   `font …`), ob runde Ecken, Schatten und Haarlinien sauber aussehen, das Umschalten hell/dunkel und
-  der Akzentfarben, die gleitende Reiter-Markierung.
+  der Farbwelten, die gleitende Reiter-Markierung, Verläufe und Glüheffekte.
+- **„Schnitzel“ ist ein Arbeitstitel** (Auftraggeber, 2026-11-18); der Name ändert sich noch. Nichts
+  am Design oder an Texten aus dem Namen ableiten.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
   Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
   Taint).
@@ -97,7 +99,9 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 
 WoW Forever ist auf dem Entwicklungsrechner installiert: `/Applications/World of Warcraft/_forever_`.
 `Interface/AddOns/Schnitzel` ist dort ein Symlink auf den Ordner `Schnitzel/` dieses Repos, jede
-Änderung ist also nach `/reload` im Spiel.
+Änderung ist also nach `/reload` im Spiel. Auf dem Windows-Rechner (seit 2026-11-18) liegt das Spiel
+unter `D:\Games\World of Warcraft\_forever_`, das Repo unter `E:\Develop\wow\schnitzel`;
+`Interface\AddOns\Schnitzel` ist dort eine Verzeichnisverknüpfung (Junction) auf `Schnitzel\`.
 
 - `/sz test` prüft gegen den echten Client: benötigte API je Feature, die oben genannten unsicheren
   Stellen (Texturen, Kamerazoom, Popup-Namen, Karte, Fehlertext-Globals) und die Annahmen aus
@@ -185,7 +189,7 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Test prüft das). `qol` zeigt seine sechs Kategorien als Reiter; `aliases` hat einen eigenen
   Aufbau (`layouts.aliases` in `UI/Options.lua`): Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
   „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Anzeige“ mit den Alias-Features. Die
-  Einstellungen haben die Reiter „Allgemein“ und „Darstellung“ (Farbschema, Akzentfarbe,
+  Einstellungen haben die Reiter „Allgemein“ und „Darstellung“ (Farbschema, Farbwelt,
   Fenstergröße). Ein Bereich ohne eigenen Aufbau bekommt je Kategorie einen Reiter.
 - **Hauptschalter** einer Kategorie: rechts in der Zeile unter den Reitern, beschriftet nur mit
   „AN“/„AUS“; bei den Aliasen auf beiden Reitern. Eine abgeschaltete Kategorie ist als Reiter
@@ -197,9 +201,36 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   der Aliase, „Über“) nicht vorhanden.
 - **Suche:** über alle Seiten und Reiter, Treffer gruppiert je Reiter in Karten („Quality of Life ·
   Händler“); keine Reiter und kein Hauptschalter in der Ergebnisansicht.
-- **Farben:** Paletten `dark` (Standard) und `light`, Akzentfarben `amber` (Standard, Markenfarbe),
-  `blue`, `green`, `violet`, `rose`, je mit eigenem Ton für hell und dunkel (`UI/Theme.lua`).
-  Gespeichert als `general.theme` und `general.accent`.
+- **Farben (überarbeitet 2026-11-18, Abend):** Der Auftraggeber fand den ersten Stand (neutrale
+  Grautöne, Akzent nur als Fläche) zu beliebig. Vorbilder für Farbkonzept, Akzente und Effekte:
+  Polestar Guide und Mastercraft, ohne sie zu kopieren. An einem HTML-Mockup hat er das Konzept
+  **„Zitrone“** gewählt: Petrol-Flächen, Akzent Zitronengelb. Eine Farbwelt (`general.accent`,
+  Liste `UI.accents`) ist seitdem ein ganzes Konzept und nicht mehr nur eine Akzentfarbe: Sie tönt
+  alle Flächen mit ihrem Farbton (`hue`, `saturation`; eine Helligkeitsleiter je Thema in
+  `ladders`) und bringt einen Akzent als Farbpaar (`accent` → `accent2`) für Verläufe. Jede gibt es
+  dunkel (Standard) und hell (`general.theme`); die hellen Akzenttöne sind dunkler, damit Text in
+  Akzentfarbe lesbar bleibt. Vorhanden: `lemon` (Standard), `mint`, `rose`, `lilac`, `amber`.
+  Vom Auftraggeber gesehen und bestätigt ist nur `lemon`; die anderen vier stammen aus dem Mockup
+  (nur dunkel gezeigt), ihre hellen Fassungen sind ungeprüft.
+- **Akzente und Effekte:** Akzent, Verlauf und Glühen stehen nur für „aktiv / hier“: Schalter an
+  (Verlauf, Schein), gewählter Reiter (Strich mit Verlauf und Schein), gewählter Bereich in der
+  Seitenleiste (auslaufender Verlauf, leuchtender Balken, Zähler auf Akzent-Plakette), Karte eines
+  laufenden Features (feiner Akzentrand, Marke links), Feld mit Fokus (Ring), Logo. Dazu als
+  Signatur ein weicher Schein in Akzentfarbe hinter dem Logo. Tiefe über eine Lichtkante oben an
+  Fenster und Karten und vertiefte Options-Zeilen. Hover blendet ein und aus (`Shape:Fade`).
+  Entscheidungen des Auftraggebers am Mockup: **eine** Linie zwischen Seitenleiste und Inhalt, der
+  Fensterrand läuft einheitlich um alles; die Linie über einer Options-Zeile geht von Kartenrand zu
+  Kartenrand; Options-Zeilen tragen einen Punkt, keinen Winkel und keine Führungslinie; der
+  Hauptknopf („Speichern“) hat einen waagerechten Verlauf, einen dunkleren Rand, eine helle Linie
+  innen und einen Schatten, aber keinen Verlauf von oben nach unten (wirkte „plastisch“).
+- **Karten:** In Kategorie-Reitern hat jedes Feature eine eigene Karte, zusammen mit seinen
+  Optionen (`FeatureBlocks`, Abstand `CARD_GAP`). Die Suche gruppiert weiter je Reiter.
+- **Technik dazu:** `UI.Shade(texture, richtung, von, nach)` für Verläufe (`SetGradient`, folgt dem
+  Thema wie `UI.Paint`); `Shape:SetGradient` verteilt einen Verlauf auf die Teile einer runden Form
+  und braucht deren Größe. Schein und Glühen kommen ohne neue Textur aus: `UI.Shadow` mit einem
+  Akzent-Farbnamen statt `shadow`, `UI.Halo` und der Schein hinter dem Logo nutzen `shadow.tga`.
+  Alles nur gegen den Mock geprüft; im Spiel offen sind vor allem `SetGradient` auf Bild-Texturen
+  (runde Ecken von Schalter, Knopf, Logo), waagerechte Verläufe und die Stärke der Glüheffekte.
 - **Form:** runde Ecken aus Viertelkreisen von `circle.tga` plus drei Rechtecken (`UI.Round`,
   `UI.Card` mit Haarlinien-Rand); Fenster 12, Karten 10, Bedienelemente 6–8. Weicher Schatten um
   Fenster und Menüs (`UI.Shadow`, `shadow.tga`). Der frühere Verlaufsrahmen (`UI.GradientFrame`) ist
@@ -211,7 +242,7 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
 - Unverändert aus 2026-11-16: feste Fensterhöhe, längere Seiten scrollen; die Seite für
   Addon-eigene Einstellungen heißt „Einstellungen“ (intern `general`); Untertitel und
   Reiterbeschreibung sagen, was der Spieler dort findet, keine technischen Hinweise; Optionen eines
-  Features (`child`) stehen eingerückt mit Führungslinie unter ihm und sind bei abgeschaltetem
+  Features (`child`) stehen eingerückt unter ihm und sind bei abgeschaltetem
   Feature eingeklappt (schmal, ausgegraut, Wert sichtbar), die Suche zeigt sie vollständig.
 
 ## Aliase

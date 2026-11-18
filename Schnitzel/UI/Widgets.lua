@@ -26,10 +26,57 @@ function Shape:SetColor(token, alpha)
     end
 end
 
-function Shape:SetShown(shown)
+-- Shades the shape from one colour token into another ("HORIZONTAL": left
+-- to right, "VERTICAL": top to bottom). The shape is made of several
+-- textures, so it needs the size of its frame to give each its share.
+function Shape:SetGradient(orientation, fromToken, toToken, width, height, alpha)
+    local vertical = orientation == "VERTICAL"
+    local inset = self.inset or 0
+    local length = math.max(1, (vertical and height or width) - inset * 2)
     for _, part in ipairs(self.parts) do
+        -- Each end of a part is { 0 or 1 (near or far edge), offset from it }.
+        local near = part.span[vertical and 3 or 1]
+        local far = part.span[vertical and 4 or 2]
+        local size = vertical and height or width
+        UI.Shade(part, orientation, fromToken, toToken, {
+            start = (near[1] * size + near[2] - inset) / length,
+            stop = (far[1] * size + far[2] - inset) / length,
+            alpha = alpha,
+            textured = part.rounded,
+        })
+    end
+end
+
+local FADE = 0.12
+
+function Shape:SetShown(shown)
+    UI.CancelTween(self)
+    self.level = shown and 1 or 0
+    for _, part in ipairs(self.parts) do
+        UI.SetLevel(part, 1)
         part:SetShown(shown)
     end
+end
+
+-- Like SetShown, but blends in or out instead of switching.
+function Shape:Fade(shown)
+    local from, to = self.level or 1, shown and 1 or 0
+    if from == to then
+        return
+    end
+    for _, part in ipairs(self.parts) do
+        part:Show()
+    end
+    UI.Tween(self, FADE, function(progress)
+        local level = from + (to - from) * progress
+        self.level = level
+        for _, part in ipairs(self.parts) do
+            UI.SetLevel(part, level)
+            if progress >= 1 and to == 0 then
+                part:Hide()
+            end
+        end
+    end)
 end
 
 function Shape:Show()
@@ -54,16 +101,28 @@ function UI.Round(frame, token, radius, opts)
     opts = opts or {}
     local layer, sublevel = opts.layer or "BACKGROUND", opts.sublevel or 0
     local inset, r = opts.inset or 0, radius
-    local shape = setmetatable({ parts = {} }, Shape)
+    local shape = setmetatable({ parts = {}, inset = inset }, Shape)
 
-    local function Part()
+    -- span: where the part lies inside the frame, for gradients. Each of
+    -- left, right, top, bottom is { 0 or 1 (near or far edge), offset }.
+    local function Part(left, right, top, bottom)
         local texture = frame:CreateTexture(nil, layer, nil, sublevel)
+        texture.span = { left, right, top, bottom }
         shape.parts[#shape.parts + 1] = texture
         return texture
     end
 
+    local nearA, nearB = { 0, inset }, { 0, inset + r }
+    local farA, farB = { 1, -inset - r }, { 1, -inset }
+
     for _, c in ipairs(CORNERS) do
-        local corner = Part()
+        local onLeft, onTop = c[2] > 0, c[3] < 0
+        local corner = Part(
+            onLeft and nearA or farA,
+            onLeft and nearB or farB,
+            onTop and nearA or farA,
+            onTop and nearB or farB
+        )
         corner:SetSize(r, r)
         corner:SetPoint(c[1], frame, c[1], c[2] * inset, c[3] * inset)
         if not (opts.square and opts.square[c[1]]) then
@@ -73,16 +132,16 @@ function UI.Round(frame, token, radius, opts)
         end
     end
 
-    local middle = Part()
+    local middle = Part(nearB, farA, nearA, farB)
     middle:SetPoint("TOPLEFT", frame, "TOPLEFT", inset + r, -inset)
     middle:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset - r, inset)
 
-    local left = Part()
+    local left = Part(nearA, nearB, nearB, farA)
     left:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset - r)
     left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", inset, inset + r)
     left:SetWidth(r)
 
-    local right = Part()
+    local right = Part(farA, farB, nearB, farA)
     right:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -inset, -inset - r)
     right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset, inset + r)
     right:SetWidth(r)
@@ -111,16 +170,18 @@ function UI.Card(frame, fillToken, borderToken, radius, opts)
     return { border = border, fill = fill }
 end
 
--- Soft shadow around a frame, in eight pieces of shadow.tga. The window
+-- Soft shadow around a frame, in eight pieces of shadow.tga. The frame
 -- itself covers the middle. spread: how far it reaches beyond the edges.
-function UI.Shadow(frame, spread, radius, drop)
+-- With an accent token instead of "shadow" it is a glow. Returns a shape, so
+-- it can be shown, hidden and faded.
+function UI.Shadow(frame, spread, radius, drop, token)
     local size = spread + radius
     local pieces = {}
     local function Piece(l, r, t, b)
         local texture = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
         texture:SetTexture(UI.media.shadow)
         texture:SetTexCoord(l, r, t, b)
-        UI.Tint(texture, "shadow")
+        UI.Tint(texture, token or "shadow")
         pieces[#pieces + 1] = texture
         return texture
     end
@@ -151,7 +212,17 @@ function UI.Shadow(frame, spread, radius, drop)
     local right = Piece(0.5, 1, 0.49, 0.51)
     right:SetPoint("TOPLEFT", tr, "BOTTOMLEFT")
     right:SetPoint("BOTTOMRIGHT", br, "TOPRIGHT")
-    return pieces
+    return setmetatable({ parts = pieces }, Shape)
+end
+
+-- A round soft spot of light in a colour token, centred on `anchor`.
+function UI.Halo(parent, anchor, size, token, layer)
+    local halo = parent:CreateTexture(nil, layer or "BORDER")
+    halo:SetTexture(UI.media.shadow)
+    halo:SetSize(size, size)
+    halo:SetPoint("CENTER", anchor, "CENTER")
+    UI.Tint(halo, token)
+    return halo
 end
 
 ---------------------------------------------------------------------------
@@ -219,18 +290,25 @@ function UI.Button(parent, onClick, variant, icon)
     button:SetHeight(28)
     button.variant = variant
 
-    local ground
+    local radius = variant == "primary" and 7 or 6
+    local ground, face, rim
     if variant == "primary" then
-        ground = UI.Round(button, "accent", 6)
+        -- Depth without a bulge: a soft shadow below, a darker border, a
+        -- light line just inside it, and the accent running left to right.
+        local pixel = UI.Pixel(button)
+        UI.Shadow(button, 6, radius, 2, "shadowSoft")
+        ground = UI.Round(button, "accentEdge", radius)
+        rim = UI.Round(button, "accentRim", math.max(1, radius - pixel), { sublevel = 1, inset = pixel })
+        face = UI.Round(button, "accent", math.max(1, radius - pixel * 2), { sublevel = 2, inset = pixel * 2 })
     elseif variant == "secondary" then
-        ground = UI.Card(button, "control", "controlBorder", 6)
+        ground = UI.Card(button, "control", "controlBorder", radius)
     end
-    local hover = UI.Round(button, variant == "primary" and "knob" or "hover", 6, { layer = "ARTWORK" })
+    local hover = UI.Round(button, variant == "primary" and "knob" or "hover", radius, { layer = "ARTWORK" })
     hover:SetColor(variant == "primary" and "knob" or "hover", variant == "primary" and 0.12 or 1)
     hover:Hide()
 
     local textToken = variant == "primary" and "onAccent" or (variant == "ghost" and "textDim" or "text")
-    local label = UI.Text(button, 12, textToken, "medium")
+    local label = UI.Text(button, 12, textToken, variant == "primary" and "semibold" or "medium")
     label:SetJustifyV("MIDDLE")
     button.label = label
 
@@ -258,7 +336,14 @@ function UI.Button(parent, onClick, variant, icon)
         label:SetText(text)
         local padding = variant == "ghost" and 20 or 28
         local minimum = variant == "ghost" and 0 or 84
-        self:SetWidth(math.max(minimum, label:GetStringWidth() + (self.icon and 20 or 0) + padding))
+        local width = math.max(minimum, label:GetStringWidth() + (self.icon and 20 or 0) + padding)
+        self:SetWidth(width)
+        if face then
+            -- The gradient needs the final size; it changes with the label.
+            local height = self:GetHeight()
+            rim:SetGradient("HORIZONTAL", "accentRim", "accentRim2", width, height)
+            face:SetGradient("HORIZONTAL", "accent", "accent2", width, height)
+        end
         Layout()
     end
 
@@ -285,11 +370,11 @@ function UI.Button(parent, onClick, variant, icon)
 
     button:SetScript("OnEnter", function(self)
         if not self.disabled then
-            hover:Show()
+            hover:Fade(true)
         end
     end)
     button:SetScript("OnLeave", function()
-        hover:Hide()
+        hover:Fade(false)
     end)
     button:SetScript("OnMouseDown", function(self)
         if not self.disabled then
@@ -324,11 +409,11 @@ function UI.IconButton(parent, media, onClick, size)
         icon:SetTexture(UI.media[name])
     end
     button:SetScript("OnEnter", function()
-        hover:Show()
+        hover:Fade(true)
         UI.Tint(icon, "text")
     end)
     button:SetScript("OnLeave", function()
-        hover:Hide()
+        hover:Fade(false)
         UI.Tint(icon, "textMuted")
     end)
     button:SetScript("OnClick", onClick)
@@ -348,6 +433,9 @@ function UI.Toggle(parent)
     toggle:SetSize(TOGGLE_W, TOGGLE_H)
 
     local track = UI.Round(toggle, "track", TOGGLE_H / 2, { layer = "ARTWORK" })
+    -- Switched on, the track runs through the accent and glows a little.
+    local glow = UI.Shadow(toggle, 6, TOGGLE_H / 2, 0, "accentGlow")
+    glow:Hide()
 
     local knobShadow = toggle:CreateTexture(nil, "OVERLAY", nil, 0)
     knobShadow:SetTexture(UI.media.circle)
@@ -371,7 +459,7 @@ function UI.Toggle(parent)
         on = on and true or false
         local changed = self.on ~= on
         self.on = on
-        track:SetColor(on and "accent" or "track")
+        track:SetGradient("HORIZONTAL", on and "accent" or "track", on and "accent2" or "track", TOGGLE_W, TOGGLE_H)
 
         local target = on and KNOB_ON or KNOB_OFF
         if animate and changed and knobX then
@@ -379,9 +467,11 @@ function UI.Toggle(parent)
             UI.Tween(self, 0.14, function(progress)
                 PlaceKnob(from + (target - from) * progress)
             end)
+            glow:Fade(on)
         else
             UI.CancelTween(self)
             PlaceKnob(target)
+            glow:SetShown(on)
         end
     end
 
@@ -558,16 +648,17 @@ local function MenuRow(index)
     row:SetPoint("TOPRIGHT", -MENU_PAD, -(index - 1) * MENU_ROW - MENU_PAD)
     local hover = UI.Round(row, "hover", 5)
     hover:Hide()
+    row.hover = hover
     row.text = UI.Text(row, 12, "text", "medium")
     row.text:SetPoint("LEFT", 10, 0)
     row.text:SetJustifyV("MIDDLE")
     row.check = UI.Icon(row, "check", 14, "accent")
     row.check:SetPoint("RIGHT", -8, 0)
     row:SetScript("OnEnter", function()
-        hover:Show()
+        hover:Fade(true)
     end)
     row:SetScript("OnLeave", function()
-        hover:Hide()
+        hover:Fade(false)
     end)
     row:SetScript("OnClick", function(self)
         local onSelect, value = menu.onSelect, self.value
@@ -596,6 +687,7 @@ function UI.OpenMenu(owner, values, current, onSelect)
         row.text:SetText(values[i].text)
         UI.Ink(row.text, selected and "accent" or "text")
         row.check:SetShown(selected)
+        row.hover:Hide() -- a fade from the last time the menu was open
         row:Show()
     end
     for i = #values + 1, #menu.rows do
@@ -636,6 +728,9 @@ end
 local function Field(parent, height, radius, maxLetters, leftInset, rightInset)
     local box = CreateFrame("Frame", nil, parent)
     box:SetHeight(height)
+    -- Soft ring in the accent colour around the field that has the focus.
+    local ring = UI.Round(box, "accentSoft", radius + 3, { sublevel = -1, inset = -3 })
+    ring:Hide()
     local card = UI.Card(box, "field", "controlBorder", radius)
 
     local edit = CreateFrame("EditBox", nil, box)
@@ -649,14 +744,18 @@ local function Field(parent, height, radius, maxLetters, leftInset, rightInset)
 
     local placeholder = UI.Text(box, 12, "textMuted")
     placeholder:SetPoint("LEFT", leftInset, 0)
+    placeholder:SetPoint("RIGHT", -8, 0) -- a long hint is cut off inside the field
+    placeholder:SetWordWrap(false)
     placeholder:SetJustifyV("MIDDLE")
     box.placeholder = placeholder
 
     edit:SetScript("OnEditFocusGained", function()
         card.border:SetColor("accent")
+        ring:Fade(true)
     end)
     edit:SetScript("OnEditFocusLost", function()
         card.border:SetColor("controlBorder")
+        ring:Fade(false)
     end)
     box:SetScript("OnMouseDown", function()
         edit:SetFocus()
@@ -739,9 +838,13 @@ function UI.Tabs(parent, onSelect)
     baseline:SetPoint("BOTTOMLEFT")
     baseline:SetPoint("BOTTOMRIGHT")
 
+    -- The bar runs through the accent and throws a little light upwards.
     local bar = CreateFrame("Frame", nil, tabs)
     bar:SetHeight(2)
-    UI.Round(bar, "accent", 1, { layer = "OVERLAY" })
+    local stroke = bar:CreateTexture(nil, "OVERLAY")
+    stroke:SetAllPoints(bar)
+    UI.Shade(stroke, "HORIZONTAL", "accent", "accent2")
+    UI.Shadow(bar, 7, 1, 0, "accentGlow")
     tabs.bar = bar
     local barX, barW
 

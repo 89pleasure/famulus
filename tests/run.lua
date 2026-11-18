@@ -896,7 +896,26 @@ local function isFolded(row)
 end
 check(isFolded(optionRow), "the option of a switched-off feature is a slim row without help text")
 check(optionRow.disabled and optionRow.toggle:IsShown() and not optionRow.toggle.on, "it is greyed out but shows its value")
-check(optionRow.guide:IsShown() and not rows[1].guide:IsShown(), "options hang off their feature with a guide line")
+check(optionRow.bullet:IsShown() and not rows[1].bullet:IsShown(), "options are marked with a dot below their feature")
+check(optionRow.sunkenLast.parts[1]:IsShown() and not optionRow.sunken:IsShown(), "an option that ends its card has the rounded ground")
+local function visibleCards()
+    local list = {}
+    for _, frame in ipairs(mock.frames) do
+        if frame.mark and frame:IsVisible() then
+            list[#list + 1] = frame
+        end
+    end
+    return list
+end
+local vendorCards = visibleCards()
+check(#vendorCards == 2 and #vendorCards[1].block.items == 2, "every feature has its own card, together with its options")
+check(not vendorCards[1].mark:IsShown() and not vendorCards[2].mark:IsShown(), "cards of switched-off features are unmarked")
+enable("sellJunk")
+mock.Advance(0.1)
+check(vendorCards[2].mark:IsShown() and not vendorCards[1].mark:IsShown(), "the card of a running feature wears the accent mark")
+enable("sellJunk", false)
+mock.Advance(0.1)
+check(not vendorCards[2].mark:IsShown(), "and loses it when the feature is switched off")
 ns:SetOption("autoRepair", "guildFunds", true)
 mock.Advance(0.3)
 check(optionRow.toggle.on and isFolded(optionRow), "a chosen value shows while folded as well")
@@ -1188,7 +1207,7 @@ enable("declineDuels", false)
 -- Settings: appearance tab.
 mock.Click(tabButton("Appearance"))
 local looks = visibleRows()
-check(looks[1].segment:IsShown() and looks[2].swatches:IsShown() and looks[3].dropdown:IsShown(), "theme, accent colour and window size")
+check(looks[1].segment:IsShown() and looks[2].swatches:IsShown() and looks[3].dropdown:IsShown(), "theme, colour scheme and window size")
 check(ns.UI.isDark and window.themeButton.icon ~= nil, "the window starts dark")
 local lightButton
 for _, button in ipairs(looks[1].segment.buttons) do
@@ -1199,28 +1218,56 @@ end
 mock.Click(lightButton)
 mock.Advance(0.1)
 check(ns:GetOption("general", "theme") == "light" and not ns.UI.isDark, "the segmented control switches to the light theme")
-check(ns.UI.colors.card[1] == 1 and lightButton.selected, "the palette follows at once")
+check(ns.UI.colors.card[1] > 0.95 and lightButton.selected, "the palette follows at once")
 mock.Click(window.themeButton)
 mock.Advance(0.1)
 check(ns.UI.isDark and (SchnitzelDB.profile.general or {}).theme == nil, "the button in the header switches back, and the default is not saved")
-local violet
+local lilac
 for _, dot in ipairs(looks[2].swatches.dots) do
-    if dot.value == "violet" then
-        violet = dot
+    if dot.value == "lilac" then
+        lilac = dot
     end
 end
-local amber = ns.UI.colors.accent[1]
-mock.Click(violet)
+local lemon, lemonWindow = ns.UI.colors.accent[3], ns.UI.colors.window[2]
+mock.Click(lilac)
 mock.Advance(0.1)
-check(ns:GetOption("general", "accent") == "violet" and ns.UI.colors.accent[1] ~= amber, "a swatch picks the accent colour")
-check(violet.selected and violet.ring:IsShown(), "the chosen swatch wears a ring")
+check(ns:GetOption("general", "accent") == "lilac" and ns.UI.colors.accent[3] ~= lemon, "a swatch picks the colour scheme")
+check(ns.UI.colors.window[2] ~= lemonWindow, "a scheme tints the grounds as well, not just the accent")
+-- Every scheme is complete in both themes.
+local function channelsValid(color)
+    for i = 1, 4 do
+        if type(color[i]) ~= "number" or color[i] < 0 or color[i] > 1 then
+            return false
+        end
+    end
+    return true
+end
+local schemesComplete = true
+for _, theme in ipairs(ns.UI.themes) do
+    for _, accent in ipairs(ns.UI.accents) do
+        ns:SetOption("general", "theme", theme)
+        ns:SetOption("general", "accent", accent)
+        local colors = ns.UI.colors
+        for _, token in ipairs({ "window", "sidebar", "card", "text", "textMuted", "accent", "accent2", "onAccent", "accentGlow", "accentEdge", "sunken", "sheen" }) do
+            schemesComplete = schemesComplete and colors[token] ~= nil and channelsValid(colors[token])
+        end
+        -- Text must stand out from its ground in either theme.
+        schemesComplete = schemesComplete and math.abs(colors.text[2] - colors.card[2]) > 0.6
+        schemesComplete = schemesComplete and (colors.accent[1] ~= colors.accent2[1] or colors.accent[2] ~= colors.accent2[2])
+    end
+end
+check(schemesComplete, "every scheme has all its colours in the dark and the light theme")
+ns:SetOption("general", "theme", "dark")
+ns:SetOption("general", "accent", "lilac")
+mock.Advance(0.1)
+check(lilac.selected and lilac.ring:IsShown(), "the chosen swatch wears a ring")
 mock.Click(looks[2])
-check(ns:GetOption("general", "accent") == "violet", "a click beside the swatches changes nothing")
+check(ns:GetOption("general", "accent") == "lilac", "a click beside the swatches changes nothing")
 check(not window.resetButton.disabled, "a changed look makes the tab resettable")
 mock.Click(window.resetButton)
 mock.Click(window.resetButton)
 mock.Advance(4.1)
-check(ns:GetOption("general", "accent") == "amber", "reset brings the default look back")
+check(ns:GetOption("general", "accent") == "lemon", "reset brings the default look back")
 check(ns:GetOption("general", "pauseModifier") == "SHIFT" and ns:GetOption("general", "minimapAngle") == 215, "and touches nothing else")
 
 -- Window size.

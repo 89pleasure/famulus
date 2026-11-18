@@ -18,8 +18,8 @@ local WIDTH, HEIGHT = 880, 590
 local SIDEBAR, PAD, RADIUS = 224, 28, 12
 local CONTENT_W = WIDTH - SIDEBAR - PAD * 2
 local HEADER = 84
-local NAV_ROW, NAV_TOP = 34, 128
-local BLOCK_GAP, BLOCK_TITLE = 22, 24
+local NAV_ROW, NAV_TOP = 34, 142
+local BLOCK_GAP, BLOCK_TITLE, CARD_GAP = 22, 24, 8
 
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
 local MODIFIERS = { "SHIFT", "CTRL", "ALT", "NONE" }
@@ -148,7 +148,12 @@ local function FeatureItems(category)
     local items = {}
     for _, feature in ipairs(ns.featureList) do
         if feature.category == category and feature:IsShown() then
-            items[#items + 1] = FeatureItem(feature)
+            local item = FeatureItem(feature)
+            -- Whether the feature really runs; its card shows that.
+            item.active = function()
+                return feature.enabled == true
+            end
+            items[#items + 1] = item
             for _, option in ipairs(feature.options) do
                 if ns:IsOptionAvailable(option) then
                     items[#items + 1] = OptionItem(feature, option)
@@ -268,8 +273,23 @@ end
 -- Pages and tabs
 ---------------------------------------------------------------------------
 
+-- One card per feature: the feature's row and, below it, its options.
+local function FeatureBlocks(items)
+    local blocks = {}
+    for _, item in ipairs(items) do
+        local block = blocks[#blocks]
+        if item.child and block then
+            block.items[#block.items + 1] = item
+        else
+            blocks[#blocks + 1] = { items = { item }, tight = true, active = item.active }
+        end
+    end
+    return blocks
+end
+
 local function CategoryTab(category)
     local items = FeatureItems(category)
+    local blocks = FeatureBlocks(items)
     return {
         id = category,
         category = category,
@@ -281,7 +301,7 @@ local function CategoryTab(category)
         end,
         settings = items,
         blocks = function()
-            return { { items = items } }
+            return blocks
         end,
     }
 end
@@ -624,7 +644,8 @@ local function ControlWidth(row, kind)
     return 0
 end
 
-local function RowSetItem(row, item, index, flat)
+-- last: the row is the last one of its card.
+local function RowSetItem(row, item, index, flat, last)
     row.item = item
     local kind = item.kind
     EnsureControls(row, kind)
@@ -642,7 +663,18 @@ local function RowSetItem(row, item, index, flat)
     local controlWidth = ControlWidth(row, kind)
     local textWidth = CONTENT_W - indent - 18 - controlWidth - (controlWidth > 0 and 24 or 0)
 
-    row.guide:SetShown(child)
+    -- An option lies a little deeper in the card than its feature, marked
+    -- with a dot; the line above it runs from edge to edge.
+    local pixel = UI.Pixel(row)
+    row.sunken:SetShown(child and not last)
+    row.sunkenLast:SetShown(child and last)
+    row.bullet:SetShown(child)
+    row.bullet:ClearAllPoints()
+    row.bullet:SetPoint("TOPLEFT", 25, -(padding + 5))
+    local edge = child and pixel or 18
+    row.divider:ClearAllPoints()
+    row.divider:SetPoint("TOPLEFT", edge, 0)
+    row.divider:SetPoint("TOPRIGHT", -edge, 0)
     if kind == "alias" then
         row.initial:SetText(Initial(item.label()))
     end
@@ -699,13 +731,19 @@ local function CreateRow(parent)
     row.hover:Hide()
 
     row.divider = UI.Line(row)
-    row.divider:SetPoint("TOPLEFT", 18, 0)
-    row.divider:SetPoint("TOPRIGHT", -18, 0)
 
-    -- Options hang off their feature with a thin guide line.
-    row.guide = UI.VLine(row, "cardBorder")
-    row.guide:SetPoint("TOPLEFT", 26, 0)
-    row.guide:SetPoint("BOTTOMLEFT", 26, 0)
+    -- Ground of an option row; rounded where it ends the card.
+    local pixel = UI.Pixel(row)
+    row.sunken = row:CreateTexture(nil, "BACKGROUND", nil, -2)
+    row.sunken:SetPoint("TOPLEFT", pixel, 0)
+    row.sunken:SetPoint("BOTTOMRIGHT", -pixel, 0)
+    UI.Paint(row.sunken, "sunken")
+    row.sunkenLast = UI.Round(row, "sunken", 9, {
+        sublevel = -2,
+        inset = pixel,
+        square = { TOPLEFT = true, TOPRIGHT = true },
+    })
+    row.bullet = UI.Icon(row, "circle", 5, "textMuted")
 
     row.label = UI.Text(row, 13, "text", "medium")
     row.desc = UI.Text(row, 12, "textMuted")
@@ -714,11 +752,11 @@ local function CreateRow(parent)
 
     row:SetScript("OnEnter", function(self)
         if not self.disabled and not HOVERLESS[self.item.kind] then
-            self.hover:Show()
+            self.hover:Fade(true)
         end
     end)
     row:SetScript("OnLeave", function(self)
-        self.hover:Hide()
+        self.hover:Fade(false)
     end)
     row:SetScript("OnClick", RowClicked)
     return row
@@ -729,13 +767,34 @@ local function CreateCard(parent)
     local card = CreateFrame("Frame", nil, parent)
     card:SetWidth(CONTENT_W)
     card:SetFrameLevel(parent:GetFrameLevel() + 1)
-    UI.Card(card, "card", "cardBorder", 10)
+    card.shape = UI.Card(card, "card", "cardBorder", 10)
+
+    -- A little light on the top edge.
+    local pixel = UI.Pixel(card)
+    local sheen = UI.Line(card, "sheenSoft")
+    sheen:SetPoint("TOPLEFT", 10, -pixel)
+    sheen:SetPoint("TOPRIGHT", -10, -pixel)
+
+    -- Mark of a card whose feature is switched on.
+    card.mark = card:CreateTexture(nil, "BORDER")
+    card.mark:SetPoint("TOPLEFT", 0, -14)
+    card.mark:SetPoint("BOTTOMLEFT", 0, 14)
+    card.mark:SetWidth(2)
+    UI.Paint(card.mark, "accent")
+
     card.title = UI.Text(card, 12, "textDim", "semibold")
     card.title:SetPoint("BOTTOMLEFT", card, "TOPLEFT", 4, 9)
     card.note = UI.Text(card, 12, "textMuted", "medium")
     card.note:SetPoint("BOTTOMRIGHT", card, "TOPRIGHT", -4, 9)
     card.note:SetJustifyH("RIGHT")
     return card
+end
+
+-- Shows on a feature's card whether the feature runs.
+local function CardRefresh(card)
+    local active = card.block ~= nil and card.block.active ~= nil and card.block.active()
+    card.shape.border:SetColor(active and "cardActive" or "cardBorder")
+    card.mark:SetShown(active)
 end
 
 ---------------------------------------------------------------------------
@@ -774,6 +833,7 @@ local function RefreshSidebar()
         local selected = not searching and id == currentPage
         button.selected = selected
         button.fill:SetShown(selected)
+        button.bar:SetShown(selected)
         button.label:SetText(page.title())
         UI.Ink(button.label, selected and "text" or "textDim")
         UI.Tint(button.icon, selected and "accent" or "textMuted")
@@ -782,13 +842,12 @@ local function RefreshSidebar()
             -- A switched-off area is greyed out here as well.
             button.label:SetAlpha(anyOn and 1 or 0.45)
             button.icon:SetAlpha(anyOn and 1 or 0.45)
-            if anyOn then
-                button.count:SetText(active .. "/" .. total)
-                UI.Ink(button.count, active > 0 and "accent" or "textMuted")
-            else
-                button.count:SetText(L.ui_category_off)
-                UI.Ink(button.count, "textMuted")
-            end
+            -- The counter sits on a small plate; "off" stands alone.
+            button.count:SetText(anyOn and (active .. "/" .. total) or L.ui_category_off)
+            UI.Ink(button.count, anyOn and selected and "accent" or "textMuted")
+            button.pill:SetWidth(button.count:GetStringWidth() + 14)
+            button.plate:SetShown(anyOn)
+            button.plate:SetColor(selected and "accentSoft" or "chip")
         end
     end
     local active, total = ns:CountActiveFeatures()
@@ -887,6 +946,11 @@ local function RefreshState(animate)
     for i = 1, #rows do
         if rows[i]:IsShown() then
             RowRefresh(rows[i], animate)
+        end
+    end
+    for i = 1, #cards do
+        if cards[i]:IsShown() then
+            CardRefresh(cards[i])
         end
     end
     if searchText == "" then
@@ -1000,15 +1064,18 @@ function Render(animateTabs)
                 row = CreateRow(content)
                 rows[rowCount] = row
             end
-            RowSetItem(row, item, index, searching)
+            RowSetItem(row, item, index, searching, index == #block.items)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(y + offset))
             row:Show()
             offset = offset + row.height
         end
+        card.block = block
         card:SetHeight(math.max(1, offset))
         card:Show()
-        y = y + offset + BLOCK_GAP
+        CardRefresh(card)
+        -- Cards of single features sit close together.
+        y = y + offset + (block.tight and not searching and CARD_GAP or BLOCK_GAP)
     end
     for index = rowCount + 1, #rows do
         rows[index]:Hide()
@@ -1091,10 +1158,22 @@ local function CreateNavButton(parent, page)
     button:SetHeight(NAV_ROW)
     button.navId = page.id
 
-    button.fill = UI.Round(button, "accentSoft", 8)
+    -- The chosen entry: the accent fading out to the right, and a glowing
+    -- bar at its left edge.
+    button.fill = UI.Round(button, "accentFade", 8)
+    button.fill:SetGradient("HORIZONTAL", "accentFade", "accentFadeEnd", SIDEBAR - 24, NAV_ROW)
     button.fill:Hide()
     local hover = UI.Round(button, "hover", 8, { sublevel = 1 })
     hover:Hide()
+
+    button.bar = CreateFrame("Frame", nil, button)
+    button.bar:SetSize(3, NAV_ROW - 16)
+    button.bar:SetPoint("LEFT")
+    local stroke = button.bar:CreateTexture(nil, "ARTWORK")
+    stroke:SetAllPoints(button.bar)
+    UI.Shade(stroke, "VERTICAL", "accent2", "accent")
+    UI.Shadow(button.bar, 6, 1, 0, "accentGlow")
+    button.bar:Hide()
 
     button.icon = UI.Icon(button, page.icon, 16, "textMuted")
     button.icon:SetPoint("LEFT", 12, 0)
@@ -1104,18 +1183,23 @@ local function CreateNavButton(parent, page)
     button.label:SetJustifyV("MIDDLE")
 
     if page.area then
-        button.count = UI.Text(button, 11, "textMuted", "medium")
-        button.count:SetPoint("RIGHT", -12, 0)
-        button.count:SetJustifyH("RIGHT")
+        button.pill = CreateFrame("Frame", nil, button)
+        button.pill:SetHeight(18)
+        button.pill:SetPoint("RIGHT", -8, 0)
+        button.plate = UI.Round(button.pill, "chip", 9)
+        button.count = UI.Text(button.pill, 11, "textMuted", "medium")
+        button.count:SetPoint("CENTER")
+        button.count:SetJustifyH("CENTER")
+        button.count:SetJustifyV("MIDDLE")
     end
 
     button:SetScript("OnEnter", function(self)
         if not self.selected then
-            hover:Show()
+            hover:Fade(true)
         end
     end)
     button:SetScript("OnLeave", function()
-        hover:Hide()
+        hover:Fade(false)
     end)
     button:SetScript("OnClick", function()
         hover:Hide()
@@ -1145,11 +1229,49 @@ local function BuildSidebar()
     edge:SetPoint("TOPRIGHT")
     edge:SetPoint("BOTTOMRIGHT")
 
-    -- Logo: the accent colour with an "S", so it follows the chosen accent.
+    -- A soft glow in the accent colour behind the logo. It is one round
+    -- spot, much larger than the corner it sits in; two pieces show the part
+    -- inside the sidebar and leave out the window's rounded corner.
+    local SPOT = { left = -116, top = -136, width = 400, height = 360 }
+    local function Haze(left, top, right, bottom)
+        local piece = sidebar:CreateTexture(nil, "BACKGROUND", nil, 3)
+        piece:SetTexture(UI.media.shadow)
+        piece:SetPoint("TOPLEFT", sidebar, "TOPLEFT", left, -top)
+        piece:SetPoint("BOTTOMRIGHT", sidebar, "TOPLEFT", right, -bottom)
+        piece:SetTexCoord(
+            (left - SPOT.left) / SPOT.width,
+            (right - SPOT.left) / SPOT.width,
+            (top - SPOT.top) / SPOT.height,
+            (bottom - SPOT.top) / SPOT.height
+        )
+        UI.Tint(piece, "accentHaze")
+    end
+    local hazeBottom = SPOT.top + SPOT.height
+    Haze(RADIUS, pixel, SIDEBAR - pixel, hazeBottom)
+    Haze(pixel, RADIUS, RADIUS, hazeBottom)
+
+    -- The corner itself: a quarter circle in the glow's strength at that
+    -- spot (the falloff of shadow.tga, see tools/make_media.py). Without
+    -- it the corner shows as a dark square in the glow.
+    local function SpotAlpha(x, y)
+        local dx = ((x - SPOT.left) / SPOT.width - 0.5) * 64
+        local dy = ((y - SPOT.top) / SPOT.height - 0.5) * 64
+        local distance = math.max(0, math.sqrt(dx * dx + dy * dy) - 4)
+        return (1 - math.min(1, distance / 28)) ^ 2.2
+    end
+    local corner = sidebar:CreateTexture(nil, "BACKGROUND", nil, 3)
+    corner:SetTexture(UI.media.circle)
+    corner:SetTexCoord(0, 0.5, 0, 0.5)
+    corner:SetSize(RADIUS - pixel, RADIUS - pixel)
+    corner:SetPoint("TOPLEFT", sidebar, "TOPLEFT", pixel, -pixel)
+    UI.Tint(corner, "accentHaze", SpotAlpha(RADIUS * 0.6, RADIUS * 0.6))
+
+    -- Logo: the accent with an "S", so it follows the chosen scheme.
     local logo = CreateFrame("Frame", nil, sidebar)
     logo:SetSize(32, 32)
     logo:SetPoint("TOPLEFT", 20, -22)
-    UI.Round(logo, "accent", 9, { layer = "ARTWORK" })
+    UI.Shadow(logo, 10, 9, 0, "accentGlow")
+    UI.Round(logo, "accent", 9, { layer = "ARTWORK" }):SetGradient("VERTICAL", "accent2", "accent", 32, 32)
     local letter = UI.Text(logo, 18, "onAccent", "semibold")
     letter:SetPoint("CENTER", 0, 0)
     letter:SetJustifyH("CENTER")
@@ -1201,6 +1323,7 @@ local function BuildSidebar()
 
     local dot = UI.Icon(sidebar, "circle", 6, "accent")
     dot:SetPoint("BOTTOMLEFT", 24, 21)
+    UI.Halo(sidebar, dot, 18, "accentGlow")
     window.status = UI.Text(sidebar, 11, "textMuted", "medium")
     window.status:SetPoint("LEFT", dot, "RIGHT", 8, 0)
     window.status:SetJustifyV("MIDDLE")
@@ -1277,6 +1400,16 @@ local function Build()
     ApplyScale()
     UI.Shadow(window, 32, RADIUS, 10)
     UI.Card(window, "window", "cardBorder", RADIUS)
+
+    -- Light catching the top edge, across sidebar and content alike. Its
+    -- own frame, so that it lies above the sidebar's ground.
+    local pixel = UI.Pixel(window)
+    local gloss = CreateFrame("Frame", nil, window)
+    gloss:SetFrameLevel(window:GetFrameLevel() + 30)
+    gloss:SetPoint("TOPLEFT", RADIUS, -pixel)
+    gloss:SetPoint("TOPRIGHT", -RADIUS, -pixel)
+    gloss:SetHeight(pixel)
+    UI.Fill(gloss, "sheen")
 
     local saved = ns.global.window
     if saved and saved.point then

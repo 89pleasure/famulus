@@ -39,7 +39,7 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 **Das Fenster** (`/sz`): Links die Hauptfunktionen (**Quality of Life**, **Aliase**), unten die
 Seiten **Einstellungen** und **Über**. Quality of Life teilt sich in Reiter (Händler, Quests, Beute,
 Soziales, Tooltips, Interface); die Aliase haben ihren eigenen Aufbau mit der Namensliste und einem
-Reiter „Anzeige“. Helles und dunkles Farbschema (Knopf oben rechts), fünf Akzentfarben und die
+Reiter „Anzeige“. Helles und dunkles Farbschema (Knopf oben rechts), fünf Farbwelten und die
 Fenstergröße stehen unter Einstellungen › Darstellung. Die Suche links findet Einstellungen und
 Aliase auf allen Seiten.
 
