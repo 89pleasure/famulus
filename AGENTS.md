@@ -31,6 +31,9 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   und prüft jedes Feature, das Fenster und die Übersetzungen. Muss vor jedem Commit grün sein.
 - Der Mock beweist die eigene Logik, nicht das Verhalten des Clients. Dafür gibt es den Selbsttest
   im Spiel, siehe „Test im Spiel“.
+- Secret Values im Mock: `mock.SECRET` verweigert Index, Rechnen, Vergleich und Verketten.
+  Eine Wahr/Falsch-Prüfung (`not x`) lässt sich in Lua nicht abfangen; deshalb prüft der Test im
+  Quelltext, dass `ns.IsSecret(x)` vor jedem Test von `x` steht.
 - **Erster Selbsttest im Spiel am 2026-11-16** (Client 1.60.1, Build 70938, deDE): 54 Prüfungen ok,
   1 Warnung, 0 fehlgeschlagen; keine blockierten Aktionen, keine Lua-Warnungen. Bestätigt:
   - Das Addon lädt, das Fenster öffnet sich, Einstellungen und Fensterposition werden gespeichert.
@@ -112,6 +115,19 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
   Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
   Taint).
+- **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
+  629 KB bei 8 aktiven Features und 4 Spielereignissen.
+  - Die drei Inter-Schriften laden nicht (`SetFont` liefert falsch); das Fenster nimmt die
+    Spielschrift. Ursache noch nicht geklärt.
+  - Der Knopf unter Optionen › AddOns › Famulus schloss Blizzards Einstellungsfenster mit
+    `SettingsPanel:Close()` aus Addon-Code. Das Spiel meldete danach „Famulus wurde blockiert …“.
+    Ursache: Ohne Argument kehrt `Close` über `TransitionBackOpeningPanel` ins Spielmenü zurück und
+    ruft dabei das geschützte `ToggleGameMenu`. Jetzt `SettingsPanel:Close(true)` wie bei FlareUI
+    (Polestar: `HideUIPanel`); im Spiel bestätigt (keine Meldung, Famulus vorne). Offen lassen geht nicht: Famulus
+    liegt dann hinter Blizzards Fenster (beide `HIGH`).
+  - Der Entwicklermodus war an, `devLog` blieb trotzdem leer: Die Blockade kam nicht über
+    `ADDON_ACTION_BLOCKED`/`_FORBIDDEN` mit dem Addon-Namen an. Ursache offen; `devLog` ist für
+    blockierte Aktionen also kein verlässlicher Beleg.
 
 ## Test im Spiel
 

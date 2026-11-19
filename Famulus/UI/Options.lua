@@ -1563,8 +1563,10 @@ ns:On("LOGIN", function()
     button:SetSize(240, 26)
     button:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -16)
     button:SetScript("OnClick", function()
+        -- Close(true) skips the way back to the game menu: that path calls the
+        -- protected ToggleGameMenu, which the game blocks from addon code.
         if SettingsPanel and SettingsPanel.Close and not InCombatLockdown() then
-            SettingsPanel:Close()
+            SettingsPanel:Close(true)
         end
         if not (window and window:IsShown()) then
             ns:ToggleOptions()
