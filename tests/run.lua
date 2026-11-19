@@ -1207,24 +1207,11 @@ enable("declineDuels", false)
 -- Settings: appearance tab.
 mock.Click(tabButton("Appearance"))
 local looks = visibleRows()
-check(looks[1].segment:IsShown() and looks[2].swatches:IsShown() and looks[3].toggle:IsShown() and looks[4].dropdown:IsShown(),
-    "theme, colour scheme, sparks and window size")
-check(ns.UI.isDark and window.themeButton.icon ~= nil, "the window starts dark")
-local lightButton
-for _, button in ipairs(looks[1].segment.buttons) do
-    if button.value == "light" then
-        lightButton = button
-    end
-end
-mock.Click(lightButton)
-mock.Advance(0.1)
-check(ns:GetOption("general", "theme") == "light" and not ns.UI.isDark, "the segmented control switches to the light theme")
-check(ns.UI.colors.card[1] > 0.95 and lightButton.selected, "the palette follows at once")
-mock.Click(window.themeButton)
-mock.Advance(0.1)
-check(ns.UI.isDark and (FamulusDB.profile.general or {}).theme == nil, "the button in the header switches back, and the default is not saved")
+check(#looks == 3 and looks[1].swatches:IsShown() and looks[2].toggle:IsShown() and looks[3].dropdown:IsShown(),
+    "colour scheme, sparks and window size")
+check(window.themeButton == nil and ns.UI.colors.card[1] < 0.3, "the window is dark and has no light version")
 local lilac
-for _, dot in ipairs(looks[2].swatches.dots) do
+for _, dot in ipairs(looks[1].swatches.dots) do
     if dot.value == "lilac" then
         lilac = dot
     end
@@ -1234,7 +1221,7 @@ mock.Click(lilac)
 mock.Advance(0.1)
 check(ns:GetOption("general", "accent") == "lilac" and ns.UI.colors.accent[3] ~= lemon, "a swatch picks the colour scheme")
 check(ns.UI.colors.window[2] ~= lemonWindow, "a scheme tints the grounds as well, not just the accent")
--- Every scheme is complete in both themes.
+-- Every scheme is complete.
 local function channelsValid(color)
     for i = 1, 4 do
         if type(color[i]) ~= "number" or color[i] < 0 or color[i] > 1 then
@@ -1244,25 +1231,23 @@ local function channelsValid(color)
     return true
 end
 local schemesComplete = true
-for _, theme in ipairs(ns.UI.themes) do
+do
     for _, accent in ipairs(ns.UI.accents) do
-        ns:SetOption("general", "theme", theme)
         ns:SetOption("general", "accent", accent)
         local colors = ns.UI.colors
         for _, token in ipairs({ "window", "sidebar", "card", "text", "textMuted", "accent", "accent2", "onAccent", "accentGlow", "accentEdge", "sunken", "sheen" }) do
             schemesComplete = schemesComplete and colors[token] ~= nil and channelsValid(colors[token])
         end
-        -- Text must stand out from its ground in either theme.
+        -- Text must stand out from its ground.
         schemesComplete = schemesComplete and math.abs(colors.text[2] - colors.card[2]) > 0.6
         schemesComplete = schemesComplete and (colors.accent[1] ~= colors.accent2[1] or colors.accent[2] ~= colors.accent2[2])
     end
 end
-check(schemesComplete, "every scheme has all its colours in the dark and the light theme")
-ns:SetOption("general", "theme", "dark")
+check(schemesComplete, "every scheme has all its colours")
 ns:SetOption("general", "accent", "lilac")
 mock.Advance(0.1)
 check(lilac.selected and lilac.ring:IsShown(), "the chosen swatch wears a ring")
-mock.Click(looks[2])
+mock.Click(looks[1])
 check(ns:GetOption("general", "accent") == "lilac", "a click beside the swatches changes nothing")
 check(not window.resetButton.disabled, "a changed look makes the tab resettable")
 mock.Click(window.resetButton)
@@ -1272,7 +1257,7 @@ check(ns:GetOption("general", "accent") == "lemon", "reset brings the default lo
 check(ns:GetOption("general", "pauseModifier") == "SHIFT" and ns:GetOption("general", "minimapAngle") == 215, "and touches nothing else")
 
 -- Window size.
-check(looks[4].label:GetText() == "Window size" and looks[4].dropdown.text:GetText() == "100%", "the appearance tab offers the window size")
+check(looks[3].label:GetText() == "Window size" and looks[3].dropdown.text:GetText() == "100%", "the appearance tab offers the window size")
 ns:SetOption("general", "windowScale", 120)
 check(window.scale == 1.2, "changing it rescales the window at once")
 ns:SetOption("general", "windowScale", 100)
@@ -1296,11 +1281,11 @@ local function sparkGroups()
 end
 local sparksPlaying, sparksTotal = sparkGroups()
 check(sparksTotal > 10 and sparksPlaying == sparksTotal, "the sparks rise while the window is open (" .. sparksPlaying .. " of " .. sparksTotal .. ")")
-check(looks[3].label:GetText() == "Sparks in the background" and looks[3].toggle.on, "and have a switch on the appearance tab")
-mock.Click(looks[3])
+check(looks[2].label:GetText() == "Sparks in the background" and looks[2].toggle.on, "and have a switch on the appearance tab")
+mock.Click(looks[2])
 mock.Advance(0.1)
 check(ns:GetOption("general", "embers") == false and sparkGroups() == 0, "switching them off stops every one")
-mock.Click(looks[3])
+mock.Click(looks[2])
 mock.Advance(0.1)
 check(sparkGroups() == sparksTotal, "switching them on starts them again")
 

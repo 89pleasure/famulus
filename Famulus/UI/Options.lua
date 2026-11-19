@@ -411,13 +411,6 @@ local function SettingsTabs()
     })
 
     local appearance = SimpleTab("appearance", {
-        GeneralItem("theme", "segment", function()
-            local list = {}
-            for i, theme in ipairs(UI.themes) do
-                list[i] = { value = theme, text = L["theme_" .. theme] }
-            end
-            return list
-        end),
         GeneralItem("accent", "swatch", function()
             return UI.accents
         end),
@@ -573,8 +566,6 @@ local function RowRefresh(row, animate)
     elseif kind == "select" then
         row.dropdown.text:SetText(ValueText(item))
         row.dropdown:SetAlpha(alpha)
-    elseif kind == "segment" then
-        row.segment:SetValues(item.values(), item.get())
     elseif kind == "swatch" then
         row.swatches:SetValues(item.values(), item.get())
     elseif kind == "info" then
@@ -589,11 +580,6 @@ local function EnsureControls(row, kind)
     elseif kind == "select" and not row.dropdown then
         row.dropdown = UI.Dropdown(row)
         row.dropdown:SetPoint("RIGHT", -18, 0)
-    elseif kind == "segment" and not row.segment then
-        row.segment = UI.Segmented(row, function(value)
-            row.item.set(value)
-        end)
-        row.segment:SetPoint("RIGHT", -18, 0)
     elseif kind == "swatch" and not row.swatches then
         row.swatches = UI.Swatches(row, function(value)
             row.item.set(value)
@@ -619,7 +605,6 @@ local function EnsureControls(row, kind)
     local controls = {
         toggle = row.toggle,
         select = row.dropdown,
-        segment = row.segment,
         swatch = row.swatches,
         aliasEdit = row.editor,
         alias = row.remove,
@@ -640,8 +625,6 @@ local function ControlWidth(row, kind)
         return 34
     elseif kind == "select" then
         return row.dropdown:GetWidth()
-    elseif kind == "segment" then
-        return row.segment:GetWidth()
     elseif kind == "swatch" then
         return row.swatches:GetWidth()
     elseif kind == "alias" then
@@ -658,7 +641,7 @@ local function RowSetItem(row, item, index, flat, last)
     if kind == "aliasEdit" then
         aliasEditor = row.editor
         aliasEditor:Relabel()
-    elseif kind == "segment" or kind == "swatch" then
+    elseif kind == "swatch" then
         RowRefresh(row, false) -- sizes the control before the text is laid out
     end
 
@@ -714,7 +697,7 @@ end
 local function RowClicked(row)
     local item = row.item
     local kind = item.kind
-    if row.disabled or kind == "info" or kind == "segment" or kind == "swatch" then
+    if row.disabled or kind == "info" or kind == "swatch" then
         return
     end
     if kind == "alias" then
@@ -726,7 +709,7 @@ local function RowClicked(row)
     end
 end
 
-local HOVERLESS = { info = true, aliasEdit = true, segment = true, swatch = true }
+local HOVERLESS = { info = true, aliasEdit = true, swatch = true }
 
 local function CreateRow(parent)
     local row = CreateFrame("Button", nil, parent)
@@ -943,10 +926,6 @@ local function ApplyScale()
     end
 end
 
-local function RefreshThemeButton()
-    window.themeButton:SetIcon(UI.isDark and "sun" or "moon")
-end
-
 -- Refreshes switches and counters without touching the layout.
 local function RefreshState(animate)
     for i = 1, #rows do
@@ -965,7 +944,6 @@ local function RefreshState(animate)
     RefreshMaster(animate)
     UpdateResetButton()
     RefreshSidebar()
-    RefreshThemeButton()
 end
 
 -- Places the tab bar, the description line and the scroll area from top to
@@ -1099,7 +1077,6 @@ function Render(animateTabs)
 
     window.search.placeholder:SetText(L.ui_search)
     RefreshSidebar()
-    RefreshThemeButton()
 end
 
 local function SelectPage(id)
@@ -1351,18 +1328,13 @@ local function BuildHeader()
 
     window.subtitle = UI.Text(window, 12, "textMuted")
     window.subtitle:SetPoint("TOPLEFT", window.title, "BOTTOMLEFT", 0, -7)
-    window.subtitle:SetWidth(CONTENT_W - 90)
+    window.subtitle:SetWidth(CONTENT_W - 50)
 
     local close = UI.IconButton(window, "close", function()
         window:Hide()
     end, 28)
     close:SetPoint("TOPRIGHT", -12, -12)
     window.closeButton = close
-
-    window.themeButton = UI.IconButton(window, "sun", function()
-        ns:SetOption("general", "theme", UI.isDark and "light" or "dark")
-    end, 28)
-    window.themeButton:SetPoint("RIGHT", close, "LEFT", -4, 0)
 
     window.tabs = UI.Tabs(window, SelectTab)
     window.tabs:SetWidth(CONTENT_W)

@@ -39,7 +39,7 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 **Das Fenster** (`/fam`): Links die Hauptfunktionen (**Quality of Life**, **Aliase**), unten die
 Seiten **Einstellungen** und **Über**. Quality of Life teilt sich in Reiter (Händler, Quests, Beute,
 Soziales, Tooltips, Interface); die Aliase haben ihren eigenen Aufbau mit der Namensliste und einem
-Reiter „Anzeige“. Helles und dunkles Farbschema (Knopf oben rechts), fünf Farbwelten und die
+Reiter „Anzeige“. Fünf Farbwelten, die Funken im Hintergrund und die
 Fenstergröße stehen unter Einstellungen › Darstellung. Die Suche links findet Einstellungen und
 Aliase auf allen Seiten.
 
@@ -69,7 +69,7 @@ Umschalt) überspringt jede Automatik einmalig.
 | ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 20 Features auf 7 Seiten, eine klare Regel für Standardwerte, eine Sammelzeile pro Aktion (abschaltbar) |
 | FlareUI ohne Deutsch; Polestar-Sprachen als 18 Zusatz-Addons | enUS und deDE eingebaut, per Test auf Vollständigkeit geprüft |
 | Fehler in einem Teil reißen andere mit | Fehler beim Einschalten schalten nur das betroffene Feature ab; fehlt eine Client-API, wird das Feature als „nicht verfügbar“ angezeigt |
-| Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen und weitergedacht: Hauptfunktionen in der Seitenleiste, Reiter, helles und dunkles Farbschema, runde Ecken, eigene Schrift (Inter) |
+| Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen und weitergedacht: Hauptfunktionen in der Seitenleiste, Reiter, eigene Farbwelten, runde Ecken, eigene Schrift (Inter) |
 
 ## Aufbau
 

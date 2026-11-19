@@ -87,7 +87,7 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 - **Aliase im Spiel (2026-11-18):** Der Alias erscheint im normalen Chat und in Guildy (bestätigt).
 - **Neues Fenster (2026-11-18, nur gegen den Mock geprüft, noch nicht im Spiel):** siehe „Das
   Fenster“ unten. Offen im Spiel: ob die Inter-Schriften laden (`/fam test`, Gruppe `media`, Prüfungen
-  `font …`), ob runde Ecken, Schatten und Haarlinien sauber aussehen, das Umschalten hell/dunkel und
+  `font …`), ob runde Ecken, Schatten und Haarlinien sauber aussehen, das Umschalten
   der Farbwelten, die gleitende Reiter-Markierung, Verläufe und Glüheffekte.
 - **Name (2026-11-19):** Das Addon heißt **Famulus** (lateinisch: Gehilfe eines Gelehrten oder
   Magiers); „Schnitzel“ war der Arbeitstitel. Verworfen, weil auf CurseForge schon für WoW Forever
@@ -195,19 +195,20 @@ Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
 **Neugestaltung 2026-11-18** auf Wunsch des Auftraggebers: Mit den Aliasen kam die erste größere
 Funktion; das Fenster soll mit weiteren Hauptfunktionen übersichtlich bleiben. Vorgaben: Hauptfunktionen
 in der Seitenleiste mit eigenem Aufbau je Funktion, Quality of Life in Reitern, modern und
-schlicht wie Polestar, helles und dunkles Design, runde Ecken, eigene Schrift. Er hat freie Hand
+schlicht wie Polestar, helles und dunkles Design (das helle ist seit 2026-11-19 wieder entfernt,
+siehe „Farben“), runde Ecken, eigene Schrift. Er hat freie Hand
 gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noch nicht bestätigt.
 
 - **Aufbau:** Seitenleiste (Logo, Suche, „Funktionen“ mit einem Eintrag je Bereich und Zähler
   aktiv/gesamt; unten „Einstellungen“ und „Über“, darunter „x von y aktiv“) | rechts Titel und
-  Untertitel des Bereichs, oben rechts Knopf hell/dunkel und Schließen, darunter die Reiter, eine
+  Untertitel des Bereichs, oben rechts Schließen, darunter die Reiter, eine
   Zeile mit der Beschreibung des Reiters und rechts seinen Aktionen (Zurücksetzen, Hauptschalter),
   dann Karten mit Zeilen. Keine Fußzeile.
 - **Bereiche (`ns.areas`, `Core/Features.lua`):** Jede Kategorie gehört zu genau einem Bereich (der
   Test prüft das). `qol` zeigt seine sechs Kategorien als Reiter; `aliases` hat einen eigenen
   Aufbau (`layouts.aliases` in `UI/Options.lua`): Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
   „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Anzeige“ mit den Alias-Features. Die
-  Einstellungen haben die Reiter „Allgemein“ und „Darstellung“ (Farbschema, Farbwelt,
+  Einstellungen haben die Reiter „Allgemein“ und „Darstellung“ (Farbwelt, Funken,
   Fenstergröße). Ein Bereich ohne eigenen Aufbau bekommt je Kategorie einen Reiter.
 - **Hauptschalter** einer Kategorie: rechts in der Zeile unter den Reitern, beschriftet nur mit
   „AN“/„AUS“; bei den Aliasen auf beiden Reitern. Eine abgeschaltete Kategorie ist als Reiter
@@ -224,12 +225,15 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Polestar Guide und Mastercraft, ohne sie zu kopieren. An einem HTML-Mockup hat er das Konzept
   **„Zitrone“** gewählt: Petrol-Flächen, Akzent Zitronengelb. Eine Farbwelt (`general.accent`,
   Liste `UI.accents`) ist seitdem ein ganzes Konzept und nicht mehr nur eine Akzentfarbe: Sie tönt
-  alle Flächen mit ihrem Farbton (`hue`, `saturation`; eine Helligkeitsleiter je Thema in
-  `ladders`) und bringt einen Akzent als Farbpaar (`accent` → `accent2`) für Verläufe. Jede gibt es
-  dunkel (Standard) und hell (`general.theme`); die hellen Akzenttöne sind dunkler, damit Text in
-  Akzentfarbe lesbar bleibt. Vorhanden: `lemon` (Standard), `mint`, `rose`, `lilac`, `amber`.
-  Vom Auftraggeber gesehen und bestätigt ist nur `lemon`; die anderen vier stammen aus dem Mockup
-  (nur dunkel gezeigt), ihre hellen Fassungen sind ungeprüft.
+  alle Flächen mit ihrem Farbton (`hue`, `saturation`; die Helligkeitsleiter `ladder`) und bringt
+  einen Akzent als Farbpaar (`accent` → `accent2`) für Verläufe. Vorhanden: `lemon` (Standard),
+  `mint`, `rose`, `lilac`, `amber`. Vom Auftraggeber im Spiel gesehen und bestätigt ist `lemon`;
+  die anderen vier stammen aus dem Mockup.
+- **Kein heller Modus (Entscheidung des Auftraggebers, 2026-11-19):** Das Fenster ist immer dunkel.
+  Entfernt sind die helle Palette, die Option `general.theme`, der Knopf oben rechts, die Symbole
+  Sonne und Mond und das nur dafür gebaute Umschaltfeld (`UI.Segmented`, Zeilentyp `segment`).
+  Nicht wieder einbauen, ohne zu fragen. Das Signal heißt weiter `THEME_CHANGED` und feuert beim
+  Wechsel der Farbwelt.
 - **Akzente und Effekte:** Akzent, Verlauf und Glühen stehen nur für „aktiv / hier“: Schalter an
   (Verlauf, Schein), gewählter Reiter (Strich mit Verlauf und Schein), gewählter Bereich in der
   Seitenleiste (auslaufender Verlauf, leuchtender Balken, Zähler auf Akzent-Plakette), Karte eines
@@ -390,10 +394,10 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   lesen, nie beim Laden zwischenspeichern, sonst bricht der Sprachwechsel.
 - **Einstellungen:** Gespeichert wird nur, was vom Standard abweicht (`ns:SetOption`).
 - **Fenster:** Zeilen entstehen automatisch aus Features und deren `options`
-  (`type = "toggle"` oder `"select"`; Addon-Optionen auch `"segment"` und `"swatch"`). Neue Widgets
+  (`type = "toggle"` oder `"select"`; Addon-Optionen auch `"swatch"`). Neue Widgets
   gehören nach `UI/Widgets.lua`. Farben nie direkt setzen, sondern über Farbnamen mit `UI.Paint`
   (Flächen), `UI.Tint` (Bilder) oder `UI.Ink` (Text): Nur so folgt das offene Fenster dem
-  Wechsel von Farbschema und Akzentfarbe. Texte über `UI.Text` (Schrift und Fallback).
+  Wechsel der Farbwelt. Texte über `UI.Text` (Schrift und Fallback).
 
 ## Bewusst weggelassen
 

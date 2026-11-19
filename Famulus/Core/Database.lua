@@ -15,7 +15,6 @@ local defaults = {
         minimapButton = true,
         minimapAngle = 215,
         windowScale = 100,
-        theme = "dark",
         accent = "lemon",
         embers = true,
     },

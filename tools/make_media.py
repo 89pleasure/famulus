@@ -105,20 +105,6 @@ write_tga("search.tga", 32, stroke([[(19.5, 19.5), (26, 26)]], PEN, [(14, 14, 8)
 write_tga("info.tga", 32, stroke([[(16, 15), (16, 22.5)], [(16, 10.2), (16, 10.4)]], PEN, [(16, 16, 12)]))
 write_tga("reset.tga", 32, stroke([arc(16, 16, 9, 200, 470), [(4.6, 9.2), (7.6, 15.6), (13.8, 13.0)]], PEN))
 
-SUN_RAYS = [
-    [(16 + 10 * math.cos(a), 16 + 10 * math.sin(a)), (16 + 13 * math.cos(a), 16 + 13 * math.sin(a))]
-    for a in (math.radians(45 * i) for i in range(8))
-]
-write_tga("sun.tga", 32, stroke(SUN_RAYS, PEN, [(16, 16, 5.2)]))
-
-
-def moon(x, y):
-    return math.hypot(x - 15, y - 17) <= 11 and math.hypot(x - 21, y - 11) > 9
-
-
-write_tga("moon.tga", 32, supersample(moon))
-
-
 def gear(x, y):
     dx, dy = x - 16, y - 16
     r = math.hypot(dx, dy)
