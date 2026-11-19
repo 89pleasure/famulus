@@ -176,7 +176,7 @@ check(type(FamulusDB) == "table" and type(FamulusDB.profile) == "table", "databa
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
-check(total == 20, "20 features registered (got " .. total .. ")")
+check(total == 23, "23 features registered (got " .. total .. ")")
 check(active == 6, "6 features on by default (got " .. active .. ")")
 for _, feature in ipairs(ns.featureList) do
     local harmless = feature.id == "mapCoords" or feature.id == "chatArrowKeys" or feature.category == "aliases"
@@ -749,10 +749,11 @@ coordFrame.scripts.OnLeave(coordFrame)
 mock.reset()
 coordFrame.scripts.OnMouseUp(coordFrame, "RightButton")
 check(#mock.calls == 0, "only the left button inserts")
+local chatInfoBefore = C_ChatInfo
 C_ChatInfo = { InChatMessagingLockdown = function() return true end }
 coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
 check(#mock.calls == 0, "nothing is inserted during chat lockdown")
-C_ChatInfo = nil
+C_ChatInfo = chatInfoBefore
 ns:SetOption("mapCoords", "clickToChat", false)
 check(coordFrame.mouseEnabled == false and coordFrame.scripts.OnMouseUp == nil,
     "with the option off the field leaves clicks to the map")
@@ -925,7 +926,7 @@ check(window.title:GetText() == "Quality of Life" and window.subtitle:GetText() 
 check(window.tabs:IsShown() and tabButton("Vendors") and tabButton("Interface") and tabButton("Vendors").selected,
     "its categories are tabs, starting with Vendors")
 check(window.section.desc:GetText() == ns.L.cat_vendor_desc, "the line under the tabs describes the tab")
-check(navButton("Quality of Life") and navButton("Aliases") and navButton("Settings") and navButton("About"),
+check(navButton("Quality of Life") and navButton("Aliases") and navButton("Chronicle") and navButton("Journal") and navButton("Settings") and navButton("About"),
     "the sidebar lists the main features and the addon's own pages")
 check(navButton("Quality of Life").selected and navButton("Quality of Life").count:GetText() == "2/16",
     "the main feature is selected and counts its active features")
@@ -1236,11 +1237,11 @@ ns:SetOption("general", "pauseModifier", "SHIFT")
 
 -- Character profile.
 enable("declineDuels")
-mock.Click(generalRows[5])
+mock.Click(generalRows[6])
 mock.Advance(0.1)
 check(ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "character profile starts as a copy")
 enable("declineDuels", false)
-mock.Click(generalRows[5])
+mock.Click(generalRows[6])
 mock.Advance(0.1)
 check(not ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "switching back restores the account settings")
 enable("declineDuels", false)
@@ -1341,7 +1342,236 @@ check(not window:IsShown(), "/fam closes the window again")
 check(sparkGroups() == 0, "a closed window animates nothing")
 mock.reset()
 SlashCmdList.FAMULUS("status")
-check(lastChat():find("6 of 20", 1, true) ~= nil, "/fam status reports: " .. lastChat())
+check(lastChat():find("6 of 23", 1, true) ~= nil, "/fam status reports: " .. lastChat())
+
+---------------------------------------------------------------------------
+section("Journal")
+---------------------------------------------------------------------------
+
+local Journal = ns.JournalService
+local stateBeforeJournal = mock.state
+local kindsLogged = {}
+for _, entry in ipairs(Journal.Entries()) do
+    kindsLogged[entry.k] = true
+end
+check(kindsLogged.repair and kindsLogged.junk and kindsLogged.invite and kindsLogged.duel,
+    "the automations exercised above wrote into the journal")
+check(kindsLogged.questAccepted and kindsLogged.questTurnedIn, "the quest features report as well, without a chat line")
+check(type(FamulusDB.journal) == "table" and FamulusDB.profile.journal == nil, "the journal is data beside the profiles")
+Journal.Clear()
+check(#Journal.Entries() == 0 and FamulusDB.journal == nil, "clearing removes it from the saved file")
+
+enable("autoRepair")
+mock.reset()
+setState({ canRepair = true, repairCost = 1200, money = 5000 })
+mock.Fire("MERCHANT_SHOW")
+local repairEntry = Journal.Entries()[1]
+check(#Journal.Entries() == 1 and repairEntry.k == "repair" and repairEntry.cost == 1200 and type(repairEntry.t) == "number",
+    "a repair is written down with its cost and time")
+check(#mock.chat == 1 and lastChat():find(Journal.Text(repairEntry), 1, true) ~= nil, "and says the same sentence in chat, once")
+check(Journal.Totals("session").repairs == 1 and Journal.Totals("week").repairs == 1 and Journal.Totals("total").repairSpent == 1200,
+    "the totals count it for the session, the week and all time")
+local englishSentence = Journal.Text(repairEntry)
+ns:SetOption("general", "language", "deDE")
+check(Journal.Text(repairEntry) ~= englishSentence and Journal.Text(repairEntry):find("repariert", 1, true) ~= nil,
+    "an entry holds values, not text: its sentence follows the language")
+ns:SetOption("general", "language", "auto")
+
+setState({ canRepair = true, repairCost = 9000, money = 10 })
+mock.Fire("MERCHANT_SHOW")
+mock.Fire("MERCHANT_SHOW")
+local _, leftAlone = Journal.Text(Journal.Entries()[2] or repairEntry)
+check(#Journal.Entries() == 2 and leftAlone, "what was left alone is written once, not on every visit")
+check(Journal.Totals("session").repairs == 1, "and does not count as done")
+
+ns:SetOption("general", "journal", false)
+mock.reset()
+setState({ canRepair = true, repairCost = 300, money = 5000 })
+mock.Fire("MERCHANT_SHOW")
+check(#Journal.Entries() == 2 and #mock.chat == 1, "with the journal switched off nothing is stored; the chat line stays")
+ns:SetOption("general", "journal", true)
+enable("autoRepair", false)
+setState(stateBeforeJournal)
+
+-- The page.
+if not window:IsShown() then
+    SlashCmdList.FAMULUS("")
+end
+mock.Click(navButton("Journal"))
+mock.Advance(0.1)
+check(window.title:GetText() == "Journal" and tabButton("History") and tabButton("Totals") and tabButton("History").selected,
+    "the journal has its own page with history and totals")
+local journalRows = visibleRows()
+check(#journalRows == 2 and journalRows[2].label:GetText() == Journal.Text(repairEntry), "the history lists the newest entry first")
+check(journalRows[1].disabled and not journalRows[2].disabled, "what was left alone is greyed out")
+check(not window.resetButton:IsShown() and not window.master:IsShown(), "a diary has nothing to reset or to switch")
+mock.Click(tabButton("Totals"))
+mock.Advance(0.1)
+local totalRows = visibleRows()
+check(#totalRows == #Journal.counters and totalRows[1].label:GetText() == "Repairs"
+    and totalRows[1].desc:GetText():find("This session: 1 for", 1, true) ~= nil, "the totals add up per kind")
+SlashCmdList.FAMULUS("journal clear")
+mock.Advance(0.1)
+mock.Click(tabButton("History"))
+mock.Advance(0.1)
+check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nothing to report yet", "/fam journal clear empties it, and the page says so")
+mock.Click(navButton("Quality of Life"))
+SlashCmdList.FAMULUS("")
+check(not window:IsShown(), "window closed again")
+
+---------------------------------------------------------------------------
+section("Chronicle")
+---------------------------------------------------------------------------
+
+local Chronicle = ns.ChronicleService
+local stateBeforeChronicle = mock.state
+check(not ns.features.ownJourney.enabled and not ns.features.companions.enabled and #Chronicle.Entries() == 0,
+    "the chronicle records nothing until it is switched on")
+local eventsBeforeChronicle = ns:CountRegisteredEvents()
+setState({ zone = "Elwynn Forest", level = 12 })
+enable("ownJourney")
+check(ns:CountRegisteredEvents() > eventsBeforeChronicle, "switched on, it listens for milestones")
+mock.Fire("PLAYER_LEVEL_UP", 13)
+local levelEntry = Chronicle.Entries()[1]
+check(levelEntry and levelEntry.k == "level" and levelEntry.level == 13 and levelEntry.zone == "Elwynn Forest" and Chronicle.IsOwn(levelEntry),
+    "a level-up is written down with level and place")
+check(Chronicle.Text(levelEntry) == "Reached level 13" and select(2, Chronicle.Text(levelEntry)) == "in Elwynn Forest", "and reads as a sentence")
+mock.Fire("ZONE_CHANGED_NEW_AREA")
+check(#Chronicle.Entries() == 1, "the zone the character already stood in is no arrival")
+setState({ zone = "Westfall", level = 13 })
+mock.Fire("ZONE_CHANGED_NEW_AREA")
+mock.Fire("ZONE_CHANGED_NEW_AREA")
+check(#Chronicle.Entries() == 2 and Chronicle.Text(Chronicle.Entries()[2]) == "Arrived in Westfall", "a new zone is an arrival, once")
+mock.Fire("PLAYER_DEAD")
+mock.Fire("PLAYER_DEAD")
+check(#Chronicle.Entries() == 3 and Chronicle.Text(Chronicle.Entries()[3]) == "Fallen in Westfall", "a death is written once, with the place")
+mock.Fire("BOSS_KILL", 77, "Edwin VanCleef")
+mock.Fire("ACHIEVEMENT_EARNED", 501, false)
+mock.Fire("ACHIEVEMENT_EARNED", 501, true)
+check(#Chronicle.Entries() == 5 and Chronicle.Text(Chronicle.Entries()[4]) == "Edwin VanCleef defeated"
+    and Chronicle.Text(Chronicle.Entries()[5]) == "Challenge completed: Challenge 501", "bosses and challenges follow; one already earned does not")
+enable("ownJourney", false)
+mock.Fire("PLAYER_LEVEL_UP", 14)
+check(#Chronicle.Entries() == 5 and ns:CountRegisteredEvents() == eventsBeforeChronicle, "switched off, it hears nothing")
+
+-- Companions: level-ups seen on the friends list.
+local friend = { name = "Jaina Proudmoore", level = 19, area = "Duskwood", guid = "Player-1-FRIEND", connected = true }
+setState({ friends = { friend } })
+enable("companions")
+mock.Fire("FRIENDLIST_UPDATE")
+check(#Chronicle.Entries() == 5 and Chronicle.FriendLevel("Player-1-FRIEND") == 19, "a friend seen for the first time is only remembered")
+friend.level = 20
+mock.Fire("FRIENDLIST_UPDATE")
+mock.Fire("FRIENDLIST_UPDATE")
+local friendEntry = Chronicle.Entries()[6]
+check(#Chronicle.Entries() == 6 and friendEntry.who == "Jaina Proudmoore" and not Chronicle.IsOwn(friendEntry)
+    and Chronicle.Text(friendEntry) == "Jaina Proudmoore reaches level 20", "their level-up is written once")
+friend.connected, friend.level = false, 0
+mock.Fire("FRIENDLIST_UPDATE")
+check(#Chronicle.Entries() == 6 and Chronicle.FriendLevel("Player-1-FRIEND") == 20, "a friend going offline changes nothing")
+ns.AliasService.Set("Jaina Proudmoore", "Anna")
+check(Chronicle.Text(friendEntry) == "Anna reaches level 20" and select(2, Chronicle.Text(friendEntry)) == "Jaina Proudmoore  ·  in Duskwood",
+    "a companion appears under the alias, the character name beside it")
+ns.AliasService.Set("Jaina Proudmoore", nil)
+enable("companions", false)
+local chronicleBeforeSharing = {}
+for i, entry in ipairs(Chronicle.Entries()) do
+    chronicleBeforeSharing[i] = entry
+end
+FamulusDB.chronicle.entries = {}
+-- Sharing: friends who use the addon exchange milestones and statistics.
+local sharing = ns.features.sharing
+local jaina = { name = "Jaina Proudmoore", level = 20, area = "Duskwood", guid = "Player-1-FRIEND", connected = true }
+setState({ friends = { jaina }, zone = "Westfall", level = 13, units = { player = { name = "Boris", surname = "Bloom" } },
+    statistics = { [60] = "12", [107] = "3,456", [98] = "210", [932] = "7", [999] = "5" } })
+mock.sent = {}
+local eventsBeforeSharing = ns:CountRegisteredEvents()
+enable("ownJourney")
+enable("sharing")
+mock.Advance(1)
+check(#mock.sent == 1 and mock.sent[1].text == "1~H~0" and mock.sent[1].chatType == "WHISPER" and mock.sent[1].target == "Jaina Proudmoore",
+    "switched on, it greets the friends who are online, by whisper")
+mock.Advance(3)
+check(sharing.ticker == nil, "the queue's ticker stops when nothing waits")
+local sharedNow = time()
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. sharedNow .. "~level~level=40", "WHISPER", "Some Stranger")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. sharedNow .. "~level~level=40", "GUILD", "Jaina Proudmoore")
+mock.Fire("CHAT_MSG_ADDON", "OtherAddon", "1~E~" .. sharedNow .. "~level~level=40", "WHISPER", "Jaina Proudmoore")
+check(#Chronicle.Entries() == 0, "nothing is accepted from strangers, other channels or other addons")
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. sharedNow .. "~death~level=20;zone=Dusk|cffwood;gold=9", "WHISPER", "Jaina-Proudmoore")
+local theirs = Chronicle.Entries()[1]
+check(theirs and theirs.who == "Jaina Proudmoore" and theirs.k == "death" and theirs.level == 20 and theirs.gold == nil
+    and not theirs.zone:find("|", 1, true), "a friend's entry is taken in: known fields only, escape codes removed")
+check(Chronicle.Text(theirs):find("Jaina Proudmoore has fallen in", 1, true) ~= nil, "and names the companion")
+local toastFrame = ns.UI.Toast and select(1, ns.UI.Toast("probe", "probe"))
+check(toastFrame and toastFrame:IsShown(), "fresh news can be shown as a card on screen")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. sharedNow .. "~death~level=20;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
+check(#Chronicle.Entries() == 1, "the same news twice is written once")
+mock.Advance(1)
+check(#mock.sent == 1 and mock.sent[1].text == "1~H~" .. sharedNow, "a first contact is greeted back, with how far their news reaches")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~S~20~60=12;107=3456;bad=1", "WHISPER", "Jaina Proudmoore")
+local profile = Chronicle.Profile("Jaina Proudmoore")
+check(profile and profile.level == 20 and profile.stats[60] == 12 and profile.stats[107] == 3456, "their statistics become a profile")
+
+-- Own milestones go out to linked friends; a greeting is answered.
+mock.sent = {}
+mock.Fire("PLAYER_LEVEL_UP", 14)
+mock.Advance(1)
+check(#mock.sent == 1 and mock.sent[1].text:find("^1~E~%d+~level~level=14;zone=Westfall$") ~= nil, "an own milestone is sent to linked friends: " .. tostring(mock.sent[1] and mock.sent[1].text))
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Jaina Proudmoore")
+mock.Advance(2)
+check(#mock.sent == 2 and mock.sent[1].text:find("~level~", 1, true) and mock.sent[2].text == "1~S~13~107=3456;60=12;932=7;98=210",
+    "a greeting is answered with what they missed and the own statistics: " .. tostring(mock.sent[2] and mock.sent[2].text))
+mock.sent = {}
+setState({ friends = { jaina }, zone = "Westfall", level = 13, lockdown = true })
+mock.Fire("PLAYER_DEAD")
+mock.Advance(2)
+check(#mock.sent == 0, "during a boss fight nothing is sent")
+setState({ friends = { jaina }, zone = "Westfall", level = 13 })
+mock.Advance(1)
+check(#mock.sent == 1 and mock.sent[1].text:find("~death~", 1, true) ~= nil, "it goes out afterwards")
+mock.sent = {}
+jaina.connected = false
+mock.Fire("FRIENDLIST_UPDATE")
+mock.Fire("BOSS_KILL", 5, "Hogger")
+mock.Advance(1)
+check(#mock.sent == 0, "a friend who went offline gets no whisper")
+jaina.connected = true
+enable("sharing", false)
+enable("ownJourney", false)
+check(ns:CountRegisteredEvents() == eventsBeforeSharing and sharing.ticker == nil, "switched off, it neither listens nor sends")
+Chronicle.Clear()
+FamulusDB.chronicle = { entries = chronicleBeforeSharing, friends = {} }
+setState(stateBeforeChronicle)
+
+-- The page.
+if not window:IsShown() then
+    SlashCmdList.FAMULUS("")
+end
+mock.Click(navButton("Chronicle"))
+mock.Advance(0.1)
+check(window.title:GetText() == "Chronicle" and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Recording"),
+    "the chronicle has its own page: everyone, my journey, companions, recording")
+check(navButton("Chronicle").count:GetText() == "0/3", "the sidebar counts its three switches")
+check(#visibleRows() == 6 and visibleRows()[1].label:GetText() == "Jaina Proudmoore reaches level 20", "everyone: all entries, newest first")
+mock.Click(tabButton("My journey"))
+mock.Advance(0.1)
+check(#visibleRows() == 5 and visibleRows()[1].label:GetText() == "Challenge completed: Challenge 501", "my journey: only my own")
+mock.Click(tabButton("Companions"))
+mock.Advance(0.1)
+check(#visibleRows() == 1, "companions: only theirs")
+mock.Click(tabButton("Recording"))
+mock.Advance(0.1)
+check(#visibleRows() == 4 and visibleRows()[1].toggle ~= nil and window.master:IsShown(), "recording: the switches, one option and the master switch")
+Chronicle.Clear()
+mock.Advance(0.1)
+mock.Click(tabButton("Everyone"))
+mock.Advance(0.1)
+check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nothing recorded yet", "an empty chronicle says how to begin")
+mock.Click(navButton("Quality of Life"))
+SlashCmdList.FAMULUS("")
 
 ---------------------------------------------------------------------------
 section("Self-test")

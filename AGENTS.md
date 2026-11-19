@@ -302,6 +302,99 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Features (`child`) stehen eingerückt unter ihm und sind bei abgeschaltetem
   Feature eingeklappt (schmal, ausgegraut, Wert sichtbar), die Suche zeigt sie vollständig.
 
+## Tagebuch
+
+Seit 2026-11-19, auf Wunsch des Auftraggebers als Alleinstellungsmerkmal: Schalter-Sammlungen
+(Leatrix Plus, ForeverPlus, OneForAll), Spielernotizen (Worth Remembering, Zecho, Dossier) und
+Gold-Buchhaltungen (GoldLedger, Sesh, Allemano Ledger) gibt es für Forever schon. Famulus soll sich
+als Gehilfe abheben, der Rechenschaft ablegt: Es führt Buch über das, was es selbst für den
+Spieler getan hat, und über das, was es bewusst gelassen hat. Weitere Ideen in dieser Richtung,
+noch nicht beschlossen: Erinnerungen nach Ort und Situation, selbst gebaute Wenn-dann-Regeln.
+Nur gegen den Mock geprüft, noch nicht im Spiel.
+
+- **Eine Meldestelle:** Jede Automatik meldet eine Aktion genau einmal über
+  `ns.JournalService.Report(art, werte)` (`Core/JournalService.lua`); daraus entstehen die
+  Chat-Zeile (nur für Arten mit `chat = true`) und der Eintrag. Neue Automatiken melden dort
+  und rufen `ns:Notify` nicht mehr selbst. Die Quest-Features nutzen `QuestService.Report`.
+- **Arten:** `repair`, `repairShort` (zu wenig Gold), `junk` (mit bis zu 12 Gegenständen),
+  `questAccepted`, `questTurnedIn`, `questSkipped` (Grund `repeatable`, `trivial`, `pvp`, `cost`,
+  `choice`), `invite`, `duel`, `loot`. Quests und Beute schreiben nur ins Tagebuch, nicht in den
+  Chat. `easyDelete` meldet nichts, weil dort der Spieler selbst klickt.
+- **Ausgelassenes** (`skipped`) steht grau im Verlauf, zählt in keiner Summe und wird innerhalb von
+  zehn Minuten nur einmal geschrieben. Bei gehaltener Pausentaste wird nichts geschrieben.
+- **Daten, keine Einstellung:** `FamulusDB.journal = { entries, days, total }`, accountweit,
+  außerhalb der Profile. Einträge enthalten Art und Werte, nie fertigen Text; der Satz entsteht
+  beim Anzeigen (`JournalService.Text`) und folgt so der Sprache. Höchstens 500 Einträge, Tagessummen
+  90 Tage, Gesamtsumme unbegrenzt. Geheime Werte (Namen im Kampf) werden nicht gespeichert.
+- **Fenster:** eigener Eintrag „Tagebuch“ in der Seitenleiste (kein Bereich aus `ns.areas`, also ohne
+  Zähler), Reiter „Verlauf“ (eine Karte je Tag, neueste zuerst, die letzten 80 Einträge) und
+  „Bilanz“ (Sitzung, sieben Tage, insgesamt). Die Suche lässt das Tagebuch aus.
+- **Abschalten und leeren:** „Tagebuch führen“ unter Einstellungen › Allgemein (`general.journal`,
+  Standard an); `/fam journal clear` leert es.
+- **Kein Zurückkaufen:** Der Verlauf zeigt, was verkauft wurde; zurückkaufen geht nur beim Händler.
+
+## Chronik
+
+Idee des Auftraggebers (2026-11-19): die Reise des Spielers und seiner Gefährten festhalten
+(Stufenaufstiege, Tode, Erfolge und mehr), grafisch aufbereitet „wie ein Bilderbuch“, am liebsten
+mit Live-Benachrichtigung. Stand: Erfassung, eine schlichte Listenansicht, das Teilen zwischen
+Spielern und die Benachrichtigung sind gebaut und nur gegen den Mock geprüft; die Bilderbuch-Optik
+steht aus. Ein HTML-Entwurf für die Optik wurde gezeigt, eine Rückmeldung dazu gibt es noch nicht.
+
+- **Aufbau:** Bereich und Kategorie `chronicle`, Daten über `ns.ChronicleService`
+  (`Modules/Chronicle/ChronicleService.lua`) in `FamulusDB.chronicle` (accountweit, außerhalb der
+  Profile, höchstens 2000 Einträge, Art und Werte statt Text). Reiter „Alle“, „Meine Reise“,
+  „Gefährten“ und „Aufzeichnung“ (`layouts.chronicle`).
+- **`ownJourney`:** `PLAYER_LEVEL_UP`, `PLAYER_DEAD`, `BOSS_KILL`, `ACHIEVEMENT_EARNED` und
+  `ZONE_CHANGED_NEW_AREA`. Ein Gebiet zählt als „Ankunft“, wenn der Charakter es zum ersten Mal
+  betritt, seit die Chronik läuft (`FamulusCharDB.zones`); deshalb heißt es nicht „zum ersten Mal“.
+- **`companions`:** vergleicht bei `FRIENDLIST_UPDATE` die Stufen der Freundesliste mit dem zuletzt
+  gemerkten Stand (nach GUID). Zeigt Gefährten unter ihrem Alias.
+- **`sharing` (Entscheidung des Auftraggebers, 2026-11-19):** Anvisieren und Nähe taugen nicht; die
+  Chronik soll unabhängig vom Ort der Freunde sein. Deshalb spricht Famulus mit Famulus
+  (`Modules/Chronicle/Sharing.lua`): Addon-Nachrichten mit dem Präfix `Famulus`, geflüstert an
+  Freunde der Freundesliste, die online sind. Angenommen wird nur von Leuten auf der Freundesliste,
+  nur per WHISPER, nur bekannte Felder; `|` und Steuerzeichen werden entfernt.
+  - Nachrichten, Felder mit `~` getrennt: `1~H~<zeit>` (Gruß: „deine Neuigkeiten habe ich bis
+    <zeit>“), `1~E~<zeit>~<art>~k=v;k=v` (ein Eintrag), `1~S~<stufe>~id=n;id=n` (Statistiken).
+  - Ein Gruß geht an jeden Freund, der online kommt. Wer antwortet, gilt für die Sitzung als
+    verbunden und bekommt die eigenen Meilensteine live. Auf einen Gruß folgen bis zu 20 verpasste
+    Einträge und die Statistiken.
+  - Geteilte Statistiken (IDs des Spiels): 60 Tode, 107 besiegte Kreaturen, 98 Quests, 932 betretene
+    Dungeons. Sie stehen als „Steckbrief“ je Gefährte auf dem Reiter „Gefährten“
+    (`FamulusDB.chronicle.profiles`).
+  - Alles läuft über eine Warteschlange mit Ticker (eine Nachricht je halbe Sekunde, nur solange
+    etwas wartet). Während der Chat-Sperre (Bosskampf, gesperrte Karte) bleibt sie stehen.
+  - Option `toast`: frische Neuigkeiten erscheinen kurz als Karte am Bildschirm (`UI.Toast`).
+  - **Ungeprüft im Spiel:** ob geflüsterte Addon-Nachrichten so ankommen, wie Name und Absender
+    geschrieben werden (`Vorname Nachname` gegen `Vorname-Nachname`), ob ein Flüstern an jemanden,
+    der gerade offline ging, eine Fehlermeldung im Chat hinterlässt, und ob die Statistik-IDs
+    stimmen (aus Guildys Quellcode entnommen). Das lässt sich nur mit zwei Accounts prüfen.
+- **Verworfen:** fremde Statistiken über den Erfolgsvergleich des Spiels zu lesen, wie Guildy es
+  tut. Das geht nur für das anvisierte Ziel in Sichtweite und hat bei Guildy zu Verbindungsabbrüchen
+  geführt.
+- **Alle drei Features sind standardmäßig aus**, weil der Test festschreibt, dass mit Standardwerten
+  kein Spielereignis registriert ist. Ob die Chronik von Haus aus mitschreiben soll, ist eine
+  offene Entscheidung des Auftraggebers.
+- **Was der Client hergibt (recherchiert 2026-11-19 im UI-Quellcode, Branch `forever`, und im Wiki;
+  nichts davon im Spiel geprüft):**
+  - Ohne Zutun des Freundes sind nur Stufe, Gebiet und Online-Status sichtbar (Freundesliste,
+    Battle.net, Gildenliste). Tode, Bosse, Beute und Erfolge anderer nicht.
+  - Addon-Nachrichten gibt es (`C_ChatInfo.SendAddonMessage`, 255 Bytes, gedrosselt). Laut den
+    Messungen des Addons BFF kommen auf Forever WHISPER und PARTY an, CHANNEL nicht. In
+    Bosskämpfen und gesperrten Karten wird nichts gesendet und Empfangenes verworfen; nichts wird
+    nachgeliefert, wenn jemand offline war.
+  - Das Kampflog ist für Addons gesperrt: Es gibt keine Todesursache.
+  - Erfolge heißen in Forever „Legacy-Herausforderungen“; `ACHIEVEMENT_EARNED` und
+    `GetAchievementInfo` existieren.
+  - Tod eines Gruppenmitglieds über `UnitIsDeadOrGhost`, nicht über `UnitHealth` (geheim).
+  - Bilder: Klassen- und Volkssymbole, Gegenstandssymbole, Kartengrafik; Porträt und 3D-Modell
+    nur für anwesende Einheiten; keine Screenshots im Fenster.
+- **Ähnliche Addons:** „BFF – Best Friends in Forever“ hat bereits einen Freundes-Feed mit
+  Stufenaufstiegen und Toden über ein Flüster-Netz zwischen den Addons; „Guild Chronicle“ ein
+  Gilden-Todesbuch in Pergament-Optik. Die Daten allein sind also kein Alleinstellungsmerkmal; die
+  Chance liegt in der Aufbereitung und in der Verbindung mit Aliasen und Tagebuch.
+
 ## Aliase
 
 Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
@@ -415,7 +508,7 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   Standardwerten ist kein Spielereignis registriert, kein `OnUpdate`, kein Timer.
 - **Texte:** Jeder Schlüssel in `Locales/enUS.lua` **und** `Locales/deDE.lua`, mit denselben
   Platzhaltern. Schema: `area_<bereich>`, `cat_<kategorie>`, `f_<feature>`, `o_<feature>_<option>`,
-  `g_<allgemein>`, `msg_<chat>`, `ui_<fenster>` (Reiter: `ui_tab_<id>`); Hilfetext mit Endung `_desc`. Texte erst zur Laufzeit über `ns.L`
+  `g_<allgemein>`, `msg_<chat>`, `j_<tagebuch>`, `ui_<fenster>` (Reiter: `ui_tab_<id>`); Hilfetext mit Endung `_desc`. Texte erst zur Laufzeit über `ns.L`
   lesen, nie beim Laden zwischenspeichern, sonst bricht der Sprachwechsel.
 - **Einstellungen:** Gespeichert wird nur, was vom Standard abweicht (`ns:SetOption`).
 - **Fenster:** Zeilen entstehen automatisch aus Features und deren `options`
@@ -466,7 +559,7 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
 - Bei einer neuen Version: `## Version` in `Famulus/Famulus.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
-  dort fehlt. Er zählt außerdem die Features (`total == 20`); die Zahl bei einem neuen Feature
+  dort fehlt. Er zählt außerdem die Features (`total == 23`); die Zahl bei einem neuen Feature
   mit anpassen.
 - Repository: `github.com/89pleasure/famulus` (privat; bis 2026-11-19 `schnitzel`), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.

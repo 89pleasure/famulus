@@ -50,10 +50,21 @@ QuestService.AddPicker(turnIn, {
     end,
 })
 
+-- Whether the quest in the window may be handed in. Writes into the journal
+-- why not, unless the player holds the pause key.
 local function MayHandIn()
-    return not ns:IsPaused()
-        and not QuestService.IsRepeatable(QuestService.CurrentQuestID())
-        and not QuestService.CostsMoney()
+    if ns:IsPaused() then
+        return false
+    end
+    if QuestService.IsRepeatable(QuestService.CurrentQuestID()) then
+        QuestService.Report("questSkipped", "repeatable")
+        return false
+    end
+    if QuestService.CostsMoney() then
+        QuestService.Report("questSkipped", "cost")
+        return false
+    end
+    return true
 end
 
 function turnIn:OnEnable()
@@ -73,6 +84,10 @@ function turnIn:QUEST_COMPLETE()
     end
     local choices = GetNumQuestChoices()
     if choices <= 1 then
+        local title = QuestService.CurrentTitle() -- the window closes with the reward
         GetQuestReward(choices)
+        QuestService.Report("questTurnedIn", nil, title)
+    else
+        QuestService.Report("questSkipped", "choice")
     end
 end

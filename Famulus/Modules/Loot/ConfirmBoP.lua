@@ -18,6 +18,8 @@ function confirmBoP:LOOT_BIND_CONFIRM(_, slot)
     if ns:IsPaused() or IsInGroup() or not slot then
         return
     end
+    local item = GetLootSlotLink and GetLootSlotLink(slot)
     ConfirmLootSlot(slot)
+    ns.JournalService.Report("loot", { item = item })
     ns.PopupService.HideSoon("LOOT_BIND")
 end

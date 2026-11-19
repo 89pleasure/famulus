@@ -1,7 +1,7 @@
 -- Repairs all items when a merchant window opens, optionally with guild gold.
 
 local _, ns = ...
-local L = ns.L
+local Journal = ns.JournalService
 
 local repair = ns:NewFeature({
     id = "autoRepair",
@@ -18,9 +18,9 @@ local guildCost = 0
 local function RepairWithOwnGold(cost)
     if GetMoney() >= cost then
         RepairAllItems()
-        ns:Notify(L.msg_repair:format(ns.FormatMoney(cost)))
+        Journal.Report("repair", { cost = cost })
     else
-        ns:Notify(L.msg_repair_nomoney:format(ns.FormatMoney(cost)))
+        Journal.Report("repairShort", { cost = cost })
     end
 end
 
@@ -34,7 +34,7 @@ local function CheckGuildRepair()
     if needsRepair and remaining and remaining > 0 then
         RepairWithOwnGold(remaining)
     else
-        ns:Notify(L.msg_repair_guild:format(ns.FormatMoney(guildCost)))
+        Journal.Report("repair", { cost = guildCost, guild = true })
     end
 end
 

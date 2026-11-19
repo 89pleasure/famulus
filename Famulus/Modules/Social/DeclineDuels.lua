@@ -1,7 +1,6 @@
 -- Declines duel requests.
 
 local _, ns = ...
-local L = ns.L
 
 local duels = ns:NewFeature({
     id = "declineDuels",
@@ -20,5 +19,5 @@ function duels:DUEL_REQUESTED(_, name)
     end
     CancelDuel()
     ns.PopupService.HideSoon("DUEL_REQUESTED")
-    ns:Notify(L.msg_duel_declined:format(ns.Label(name)))
+    ns.JournalService.Report("duel", { name = name })
 end

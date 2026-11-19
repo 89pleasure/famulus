@@ -24,7 +24,7 @@ local BLOCK_GAP, BLOCK_TITLE, CARD_GAP = 22, 24, 8
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
 local MODIFIERS = { "SHIFT", "CTRL", "ALT", "NONE" }
 local WINDOW_SCALES = { 80, 90, 100, 110, 120, 130, 140 }
-local AREA_ICONS = { qol = "sparkle", aliases = "tag" }
+local AREA_ICONS = { qol = "sparkle", aliases = "tag", chronicle = "flag" }
 
 local window
 local pages, pageOrder = {}, {}
@@ -406,6 +406,7 @@ local function SettingsTabs()
             return list
         end),
         GeneralItem("chatOutput", "toggle"),
+        GeneralItem("journal", "toggle"),
         GeneralItem("minimapButton", "toggle"),
         profileItem,
     })
@@ -426,6 +427,308 @@ local function SettingsTabs()
     return { general, appearance }
 end
 
+---------------------------------------------------------------------------
+-- Journal: what the automations did and what they left alone, read from
+-- the JournalService. Like the alias list this is data, not settings.
+---------------------------------------------------------------------------
+
+local JOURNAL_ROWS = 80 -- entries on the history tab; older ones stay in the totals
+
+local JOURNAL_EMPTY_ITEM = {
+    kind = "info",
+    label = function()
+        return L.j_empty
+    end,
+    desc = function()
+        return L.j_empty_desc
+    end,
+}
+local JOURNAL_MORE_ITEM = {
+    kind = "info",
+    label = function()
+        return L.j_more
+    end,
+    desc = function()
+        return L.j_more_desc:format(JOURNAL_ROWS)
+    end,
+}
+
+-- "Today", "Yesterday" or the date of a day key ("2026-11-19").
+local function DayTitle(key, today, yesterday)
+    if key == today then
+        return L.j_today
+    elseif key == yesterday then
+        return L.j_yesterday
+    end
+    local year, month, day = string.match(key, "^(%d+)-(%d+)-(%d+)$")
+    if not year then
+        return key
+    end
+    return (string.gsub(L.j_date, "{(%a)}", { d = day, m = month, y = year }))
+end
+
+local function JournalItem(entry)
+    local Journal = ns.JournalService
+    return {
+        kind = "info",
+        label = function()
+            return (Journal.Text(entry))
+        end,
+        -- Time, the character if it was another one, and what was sold.
+        desc = function()
+            local parts = { date("%H:%M", entry.t) }
+            parts[#parts + 1] = Journal.OtherCharacter(entry)
+            if type(entry.items) == "table" then
+                local names = {}
+                for _, item in ipairs(entry.items) do
+                    if type(item) == "table" and type(item.n) == "string" then
+                        local count = tonumber(item.q) or 1
+                        names[#names + 1] = count > 1 and L.j_item_count:format(count, item.n) or item.n
+                    end
+                end
+                if #names > 0 then
+                    parts[#parts + 1] = table.concat(names, ", ")
+                end
+            end
+            return table.concat(parts, "  ·  ")
+        end,
+        -- What the helper left alone is greyed out.
+        disabled = function()
+            local _, skipped = Journal.Text(entry)
+            return skipped
+        end,
+    }
+end
+
+-- One card per day, the newest entry first.
+local function JournalHistory()
+    local Journal = ns.JournalService
+    local entries = Journal.Entries()
+    if #entries == 0 then
+        return { { items = { JOURNAL_EMPTY_ITEM } } }
+    end
+    local now = time()
+    local today, yesterday = Journal.DayKey(now), Journal.DayKey(now - 86400)
+    local blocks, block, blockKey = {}, nil, nil
+    local first = math.max(1, #entries - JOURNAL_ROWS + 1)
+    for i = #entries, first, -1 do
+        local entry = entries[i]
+        local key = Journal.DayKey(entry.t)
+        if key ~= blockKey then
+            block = { title = DayTitle(key, today, yesterday), items = {} }
+            blocks[#blocks + 1] = block
+            blockKey = key
+        end
+        block.items[#block.items + 1] = JournalItem(entry)
+    end
+    for _, dayBlock in ipairs(blocks) do
+        dayBlock.note = tostring(#dayBlock.items)
+    end
+    if first > 1 then
+        blocks[#blocks + 1] = { items = { JOURNAL_MORE_ITEM } }
+    end
+    return blocks
+end
+
+-- "3 for 2g" where a count comes with money, the bare count otherwise.
+local function TotalText(counters, counter)
+    local count = counters[counter.key] or 0
+    if counter.money and count > 0 then
+        return L.j_count_money:format(count, ns.FormatMoney(counters[counter.money] or 0))
+    end
+    return tostring(count)
+end
+
+local function JournalTotals()
+    local Journal = ns.JournalService
+    local items = {}
+    for i, counter in ipairs(Journal.counters) do
+        items[i] = {
+            kind = "info",
+            label = function()
+                return L["j_t_" .. counter.key]
+            end,
+            desc = function()
+                return L.j_t_line:format(
+                    TotalText(Journal.Totals("session"), counter),
+                    TotalText(Journal.Totals("week"), counter),
+                    TotalText(Journal.Totals("total"), counter)
+                )
+            end,
+        }
+    end
+    return { { items = items } }
+end
+
+local function JournalTabs()
+    local function Tab(id, blocks)
+        return {
+            id = id,
+            label = function()
+                return L["ui_tab_" .. id]
+            end,
+            desc = function()
+                return L["ui_tab_" .. id .. "_desc"]
+            end,
+            settings = {},
+            blocks = blocks,
+        }
+    end
+    return { Tab("history", JournalHistory), Tab("totals", JournalTotals) }
+end
+
+---------------------------------------------------------------------------
+-- Chronicle: the story of the player and their companions. Three tabs
+-- list the entries, a fourth holds the switches that record them.
+---------------------------------------------------------------------------
+
+local CHRONICLE_ROWS = 80
+
+local CHRONICLE_EMPTY_ITEM = {
+    kind = "info",
+    label = function()
+        return L.c_empty
+    end,
+    desc = function()
+        return L.c_empty_desc
+    end,
+}
+
+local function ChronicleItem(entry)
+    local Chronicle = ns.ChronicleService
+    return {
+        kind = "info",
+        label = function()
+            return (Chronicle.Text(entry))
+        end,
+        desc = function()
+            local _, detail = Chronicle.Text(entry)
+            local parts = { date("%H:%M", entry.t) }
+            parts[#parts + 1] = Chronicle.OtherCharacter(entry)
+            parts[#parts + 1] = detail
+            return table.concat(parts, "  ·  ")
+        end,
+    }
+end
+
+-- One card per day, the newest entry first. wanted(entry): which entries.
+local function ChronicleBlocks(wanted)
+    local Chronicle = ns.ChronicleService
+    local entries = Chronicle.Entries()
+    local now = time()
+    local today, yesterday = ns.JournalService.DayKey(now), ns.JournalService.DayKey(now - 86400)
+    local blocks, block, blockKey, shown = {}, nil, nil, 0
+    for i = #entries, 1, -1 do
+        local entry = entries[i]
+        if wanted(entry) then
+            if shown == CHRONICLE_ROWS then
+                break
+            end
+            shown = shown + 1
+            local key = ns.JournalService.DayKey(entry.t)
+            if key ~= blockKey then
+                block = { title = DayTitle(key, today, yesterday), items = {} }
+                blocks[#blocks + 1] = block
+                blockKey = key
+            end
+            block.items[#block.items + 1] = ChronicleItem(entry)
+        end
+    end
+    if #blocks == 0 then
+        return { { items = { CHRONICLE_EMPTY_ITEM } } }
+    end
+    return blocks
+end
+
+-- What companions told about themselves, one row each.
+local function ChronicleProfiles()
+    local Chronicle = ns.ChronicleService
+    local items = {}
+    for _, who in ipairs(Chronicle.ProfileNames()) do
+        items[#items + 1] = {
+            kind = "info",
+            label = function()
+                return (Chronicle.Companion({ who = who }))
+            end,
+            desc = function()
+                local profile = Chronicle.Profile(who) or {}
+                local parts = {}
+                local _, realName = Chronicle.Companion({ who = who })
+                parts[#parts + 1] = realName
+                if (tonumber(profile.level) or 0) > 0 then
+                    parts[#parts + 1] = L.c_p_level:format(profile.level)
+                end
+                for _, id in ipairs(ns.features.sharing.STATISTICS) do
+                    local value = type(profile.stats) == "table" and tonumber(profile.stats[id])
+                    if value then
+                        parts[#parts + 1] = L["c_stat_" .. id]:format(value)
+                    end
+                end
+                return table.concat(parts, "  ·  ")
+            end,
+        }
+    end
+    if #items == 0 then
+        return nil
+    end
+    return { title = L.c_profiles, note = tostring(#items), items = items }
+end
+
+function layouts.chronicle()
+    local Chronicle = ns.ChronicleService
+    local function Tab(id, wanted)
+        return {
+            id = id,
+            category = "chronicle",
+            label = function()
+                return L["ui_tab_" .. id]
+            end,
+            desc = function()
+                return L["ui_tab_" .. id .. "_desc"]
+            end,
+            settings = {},
+            blocks = function()
+                return ChronicleBlocks(wanted)
+            end,
+        }
+    end
+    local record = CategoryTab("chronicle")
+    record.id = "record"
+    record.label = function()
+        return L.ui_tab_record
+    end
+    record.desc = function()
+        return L.ui_tab_record_desc
+    end
+    return {
+        Tab("everyone", function()
+            return true
+        end),
+        Tab("mine", Chronicle.IsOwn),
+        (function()
+            local tab = Tab("companions", function(entry)
+                return not Chronicle.IsOwn(entry)
+            end)
+            local events = tab.blocks
+            -- The profiles stand above the events; alone, they replace
+            -- the "nothing yet" note.
+            tab.blocks = function()
+                local blocks, profiles = events(), ChronicleProfiles()
+                if not profiles then
+                    return blocks
+                end
+                if #blocks == 1 and blocks[1].items[1] == CHRONICLE_EMPTY_ITEM then
+                    return { profiles }
+                end
+                table.insert(blocks, 1, profiles)
+                return blocks
+            end
+            return tab
+        end)(),
+        record,
+    }
+end
+
 local function BuildPages()
     for _, area in ipairs(ns.areas) do
         local layout = layouts[area.id] or layouts.default
@@ -442,6 +745,18 @@ local function BuildPages()
             tabs = layout(area),
         })
     end
+
+    AddPage({
+        id = "journal",
+        icon = "book",
+        title = function()
+            return L.area_journal
+        end,
+        desc = function()
+            return L.area_journal_desc
+        end,
+        tabs = JournalTabs(),
+    })
 
     AddPage({
         id = "general",
@@ -1528,6 +1843,12 @@ ns:On("THEME_CHANGED", function()
     RequestRefresh("state")
 end)
 ns:On("LOCALE_CHANGED", function()
+    RequestRefresh("layout")
+end)
+ns:On("CHRONICLE_CHANGED", function()
+    RequestRefresh("layout")
+end)
+ns:On("JOURNAL_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("ALIASES_CHANGED", function()

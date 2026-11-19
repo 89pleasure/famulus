@@ -20,6 +20,7 @@ Core\Features.lua
 Core\GameOptions.lua
 Core\PopupService.lua
 Core\ChatService.lua
+Core\JournalService.lua
 Core\SelfTest.lua
 
 Modules\Vendor\AutoRepair.lua
@@ -37,6 +38,10 @@ Modules\Aliases\ChatAliases.lua
 Modules\Aliases\TooltipAliases.lua
 Modules\Aliases\AliasMenu.lua
 Modules\Aliases\GuildyAliases.lua
+Modules\Chronicle\ChronicleService.lua
+Modules\Chronicle\OwnJourney.lua
+Modules\Chronicle\Companions.lua
+Modules\Chronicle\Sharing.lua
 Modules\Tooltip\TooltipIDs.lua
 Modules\Tooltip\TooltipCursor.lua
 Modules\Interface\MapCoords.lua

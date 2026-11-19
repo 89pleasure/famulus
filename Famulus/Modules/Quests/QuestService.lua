@@ -46,6 +46,17 @@ function QuestService.CurrentQuestID()
     return GetQuestID and GetQuestID()
 end
 
+-- Its title, for the journal.
+function QuestService.CurrentTitle()
+    return GetTitleText and GetTitleText() or nil
+end
+
+-- Journal entries of the quest features: "questAccepted", "questTurnedIn",
+-- or "questSkipped" with the reason the quest was left alone.
+function QuestService.Report(kind, reason, title)
+    ns.JournalService.Report(kind, { quest = title or QuestService.CurrentTitle(), reason = reason })
+end
+
 ---------------------------------------------------------------------------
 -- NPC quest lists
 ---------------------------------------------------------------------------

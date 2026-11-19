@@ -420,6 +420,7 @@ function GetBuildInfo()
     return "1.60.1", "66666", "Nov 10 2026", 16001
 end
 date = os.date
+time = os.time
 
 function CreateColor(r, g, b, a)
     return { r = r, g = g, b = b, a = a }
@@ -739,11 +740,72 @@ end
 function CancelDuel()
     record("CancelDuel")
 end
+-- mock.state.friends = { { name = ..., level = ..., area = ..., guid = ..., connected = true }, ... }
 C_FriendList = {
     IsFriend = function(guid)
         return guid == "Player-1-FRIEND"
     end,
+    GetNumFriends = function()
+        return #(mock.state.friends or {})
+    end,
+    GetFriendInfoByIndex = function(index)
+        return (mock.state.friends or {})[index]
+    end,
+    ShowFriends = function()
+        record("C_FriendList.ShowFriends")
+    end,
 }
+-- Addon messages: what was sent is collected in mock.sent.
+mock.sent = {}
+C_ChatInfo = {
+    RegisterAddonMessagePrefix = function(prefix)
+        record("C_ChatInfo.RegisterAddonMessagePrefix", prefix)
+        return true
+    end,
+    SendAddonMessage = function(prefix, text, chatType, target)
+        mock.sent[#mock.sent + 1] = { prefix = prefix, text = text, chatType = chatType, target = target }
+        return 0
+    end,
+    InChatMessagingLockdown = function()
+        return mock.state.lockdown == true
+    end,
+}
+function strsplit(delimiter, text)
+    local parts = {}
+    for part in string.gmatch(text .. delimiter, "(.-)" .. delimiter:gsub("%p", "%%%0")) do
+        parts[#parts + 1] = part
+    end
+    return unpack(parts)
+end
+-- Statistics: mock.state.statistics = { [id] = "<quantity as the game prints it>" }
+function GetStatisticsCategoryList()
+    return { 1 }
+end
+function GetCategoryNumAchievements()
+    local count = 0
+    for _ in pairs(mock.state.statistics or {}) do
+        count = count + 1
+    end
+    return count
+end
+function GetStatistic(_, index)
+    local ids = {}
+    for id in pairs(mock.state.statistics or {}) do
+        ids[#ids + 1] = id
+    end
+    table.sort(ids)
+    local id = ids[index]
+    return id and mock.state.statistics[id], false, id
+end
+function GetRealZoneText()
+    return mock.state.zone or "Elwynn Forest"
+end
+function UnitLevel()
+    return mock.state.level or 12
+end
+function GetAchievementInfo(id)
+    return id, "Challenge " .. tostring(id)
+end
 function IsGuildMember(guid)
     return guid == "Player-1-GUILD"
 end

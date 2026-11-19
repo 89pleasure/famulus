@@ -56,10 +56,16 @@ function accept:QUEST_DETAIL()
         return
     end
     local questID = QuestService.CurrentQuestID()
-    if QuestService.IsRepeatable(questID) or (self:Get("skipTrivial") and QuestService.IsTrivial(questID)) then
+    if QuestService.IsRepeatable(questID) then
+        QuestService.Report("questSkipped", "repeatable")
+        return
+    end
+    if self:Get("skipTrivial") and QuestService.IsTrivial(questID) then
+        QuestService.Report("questSkipped", "trivial")
         return
     end
     if QuestFlagsPVP and QuestFlagsPVP() then
+        QuestService.Report("questSkipped", "pvp")
         return
     end
     if QuestGetAutoAccept and QuestGetAutoAccept() and AcknowledgeAutoAcceptQuest then
@@ -68,12 +74,14 @@ function accept:QUEST_DETAIL()
     else
         AcceptQuest()
     end
+    QuestService.Report("questAccepted")
 end
 
 -- A group member started an escort quest and the game asks whether to join.
-function accept:QUEST_ACCEPT_CONFIRM()
+function accept:QUEST_ACCEPT_CONFIRM(_, _, title)
     if not ns:IsPaused() then
         ConfirmAcceptQuest()
         ns.PopupService.Hide("QUEST_ACCEPT")
+        QuestService.Report("questAccepted", nil, title)
     end
 end

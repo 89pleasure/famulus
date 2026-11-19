@@ -1,7 +1,6 @@
 -- Accepts group invites from friends and guild members.
 
 local _, ns = ...
-local L = ns.L
 
 local invites = ns:NewFeature({
     id = "acceptInvites",
@@ -41,7 +40,7 @@ function invites:PARTY_INVITE_REQUEST(_, name, _, _, _, _, _, inviterGUID)
     -- Close the invite popup only once we really are in the group. Closing
     -- it earlier would make the popup decline the invitation again.
     self:RegisterEvent("GROUP_ROSTER_UPDATE")
-    ns:Notify(L.msg_invite_accepted:format(ns.Label(name)))
+    ns.JournalService.Report("invite", { name = name })
 end
 
 function invites:GROUP_ROSTER_UPDATE()

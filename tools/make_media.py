@@ -135,6 +135,22 @@ write_tga(
 TAG = [(5.5, 5.5), (15.5, 5.5), (27, 17), (17, 27), (5.5, 15.5), (5.5, 5.5)]
 write_tga("tag.tga", 32, stroke([TAG], PEN, [(11.2, 11.2, 1.6)]))
 
+# A closed book with its spine on the left and two lines on the cover.
+BOOK = [
+    [(7.5, 5.5), (24.5, 5.5), (24.5, 26.5), (7.5, 26.5), (7.5, 5.5)],
+    [(12, 5.5), (12, 26.5)],
+    [(16, 11.5), (20.5, 11.5)],
+    [(16, 16), (20.5, 16)],
+]
+write_tga("book.tga", 32, stroke(BOOK, PEN))
+
+# A pennant on its pole: a milestone on the way.
+FLAG = [
+    [(9, 5.5), (9, 27)],
+    [(9, 7), (24, 11.5), (9, 16.5)],
+]
+write_tga("flag.tga", 32, stroke(FLAG, PEN))
+
 
 # Soft drop shadow, used in nine pieces around a window or menu. The centre
 # of the texture is the corner of the shape; alpha falls off outwards.

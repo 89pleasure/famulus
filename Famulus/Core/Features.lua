@@ -38,7 +38,7 @@
 local _, ns = ...
 local L = ns.L
 
-ns.categories = { "vendor", "quests", "loot", "social", "aliases", "tooltip", "interface" }
+ns.categories = { "vendor", "quests", "loot", "social", "aliases", "chronicle", "tooltip", "interface" }
 
 -- Main features ("areas") each get an entry in the window's sidebar. An area
 -- with several categories shows them as tabs; a larger feature such as the
@@ -47,6 +47,7 @@ ns.categories = { "vendor", "quests", "loot", "social", "aliases", "tooltip", "i
 ns.areas = {
     { id = "qol", categories = { "vendor", "quests", "loot", "social", "tooltip", "interface" } },
     { id = "aliases", categories = { "aliases" } },
+    { id = "chronicle", categories = { "chronicle" } },
 }
 
 -- Master switches are ordinary options (section "categories"), so they are
@@ -385,6 +386,9 @@ SlashCmdList.FAMULUS = function(input)
         ns:RunSelfTest()
     elseif command == "dev" then
         ns:SetDevMode(not ns:IsDevMode())
+    elseif command == "journal clear" then
+        ns.JournalService.Clear()
+        ns:Print(L.msg_journal_cleared)
     else
         ns:ToggleOptions()
     end
