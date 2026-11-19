@@ -95,8 +95,8 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   (Rollenspiel-Addon), „Lantern“ (Lantern – QoL Core). Für „Famulus“ fand eine Websuche kein
   gleichnamiges Addon; vor der Veröffentlichung direkt auf CurseForge und Wago prüfen. Umbenannt
   sind Ordner, `.toc`, gespeicherte Variablen (`FamulusDB`, `FamulusCharDB`), Frame-Namen und die
-  Befehle (`/fam`, `/famulus`) und das GitHub-Repo (`89pleasure/famulus`). Noch beim alten Namen: der
-  lokale Ordner und `dist/Schnitzel-0.1.0.zip` (veraltet). Auf dem Mac muss der
+  Befehle (`/fam`, `/famulus`) und das GitHub-Repo (`89pleasure/famulus`). Der Untertitel im Fenster ist „Dein Gehilfe in Azeroth“ / „Your assistant in Azeroth“
+  (`ui_tagline`, Vorschlag des Assistenten, vom Auftraggeber ohne Änderung übernommen). Auf dem Mac muss der
   Symlink im Addon-Ordner neu angelegt werden (`Famulus` statt `Schnitzel`), und die Einstellungen
   aus `SavedVariables/Schnitzel.lua` gehen nicht von selbst über.
 - **Logo (2026-11-19):** eine lodernde Flamme in drei Schichten mit Funken und weichem Schein, frei ohne Kachel
@@ -118,7 +118,7 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 WoW Forever ist auf dem Entwicklungsrechner installiert: `/Applications/World of Warcraft/_forever_`.
 `Interface/AddOns/Famulus` ist dort ein Symlink auf den Ordner `Famulus/` dieses Repos, jede
 Änderung ist also nach `/reload` im Spiel. Auf dem Windows-Rechner (seit 2026-11-18) liegt das Spiel
-unter `D:\Games\World of Warcraft\_forever_`, das Repo unter `E:\Develop\wow\schnitzel`;
+unter `D:\Games\World of Warcraft\_forever_`, das Repo unter `E:\Develop\wow\famulus`;
 `Interface\AddOns\Famulus` ist dort eine Verzeichnisverknüpfung (Junction) auf `Famulus\`.
 
 - `/fam test` prüft gegen den echten Client: benötigte API je Feature, die oben genannten unsicheren
@@ -414,6 +414,12 @@ python3 tools/make_fonts.py <Inter-Release>/extras/ttf   # braucht fontTools
 
 ```bash
 rm -f dist/Famulus-*.zip && zip -rq dist/Famulus-0.1.0.zip Famulus -x '*.DS_Store'
+```
+
+Unter Windows gibt es kein `zip`; dort baut das mitgelieferte `tar` dasselbe Archiv (in Git Bash):
+
+```bash
+rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.1.0.zip Famulus
 ```
 
 - Bei einer neuen Version: `## Version` in `Famulus/Famulus.toc`, den Zip-Namen und die

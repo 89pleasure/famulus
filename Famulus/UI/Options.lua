@@ -852,7 +852,7 @@ local function RefreshSidebar()
     end
     local active, total = ns:CountActiveFeatures()
     window.status:SetText(L.ui_active_count:format(active, total))
-    window.tagline:SetText("v" .. ns.version)
+    window.tagline:SetText(L.ui_tagline)
     window.navHeading:SetText(L.ui_nav_features)
 end
 
