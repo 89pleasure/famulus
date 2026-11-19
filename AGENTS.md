@@ -373,7 +373,9 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   „1“/„0“), ohne eigenen Code. `Core/GameOptions.lua` erledigt alles: Die Spieloption ist die
   Wahrheit (Abgleich beim Login, über `CVarCallbackRegistry` sofort bei jeder Änderung und beim
   Öffnen des Fensters, ohne zurückzuschreiben); der Schalter des Features setzt sie an und aus;
-  der Kategorie-Hauptschalter fasst sie nicht an. Nicht für Fälle, in denen das Addon eine
+  der Kategorie-Hauptschalter fasst sie nicht an. „Zurücksetzen“ überspringt den Schalter (er
+  zählt auch nicht als Abweichung), und ein Profilwechsel übernimmt zuerst den Wert aus dem Spiel,
+  statt den des Profils zu schreiben. Nicht für Fälle, in denen das Addon eine
   Spieleinstellung nur vorübergehend ändert und den alten Wert zurückstellen muss (`cameraZoom`).
 - **`requires`:** Jede benötigte Client-API als Pfad angeben (`"C_Container.UseContainerItem"`).
   Fehlt sie, bleibt das Feature aus und erscheint als „nicht verfügbar“.

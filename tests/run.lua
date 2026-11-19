@@ -394,6 +394,22 @@ check(ns.features.autoLoot.enabled and mock.cvars.autoLootDefault == "1", "switc
 enable("autoLoot", false)
 check(mock.cvars.autoLootDefault == "0", "only the feature's own switch clears it")
 
+-- Neither a page reset nor a profile switch may write the game's option.
+mock.SetGameOption("autoLootDefault", "1")
+check(ns:IsSectionDefault("autoLoot"), "a switch that only follows the game counts as untouched")
+mock.reset()
+ns:ResetSections({ "autoLoot" })
+check(ns.features.autoLoot.enabled and mock.cvars.autoLootDefault == "1" and mock.count("SetCVar") == 0,
+    "resetting its page keeps the game's auto loot")
+ns:SetUseCharacterProfile(true)
+mock.SetGameOption("autoLootDefault", "0")
+mock.reset()
+ns:SetUseCharacterProfile(false)
+check(not ns.features.autoLoot.enabled and ns:GetOption("autoLoot", "enabled") == false,
+    "a profile switch takes the game's value into the new profile")
+check(mock.cvars.autoLootDefault == "0" and mock.count("SetCVar") == 0, "instead of writing its own")
+FamulusCharDB.profile = nil
+
 enable("confirmBoP")
 mock.reset()
 setState({ inGroup = true })

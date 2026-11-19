@@ -340,6 +340,9 @@ ns:On("OPTION_CHANGED", function(section, key, value)
 end)
 
 ns:On("PROFILE_CHANGED", function()
+    -- Mirrored switches take the game's value into the new profile first, so
+    -- the restart below cannot overwrite the game's option.
+    ns.FollowGameOptions()
     -- A different profile can differ in every option: restart what is running.
     for i = 1, #featureList do
         if featureList[i].enabled then

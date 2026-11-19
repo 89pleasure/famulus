@@ -75,10 +75,26 @@ function ns:IsDefault(section, key)
     return self:GetOption(section, key) == self:GetDefault(section, key)
 end
 
+-- The switch of a mirrored feature belongs to the game's option
+-- (Core/GameOptions.lua): it never counts as a change and a reset leaves it,
+-- so resetting a page cannot switch the game's option off.
+local function FollowsGame(section, key)
+    local feature = key == "enabled" and ns.features and ns.features[section]
+    return feature and feature.mirror ~= nil or false
+end
+
 -- True while nothing in the section differs from its defaults. Only
 -- differences are stored, so an untouched section is simply absent.
 function ns:IsSectionDefault(section)
-    return profile == nil or profile[section] == nil
+    local values = profile and profile[section]
+    if values then
+        for key in pairs(values) do
+            if not FollowsGame(section, key) then
+                return false
+            end
+        end
+    end
+    return true
 end
 
 -- Puts every option of the given sections (or of all sections) back to its
@@ -98,7 +114,9 @@ function ns:ResetSections(sections)
         if values then
             local keys = {}
             for key in pairs(values) do
-                keys[#keys + 1] = key
+                if not FollowsGame(section, key) then
+                    keys[#keys + 1] = key
+                end
             end
             for _, key in ipairs(keys) do
                 self:SetOption(section, key, self:GetDefault(section, key))

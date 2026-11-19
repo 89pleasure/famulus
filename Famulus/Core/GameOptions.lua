@@ -18,6 +18,9 @@
 --     alone: the category is about Famulus, not about the game.
 --   * Nothing is written before the switch has followed the game once, so a
 --     login never overrides what the player set in the game's options.
+--   * Resetting a page and switching profiles leave the game's option alone:
+--     the reset skips the switch (Core/Database.lua), and a new profile
+--     follows the game before its features start.
 
 local _, ns = ...
 
@@ -54,6 +57,8 @@ local function FollowAll()
         Follow(mirrored[i])
     end
 end
+-- Called by the feature registry before it restarts features for a new profile.
+ns.FollowGameOptions = FollowAll
 
 -- Runs after every state sync of a feature.
 ns:On("FEATURE_STATE", function(feature)
