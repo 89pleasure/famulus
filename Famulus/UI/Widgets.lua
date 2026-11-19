@@ -345,7 +345,8 @@ function UI.VLine(frame, token)
 end
 
 -- Sets one of the window's fonts. SetFont returns false when the client
--- cannot load the file; a font string without a font would raise errors on
+-- cannot load the file or has not loaded it yet (see the LOGIN handler in
+-- UI/Theme.lua); a font string without a font would raise errors on
 -- SetText, so it then gets the game's font instead.
 function UI.SetFont(region, size, weight)
     if region:SetFont(UI.FontPath(weight), size, "") == false then

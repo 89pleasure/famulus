@@ -118,7 +118,13 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 - **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
   629 KB bei 8 aktiven Features und 4 Spielereignissen.
   - Die drei Inter-Schriften laden nicht (`SetFont` liefert falsch); das Fenster nimmt die
-    Spielschrift. Ursache noch nicht geklärt.
+    Spielschrift. Ursache (per `/run` geprüft): Der Client lädt eine Schriftdatei beim ersten
+    `SetFont` im Hintergrund; dieser erste Aufruf liefert falsch, ein späterer wahr. Symlink und
+    das Kürzen der Dateien sind es nicht (Polestars ungekürztes Inter verhielt sich gleich).
+    Jetzt fragt `UI/Theme.lua` die Schriften schon beim Login an; im Spiel noch nicht bestätigt
+    (der Selbsttest nach dem Login muss die Prüfungen `font …` als ok melden). Dieselben Dateien
+    in einem Probe-Ordner ohne `.toc` blieben auch beim zweiten Aufruf falsch, vermutlich wegen
+    der fehlenden `.toc`.
   - Der Knopf unter Optionen › AddOns › Famulus schloss Blizzards Einstellungsfenster mit
     `SettingsPanel:Close()` aus Addon-Code. Das Spiel meldete danach „Famulus wurde blockiert …“.
     Ursache: Ohne Argument kehrt `Close` über `TransitionBackOpeningPanel` ins Spielmenü zurück und
@@ -287,8 +293,9 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   entfallen.
 - **Schrift:** Inter (SIL Open Font License 1.1) in Regular, Medium und SemiBold, mit
   `tools/make_fonts.py` auf Latein, Griechisch, Kyrillisch und Satzzeichen gekürzt (je ~100 KB,
-  geladen erst beim Öffnen des Fensters). Auf koKR/zhCN/zhTW-Clients bleibt die Spielschrift. Lädt
-  eine Datei nicht, nimmt `UI.SetFont` die Spielschrift.
+  beim Login angefragt, weil der Client sie im Hintergrund lädt und der erste `SetFont` falsch
+  liefert). Auf koKR/zhCN/zhTW-Clients bleibt die Spielschrift. Lädt eine Datei nicht, nimmt
+  `UI.SetFont` die Spielschrift.
 - Unverändert aus 2026-11-16: feste Fensterhöhe, längere Seiten scrollen; die Seite für
   Addon-eigene Einstellungen heißt „Einstellungen“ (intern `general`); Untertitel und
   Reiterbeschreibung sagen, was der Spieler dort findet, keine technischen Hinweise; Optionen eines
