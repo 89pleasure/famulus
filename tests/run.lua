@@ -176,10 +176,10 @@ check(type(FamulusDB) == "table" and type(FamulusDB.profile) == "table", "databa
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
-check(total == 23, "23 features registered (got " .. total .. ")")
-check(active == 6, "6 features on by default (got " .. active .. ")")
+check(total == 24, "24 features registered (got " .. total .. ")")
+check(active == 7, "7 features on by default (got " .. active .. ")")
 for _, feature in ipairs(ns.featureList) do
-    local harmless = feature.id == "mapCoords" or feature.id == "chatArrowKeys" or feature.category == "aliases"
+    local harmless = feature.id == "mapCoords" or feature.id == "chatArrowKeys" or feature.id == "liveFeed" or feature.category == "aliases"
     check(feature.enabled == harmless, "only the harmless features are on by default: " .. feature.id)
 end
 check(ns:CountRegisteredEvents() == 0, "no game event is registered after login (got " .. ns:CountRegisteredEvents() .. ")")
@@ -1342,7 +1342,7 @@ check(not window:IsShown(), "/fam closes the window again")
 check(sparkGroups() == 0, "a closed window animates nothing")
 mock.reset()
 SlashCmdList.FAMULUS("status")
-check(lastChat():find("6 of 23", 1, true) ~= nil, "/fam status reports: " .. lastChat())
+check(lastChat():find("7 of 24", 1, true) ~= nil, "/fam status reports: " .. lastChat())
 
 ---------------------------------------------------------------------------
 section("Journal")
@@ -1557,6 +1557,72 @@ do -- special items, recognised by their ID
     Chronicle.Entries()[count + 1] = nil
     mock.state.owned = nil
 end
+do -- the live feed: what was just written down appears on screen for a while
+    local Feed = ns.UI.Feed
+    -- The probes carry times of their own, so they are found by a mark.
+    local function forget()
+        local entries = Chronicle.Entries()
+        for index = #entries, 1, -1 do
+            if entries[index].probe then
+                table.remove(entries, index)
+            end
+        end
+    end
+    Feed.Clear()
+    check(ns.features.liveFeed.enabled and ns:GetOption("liveFeed", "zone") == false and ns:GetOption("liveFeed", "level") == true,
+        "the feed is on from the start; arrivals in a zone are not shown")
+    -- (Two events of a kind within a second count as one; hence the times.)
+    Chronicle.Add("level", { level = 14, t = time() - 20, probe = true })
+    local card = Feed.Shown()[1]
+    check(#Feed.Shown() == 1 and card:IsShown() and card.title:GetText() == "Reached level 14"
+        and card.number:IsShown() and card.number:GetText() == "14" and not card.icon:IsShown(),
+        "a level-up appears as a card with its number")
+    Chronicle.Add("zone", { zone = "Nowhere", t = time() - 21, probe = true })
+    Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 3600, probe = true })
+    check(#Feed.Shown() == 1, "a kind that is switched off and old news stay off screen")
+    ns:SetOption("liveFeed", "companions", false)
+    Chronicle.Add("boss", { name = "Hogger", who = "Jaina Proudmoore", t = time() - 22, probe = true })
+    check(#Feed.Shown() == 1, "without companions, only the player's own events appear")
+    ns:SetOption("liveFeed", "companions", true)
+    Chronicle.Add("item", { item = 211527, name = "Cozy Sleeping Bag", who = "Jaina Proudmoore", probe = true })
+    check(#Feed.Shown() == 2 and Feed.Shown()[1].title:GetText() == "Jaina Proudmoore receives: Cozy Sleeping Bag"
+        and Feed.Shown()[1].icon:IsShown(), "a companion's event appears above the older card")
+    for skill = 1, 3 do
+        Chronicle.Add("skill", { skill = skill, name = "Craft " .. skill, rank = 75, probe = true })
+    end
+    check(#Feed.Shown() == 3 and Feed.Shown()[3].title:GetText() == "Craft 1 raised to 75", "at most three cards; the oldest makes room")
+    mock.Advance(6.5)
+    check(#Feed.Shown() == 3, "a card stays for its time")
+    mock.Advance(2)
+    check(#Feed.Shown() == 0 and not card:IsShown(), "then it fades out and is gone")
+    ns:SetOption("liveFeed", "level", false)
+    Chronicle.Add("level", { level = 15, t = time() - 23, probe = true })
+    check(#Feed.Shown() == 0, "each kind of event has its own switch")
+    ns:SetOption("liveFeed", "level", true)
+    enable("liveFeed", false)
+    Chronicle.Add("level", { level = 16, t = time() - 24, probe = true })
+    check(#Feed.Shown() == 0, "switched off, nothing appears")
+    enable("liveFeed")
+    -- The place: shown and dragged in the game's Edit Mode or with /fam feed.
+    EditModeManagerFrame.scripts.OnShow(EditModeManagerFrame)
+    check(Feed.IsMoving() and Feed.mover:IsShown() and Feed.mover.label:GetText() == ns.L.ui_feed_mover,
+        "in the game's Edit Mode the feed shows where it appears")
+    Feed.mover.scripts.OnDragStart(Feed.mover)
+    Feed.mover.scripts.OnDragStop(Feed.mover)
+    check(type(FamulusDB.feed) == "table" and FamulusDB.feed.point ~= nil, "dragging it keeps the place")
+    EditModeManagerFrame.scripts.OnHide(EditModeManagerFrame)
+    check(not Feed.IsMoving() and not Feed.mover:IsShown(), "leaving Edit Mode fixes it")
+    SlashCmdList.FAMULUS("feed")
+    check(Feed.IsMoving(), "/fam feed shows the place as well")
+    SlashCmdList.FAMULUS("feed")
+    SlashCmdList.FAMULUS("feed reset")
+    check(not Feed.IsMoving() and FamulusDB.feed == nil, "/fam feed fixes it again, /fam feed reset puts it back")
+    Feed.Clear()
+    SlashCmdList.FAMULUS("feed test")
+    check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13", "/fam feed test shows a sample card")
+    Feed.Clear()
+    forget()
+end
 do -- sample entries for looking at the book
     local count = #Chronicle.Entries()
     SlashCmdList.FAMULUS("chronicle demo")
@@ -1633,8 +1699,11 @@ local theirs = Chronicle.Entries()[1]
 check(theirs and theirs.who == "Jaina Proudmoore" and theirs.k == "death" and theirs.level == 20 and theirs.gold == nil
     and not theirs.zone:find("|", 1, true), "a friend's entry is taken in: known fields only, escape codes removed")
 check(Chronicle.Text(theirs):find("Jaina Proudmoore has fallen in", 1, true) ~= nil, "and names the companion")
-local toastFrame = ns.UI.Toast and select(1, ns.UI.Toast("probe", "probe"))
-check(toastFrame and toastFrame:IsShown(), "fresh news can be shown as a card on screen")
+do
+    local card = ns.UI.Feed.Shown()[1]
+    check(card and card:IsShown() and card.title:GetText():find("Jaina Proudmoore has fallen in", 1, true) ~= nil,
+        "fresh news of a companion appears as a card on screen")
+end
 mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. sharedNow .. "~death~level=20;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
 check(#Chronicle.Entries() == 1, "the same news twice is written once")
 mock.Advance(1)
@@ -1751,7 +1820,7 @@ mock.Click(navButton("Chronicle"))
 mock.Advance(0.1)
 check(window.title:GetText() == "Chronicle" and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Recording"),
     "the chronicle has its own page: everyone, my journey, companions, recording")
-check(navButton("Chronicle").count:GetText() == "0/3", "the sidebar counts its three switches")
+check(navButton("Chronicle").count:GetText() == "1/4", "the sidebar counts its four switches; the feed is on")
 -- The entries are told as a picture book: chapters, and events on a line.
 local function bookFrames(field)
     local list = {}
@@ -1890,8 +1959,8 @@ do -- an item is shown with the game's icon of it, in its own colours
 end
 mock.Click(tabButton("Recording"))
 mock.Advance(0.1)
-check(#visibleRows() == 4 and visibleRows()[1].toggle ~= nil and window.master:IsShown() and #bookFrames("story") == 0,
-    "recording: the switches, one option and the master switch; no book")
+check(#visibleRows() == 15 and visibleRows()[1].toggle ~= nil and window.master:IsShown() and #bookFrames("story") == 0,
+    "recording: the four switches, the feed's eleven options and the master switch; no book (got " .. #visibleRows() .. ")")
 Chronicle.Clear()
 mock.Advance(0.1)
 mock.Click(tabButton("Everyone"))
@@ -1982,6 +2051,7 @@ check(FamulusDB.dev == nil and FamulusDB.devLog == nil and ns:CountRegisteredEve
 FamulusDB.selfTest = nil
 
 -- With developer mode saved from the last session, login starts both.
+mock.Advance(13) -- cards of the live feed from the tests above run out
 FamulusDB.dev = true
 mock.reset()
 ns:Fire("LOGIN")

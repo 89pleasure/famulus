@@ -364,7 +364,6 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Font-Objekt `QuestTitleFont` (`UI.SetDisplayFont`), damit jede Sprache ihre Datei bekommt;
     fehlt das Objekt, nimmt das Fenster Inter. Ob es `QuestTitleFont` im Forever-Client gibt,
     ist unbestätigt. Kursive Schrift wie im Entwurf gibt es nicht.
-  - Die Benachrichtigung (`UI.Toast`) zeigt weiter das Logo statt des Bildes aus dem Buch.
 - **`ownJourney`:** `PLAYER_LEVEL_UP`, `PLAYER_DEAD`, `BOSS_KILL`, `ACHIEVEMENT_EARNED` und
   `ZONE_CHANGED_NEW_AREA`. Ein Gebiet hinterlässt je Charakter genau eine „Ankunft“
   (`FamulusCharDB.zones`), und nur, wenn er es neu entdeckt (Wunsch des Auftraggebers, 2026-11-19):
@@ -481,7 +480,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     (`FamulusDB.chronicle.profiles`).
   - Alles läuft über eine Warteschlange mit Ticker (eine Nachricht je halbe Sekunde, nur solange
     etwas wartet). Während der Chat-Sperre (Bosskampf, gesperrte Karte) bleibt sie stehen.
-  - Option `toast`: frische Neuigkeiten erscheinen kurz als Karte am Bildschirm (`UI.Toast`).
+  - Frische Neuigkeiten erscheinen am Bildschirm über die Live-Einblendung (`liveFeed`, siehe
+    unten); die frühere Option `toast` und `UI.Toast` sind entfallen.
   - **Ungeprüft im Spiel:** ob geflüsterte Addon-Nachrichten so ankommen, wie Name und Absender
     geschrieben werden (`Vorname Nachname` gegen `Vorname-Nachname`), ob ein Flüstern an jemanden,
     der gerade offline ging, eine Fehlermeldung im Chat hinterlässt, und ob die Statistik-IDs
@@ -491,7 +491,35 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
 - **Verworfen:** fremde Statistiken über den Erfolgsvergleich des Spiels zu lesen, wie Guildy es
   tut. Das geht nur für das anvisierte Ziel in Sichtweite und hat bei Guildy zu Verbindungsabbrüchen
   geführt.
-- **Alle drei Features sind standardmäßig aus**, weil der Test festschreibt, dass mit Standardwerten
+- **Live-Einblendung (`liveFeed`, Wunsch des Auftraggebers, 2026-11-19):** Was die Chronik gerade
+  festhält, erscheint als Karte im HUD, bleibt eine Weile und blendet aus
+  (`Modules/Chronicle/LiveFeed.lua`, Darstellung `UI/Feed.lua`). Im Spiel vom Auftraggeber
+  ausprobiert (2026-11-19, „klappt einwandfrei“, nach der Anleitung: Beispielkarte, Verschieben
+  mit `/fam feed`, Bearbeitungsmodus, Einstellungen); welche echten Ereignisse dabei ausgelöst
+  wurden, ist nicht festgehalten.
+  - Das Feature hört auf das interne Signal `CHRONICLE_CHANGED`, nicht auf das Spiel: kein
+    Spielereignis, kein eigener Timer. Deshalb ist es **standardmäßig an** (es handelt nicht im
+    Namen des Spielers und zeigt ohne Aufzeichnung nichts). Gezeigt wird nur, was höchstens 120
+    Sekunden alt ist: eigene Ereignisse und frische von Gefährten, nichts Nachgereichtes und keine
+    Beispieleinträge.
+  - Schalter je Ereignisart (`level`, `death`, `boss`, `achievement`, `ability`, `item`,
+    `profession`, `skill`, `zone`); nur `zone` ist von Haus aus aus (Vorgabe des Auftraggebers:
+    Gebiete eher nicht, Stufenaufstiege schon). Dazu `companions` (Ereignisse von Gefährten) und
+    `duration` (4, 7 oder 12 Sekunden). Eine Art ohne Schalter (neuere Version beim Gefährten)
+    bleibt unsichtbar. Eine neue Art braucht einen Eintrag in `KINDS` und ihre zwei Texte.
+  - Die Karte nutzt die Bilder des Buchs (`UI.BookPictures`, `UI.ChronicleStory`): Symbol, Zahl
+    oder Gegenstandssymbol. Höchstens drei Karten untereinander, die neueste oben; sie fangen die
+    Maus nicht.
+  - **Platz:** Standard oben in der Mitte; gespeichert accountweit in `FamulusDB.feed` wie die
+    Fensterposition. Verschieben im Bearbeitungsmodus des Spiels oder mit `/fam feed`
+    (`/fam feed reset` setzt zurück, `/fam feed test` zeigt eine Beispielkarte): Dann zeigt ein markiertes Feld den Platz und lässt sich
+    ziehen. Vorbild ist FlareUI, das dafür eine Abspaltung von LibEditMode mitbringt
+    (`Libs/FlareEditMode`). Famulus übernimmt nur den Kern: `HookScript` auf `OnShow`/`OnHide`
+    von `EditModeManagerFrame`, über `feature:HookScript`. Nicht übernommen: Einrasten am Raster,
+    Einstellungsdialog im Bearbeitungsmodus, Position je Blizzard-Layout; die Bibliothek ruft
+    dafür Methoden des Managers auf und vermerkt dabei selbst Taint. Ob der Haken im
+    Forever-Client ohne Meldung bleibt, ist im Spiel ungeprüft.
+- **Die drei aufzeichnenden Features sind standardmäßig aus**, weil der Test festschreibt, dass mit Standardwerten
   kein Spielereignis registriert ist. Ob die Chronik von Haus aus mitschreiben soll, ist eine
   offene Entscheidung des Auftraggebers.
 - **Was der Client hergibt (recherchiert 2026-11-19 im UI-Quellcode, Branch `forever`, und im Wiki;
@@ -677,7 +705,7 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
 - Bei einer neuen Version: `## Version` in `Famulus/Famulus.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
-  dort fehlt. Er zählt außerdem die Features (`total == 23`); die Zahl bei einem neuen Feature
+  dort fehlt. Er zählt außerdem die Features (`total == 24`); die Zahl bei einem neuen Feature
   mit anpassen.
 - Repository: `github.com/89pleasure/famulus` (privat; bis 2026-11-19 `schnitzel`), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.

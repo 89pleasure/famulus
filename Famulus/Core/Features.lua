@@ -386,6 +386,23 @@ SlashCmdList.FAMULUS = function(input)
         ns:RunSelfTest()
     elseif command == "dev" then
         ns:SetDevMode(not ns:IsDevMode())
+    elseif command == "feed" or command == "feed reset" or command == "feed test" then
+        local Feed = ns.UI and ns.UI.Feed
+        if not Feed then
+            return
+        end
+        if command == "feed test" then
+            -- A sample card, to see place, look and timing.
+            local level = UnitLevel and tonumber(UnitLevel("player")) or 1
+            Feed.Show({ kind = "level", title = L.c_level:format(level), number = level },
+                ns.features.liveFeed.SECONDS[ns:GetOption("liveFeed", "duration")])
+        elseif command == "feed reset" then
+            Feed.ResetPlace()
+            ns:Print(L.msg_feed_reset)
+        else
+            Feed.SetMoving(not Feed.IsMoving())
+            ns:Print(Feed.IsMoving() and L.msg_feed_moving or L.msg_feed_fixed)
+        end
     elseif command == "chronicle demo" then
         ns:Print(L.msg_demo_added:format(ns.ChronicleService.Demo()))
     elseif command == "chronicle demo clear" then

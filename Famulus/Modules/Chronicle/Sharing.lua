@@ -44,9 +44,6 @@ local sharing = ns:NewFeature({
         "C_FriendList.GetNumFriends",
         "C_FriendList.GetFriendInfoByIndex",
     },
-    options = {
-        { key = "toast", type = "toggle", default = true },
-    },
 })
 
 local PREFIX = "Famulus"
@@ -56,7 +53,6 @@ local MAX_QUEUE = 200
 local CATCH_UP = 20 -- entries sent to someone who was away
 local MAX_OFFERS = 20 -- people whose news is offered on a hello
 local LINK_AGE = 30 * 86400 -- how long a direct answer vouches for someone
-local LIVE_SECONDS = 120 -- an entry this fresh is announced on screen
 local MAX_TEXT = 60 -- bytes of a name or place in a message
 
 -- What may travel, per kind: field -> "n" (number) or "s" (text).
@@ -281,15 +277,7 @@ end
 -- Receiving
 ---------------------------------------------------------------------------
 
-local function Announce(entry)
-    if not sharing:Get("toast") or not ns.UI or not ns.UI.Toast then
-        return
-    end
-    local title, detail = Chronicle.Text(entry)
-    ns.UI.Toast(title, detail)
-end
-
--- Writes down an entry that came in; fresh news shows on screen.
+-- Writes down an entry that came in.
 local function Take(kind, when, fields, who, via)
     local allowed = FIELDS[kind]
     if not allowed then
@@ -299,9 +287,9 @@ local function Take(kind, when, fields, who, via)
     entry.t = tonumber(when)
     entry.who = who
     entry.via = via
-    if Chronicle.Add(kind, entry) and time() - entry.t <= LIVE_SECONDS then
-        Announce(entry)
-    end
+    -- Fresh news appears on screen through the live feed, which listens
+    -- to the chronicle (Modules/Chronicle/LiveFeed.lua).
+    Chronicle.Add(kind, entry)
 end
 
 local handlers = {}

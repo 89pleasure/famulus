@@ -678,6 +678,9 @@ local function ChronicleEvent(entry)
     }
 end
 
+-- The live feed shows an entry the same way (Modules/Chronicle/LiveFeed.lua).
+UI.ChronicleStory = ChronicleEvent
+
 -- Heading of a chapter: the place most of its events happened in, above it
 -- the day, below it the levels gained and the number of events.
 local function TitleChapter(chapter)

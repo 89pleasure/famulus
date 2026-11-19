@@ -39,6 +39,7 @@ local ORNAMENT = 120 -- length of each line beside the heading's mark
 
 -- Per kind: the picture's icon (none: the number), its colours, and the
 -- icon on the line.
+-- Also used by the live feed (UI/Feed.lua) as UI.BookPictures.
 local PICTURES = {
     level = { fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "sparkle" },
     achievement = { icon = "star", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "star" },
@@ -202,6 +203,8 @@ local function CreateEvent(book)
     event.chipText:SetWordWrap(false)
     return event
 end
+
+UI.BookPictures = PICTURES
 
 -- onLeft: the card stands left of the line, the time right of it.
 local function EventSet(event, story, onLeft, width)

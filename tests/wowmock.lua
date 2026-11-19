@@ -444,6 +444,7 @@ UIParent = CreateFrame("Frame", "UIParent")
 Minimap = CreateFrame("Frame", "Minimap")
 GameTooltip = CreateFrame("GameTooltip", "GameTooltip")
 ItemRefTooltip = CreateFrame("GameTooltip", "ItemRefTooltip")
+EditModeManagerFrame = CreateFrame("Frame", "EditModeManagerFrame")
 UIErrorsFrame = CreateFrame("MessageFrame", "UIErrorsFrame")
 MerchantFrame = CreateFrame("Frame", "MerchantFrame")
 MerchantFrame.shown = false
