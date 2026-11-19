@@ -26,6 +26,13 @@ UI.media = {
     tag = MEDIA .. "tag.tga",
     book = MEDIA .. "book.tga",
     flag = MEDIA .. "flag.tga",
+    skull = MEDIA .. "skull.tga",
+    swords = MEDIA .. "swords.tga",
+    peaks = MEDIA .. "peaks.tga",
+    star = MEDIA .. "star.tga",
+    hammer = MEDIA .. "hammer.tga",
+    horseshoe = MEDIA .. "horseshoe.tga",
+    chest = MEDIA .. "chest.tga",
     shadow = MEDIA .. "shadow.tga",
     grain = MEDIA .. "grain.tga",
     logo = MEDIA .. "logo.tga",
@@ -129,6 +136,13 @@ local washes = {
     clear = { 0, 0, 0, 0 },
     shadow = { 0, 0, 0, 0.55 },
     shadowSoft = { 0, 0, 0, 0.45 },
+    -- Pictures of the chronicle: a death and a defeated foe have their own tones.
+    deathGround = hex("2a2226"),
+    deathLine = hex("40333a"),
+    deathInk = hex("c8a9b3"),
+    bossGround = hex("2e2416"),
+    bossLine = hex("f2a93b", 0.5),
+    bossInk = hex("f2c36a"),
     warning = hex("f5b14c"),
     danger = hex("f06a6a"),
 }
@@ -180,6 +194,9 @@ local function Compose(accent)
     colors.accentRim = mix(base, WHITE, 0.30) -- light line just inside that border
     colors.accentRim2 = mix(bright, WHITE, 0.30)
     colors.ember = alpha(bright, 1) -- rising sparks; their animation sets the opacity
+    colors.accentDeep = mix(base, BLACK, 0.80) -- ground of a picture in the chronicle
+    colors.accentTrail = alpha(base, 0.28) -- the line the chronicle's events hang on
+    colors.accentNone = alpha(base, 0) -- where an accent line fades out
     colors.cardActive = alpha(base, 0.26) -- border of a card whose feature is on
     return true
 end

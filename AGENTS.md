@@ -338,17 +338,112 @@ Nur gegen den Mock geprüft, noch nicht im Spiel.
 
 Idee des Auftraggebers (2026-11-19): die Reise des Spielers und seiner Gefährten festhalten
 (Stufenaufstiege, Tode, Erfolge und mehr), grafisch aufbereitet „wie ein Bilderbuch“, am liebsten
-mit Live-Benachrichtigung. Stand: Erfassung, eine schlichte Listenansicht, das Teilen zwischen
-Spielern und die Benachrichtigung sind gebaut und nur gegen den Mock geprüft; die Bilderbuch-Optik
-steht aus. Ein HTML-Entwurf für die Optik wurde gezeigt, eine Rückmeldung dazu gibt es noch nicht.
+mit Live-Benachrichtigung. Stand: Erfassung, das Teilen zwischen Spielern, die Benachrichtigung
+und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
 
 - **Aufbau:** Bereich und Kategorie `chronicle`, Daten über `ns.ChronicleService`
   (`Modules/Chronicle/ChronicleService.lua`) in `FamulusDB.chronicle` (accountweit, außerhalb der
   Profile, höchstens 2000 Einträge, Art und Werte statt Text). Reiter „Alle“, „Meine Reise“,
   „Gefährten“ und „Aufzeichnung“ (`layouts.chronicle`).
+- **Bilderbuch (2026-11-19):** Der Auftraggeber fand den HTML-Entwurf „schon ganz cool“ und ließ
+  ihn so umsetzen. Die drei Erzähl-Reiter zeigen keine Zeilen mehr, sondern ein Buch
+  (`UI.Book`, `UI/Book.lua`; ein Reiter liefert es über `tab.book`, `Render` legt es unter die
+  Karten): je Tag ein Kapitel mit Überschrift, darunter eine Linie in der Mitte, an der die
+  Ereignisse abwechselnd links und rechts als Karten hängen, mit Bild, Punkt auf der Linie und
+  Uhrzeit auf der Gegenseite. Entscheidungen des Assistenten, noch nicht im Spiel gesehen:
+  - Ein Kapitel heißt nach dem Gebiet, in dem die meisten seiner Ereignisse spielen; darüber der
+    Tag, darunter die erreichten Stufen und die Zahl der Ereignisse. Ohne Gebiet heißt es nach dem
+    Tag. Eine Kapitelnummer wie im Entwurf gibt es nicht (gezeigt werden nur die letzten 50
+    Ereignisse, eine Zählung wäre nicht stabil).
+  - Bilder sind eigene Symbole (`skull.tga`, `swords.tga`, `peaks.tga`, `star.tga`, 64 px) oder
+    bei Stufen die Zahl; Tod und Boss haben feste eigene Farbtöne, der Rest folgt der Farbwelt.
+    Der eigene Stufenaufstieg ist der Meilenstein: größere Karte, Akzentrand, Schein.
+  - Ereignisse von Gefährten und von eigenen anderen Charakteren tragen eine Marke mit
+    Anfangsbuchstabe.
+  - Überschriften und Stufenzahl stehen in der Buchschrift des Spiels, gelesen aus dem
+    Font-Objekt `QuestTitleFont` (`UI.SetDisplayFont`), damit jede Sprache ihre Datei bekommt;
+    fehlt das Objekt, nimmt das Fenster Inter. Ob es `QuestTitleFont` im Forever-Client gibt,
+    ist unbestätigt. Kursive Schrift wie im Entwurf gibt es nicht.
+  - Die Benachrichtigung (`UI.Toast`) zeigt weiter das Logo statt des Bildes aus dem Buch.
 - **`ownJourney`:** `PLAYER_LEVEL_UP`, `PLAYER_DEAD`, `BOSS_KILL`, `ACHIEVEMENT_EARNED` und
-  `ZONE_CHANGED_NEW_AREA`. Ein Gebiet zählt als „Ankunft“, wenn der Charakter es zum ersten Mal
-  betritt, seit die Chronik läuft (`FamulusCharDB.zones`); deshalb heißt es nicht „zum ersten Mal“.
+  `ZONE_CHANGED_NEW_AREA`. Ein Gebiet hinterlässt je Charakter genau eine „Ankunft“
+  (`FamulusCharDB.zones`), und nur, wenn er es neu entdeckt (Wunsch des Auftraggebers, 2026-11-19):
+  - Beim Einschalten liest das Feature die Weltkarte und merkt jedes Gebiet mit aufgedecktem Teil
+    als bekannt vor (`C_Map.GetMapChildrenInfo` unter der obersten Karte,
+    `C_MapExplorationInfo.GetExploredMapTextures`). Gelingt das nicht (etwa in einer Instanz),
+    versucht es der nächste Gebietswechsel erneut. Fehlt die API, gilt wie zuvor „zum ersten Mal,
+    seit die Chronik läuft“. Ob beide Funktionen im Forever-Client so antworten und ob die
+    Kartennamen zu `GetRealZoneText` passen, ist im Spiel ungeprüft.
+  - Auf einem Flug (`UnitOnTaxi`) wird nichts geschrieben und nichts als gesehen gemerkt. Nach der
+    Landung (`PLAYER_CONTROL_GAINED`, eine Sekunde später) wird der Landeort wie ein Gebietswechsel
+    geprüft.
+  - **Berufe (Wunsch des Auftraggebers, 2026-11-19):** `SKILL_LINES_CHANGED` mit `GetProfessions`
+    und `GetProfessionInfo` (beides im UI-Quellcode des Forever-Clients, Ordner `Camelot`; im Spiel
+    ungeprüft). Arten `profession` (Beruf erlernt, Bild: Hammer `hammer.tga`) und `skill`
+    (Meilenstein alle 75 Punkte, Bild: die Zahl). Der letzte Stand je Beruf steht in
+    `FamulusCharDB.skills`. Ein Beruf, der mit 75 oder mehr Punkten zum ersten Mal auftaucht, war
+    schon vor der Chronik da und wird nur gemerkt; beim Einschalten entsteht kein Eintrag. Beide
+    Arten werden geteilt (`FIELDS` in `Sharing.lua`); der Berufsname reist in der Sprache des
+    Absenders. Dazu zählen die zwei Hauptberufe, Erste Hilfe, Angeln und Kochen.
+    Ein Klick auf die Karte öffnet das Berufsfenster (Wunsch des Auftraggebers):
+    `C_TradeSkillUI.OpenTradeSkill(skillLine)`, nicht im Kampf (`story.onClick` in `UI/Book.lua`,
+    die Karte leuchtet unter der Maus). Bei Gefährten öffnet der Klick ihr Rezeptbuch nach dem
+    Muster von Guildy (`Game/TradeSkill.lua`, `OpenBook`): Der Berufslink lässt sich selbst bauen,
+    `trade:<guid>:<zauber>:<fertigkeit>`, und `SetItemRef(link, text, "LeftButton")` öffnet
+    Blizzards Fenster. Die GUID kommt beim Klick aus Freundesliste oder Gildenliste
+    (`ChronicleService.BookLink`), der Zauber je Beruf aus `LINK_SPELL` (Bergbau: Verhüttung;
+    Kräuterkunde, Kürschnerei und Angeln haben kein Buch und sind nicht klickbar). Geht nur,
+    solange die Person online ist (laut Guildy außerdem nur auf demselben Shard); sonst sagt eine
+    Chat-Zeile das. Berufe eigener anderer Charaktere sind nicht klickbar. Die frühere Aussage
+    des Assistenten, fremde Berufe ließen sich nur über einen geposteten Link öffnen, war falsch.
+    Im Spiel ungeprüft.
+  - **Fähigkeiten (Wunsch des Auftraggebers, 2026-11-19):** Was der Charakter lernt und am Zauber
+    erkennbar ist, steht in einer Tabelle: `ChronicleService.abilities` mit `id`, `spell`
+    (Haupterkennung über `IsPlayerSpell`, Entscheidung des Auftraggebers), optional `skill`
+    (`{ line, rank }`, Ersatz über `C_SkillInfo.GetSkillLineInfoByID`), `picture` (Name in
+    `UI.media`) und `big` (Meilenstein im Buch). `ownJourney` prüft die Tabelle in einer Schleife
+    bei `SPELLS_CHANGED` und `SKILL_LINES_CHANGED` (`CheckAbilities`). Eine Art `ability` für alle:
+    Eintrag `{ ability = "<id>", name = <Zaubername>, level }`, Stand in
+    `FamulusCharDB.abilities`; was beim Einschalten schon gelernt ist, wird nur gemerkt.
+    - **Eine neue Fähigkeit** ist eine Zeile in der Tabelle plus `c_ability_<id>` und
+      `c_their_ability_<id>` in beiden Sprachen (der Test prüft Sätze und Bild je Zeile).
+    - Bisher: `riding` (Zauber 33388) und `ridingFast` (33391), beide mit Hufeisen
+      (`horseshoe.tga`) und als Meilenstein, Ersatz über Fertigkeit 762 ab 75 bzw. 150 Punkten.
+      Die IDs stammen aus Retail und Classic; ob Forever sie so führt, ist im Spiel ungeprüft.
+    - Kennt eine Version die `id` eines Gefährten nicht (neueres Addon), zeigt sie den
+      mitgeschickten Zaubernamen („… erlernt Schwimmen“).
+    - **Kein Zauber- und kein Berufe-Service (geprüft 2026-11-19):** Nur `ownJourney` fragt
+      Zauber und Berufe ab, und die Abfragen sind je ein Aufruf des Clients (`IsPlayerSpell`,
+      `GetProfessions`). Berufe brauchen keine Tabelle, weil der Client sie selbst aufzählt. Ein
+      `SpellService` oder `ProfessionService` lohnt, sobald ein zweites Feature dieselben Daten
+      braucht (etwa Haltbarkeits- oder Berufshelfer); dann die Abfragen dorthin ziehen.
+  - **Besondere Gegenstände (Wunsch des Auftraggebers, 2026-11-19):** dasselbe Prinzip über die
+    Gegenstands-ID. Tabelle `ChronicleService.items` mit `item` (ID), optional `picture` (Standard:
+    Truhe, `chest.tga`) und `big`. `ownJourney` prüft bei `BAG_UPDATE_DELAYED` mit
+    `C_Item.GetItemCount(id, true)` (Taschen und Bank) und fragt nur Gegenstände ab, die der
+    Charakter noch nie hatte (`FamulusCharDB.items`); hat er alle, kostet das Ereignis nichts.
+    Art `item`: `{ item = <ID>, name, level, zone }`. Der Satz nennt den Gegenstand so, wie der
+    Client des Lesers ihn nennt (`C_Item.GetItemNameByID`), sonst mit dem mitgeschickten Namen;
+    eigene Sätze je Gegenstand gibt es nicht. **Ein neuer Gegenstand ist eine Zeile in der
+    Tabelle.** Was beim Einschalten schon in den Taschen liegt, wird nur gemerkt. Bisher: 211527
+    (Schlafsack, ID vom Auftraggeber). Im Buch zeigt ein Gegenstand das Symbol, das das Spiel ihm
+    gibt (Wunsch des Auftraggebers; `C_Item.GetItemIconByID`, `story.texture` in `UI/Book.lua`):
+    in eigenen Farben, also ohne `UI.Tint`, mit beschnittenem Rand im runden Rahmen. Der Punkt auf
+    der Zeitlinie bleibt die Truhe; kennt der Client kein Symbol, steht sie auch im Bild. Das ist
+    die einzige Stelle, an der das Buch eine Textur des Spiels statt eines eigenen Symbols zeigt.
+    Die Maus über dem Bild zeigt den Tooltip des Spiels (Wunsch des Auftraggebers): bei
+    Gegenständen `GameTooltip:SetItemByID`, bei Fähigkeiten aus der Tabelle `SetSpellByID`
+    (`story.item`, `story.spell`). Nur solche Bilder fangen die Maus; andere nicht. Eine
+    Fähigkeit, die diese Version nicht kennt, hat keinen Tooltip (die Zauber-ID reist nicht mit).
+    Im Spiel ungeprüft; ein Gegenstand, der beim Erhalt
+    sofort verbraucht wird oder nie in die Taschen kommt, wird so nicht erkannt.
+  - Zwei Einträge gleicher Art in derselben Sekunde gelten als Dublette, außer sie unterscheiden
+    sich in `skill`, `rank`, `ability` oder `item`.
+- **Beispieleinträge (2026-11-19):** `/fam chronicle demo` schreibt 18 erfundene Einträge über drei
+  Tage (eigene und von zwei erfundenen Gefährten, jede Art einmal), `/fam chronicle demo clear`
+  entfernt sie wieder (`ChronicleService.Demo`, `ClearDemo`). Sie tragen `demo = true` und
+  verlassen den Client nie: Weder der Live-Versand noch das Nachreichen noch das Weiterreichen
+  schickt sie. Gedacht zum Ansehen des Buchs und für Screenshots.
 - **`companions`:** vergleicht bei `FRIENDLIST_UPDATE` die Stufen der Freundesliste mit dem zuletzt
   gemerkten Stand (nach GUID). Zeigt Gefährten unter ihrem Alias.
 - **`sharing` (Entscheidung des Auftraggebers, 2026-11-19):** Anvisieren und Nähe taugen nicht; die

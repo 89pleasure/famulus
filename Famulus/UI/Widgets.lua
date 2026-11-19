@@ -409,6 +409,17 @@ function UI.SetFont(region, size, weight)
     end
 end
 
+-- The game's own storybook font (the one of quest titles), for headings of
+-- the chronicle. Taken from the client's font object, so every language gets
+-- the file that has its glyphs; without it, the window's font.
+function UI.SetDisplayFont(region, size)
+    local source = QuestTitleFont
+    local path = source and source.GetFont and source:GetFont()
+    if type(path) ~= "string" or region:SetFont(path, size, "") == false then
+        UI.SetFont(region, size, "semibold")
+    end
+end
+
 -- weight: "regular" (default), "medium" or "semibold".
 function UI.Text(parent, size, token, weight)
     local text = parent:CreateFontString(nil, "OVERLAY")

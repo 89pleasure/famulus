@@ -427,6 +427,11 @@ function CreateColor(r, g, b, a)
 end
 
 STANDARD_TEXT_FONT = "Fonts\\FRIZQT__.TTF"
+QuestTitleFont = {
+    GetFont = function()
+        return "Fonts\\MORPHEUS.TTF", 18, ""
+    end,
+}
 NUM_BAG_SLOTS = 4
 NUM_CHAT_WINDOWS = 2
 DELETE_ITEM_CONFIRM_STRING = "DELETE"
@@ -604,6 +609,17 @@ C_Container = {
     end,
 }
 C_Item = {
+    -- mock.state.owned = { [itemID] = <count> }; mock.state.itemNames = { [itemID] = "<name>" }
+    GetItemCount = function(itemID)
+        return mock.state.owned and mock.state.owned[itemID] or 0
+    end,
+    -- mock.state.itemIcons = { [itemID] = <file ID> }
+    GetItemIconByID = function(itemID)
+        return mock.state.itemIcons and mock.state.itemIcons[itemID] or nil
+    end,
+    GetItemNameByID = function(itemID)
+        return mock.state.itemNames and mock.state.itemNames[itemID] or nil
+    end,
     GetItemInfo = function(link)
         local price = mock.state.prices and mock.state.prices[link] or 0
         return "name", link, 0, 1, 1, "type", "sub", 1, "", 1, price
@@ -819,7 +835,7 @@ end
 function GetGuildRosterInfo(index)
     local member = (mock.state.guild or {})[index]
     if member then
-        return member.name, "Member", 1, 20, "Mage", "Elwynn Forest", "", "", member.online or false, 0, "MAGE", 0, 0, member.mobile or false
+        return member.name, "Member", 1, 20, "Mage", "Elwynn Forest", "", "", member.online or false, 0, "MAGE", 0, 0, member.mobile or false, false, 0, member.guid
     end
 end
 C_GuildInfo = {
@@ -846,7 +862,17 @@ C_Map = {
         return 1
     end,
     GetMapInfo = function(mapID)
-        return { mapID = mapID, name = "Elwynn Forest" }
+        return { mapID = mapID, name = "Elwynn Forest", parentMapID = mapID == 1 and 900 or 0 }
+    end,
+    -- mock.state.explored = { "<zone name>", ... }: zones with an uncovered part
+    GetMapChildrenInfo = function(mapID)
+        local zones = {}
+        if mapID == 900 then
+            for index, name in ipairs({ "Elwynn Forest", "Westfall", "Duskwood", "Redridge Mountains" }) do
+                zones[index] = { mapID = 100 + index, name = name }
+            end
+        end
+        return zones
     end,
     GetPlayerMapPosition = function()
         return {
@@ -856,6 +882,56 @@ C_Map = {
         }
     end,
 }
+
+C_MapExplorationInfo = {
+    GetExploredMapTextures = function(mapID)
+        local info = C_Map.GetMapChildrenInfo(900)[mapID - 100]
+        for _, name in ipairs(mock.state.explored or {}) do
+            if info and info.name == name then
+                return { {} }
+            end
+        end
+        return {}
+    end,
+}
+-- mock.state.professions = { { name = "Tailoring", rank = 1, id = 197 }, ... }
+function GetProfessions()
+    local list = mock.state.professions or {}
+    return list[1] and 1, list[2] and 2
+end
+function GetProfessionInfo(index)
+    local info = (mock.state.professions or {})[index]
+    if info then
+        return info.name, "icon", info.rank, 300, 0, 0, info.id
+    end
+end
+-- mock.state.riding = <rank of the riding skill line>; mock.state.spells = { [id] = true }
+C_SkillInfo = {
+    GetSkillLineInfoByID = function(id)
+        if id == 762 and mock.state.riding then
+            return { skillID = id, name = "Riding", rank = mock.state.riding, maxRank = 150 }
+        end
+    end,
+}
+function IsPlayerSpell(id)
+    return mock.state.spells ~= nil and mock.state.spells[id] == true
+end
+-- mock.links: the links SetItemRef was called with
+function SetItemRef(link)
+    mock.links = mock.links or {}
+    mock.links[#mock.links + 1] = link
+end
+-- mock.opened: the skill lines whose profession window was opened
+C_TradeSkillUI = {
+    OpenTradeSkill = function(skillLine)
+        mock.opened = mock.opened or {}
+        mock.opened[#mock.opened + 1] = skillLine
+        return true
+    end,
+}
+function UnitOnTaxi()
+    return mock.state.onTaxi == true
+end
 
 -- Units: mock.state.units = { target = { name = "Jaina", surname = "Proudmoore", isPlayer = true } }
 function UnitName(unit)

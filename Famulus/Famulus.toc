@@ -52,5 +52,6 @@ Modules\Interface\LevelScreenshot.lua
 
 UI\Theme.lua
 UI\Widgets.lua
+UI\Book.lua
 UI\Options.lua
 UI\MinimapButton.lua

@@ -386,6 +386,10 @@ SlashCmdList.FAMULUS = function(input)
         ns:RunSelfTest()
     elseif command == "dev" then
         ns:SetDevMode(not ns:IsDevMode())
+    elseif command == "chronicle demo" then
+        ns:Print(L.msg_demo_added:format(ns.ChronicleService.Demo()))
+    elseif command == "chronicle demo clear" then
+        ns:Print(L.msg_demo_cleared:format(ns.ChronicleService.ClearDemo()))
     elseif command == "journal clear" then
         ns.JournalService.Clear()
         ns:Print(L.msg_journal_cleared)

@@ -152,6 +152,65 @@ FLAG = [
 write_tga("flag.tga", 32, stroke(FLAG, PEN))
 
 
+# Pictures of the chronicle: drawn in a 32 px box like the icons, but written
+# at twice the size, because they are shown larger.
+def picture(name, paths, circles=()):
+    paths = [[(x * 2, y * 2) for x, y in path] for path in paths]
+    circles = [(cx * 2, cy * 2, r * 2) for cx, cy, r in circles]
+    write_tga(name, 64, stroke(paths, 3.6, circles))
+
+
+# A skull: the dome, the jaw with two teeth, the eyes.
+SKULL = [
+    arc(16, 14, 9, 150, 390) + [(21.5, 21), (21.5, 25), (10.5, 25), (10.5, 21), (8.2, 18.5)],
+    [(14, 25), (14, 23)],
+    [(18, 25), (18, 23)],
+]
+picture("skull.tga", SKULL, [(12.5, 14.5, 2), (19.5, 14.5, 2)])
+
+# Two crossed swords with their guards and pommels.
+SWORDS = [
+    [(7, 7), (21, 21)],
+    [(25, 7), (11, 21)],
+    [(5, 21), (11, 27)],
+    [(27, 21), (21, 27)],
+    [(9, 25), (6, 28)],
+    [(23, 25), (26, 28)],
+]
+picture("swords.tga", SWORDS)
+
+# Mountains under a sun: a new land.
+PEAKS = [[(4, 24), (11, 13), (16, 20), (19, 16), (28, 24), (4, 24)]]
+picture("peaks.tga", PEAKS, [(22, 8.5, 2.5)])
+
+# A five-pointed star: a challenge mastered.
+STAR = [
+    (16 + (10.5 if i % 2 == 0 else 4.4) * math.sin(math.radians(36 * i)),
+     16.5 - (10.5 if i % 2 == 0 else 4.4) * math.cos(math.radians(36 * i)))
+    for i in range(11)
+]  # fmt: skip
+picture("star.tga", [STAR])
+
+# A hammer: a craft learned.
+HAMMER = [
+    [(7, 25), (17.7, 14.3)],
+    [(27.2, 14.7), (22.7, 19.2), (12.8, 9.3), (17.3, 4.8), (27.2, 14.7)],
+]
+picture("hammer.tga", HAMMER)
+
+# A chest with its lid and lock: a special item.
+CHEST = [
+    [(6, 11.5), (26, 11.5), (26, 25), (6, 25), (6, 11.5)],
+    [(6, 11.5), (9, 6.5), (23, 6.5), (26, 11.5)],
+    [(6, 17), (13.5, 17)],
+    [(18.5, 17), (26, 17)],
+]
+picture("chest.tga", CHEST, [(16, 17, 2.2)])
+
+# A horseshoe with two nail holes: learned to ride.
+picture("horseshoe.tga", [arc(16, 14.5, 9.5, 115, 425)], [(8.6, 12, 1.1), (23.4, 12, 1.1)])
+
+
 # Soft drop shadow, used in nine pieces around a window or menu. The centre
 # of the texture is the corner of the shape; alpha falls off outwards.
 def shadow(x, y):

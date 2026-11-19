@@ -1428,7 +1428,7 @@ local stateBeforeChronicle = mock.state
 check(not ns.features.ownJourney.enabled and not ns.features.companions.enabled and #Chronicle.Entries() == 0,
     "the chronicle records nothing until it is switched on")
 local eventsBeforeChronicle = ns:CountRegisteredEvents()
-setState({ zone = "Elwynn Forest", level = 12 })
+setState({ zone = "Elwynn Forest", level = 12, explored = { "Duskwood" } })
 enable("ownJourney")
 check(ns:CountRegisteredEvents() > eventsBeforeChronicle, "switched on, it listens for milestones")
 mock.Fire("PLAYER_LEVEL_UP", 13)
@@ -1438,7 +1438,23 @@ check(levelEntry and levelEntry.k == "level" and levelEntry.level == 13 and leve
 check(Chronicle.Text(levelEntry) == "Reached level 13" and select(2, Chronicle.Text(levelEntry)) == "in Elwynn Forest", "and reads as a sentence")
 mock.Fire("ZONE_CHANGED_NEW_AREA")
 check(#Chronicle.Entries() == 1, "the zone the character already stood in is no arrival")
+setState({ zone = "Duskwood", level = 13 })
+mock.Fire("ZONE_CHANGED_NEW_AREA")
+check(#Chronicle.Entries() == 1, "a zone the character explored before the chronicle began is no arrival")
+setState({ zone = "Redridge Mountains", level = 13, onTaxi = true })
+mock.Fire("ZONE_CHANGED_NEW_AREA")
+check(#Chronicle.Entries() == 1 and not FamulusCharDB.zones["Redridge Mountains"],
+    "a zone passed on a flight path is no arrival and stays undiscovered")
+setState({ zone = "Westfall", level = 13, onTaxi = true })
+mock.Fire("ZONE_CHANGED_NEW_AREA")
 setState({ zone = "Westfall", level = 13 })
+mock.Fire("PLAYER_CONTROL_GAINED")
+check(#Chronicle.Entries() == 1, "the landing waits a moment")
+mock.Advance(1.1)
+check(#Chronicle.Entries() == 2 and Chronicle.Text(Chronicle.Entries()[2]) == "Arrived in Westfall",
+    "landing in a new zone is an arrival")
+Chronicle.Entries()[2] = nil
+FamulusCharDB.zones["Westfall"] = nil
 mock.Fire("ZONE_CHANGED_NEW_AREA")
 mock.Fire("ZONE_CHANGED_NEW_AREA")
 check(#Chronicle.Entries() == 2 and Chronicle.Text(Chronicle.Entries()[2]) == "Arrived in Westfall", "a new zone is an arrival, once")
@@ -1450,6 +1466,119 @@ mock.Fire("ACHIEVEMENT_EARNED", 501, false)
 mock.Fire("ACHIEVEMENT_EARNED", 501, true)
 check(#Chronicle.Entries() == 5 and Chronicle.Text(Chronicle.Entries()[4]) == "Edwin VanCleef defeated"
     and Chronicle.Text(Chronicle.Entries()[5]) == "Challenge completed: Challenge 501", "bosses and challenges follow; one already earned does not")
+do -- professions
+    local count = #Chronicle.Entries()
+    mock.state.professions = { { name = "Mining", rank = 140, id = 186 } }
+    mock.Fire("SKILL_LINES_CHANGED")
+    check(#Chronicle.Entries() == count, "a profession from before the chronicle is only taken note of")
+    mock.state.professions[2] = { name = "Tailoring", rank = 1, id = 197 }
+    mock.Fire("SKILL_LINES_CHANGED")
+    mock.Fire("SKILL_LINES_CHANGED")
+    local learned = Chronicle.Entries()[count + 1]
+    check(#Chronicle.Entries() == count + 1 and learned.k == "profession" and Chronicle.Text(learned) == "Learned Tailoring",
+        "a profession learned is written down, once")
+    mock.state.professions[2].rank = 74
+    mock.Fire("SKILL_LINES_CHANGED")
+    check(#Chronicle.Entries() == count + 1, "points of skill alone are no news")
+    mock.state.professions[2].rank = 76
+    mock.state.professions[1].rank = 152
+    mock.Fire("SKILL_LINES_CHANGED")
+    local a, b = Chronicle.Entries()[count + 2], Chronicle.Entries()[count + 3]
+    check(#Chronicle.Entries() == count + 3 and a.k == "skill" and a.rank == 150 and Chronicle.Text(a) == "Mining raised to 150"
+        and Chronicle.Text(b) == "Tailoring raised to 75", "every 75 points of skill are a milestone: " .. #Chronicle.Entries() - count .. " " .. tostring(a and Chronicle.Text(a)) .. " / " .. tostring(b and Chronicle.Text(b)))
+    for index = #Chronicle.Entries(), count + 1, -1 do
+        Chronicle.Entries()[index] = nil
+    end
+    mock.state.professions = nil
+end
+do -- abilities, recognised by their spell
+    local count = #Chronicle.Entries()
+    for _, ability in ipairs(Chronicle.abilities) do
+        check(type(ability.id) == "string" and type(ability.spell) == "number"
+            and ns.L["c_ability_" .. ability.id] ~= "c_ability_" .. ability.id
+            and ns.L["c_their_ability_" .. ability.id]:find("%s", 1, true) ~= nil
+            and (ability.picture == nil or ns.UI.media[ability.picture] ~= nil),
+            "ability " .. tostring(ability.id) .. " has a spell, its sentences and a picture that exists")
+    end
+    mock.Fire("SPELLS_CHANGED")
+    check(#Chronicle.Entries() == count, "a character on foot has nothing to tell")
+    mock.state.spells = { [33388] = true }
+    mock.Fire("SPELLS_CHANGED")
+    mock.Fire("SPELLS_CHANGED")
+    local riding = Chronicle.Entries()[count + 1]
+    check(#Chronicle.Entries() == count + 1 and riding.k == "ability" and riding.ability == "riding"
+        and Chronicle.Text(riding) == "Learned to ride" and select(2, Chronicle.Text(riding)) == "at level 13",
+        "learning an ability is written down, once")
+    mock.state.spells = nil
+    mock.state.riding = 150
+    mock.Fire("SKILL_LINES_CHANGED")
+    check(#Chronicle.Entries() == count + 2 and Chronicle.Text(Chronicle.Entries()[count + 2]) == "Learned to ride fast",
+        "without the spell, the skill line tells")
+    check(Chronicle.Text({ k = "ability", ability = "riding", who = "Jaina Proudmoore" }) == "Jaina Proudmoore learns to ride"
+        and Chronicle.Text({ k = "ability", ability = "fromLater", name = "Swimming", who = "Jaina Proudmoore" }) == "Jaina Proudmoore learns Swimming",
+        "a companion's ability reads as a sentence, even one this version does not know")
+    -- A character that can do it already when the chronicle begins tells nothing.
+    enable("ownJourney", false)
+    FamulusCharDB.abilities = nil
+    enable("ownJourney")
+    mock.Fire("SPELLS_CHANGED")
+    check(#Chronicle.Entries() == count + 2 and FamulusCharDB.abilities.riding and FamulusCharDB.abilities.ridingFast,
+        "abilities from before the chronicle are only taken note of")
+    for index = #Chronicle.Entries(), count + 1, -1 do
+        Chronicle.Entries()[index] = nil
+    end
+    mock.state.riding = nil
+end
+do -- special items, recognised by their ID
+    local count = #Chronicle.Entries()
+    for _, item in ipairs(Chronicle.items) do
+        check(type(item.item) == "number" and (item.picture == nil or ns.UI.media[item.picture] ~= nil),
+            "item " .. tostring(item.item) .. " has an ID and a picture that exists")
+    end
+    mock.Fire("BAG_UPDATE_DELAYED")
+    check(#Chronicle.Entries() == count, "bags without anything special tell nothing")
+    mock.state.owned = { [211527] = 1 }
+    mock.state.itemNames = { [211527] = "Cozy Sleeping Bag" }
+    mock.Fire("BAG_UPDATE_DELAYED")
+    mock.Fire("BAG_UPDATE_DELAYED")
+    local bag = Chronicle.Entries()[count + 1]
+    check(#Chronicle.Entries() == count + 1 and bag.k == "item" and bag.item == 211527
+        and Chronicle.Text(bag) == "Received: Cozy Sleeping Bag" and select(2, Chronicle.Text(bag)) == "in Westfall",
+        "a special item is written down the first time it is in the bags")
+    mock.state.itemNames = nil
+    check(Chronicle.Text({ k = "item", item = 211527, name = "Kuscheliger Schlafsack", who = "Jaina Proudmoore" })
+        == "Jaina Proudmoore receives: Kuscheliger Schlafsack", "a companion's item is named as they named it, if this client cannot")
+    -- What the character owns when the chronicle begins tells nothing.
+    enable("ownJourney", false)
+    FamulusCharDB.items = nil
+    enable("ownJourney")
+    mock.Fire("BAG_UPDATE_DELAYED")
+    check(#Chronicle.Entries() == count + 1 and FamulusCharDB.items[211527], "items from before the chronicle are only taken note of")
+    Chronicle.Entries()[count + 1] = nil
+    mock.state.owned = nil
+end
+do -- sample entries for looking at the book
+    local count = #Chronicle.Entries()
+    SlashCmdList.FAMULUS("chronicle demo")
+    SlashCmdList.FAMULUS("chronicle demo")
+    local entries, sorted, texts = Chronicle.Entries(), true, true
+    for index, entry in ipairs(entries) do
+        sorted = sorted and (index == 1 or entries[index - 1].t <= entry.t)
+        local title = Chronicle.Text(entry)
+        texts = texts and type(title) == "string" and title ~= "" and not title:find("c_", 1, true)
+    end
+    check(#entries > count + 10 and sorted and texts, "/fam chronicle demo writes sample entries, once, in order, each a sentence")
+    check(#Chronicle.OwnSince(0, 100) == #Chronicle.OwnSince(0, 100) and (function()
+        for _, entry in ipairs(Chronicle.OwnSince(0, 100)) do
+            if entry.demo then
+                return false
+            end
+        end
+        return true
+    end)(), "sample entries are not passed on to companions")
+    SlashCmdList.FAMULUS("chronicle demo clear")
+    check(#Chronicle.Entries() == count, "/fam chronicle demo clear removes them and nothing else")
+end
 enable("ownJourney", false)
 mock.Fire("PLAYER_LEVEL_UP", 14)
 check(#Chronicle.Entries() == 5 and ns:CountRegisteredEvents() == eventsBeforeChronicle, "switched off, it hears nothing")
@@ -1623,21 +1752,152 @@ mock.Advance(0.1)
 check(window.title:GetText() == "Chronicle" and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Recording"),
     "the chronicle has its own page: everyone, my journey, companions, recording")
 check(navButton("Chronicle").count:GetText() == "0/3", "the sidebar counts its three switches")
-check(#visibleRows() == 6 and visibleRows()[1].label:GetText() == "Jaina Proudmoore reaches level 20", "everyone: all entries, newest first")
+-- The entries are told as a picture book: chapters, and events on a line.
+local function bookFrames(field)
+    local list = {}
+    for _, frame in ipairs(mock.frames) do
+        if frame[field] and frame:IsVisible() then
+            list[#list + 1] = frame
+        end
+    end
+    return list
+end
+local events, heads = bookFrames("story"), bookFrames("chapter")
+check(#visibleRows() == 0 and #events == 6 and events[1].story.title == "Jaina Proudmoore reaches level 20",
+    "everyone: all entries as events of a book, newest first (got " .. #events .. ")")
+check(#heads == 1 and heads[1].chapter.title == "Westfall" and heads[1].chapter.small == "Today"
+    and heads[1].chapter.sub:find("6 events", 1, true) ~= nil and heads[1].title:GetText() == "Westfall",
+    "a day is a chapter, named after the place most of it happened in: " .. tostring(heads[1] and heads[1].chapter.sub))
+check(events[1].onLeft and not events[2].onLeft and events[3].onLeft, "the cards alternate left and right of the line")
+check(events[1].story.chip and events[1].story.chip.text == "Companion" and events[1].story.chip.initial == "J"
+    and events[1].chipText:IsShown() and not events[2].chipText:IsShown(), "a companion's event says whose it is")
+check(events[1].number:IsShown() and events[1].number:GetText() == "20" and not events[1].icon:IsShown()
+    and not events[1].story.big and not events[1].glow.parts[1]:IsShown(), "a level shows its number; a companion's is no milestone")
+check(events[6].story.big and events[6].glow.parts[1]:IsShown() and events[6].number:GetText() == "13"
+    and events[6].card:GetHeight() > events[5].card:GetHeight(), "the player's own level-up is a milestone: larger, with a glow")
+check(events[4].story.kind == "death" and events[4].icon:IsShown() and not events[4].number:IsShown()
+    and events[4].when:GetText():match("^%d%d:%d%d$") ~= nil, "other events show a picture and their time")
+check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 60,
+    "the page is as long as its book")
 mock.Click(tabButton("My journey"))
 mock.Advance(0.1)
-check(#visibleRows() == 5 and visibleRows()[1].label:GetText() == "Challenge completed: Challenge 501", "my journey: only my own")
+events = bookFrames("story")
+check(#events == 5 and events[1].story.title == "Challenge completed: Challenge 501" and events[1].story.chip == nil,
+    "my journey: only my own")
 mock.Click(tabButton("Companions"))
 mock.Advance(0.1)
-check(#visibleRows() == 1, "companions: only theirs")
+check(#bookFrames("story") == 1 and #visibleRows() == 0, "companions: only theirs")
+do -- an item is shown with the game's icon of it, in its own colours
+    Chronicle.Add("item", { item = 211527, name = "Cozy Sleeping Bag", who = "Jaina Proudmoore" })
+    local function itemEvent()
+        mock.Click(tabButton("My journey"))
+        mock.Advance(0.1)
+        mock.Click(tabButton("Companions"))
+        mock.Advance(0.1)
+        for _, event in ipairs(bookFrames("story")) do
+            if event.story.kind == "item" then
+                return event
+            end
+        end
+    end
+    local event = itemEvent()
+    check(event and event.story.texture == nil and event.icon:IsShown() and not event.photo:IsShown(),
+        "an item the client has no icon for shows the chest")
+    mock.state.itemIcons = { [211527] = 134400 }
+    event = itemEvent()
+    check(event and event.story.texture == 134400 and event.photo:IsShown() and not event.icon:IsShown()
+        and not event.number:IsShown() and event.photo:GetWidth() < event.picture:GetWidth(),
+        "an item shows its own icon inside the frame")
+    -- The picture of an item or an ability shows the game's tooltip of it.
+    local shownItem, shownSpell, hidden = nil, nil, 0
+    GameTooltip.SetItemByID = function(_, id)
+        shownItem = id
+    end
+    GameTooltip.SetSpellByID = function(_, id)
+        shownSpell = id
+    end
+    local hide = GameTooltip.Hide
+    GameTooltip.Hide = function(self)
+        hidden = hidden + 1
+        return hide(self)
+    end
+    event.picture.scripts.OnEnter(event.picture)
+    event.picture.scripts.OnLeave(event.picture)
+    check(shownItem == 211527 and shownSpell == nil and hidden == 1 and event.picture.mouseEnabled ~= false,
+        "hovering an item's picture shows the item's tooltip, leaving hides it")
+    Chronicle.Add("ability", { ability = "riding", who = "Jaina Proudmoore", t = time() - 60 })
+    itemEvent()
+    local plain
+    for _, each in ipairs(bookFrames("story")) do
+        if each.story.kind == "ability" then
+            each.picture.scripts.OnEnter(each.picture)
+        elseif each.story.kind == "level" then
+            plain = each
+        end
+    end
+    shownItem = nil
+    plain.picture.scripts.OnEnter(plain.picture)
+    check(shownSpell == 33388 and shownItem == nil and plain.story.item == nil and plain.story.spell == nil,
+        "an ability's picture shows its spell; other pictures show nothing")
+    GameTooltip.SetItemByID, GameTooltip.SetSpellByID, GameTooltip.Hide = nil, nil, hide
+    -- A click on one of the player's own professions opens it.
+    Chronicle.Add("skill", { skill = 197, name = "Tailoring", rank = 75, t = time() - 120 })
+    Chronicle.Add("skill", { skill = 186, name = "Mining", rank = 150, who = "Jaina Proudmoore", t = time() - 180 })
+    mock.Click(tabButton("Everyone"))
+    mock.Advance(0.1)
+    local mine, theirs
+    for _, each in ipairs(bookFrames("story")) do
+        if each.story.kind == "skill" then
+            if each.story.chip then
+                theirs = each
+            else
+                mine = each
+            end
+        end
+    end
+    mock.opened = nil
+    mine.card.scripts.OnMouseUp(mine.card, "RightButton")
+    mine.card.scripts.OnMouseUp(mine.card, "LeftButton")
+    check(mock.opened and #mock.opened == 1 and mock.opened[1] == 197 and mine.card.mouseEnabled
+        and plain.card.mouseEnabled == false, "a click on an own profession opens it; other cards do nothing")
+    -- A companion's recipe book opens from a link built for them, while they are online.
+    local friendsBefore, guildBefore = mock.state.friends, mock.state.guild
+    mock.state.friends, mock.state.guild, mock.links = {}, nil, nil
+    theirs.card.scripts.OnMouseUp(theirs.card, "LeftButton")
+    check(theirs.card.mouseEnabled and mock.links == nil, "a companion who is not online has no recipe book to show")
+    mock.state.friends = { { name = "Jaina Proudmoore", guid = "Player-1-JAINA", connected = true, level = 20 } }
+    theirs.card.scripts.OnMouseUp(theirs.card, "LeftButton")
+    mock.state.friends = {}
+    mock.state.guild = { { name = "Jaina Proudmoore-Forever", online = true, guid = "Player-1-GJAINA" } }
+    theirs.card.scripts.OnMouseUp(theirs.card, "LeftButton")
+    check(mock.links and #mock.links == 2 and mock.links[1] == "trade:Player-1-JAINA:2656:186"
+        and mock.links[2] == "trade:Player-1-GJAINA:2656:186" and #mock.opened == 1,
+        "online, as a friend or in the guild, the book opens from a link built for them")
+    check(not Chronicle.HasBook(182) and Chronicle.BookLink("Jaina Proudmoore", 182) == nil, "a gathering profession has no book")
+    mock.state.friends, mock.state.guild = friendsBefore, guildBefore
+    mock.state.itemIcons = nil
+    local entries = Chronicle.Entries()
+    for index = #entries, 1, -1 do
+        if entries[index].k == "item" or entries[index].k == "ability" or entries[index].k == "skill" then
+            table.remove(entries, index)
+        end
+    end
+    mock.Click(tabButton("My journey"))
+    mock.Advance(0.1)
+    mock.Click(tabButton("Companions"))
+    mock.Advance(0.1)
+    check(#bookFrames("story") == 1 and not bookFrames("story")[1].photo:IsShown(), "a frame used again forgets the icon")
+end
 mock.Click(tabButton("Recording"))
 mock.Advance(0.1)
-check(#visibleRows() == 4 and visibleRows()[1].toggle ~= nil and window.master:IsShown(), "recording: the switches, one option and the master switch")
+check(#visibleRows() == 4 and visibleRows()[1].toggle ~= nil and window.master:IsShown() and #bookFrames("story") == 0,
+    "recording: the switches, one option and the master switch; no book")
 Chronicle.Clear()
 mock.Advance(0.1)
 mock.Click(tabButton("Everyone"))
 mock.Advance(0.1)
-check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nothing recorded yet", "an empty chronicle says how to begin")
+check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nothing recorded yet" and #bookFrames("story") == 0,
+    "an empty chronicle says how to begin")
 mock.Click(navButton("Quality of Life"))
 SlashCmdList.FAMULUS("")
 

@@ -579,10 +579,10 @@ end
 
 ---------------------------------------------------------------------------
 -- Chronicle: the story of the player and their companions. Three tabs
--- list the entries, a fourth holds the switches that record them.
+-- tell it as a picture book, a fourth holds the switches that record it.
 ---------------------------------------------------------------------------
 
-local CHRONICLE_ROWS = 80
+local CHRONICLE_ROWS = 50 -- events in the book; older ones stay in the saved data
 
 local CHRONICLE_EMPTY_ITEM = {
     kind = "info",
@@ -594,50 +594,156 @@ local CHRONICLE_EMPTY_ITEM = {
     end,
 }
 
-local function ChronicleItem(entry)
+-- A function that opens the profession window of a skill line, or nil if
+-- this client cannot.
+local function OpenProfession(skillLine)
+    skillLine = tonumber(skillLine)
+    if not skillLine or not (C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill) then
+        return nil
+    end
+    return function()
+        -- Not in combat: the game does not open its panels for addons then.
+        if InCombatLockdown and InCombatLockdown() then
+            return
+        end
+        C_TradeSkillUI.OpenTradeSkill(skillLine)
+    end
+end
+
+-- A function that opens a companion's recipe book in the game's window, or
+-- nil if the profession has none. The game shows it only while they are
+-- online; otherwise the click says so.
+local function OpenBook(entry)
     local Chronicle = ns.ChronicleService
+    if not entry.who or not Chronicle.HasBook(entry.skill) or not SetItemRef then
+        return nil
+    end
+    return function()
+        if InCombatLockdown and InCombatLockdown() then
+            return
+        end
+        local link = Chronicle.BookLink(entry.who, entry.skill)
+        if not link then
+            ns:Print(L.msg_book_offline:format((Chronicle.Companion(entry))))
+            return
+        end
+        pcall(SetItemRef, link, "[" .. (entry.name or "") .. "]", "LeftButton")
+    end
+end
+
+-- The game's icon of an item (a texture the client knows), or nil.
+local function ItemIcon(itemID)
+    itemID = tonumber(itemID)
+    local icon = itemID and C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(itemID)
+    if ns.IsSecret(icon) or (type(icon) ~= "number" and type(icon) ~= "string") then
+        return nil
+    end
+    return icon
+end
+
+-- An entry as the book shows it (see UI/Book.lua).
+local function ChronicleEvent(entry)
+    local Chronicle = ns.ChronicleService
+    local title, detail = Chronicle.Text(entry)
+    local kind = entry.k == "friendLevel" and "level" or entry.k
+    local own, other = Chronicle.IsOwn(entry), Chronicle.OtherCharacter(entry)
+    -- An ability or an item from the service's tables may bring a picture.
+    local special = kind == "ability" and Chronicle.Ability(entry.ability)
+        or kind == "item" and Chronicle.Item(entry.item) or nil
+    local chip
+    if not own then
+        chip = { initial = Initial((Chronicle.Companion(entry))), text = L.c_companion }
+    elseif other then
+        chip = { initial = Initial(other), text = other }
+    end
     return {
-        kind = "info",
-        label = function()
-            return (Chronicle.Text(entry))
-        end,
-        desc = function()
-            local _, detail = Chronicle.Text(entry)
-            local parts = { date("%H:%M", entry.t) }
-            parts[#parts + 1] = Chronicle.OtherCharacter(entry)
-            parts[#parts + 1] = detail
-            return table.concat(parts, "  ·  ")
-        end,
+        kind = kind,
+        title = title,
+        detail = detail,
+        when = date("%H:%M", entry.t),
+        number = kind == "level" and tonumber(entry.level) or kind == "skill" and tonumber(entry.rank) or nil,
+        -- The player's own level-ups and what the tables mark as great are the milestones of the book.
+        icon = special and special.picture or nil,
+        -- An item shows the icon the game gives it; without one, the chest.
+        texture = kind == "item" and ItemIcon(entry.item) or nil,
+        -- A profession opens on a click: the player's own, or the recipe
+        -- book of a companion. Not those of the player's other characters.
+        onClick = (kind == "profession" or kind == "skill")
+            and (own and not other and OpenProfession(entry.skill) or not own and OpenBook(entry)) or nil,
+        -- For the game's tooltip on the picture.
+        item = kind == "item" and tonumber(entry.item) or nil,
+        spell = kind == "ability" and special and special.spell or nil,
+        big = own and not other and (kind == "level" or (special and special.big) or false),
+        chip = chip,
     }
 end
 
--- One card per day, the newest entry first. wanted(entry): which entries.
-local function ChronicleBlocks(wanted)
+-- Heading of a chapter: the place most of its events happened in, above it
+-- the day, below it the levels gained and the number of events.
+local function TitleChapter(chapter)
+    local counts, best, bestCount = {}, nil, 0
+    local low, high
+    for _, entry in ipairs(chapter.entries) do
+        local zone = entry.zone
+        if type(zone) == "string" and zone ~= "" then
+            counts[zone] = (counts[zone] or 0) + 1
+            if counts[zone] > bestCount then
+                best, bestCount = zone, counts[zone]
+            end
+        end
+        local level = ns.ChronicleService.IsOwn(entry) and tonumber(entry.level)
+        if level then
+            low, high = math.min(low or level, level), math.max(high or level, level)
+        end
+    end
+    chapter.small = best and chapter.day or nil
+    chapter.title = best or chapter.day
+    local parts = {}
+    if low and low ~= high then
+        parts[#parts + 1] = L.c_ch_levels:format(low, high)
+    elseif low then
+        parts[#parts + 1] = L.c_ch_level:format(low)
+    end
+    local count = #chapter.events
+    parts[#parts + 1] = count == 1 and L.c_ch_event or L.c_ch_events:format(count)
+    chapter.sub = table.concat(parts, "  ·  ")
+    chapter.entries = nil
+end
+
+-- One chapter per day, the newest event first. wanted(entry): which entries.
+-- Returns nil if there is nothing to tell, else the chapters and a closing
+-- line if older events were left out.
+local function ChronicleBook(wanted)
     local Chronicle = ns.ChronicleService
     local entries = Chronicle.Entries()
     local now = time()
     local today, yesterday = ns.JournalService.DayKey(now), ns.JournalService.DayKey(now - 86400)
-    local blocks, block, blockKey, shown = {}, nil, nil, 0
+    local chapters, chapter, chapterKey, shown, more = {}, nil, nil, 0, false
     for i = #entries, 1, -1 do
         local entry = entries[i]
         if wanted(entry) then
             if shown == CHRONICLE_ROWS then
+                more = true
                 break
             end
             shown = shown + 1
             local key = ns.JournalService.DayKey(entry.t)
-            if key ~= blockKey then
-                block = { title = DayTitle(key, today, yesterday), items = {} }
-                blocks[#blocks + 1] = block
-                blockKey = key
+            if key ~= chapterKey then
+                chapter = { day = DayTitle(key, today, yesterday), events = {}, entries = {} }
+                chapters[#chapters + 1] = chapter
+                chapterKey = key
             end
-            block.items[#block.items + 1] = ChronicleItem(entry)
+            chapter.events[#chapter.events + 1] = ChronicleEvent(entry)
+            chapter.entries[#chapter.entries + 1] = entry
         end
     end
-    if #blocks == 0 then
-        return { { items = { CHRONICLE_EMPTY_ITEM } } }
+    if #chapters == 0 then
+        return nil
     end
-    return blocks
+    for _, each in ipairs(chapters) do
+        TitleChapter(each)
+    end
+    return chapters, more and L.c_more or nil
 end
 
 -- What companions told about themselves, one row each.
@@ -687,8 +793,15 @@ function layouts.chronicle()
                 return L["ui_tab_" .. id .. "_desc"]
             end,
             settings = {},
+            -- The events are told as a book; cards only say that it is empty.
             blocks = function()
-                return ChronicleBlocks(wanted)
+                if ChronicleBook(wanted) then
+                    return {}
+                end
+                return { { items = { CHRONICLE_EMPTY_ITEM } } }
+            end,
+            book = function()
+                return ChronicleBook(wanted)
             end,
         }
     end
@@ -710,18 +823,14 @@ function layouts.chronicle()
                 return not Chronicle.IsOwn(entry)
             end)
             local events = tab.blocks
-            -- The profiles stand above the events; alone, they replace
-            -- the "nothing yet" note.
+            -- The profiles stand above the book; alone, they replace the
+            -- "nothing yet" note.
             tab.blocks = function()
-                local blocks, profiles = events(), ChronicleProfiles()
-                if not profiles then
-                    return blocks
-                end
-                if #blocks == 1 and blocks[1].items[1] == CHRONICLE_EMPTY_ITEM then
+                local profiles = ChronicleProfiles()
+                if profiles then
                     return { profiles }
                 end
-                table.insert(blocks, 1, profiles)
-                return blocks
+                return events()
             end
             return tab
         end)(),
@@ -1381,6 +1490,23 @@ function Render(animateTabs)
     end
     for index = #blocks + 1, #cards do
         cards[index]:Hide()
+    end
+
+    -- A tab that tells a story lays its book out below its cards.
+    local chapters, footer
+    if not searching and tab.book then
+        chapters, footer = tab.book()
+    end
+    if chapters then
+        if not window.book then
+            window.book = UI.Book(content, CONTENT_W)
+        end
+        window.book:ClearAllPoints()
+        window.book:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
+        y = y + window.book:SetChapters(chapters, footer)
+        window.book:Show()
+    elseif window.book then
+        window.book:Hide()
     end
 
     window.scroll:SetContentHeight(y)

@@ -66,6 +66,10 @@ local FIELDS = {
     boss = { id = "n", name = "s", zone = "s" },
     achievement = { id = "n", name = "s" },
     zone = { level = "n", zone = "s" },
+    profession = { skill = "n", name = "s" },
+    ability = { ability = "s", name = "s", level = "n" },
+    item = { item = "n", name = "s", level = "n", zone = "s" },
+    skill = { skill = "n", name = "s", rank = "n" },
 }
 
 -- The character's own statistics that are shared, by the game's IDs: deaths,
@@ -248,7 +252,7 @@ local function SendOffers(key)
     local entries, offered, count = Chronicle.Entries(), {}, 0
     for i = #entries, 1, -1 do
         local who = entries[i].who
-        if who and FIELDS[entries[i].k] then
+        if who and FIELDS[entries[i].k] and not entries[i].demo then
             local whoKey = Key(who)
             if whoKey ~= key and not offered[whoKey] then
                 offered[whoKey] = true
@@ -264,7 +268,7 @@ end
 
 -- A fresh entry of the player's own goes to every linked companion.
 local function OnChronicleChanged(entry)
-    if not sharing.enabled or not entry or entry.who or entry.c ~= Chronicle.Character() then
+    if not sharing.enabled or not entry or entry.demo or entry.who or entry.c ~= Chronicle.Character() then
         return
     end
     local text = EncodeEntry(entry)
@@ -366,7 +370,7 @@ function handlers.W(key, who, since)
         if entry.t <= since or #found == CATCH_UP then
             break
         end
-        if entry.who and FIELDS[entry.k] and Key(entry.who) == whoKey then
+        if entry.who and FIELDS[entry.k] and not entry.demo and Key(entry.who) == whoKey then
             table.insert(found, 1, entry)
         end
     end

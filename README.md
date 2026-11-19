@@ -38,8 +38,8 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 
 **Das Fenster** (`/fam`): Links die Hauptfunktionen (**Quality of Life**, **Aliase**, **Chronik**)
 und das **Tagebuch**, das festhält, was Famulus für dich erledigt und was es bewusst gelassen hat.
-Die Chronik hält die Reise deiner Charaktere und deiner Gefährten fest (Stufenaufstiege, Tode,
-Bosse, Herausforderungen, neue Gebiete) und tauscht sie auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus
+Die Chronik erzählt die Reise deiner Charaktere und deiner Gefährten als Bilderbuch (Stufenaufstiege, Tode,
+Bosse, Herausforderungen, neu entdeckte Gebiete, Berufe, Reiten, besondere Gegenstände) und tauscht sie auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus
 ebenfalls nutzen, auch über gemeinsame Gefährten, wenn jemand offline ist; alle drei Chronik-Funktionen sind standardmäßig aus. Unten die
 Seiten **Einstellungen** und **Über**. Quality of Life teilt sich in Reiter (Händler, Quests, Beute,
 Soziales, Tooltips, Interface); die Aliase haben ihren eigenen Aufbau mit der Namensliste und einem
