@@ -1539,6 +1539,74 @@ mock.Fire("BOSS_KILL", 5, "Hogger")
 mock.Advance(1)
 check(#mock.sent == 0, "a friend who went offline gets no whisper")
 jaina.connected = true
+
+-- Passing on: news of someone offline comes from a companion who has it, only
+-- about guild members or people whose addon answered directly.
+check(sharing.Key("Jaina Proudmoore-Realm") == sharing.Key("Jaina-Proudmoore"), "a name with the client's realm suffix is the same person")
+enable("sharing", false)
+mock.sent = {}
+setState({ friends = { jaina }, zone = "Westfall", level = 13, units = { player = { name = "Boris", surname = "Bloom" } },
+    guild = { { name = "Thrall Hellscream-Forever", online = true }, { name = "Varian Wrynn-Forever" }, { name = "Boris Bloom-Forever", online = true } } })
+enable("sharing")
+mock.Advance(2)
+local function sentTo(target, text)
+    for _, message in ipairs(mock.sent) do
+        if message.target == target and (not text or message.text == text) then
+            return message
+        end
+    end
+end
+check(sentTo(nil, "1~P") and sentTo(nil, "1~P").chatType == "GUILD" and sentTo("Jaina Proudmoore") and not sentTo("Thrall Hellscream"),
+    "switched on, it greets the guild once on its channel and whispers to friends only")
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~P", "GUILD", "Boris Bloom-Forever")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~P", "GUILD", "Some Stranger")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~P", "GUILD", "Thrall Hellscream-Forever")
+mock.Advance(2)
+check(#mock.sent == 1 and sentTo("Thrall Hellscream", "1~H~0"), "a guild member's greeting is answered by whisper; its own echo and strangers are not")
+local relayedAt = time() - 600
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~O~Varian Wrynn~" .. relayedAt, "WHISPER", "Thrall Hellscream")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~O~Some Stranger~" .. relayedAt, "WHISPER", "Thrall Hellscream")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~O~Boris Bloom~" .. relayedAt, "WHISPER", "Thrall Hellscream")
+mock.Advance(3)
+check(sentTo("Thrall Hellscream", "1~W~Varian Wrynn~0") and #mock.sent == 2 and sentTo("Thrall Hellscream", "1~H~0"),
+    "news of an offline guild member is asked for; of strangers and of oneself not")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~R~Some Stranger~" .. relayedAt .. "~level~level=30", "WHISPER", "Thrall Hellscream")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~R~Varian Wrynn~" .. relayedAt .. "~death~level=30;zone=Duskwood", "WHISPER", "Thrall Hellscream")
+local relayed
+for _, entry in ipairs(Chronicle.Entries()) do
+    if entry.via or entry.who == "Some Stranger" then
+        check(relayed == nil, "only one passed-on entry is written")
+        relayed = entry
+    end
+end
+check(relayed and relayed.who == "Varian Wrynn" and relayed.via == "Thrall Hellscream" and relayed.k == "death"
+    and select(2, Chronicle.Text(relayed)) == "at level 30  ·  via Thrall Hellscream", "a passed-on entry names who passed it on; one about a stranger is dropped")
+check(Chronicle.NewestFrom("Varian Wrynn") == 0 and Chronicle.NewestFrom("Varian Wrynn", true) == relayedAt,
+    "a passed-on entry does not move the mark the person answers to")
+local before = #Chronicle.Entries()
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~R~Varian Wrynn~" .. (relayedAt + 1) .. "~level~level=31", "WHISPER", "Jaina Proudmoore")
+check(#Chronicle.Entries() == before, "passed-on news is taken only from the companion asked")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. relayedAt .. "~death~level=30;zone=Duskwood", "WHISPER", "Varian Wrynn-Forever")
+check(#Chronicle.Entries() == before, "the same news told later by the person themselves is written once")
+-- Jaina answered directly earlier: she is vouched for while she is offline.
+mock.Advance(2)
+mock.sent = {}
+jaina.connected = false
+mock.Fire("FRIENDLIST_UPDATE")
+check(Chronicle.Link(sharing.Key("Jaina Proudmoore")) ~= nil, "a direct answer is remembered")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~O~Jaina Proudmoore~" .. (time() + 1), "WHISPER", "Thrall Hellscream")
+mock.Advance(1)
+check(#mock.sent == 1 and mock.sent[1].text:find("^1~W~Jaina Proudmoore~%d+$") ~= nil, "news of a friend whose addon answered before is asked for")
+-- Asked by a companion: what is known of someone else goes out, passed on.
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~W~Varian Wrynn~0", "WHISPER", "Thrall Hellscream")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~W~Thrall Hellscream~0", "WHISPER", "Thrall Hellscream")
+mock.Advance(2)
+check(#mock.sent == 1 and mock.sent[1].text == "1~R~Varian Wrynn~" .. relayedAt .. "~death~level=30;zone=Duskwood",
+    "asked for someone's news, it passes on what it has; nobody gets their own back")
+jaina.connected = true
 enable("sharing", false)
 enable("ownJourney", false)
 check(ns:CountRegisteredEvents() == eventsBeforeSharing and sharing.ticker == nil, "switched off, it neither listens nor sends")

@@ -131,9 +131,10 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
     ruft dabei das geschützte `ToggleGameMenu`. Jetzt `SettingsPanel:Close(true)` wie bei FlareUI
     (Polestar: `HideUIPanel`); im Spiel bestätigt (keine Meldung, Famulus vorne). Offen lassen geht nicht: Famulus
     liegt dann hinter Blizzards Fenster (beide `HIGH`).
-  - Der Entwicklermodus war an, `devLog` blieb trotzdem leer: Die Blockade kam nicht über
-    `ADDON_ACTION_BLOCKED`/`_FORBIDDEN` mit dem Addon-Namen an. Ursache offen; `devLog` ist für
-    blockierte Aktionen also kein verlässlicher Beleg.
+  - `devLog` hat die Blockaden doch festgehalten (beim ersten Lesen war es noch leer, vermutlich
+    vor dem Speichern gelesen): um 12:13 und 12:15 je `ADDON_ACTION_FORBIDDEN` für
+    `SpellStopCasting()`, `SpellStopTargeting()` und `UNKNOWN()`, zur Zeit der Tests mit dem alten
+    `Close()`. Seit `Close(true)` kein Eintrag mehr (Bericht 16:39).
 
 ## Test im Spiel
 
@@ -353,8 +354,28 @@ steht aus. Ein HTML-Entwurf für die Optik wurde gezeigt, eine Rückmeldung dazu
 - **`sharing` (Entscheidung des Auftraggebers, 2026-11-19):** Anvisieren und Nähe taugen nicht; die
   Chronik soll unabhängig vom Ort der Freunde sein. Deshalb spricht Famulus mit Famulus
   (`Modules/Chronicle/Sharing.lua`): Addon-Nachrichten mit dem Präfix `Famulus`, geflüstert an
-  Freunde der Freundesliste, die online sind. Angenommen wird nur von Leuten auf der Freundesliste,
-  nur per WHISPER, nur bekannte Felder; `|` und Steuerzeichen werden entfernt.
+  Freunde der Freundesliste und Gildenmitglieder, die online sind. Angenommen wird nur von Leuten
+  auf der Freundesliste oder in der Gilde, nur per WHISPER (Ausnahme: der Gruß `1~P` im
+  Gildenkanal), nur bekannte Felder; `|` und Steuerzeichen werden entfernt.
+  - **Gilde (2026-11-19):** Wer online kommt, grüßt die Gilde einmal im Gildenkanal (`1~P`), sobald
+    die Gildenliste da ist; wer Famulus hat, antwortet per Flüstern mit einem Gruß. Freunde werden
+    weiter einzeln gegrüßt. Dass Addon-Nachrichten im Gildenkanal in Forever ankommen, zeigt Guildy
+    (sendet dort). Namen: Gildenliste und Absender können `Vorname Nachname-Realm` liefern
+    (so liest Guildy sie); der Schlüssel schneidet das ab.
+  - **Weiterreichen (Wunsch des Auftraggebers, 2026-11-19):** Neuigkeiten von jemandem, der offline
+    ist, kommen über einen verbundenen Gefährten, der sie hat. Auf einen Gruß folgen bis zu 20
+    Angebote `1~O~<wer>~<zeit>`; wer daraus Neues erwartet, fragt mit `1~W~<wer>~<seit>` und bekommt
+    bis zu 20 Einträge als `1~R~<wer>~<zeit>~<art>~…`. Regel: Erfragt und angenommen wird nur über
+    Gildenmitglieder und über Leute, deren Addon in den letzten 30 Tagen direkt geantwortet hat
+    (`FamulusDB.chronicle.links`; eine direkte Antwort kommt nur von jemandem, der den Spieler auf
+    der Freundesliste oder in der Gilde hat, das belegt beidseitige Freundschaft). So kommt nichts
+    über Fremde an. Je Person wird pro Sitzung nur ein Gefährte gefragt, und `R` wird nur von ihm
+    angenommen. Weitergereichte Einträge tragen `via` (angezeigt als „über <Name>“) und verschieben
+    den Lesezeiger für den direkten Gruß nicht (`NewestFrom(who)` ohne `withRelayed`), sonst
+    entstünde eine bleibende Lücke, wenn der Weiterreichende selbst etwas verpasst hat. Grenzen:
+    Ein Gefährte könnte Einträge über andere fälschen, und ein verändertes Addon könnte über jeden
+    fragen; der Antwortende prüft das nicht. Für Stufen, Tode und Bosse vertretbar. Streicht jemand
+    den Spieler von der Freundesliste, gilt er bis zu 30 Tage weiter als verbunden.
   - Nachrichten, Felder mit `~` getrennt: `1~H~<zeit>` (Gruß: „deine Neuigkeiten habe ich bis
     <zeit>“), `1~E~<zeit>~<art>~k=v;k=v` (ein Eintrag), `1~S~<stufe>~id=n;id=n` (Statistiken).
   - Ein Gruß geht an jeden Freund, der online kommt. Wer antwortet, gilt für die Sitzung als
@@ -370,6 +391,8 @@ steht aus. Ein HTML-Entwurf für die Optik wurde gezeigt, eine Rückmeldung dazu
     geschrieben werden (`Vorname Nachname` gegen `Vorname-Nachname`), ob ein Flüstern an jemanden,
     der gerade offline ging, eine Fehlermeldung im Chat hinterlässt, und ob die Statistik-IDs
     stimmen (aus Guildys Quellcode entnommen). Das lässt sich nur mit zwei Accounts prüfen.
+    Ebenso ungeprüft: Gruß und Antwort in der Gilde und das Weiterreichen (dafür braucht es drei
+    Charaktere, einer davon offline), und welche Namensform die Gildenliste in Forever liefert.
 - **Verworfen:** fremde Statistiken über den Erfolgsvergleich des Spiels zu lesen, wie Guildy es
   tut. Das geht nur für das anvisierte Ziel in Sichtweite und hat bei Guildy zu Verbindungsabbrüchen
   geführt.

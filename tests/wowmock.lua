@@ -809,6 +809,24 @@ end
 function IsGuildMember(guid)
     return guid == "Player-1-GUILD"
 end
+-- mock.state.guild = { { name = ..., online = true, mobile = false }, ... }; nil: not in a guild
+function IsInGuild()
+    return mock.state.guild ~= nil
+end
+function GetNumGuildMembers()
+    return #(mock.state.guild or {})
+end
+function GetGuildRosterInfo(index)
+    local member = (mock.state.guild or {})[index]
+    if member then
+        return member.name, "Member", 1, 20, "Mage", "Elwynn Forest", "", "", member.online or false, 0, "MAGE", 0, 0, member.mobile or false
+    end
+end
+C_GuildInfo = {
+    GuildRoster = function()
+        record("C_GuildInfo.GuildRoster")
+    end,
+}
 
 -- Tooltips
 TooltipDataProcessor = {

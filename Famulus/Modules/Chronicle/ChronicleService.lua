@@ -9,11 +9,13 @@
 --   FamulusDB.chronicle = {
 --       entries = { { t = <time>, k = "<kind>", c = "<own character>", ... }, ... },
 --       friends = { ["<guid>"] = <last known level>, ... },
+--       links = { ["<name key>"] = { name = ..., t = <time> }, ... },
 --   }
 --   FamulusCharDB.zones = { ["<zone name>"] = true, ... }   -- seen by this character
 --
 -- An entry about a companion carries `who` (their character name) instead
--- of `c`. Nothing is sent to anyone; everything here was seen by this client.
+-- of `c`, and `via` (who passed it on) when it did not come from them.
+-- Nothing is sent from here; Modules/Chronicle/Sharing.lua does that.
 
 local _, ns = ...
 local L = ns.L
@@ -193,15 +195,39 @@ function ChronicleService.OwnSince(since, limit)
     return found
 end
 
--- Time of the newest entry about a companion, or 0.
-function ChronicleService.NewestFrom(who)
+-- Time of the newest entry about a companion, or 0. Entries another
+-- companion passed on (`via`) count only with withRelayed: the relay may
+-- have missed some, so they must not move the mark the companion answers to.
+function ChronicleService.NewestFrom(who, withRelayed)
     local entries = ChronicleService.Entries()
     for i = #entries, 1, -1 do
-        if entries[i].who == who then
-            return entries[i].t
+        local entry = entries[i]
+        if entry.who == who and (withRelayed or not entry.via) then
+            return entry.t
         end
     end
     return 0
+end
+
+-- Companions whose addon answered this one directly, by name key:
+-- { name = <character name>, t = <time> }. Such an answer comes only from
+-- someone who has the player on their friends list or shares their guild.
+-- Pass a name to record a contact now.
+function ChronicleService.Link(key, name)
+    local chronicle = Store(name ~= nil)
+    if not chronicle then
+        return nil
+    end
+    if type(chronicle.links) ~= "table" then
+        if not name then
+            return nil
+        end
+        chronicle.links = {}
+    end
+    if name then
+        chronicle.links[key] = { name = name, t = time() }
+    end
+    return chronicle.links[key]
 end
 
 -- What a companion told about themselves: { t = <time>, level = ..., stats =
@@ -263,6 +289,10 @@ function ChronicleService.Text(entry)
         local _, realName = Companion(entry)
         if realName then
             detail = detail and (realName .. "  ·  " .. detail) or realName
+        end
+        if entry.via then
+            local via = L.c_via:format(entry.via)
+            detail = detail and (detail .. "  ·  " .. via) or via
         end
     end
     return spec.title(entry), detail
