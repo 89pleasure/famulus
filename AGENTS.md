@@ -96,10 +96,19 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   gleichnamiges Addon; vor der Veröffentlichung direkt auf CurseForge und Wago prüfen. Umbenannt
   sind Ordner, `.toc`, gespeicherte Variablen (`FamulusDB`, `FamulusCharDB`), Frame-Namen und die
   Befehle (`/fam`, `/famulus`) und das GitHub-Repo (`89pleasure/famulus`). Noch beim alten Namen: der
-  lokale Ordner, `dist/Schnitzel-0.1.0.zip` (veraltet) und das „S“ in `logo.tga`
-  (`tools/make_media.py` zeichnet noch ein S; ein richtiges Logo steht aus). Auf dem Mac muss der
+  lokale Ordner und `dist/Schnitzel-0.1.0.zip` (veraltet). Auf dem Mac muss der
   Symlink im Addon-Ordner neu angelegt werden (`Famulus` statt `Schnitzel`), und die Einstellungen
   aus `SavedVariables/Schnitzel.lua` gehen nicht von selbst über.
+- **Logo (2026-11-19):** eine lodernde Flamme in drei Schichten mit Funken und weichem Schein, frei ohne Kachel
+  ("Lodernd"), vom Auftraggeber am Mockup gewählt. Verworfen: abstrakte Zeichen (Monogramm, Kerzen-F,
+  Laterne, Feder; "zu abstrakt und minimalistisch"), ein Maskottchen mit Gesicht und Fassungen mit
+  Spielwelt-Motiv (Quest-Ausrufezeichen, Fackel, Runenkreis, Zahnrad, Schild, Ruhestein). Blizzards
+  eigene Embleme (Allianz, Horde, WoW-Logo) bleiben außen vor. Den Kasten um die Flamme wollte er nach dem
+  ersten Blick ins Spiel nicht. `logo.tga` (Flamme allein: Fenster,
+  Addon-Liste) und `logo-round.tga` (auf dunkler Scheibe: Minikarte), 128 px, gezeichnet in
+  `tools/make_media.py`. Das Logo hat feste Farben und folgt der Farbwelt nicht. Auf dem
+  Windows-Rechner ist kein eigenes Python installiert; `make_media.py` braucht nur die
+  Standardbibliothek und lief dort mit einem vorhandenen Python 3.12. Im Spiel noch nicht gesehen.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
   Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
   Taint).

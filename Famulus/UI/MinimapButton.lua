@@ -40,7 +40,7 @@ local function Build()
     rim:SetAllPoints()
 
     local icon = button:CreateTexture(nil, "ARTWORK")
-    icon:SetTexture(UI.media.logo)
+    icon:SetTexture(UI.media.logoRound)
     icon:SetPoint("TOPLEFT", 3, -3)
     icon:SetPoint("BOTTOMRIGHT", -3, 3)
 

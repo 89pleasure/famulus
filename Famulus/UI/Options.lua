@@ -1266,20 +1266,17 @@ local function BuildSidebar()
     corner:SetPoint("TOPLEFT", sidebar, "TOPLEFT", pixel, -pixel)
     UI.Tint(corner, "accentHaze", SpotAlpha(RADIUS * 0.6, RADIUS * 0.6))
 
-    -- Logo: the accent with an "S", so it follows the chosen scheme.
+    -- Logo: the flame, free on the sidebar. It is a picture with its own
+    -- colours and glow and looks the same in every scheme and theme.
     local logo = CreateFrame("Frame", nil, sidebar)
-    logo:SetSize(32, 32)
-    logo:SetPoint("TOPLEFT", 20, -22)
-    UI.Shadow(logo, 10, 9, 0, "accentGlow")
-    UI.Round(logo, "accent", 9, { layer = "ARTWORK" }):SetGradient("VERTICAL", "accent2", "accent", 32, 32)
-    local letter = UI.Text(logo, 18, "onAccent", "semibold")
-    letter:SetPoint("CENTER", 0, 0)
-    letter:SetJustifyH("CENTER")
-    letter:SetJustifyV("MIDDLE")
-    letter:SetText("F")
+    logo:SetSize(40, 40)
+    logo:SetPoint("TOPLEFT", 15, -17)
+    local picture = logo:CreateTexture(nil, "ARTWORK")
+    picture:SetTexture(UI.media.logo)
+    picture:SetAllPoints(logo)
 
     local wordmark = UI.Text(sidebar, 16, "text", "semibold")
-    wordmark:SetPoint("TOPLEFT", logo, "TOPRIGHT", 11, -1)
+    wordmark:SetPoint("TOPLEFT", logo, "TOPRIGHT", 8, -4)
     wordmark:SetText("Famulus")
 
     window.tagline = UI.Text(sidebar, 11, "textMuted")

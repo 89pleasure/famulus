@@ -160,18 +160,164 @@ def shadow(x, y):
 
 write_tga("shadow.tga", 64, shadow)
 
-# Logo: golden disc with a dark "S". Used for the addon list and minimap.
-GOLD = (0.96, 0.70, 0.33)
-DARK = (0.10, 0.08, 0.05)
-LETTER = arc(32, 24, 8, -25, -270) + arc(32, 40, 8, -90, 155)[1:]
+# Logo: a blazing flame with a soft glow, in its own colours (it does not
+# follow the colour scheme). logo.tga is the flame alone, for the settings
+# window and the addon list; logo-round.tga sets it on a dark disc for the
+# minimap button.
+#
+# The flame is drawn in a 128 x 128 box.
+LOGO = 128
+SAMPLES = 3  # per axis, for the edges of the filled shapes
 
 
-def logo(x, y):
-    disc = coverage(math.hypot(x - 32, y - 32) - 30)
-    ink = coverage(polyline_distance(x, y, LETTER) - 2.7)
-    return tuple(GOLD[i] * (1 - ink) + DARK[i] * ink for i in range(3)) + (disc,)
+def rgb(value):
+    return tuple(int(value[i : i + 2], 16) / 255 for i in (0, 2, 4))
 
 
-write_tga("logo.tga", 64, logo)
+def lerp(a, b, t):
+    return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+
+
+def ramp(stops, t):
+    """Colour at t along [(position, colour), ...]."""
+    if t <= stops[0][0]:
+        return stops[0][1]
+    for (p0, c0), (p1, c1) in zip(stops, stops[1:]):
+        if t <= p1:
+            return lerp(c0, c1, (t - p0) / (p1 - p0))
+    return stops[-1][1]
+
+
+def cubic_path(start, *controls, steps=14):
+    """Closed outline along cubic Bezier segments; controls come in threes."""
+    points = [start]
+    for i in range(0, len(controls), 3):
+        p0, (c1, c2, p3) = points[-1], controls[i : i + 3]
+        for step in range(1, steps + 1):
+            t = step / steps
+            u = 1 - t
+            points.append(
+                tuple(
+                    u**3 * p0[k] + 3 * u * u * t * c1[k] + 3 * u * t * t * c2[k] + t**3 * p3[k]
+                    for k in (0, 1)
+                )
+            )
+    return points
+
+
+def inside_polygon(x, y, polygon):
+    hit = False
+    xj, yj = polygon[-1]
+    for xi, yi in polygon:
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi) + xi:
+            hit = not hit
+        xj, yj = xi, yi
+    return hit
+
+
+def bounds(polygon):
+    xs, ys = [p[0] for p in polygon], [p[1] for p in polygon]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+FLAME_OUTER = cubic_path(
+    (66, 10), (72, 30), (98, 44), (98, 76), (98, 98), (83, 114), (64, 114), (45, 114), (30, 99), (30, 78),
+    (30, 62), (40, 54), (44, 40), (48, 50), (54, 54), (58, 50), (64, 42), (60, 24), (66, 10),
+)  # fmt: skip
+FLAME_LICK = cubic_path((33, 40), (36, 49), (32, 56), (29, 63), (25, 56), (27, 47), (33, 40))
+FLAME_MID = cubic_path(
+    (66, 44), (70, 58), (84, 66), (84, 84), (84, 98), (75, 108), (64, 108), (53, 108), (44, 99), (44, 86),
+    (44, 76), (51, 72), (54, 62), (57, 68), (61, 69), (63, 66), (66, 60), (64, 52), (66, 44),
+)  # fmt: skip
+FLAME_CORE = cubic_path(
+    (64, 76), (68, 84), (74, 88), (74, 96), (74, 103), (69, 108), (64, 108), (59, 108), (54, 103), (54, 97),
+    (54, 90), (60, 86), (64, 76),
+)  # fmt: skip
+SPARKS = [(96, 30, 3.2), (106, 50, 2.2), (26, 26, 2.4)]
+
+# From the tip of the flame down to its base.
+FIRE = [(0.0, rgb("fff3a6")), (0.45, rgb("f2d640")), (1.0, rgb("cf9a12"))]
+FIRE_TOP, FIRE_BOTTOM = 10, 114
+
+
+def fire(x, y):
+    return ramp(FIRE, (y - FIRE_TOP) / (FIRE_BOTTOM - FIRE_TOP))
+
+
+# Painted in this order; each is (outline, its bounds, colour at a point).
+LAYERS = [
+    (shape, bounds(shape), colour)
+    for shape, colour in (
+        (FLAME_OUTER, fire),
+        (FLAME_LICK, fire),
+        (FLAME_MID, lambda x, y: rgb("fff0a0")),
+        (FLAME_CORE, lambda x, y: rgb("fffce8")),
+    )
+]
+
+# Ground of the tile: lighter behind the flame, darker towards the corners.
+GROUND = [(0.0, rgb("24403f")), (0.62, rgb("142022")), (1.0, rgb("0f1719"))]
+RIM = rgb("2f4447")
+GLOW = rgb("f2d640")
+
+
+def over(colour, alpha, paint, amount):
+    """Lays `paint` with opacity `amount` over a colour that has its own alpha."""
+    total = amount + alpha * (1 - amount)
+    if total <= 0:
+        return colour, 0.0
+    return lerp(colour, paint, amount / total), total
+
+
+def logo(disc, view_min, view_size):
+    """The flame with its glow; on a dark disc if `disc`, else on nothing."""
+    half = LOGO / 2
+
+    def pixel(px, py):
+        # Drawing coordinates of this pixel.
+        x = view_min + px / LOGO * view_size
+        y = view_min + py / LOGO * view_size
+        step = view_size / LOGO
+
+        if disc:
+            edge = math.hypot(px - half, py - half) - half  # negative inside
+            alpha = coverage(edge + 0.5)
+            if alpha <= 0:
+                return (0.0, 0.0, 0.0, 0.0)
+            colour = ramp(GROUND, math.hypot(px - half, py - LOGO * 0.62) / (LOGO * 0.8))
+            colour = lerp(colour, RIM, max(0.0, min(1.0, edge + 2.5)))  # hairline along the edge
+        else:
+            colour, alpha = GLOW, 0.0
+
+        # The glow must fade out before the edge of the texture.
+        halo = max(0.0, 1 - math.hypot(x - 64, y - 72) / (70 if disc else 54)) * 0.38
+        colour, alpha = over(colour, alpha, GLOW, halo)
+
+        for shape, (left, top, right, bottom), paint in LAYERS:
+            if x < left - step or x > right + step or y < top - step or y > bottom + step:
+                continue
+            hits = 0
+            for i in range(SAMPLES):
+                for j in range(SAMPLES):
+                    sx = x + ((i + 0.5) / SAMPLES - 0.5) * step
+                    sy = y + ((j + 0.5) / SAMPLES - 0.5) * step
+                    if inside_polygon(sx, sy, shape):
+                        hits += 1
+            if hits:
+                colour, alpha = over(colour, alpha, paint(x, y), hits / (SAMPLES * SAMPLES))
+
+        for cx, cy, r in SPARKS:
+            spark = coverage((math.hypot(x - cx, y - cy) - r) / step)
+            if spark > 0:
+                colour, alpha = over(colour, alpha, GLOW, spark)
+
+        return colour + (alpha,)
+
+    return pixel
+
+
+# The free flame fills its texture; on the disc it keeps a margin.
+write_tga("logo.tga", LOGO, logo(False, 2.0, 124.0))
+write_tga("logo-round.tga", LOGO, logo(True, -10.0, 148.0))
 
 print("wrote", ", ".join(sorted(os.listdir(OUT))))

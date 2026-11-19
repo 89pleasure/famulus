@@ -28,6 +28,7 @@ UI.media = {
     tag = MEDIA .. "tag.tga",
     shadow = MEDIA .. "shadow.tga",
     logo = MEDIA .. "logo.tga",
+    logoRound = MEDIA .. "logo-round.tga",
 }
 
 ---------------------------------------------------------------------------
