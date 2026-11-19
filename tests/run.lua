@@ -151,6 +151,18 @@ for _, file in ipairs(files) do
         check(declared == 1, "a module file is exactly one feature or a *Service.lua: " .. file .. " (declares " .. declared .. ")")
     end
 end
+-- A boolean test on a secret value is an error in the client, so ns.IsSecret
+-- has to come first. The mock cannot catch "not x" at run time.
+local secretTestedFirst = {}
+for _, file in ipairs(files) do
+    local source = readFile("Famulus/" .. file)
+    for _, pattern in ipairs({ "not%s+([%w_%.]+)%s+or%s+ns%.IsSecret%(%1%)", "([%w_%.]+)%s+and%s+not%s+ns%.IsSecret%(%1%)" }) do
+        for name in source:gmatch(pattern) do
+            secretTestedFirst[#secretTestedFirst + 1] = file .. ": " .. name
+        end
+    end
+end
+check(#secretTestedFirst == 0, "ns.IsSecret comes before any test of the value (" .. table.concat(secretTestedFirst, ", ") .. ")")
 
 ---------------------------------------------------------------------------
 section("Login")
@@ -450,6 +462,8 @@ mock.Fire("PARTY_INVITE_REQUEST", "Guildie", false, false, false, true, false, "
 check(mock.count("AcceptGroup") == 2, "accepts a guild member's invite")
 mock.Fire("PARTY_INVITE_REQUEST", "NoGuid")
 check(mock.count("AcceptGroup") == 2, "an invite without sender id is left alone")
+mock.Fire("PARTY_INVITE_REQUEST", "Hidden", false, false, false, true, false, mock.SECRET)
+check(mock.count("AcceptGroup") == 2, "and so is one with a secret sender id")
 enable("acceptInvites", false)
 
 enable("declineDuels")
@@ -496,11 +510,8 @@ end
 check(mock.SenderName("CHAT_MSG_GUILD", "|cff3fc7ebJaina|r", "Jaina-Proudmoore") == "|cff3fc7ebAnna|r",
     "a name the chat shortened is replaced as well")
 Ambiguate = nil
-issecretvalue = function(value)
-    return value == "SECRET"
-end
-check(mock.SenderName("CHAT_MSG_SAY", "SECRET", "SECRET") == "SECRET" and Aliases.Get("SECRET") == nil, "secret names are passed through untouched")
-issecretvalue = nil
+check(mock.SenderName("CHAT_MSG_SAY", mock.SECRET, mock.SECRET) == mock.SECRET and Aliases.Get(mock.SECRET) == nil,
+    "secret names are passed through untouched")
 enable("chatAliases", false)
 check(mock.CountSenderFilters() == 0, "switching off removes the chat filter")
 check(mock.SenderName("CHAT_MSG_SAY", "Jaina-Proudmoore", "Jaina-Proudmoore") == "Jaina-Proudmoore", "and names are back")
@@ -626,6 +637,8 @@ enable("tooltipIDs")
 check(#TooltipDataProcessor.postCalls == 2, "item and spell hooks are installed on first use")
 TooltipDataProcessor.postCalls[1].fn(GameTooltip, { id = 6948 })
 check(lines == 1, "adds the ID line")
+TooltipDataProcessor.postCalls[1].fn(GameTooltip, { id = mock.SECRET })
+check(lines == 1, "but not for a secret ID")
 TooltipDataProcessor.postCalls[1].fn(CreateFrame("GameTooltip"), { id = 6948 })
 check(lines == 1, "leaves other tooltips alone")
 enable("tooltipIDs", false)
@@ -685,6 +698,18 @@ end
 local wideWidth = coordWidthAt(0.4567, 0.1234)
 check(coordWidthAt(0.05, 0.07) == wideWidth and coordWidthAt(nil) == wideWidth,
     "the field keeps its width whatever the numbers are")
+do
+    local original = C_Map.GetPlayerMapPosition
+    C_Map.GetPlayerMapPosition = function()
+        return { GetXY = function() return mock.SECRET, mock.SECRET end }
+    end
+    mock.reset()
+    coordFrame.scripts.OnShow(coordFrame)
+    coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
+    check(mock.count("ChatFrameUtil.OpenChat") == 0 and mock.count("ChatFrameUtil.InsertLink") == 0,
+        "a secret position is neither shown nor sent")
+    C_Map.GetPlayerMapPosition = original
+end
 coordFrame.scripts.OnEnter(coordFrame)
 coordFrame.scripts.OnLeave(coordFrame)
 mock.reset()
@@ -1417,6 +1442,22 @@ enable("sellJunk")
 check(FamulusDB.profile.sellJunk and FamulusDB.profile.sellJunk.enabled == true, "a changed option is saved")
 enable("sellJunk", false)
 check(FamulusDB.profile.sellJunk == nil, "an option back on default is removed from the saved file")
+
+-- A character profile starts as a copy of the account profile and then goes
+-- its own way; switching restarts the features with the other choices.
+local idleEvents = ns:CountRegisteredEvents()
+ns:SetUseCharacterProfile(true)
+check(ns:UsesCharacterProfile(), "the character profile can be switched on")
+enable("sellJunk")
+check(ns.features.sellJunk.enabled and FamulusCharDB.profile.sellJunk.enabled == true and FamulusDB.profile.sellJunk == nil,
+    "its changes stay out of the account profile")
+ns:SetUseCharacterProfile(false)
+check(not ns.features.sellJunk.enabled and ns:CountRegisteredEvents() == idleEvents,
+    "switching back stops what only the character profile ran")
+ns:SetUseCharacterProfile(true)
+check(ns.features.sellJunk.enabled, "and switching again starts it with the kept choices")
+ns:SetUseCharacterProfile(false)
+FamulusCharDB.profile = nil
 
 ---------------------------------------------------------------------------
 print("")

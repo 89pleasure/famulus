@@ -705,6 +705,33 @@ function StaticPopup_FindVisible(which)
     return mock.state.popups and mock.state.popups[which] or nil
 end
 
+-- Secret values. mock.SECRET stands for a value the client hides from addons
+-- and, like it, refuses indexing, arithmetic, ordering and concatenation. A
+-- boolean test ("not x") cannot be caught in Lua; tests/run.lua checks the
+-- order of those tests in the source instead.
+local function refuseSecret()
+    error("attempt to use a secret value", 2)
+end
+mock.SECRET = setmetatable({}, {
+    __index = refuseSecret,
+    __newindex = refuseSecret,
+    __call = refuseSecret,
+    __concat = refuseSecret,
+    __len = refuseSecret,
+    __unm = refuseSecret,
+    __add = refuseSecret,
+    __sub = refuseSecret,
+    __mul = refuseSecret,
+    __div = refuseSecret,
+    __mod = refuseSecret,
+    __pow = refuseSecret,
+    __lt = refuseSecret,
+    __le = refuseSecret,
+})
+function issecretvalue(value)
+    return rawequal(value, mock.SECRET)
+end
+
 -- Social
 function AcceptGroup()
     record("AcceptGroup")
