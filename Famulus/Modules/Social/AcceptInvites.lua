@@ -11,7 +11,7 @@ local invites = ns:NewFeature({
 })
 
 local function IsTrusted(guid)
-    if not guid or ns.IsSecret(guid) then
+    if ns.IsSecret(guid) or not guid then
         return false
     end
     if C_FriendList and C_FriendList.IsFriend and C_FriendList.IsFriend(guid) then

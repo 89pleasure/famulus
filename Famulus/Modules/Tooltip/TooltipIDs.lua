@@ -26,7 +26,7 @@ local function AddLine(tooltip, data, labelKey)
         return
     end
     local id = data.id
-    if not id or ns.IsSecret(id) then
+    if ns.IsSecret(id) or not id then
         return
     end
     tooltip:AddDoubleLine(L[labelKey], id, 0.61, 0.64, 0.73, 1, 1, 1)

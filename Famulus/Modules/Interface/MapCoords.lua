@@ -43,7 +43,7 @@ local function PlayerPosition()
         return -1, -1
     end
     local x, y = position:GetXY()
-    if not x or ns.IsSecret(x) then
+    if ns.IsSecret(x) or not x then
         return -1, -1
     end
     local tx, ty = Tenths(x, y)
