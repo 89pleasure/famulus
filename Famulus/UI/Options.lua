@@ -33,7 +33,12 @@ local rows, cards, navButtons = {}, {}, {}
 local renderedKey -- page, tab or search the rows were last laid out for
 local resetArmed, resetToken = false, 0
 local aliasEditor -- input row of the aliases page, once it has been shown
-local Render -- forward declaration
+local embers = {} -- the sparks in the background, one set per ground
+local Render, PlayEmbers -- forward declarations
+
+-- Grain lies in a band across the top of the window, sidebar and content
+-- alike, and fades out below the tabs.
+local GRAIN_BAND = 210
 
 ---------------------------------------------------------------------------
 -- Items
@@ -416,6 +421,7 @@ local function SettingsTabs()
         GeneralItem("accent", "swatch", function()
             return UI.accents
         end),
+        GeneralItem("embers", "toggle"),
         GeneralItem("windowScale", "select", function()
             local list = {}
             for i, percent in ipairs(WINDOW_SCALES) do
@@ -1209,6 +1215,15 @@ local function CreateNavButton(parent, page)
     return button
 end
 
+-- The sparks move only while the window is open and the player wants them.
+-- wanted: false to stop them regardless of the option.
+function PlayEmbers(wanted)
+    local playing = wanted ~= false and window ~= nil and window:IsShown() and ns:GetOption("general", "embers") == true
+    for _, set in ipairs(embers) do
+        set:SetPlaying(playing)
+    end
+end
+
 local function SavePosition()
     local point, _, relativePoint, x, y = window:GetPoint(1)
     ns.global.window = { point = point, relativePoint = relativePoint, x = x, y = y }
@@ -1249,6 +1264,10 @@ local function BuildSidebar()
     local hazeBottom = SPOT.top + SPOT.height
     Haze(RADIUS, pixel, SIDEBAR - pixel, hazeBottom)
     Haze(pixel, RADIUS, RADIUS, hazeBottom)
+
+    -- Grain across the top and a few sparks that rise behind the entries.
+    UI.Grain(sidebar, 4, 4, pixel, HEIGHT - GRAIN_BAND, SIDEBAR, HEIGHT, true)
+    embers[#embers + 1] = UI.Embers(sidebar, 7, 0, SIDEBAR, HEIGHT, 11)
 
     -- The corner itself: a quarter circle in the glow's strength at that
     -- spot (the falloff of shadow.tga, see tools/make_media.py). Without
@@ -1408,6 +1427,15 @@ local function Build()
     gloss:SetHeight(pixel)
     UI.Fill(gloss, "sheen")
 
+    -- The content's ground: grain across the top, a little darker towards the bottom, and
+    -- sparks that rise behind the cards.
+    local dusk = window:CreateTexture(nil, "BACKGROUND", nil, 3)
+    dusk:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR, -HEIGHT * 0.45)
+    dusk:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -4, 4)
+    UI.Shade(dusk, "VERTICAL", "clear", "dusk")
+    UI.Grain(window, SIDEBAR, 4, 4, HEIGHT - GRAIN_BAND, WIDTH, HEIGHT, true)
+    embers[#embers + 1] = UI.Embers(window, 12, SIDEBAR, WIDTH - SIDEBAR, HEIGHT, 23)
+
     local saved = ns.global.window
     if saved and saved.point then
         window:SetPoint(saved.point, UIParent, saved.relativePoint or saved.point, saved.x or 0, saved.y or 0)
@@ -1429,6 +1457,7 @@ local function Build()
 
     window:SetScript("OnShow", function(self)
         ns:Fire("OPTIONS_SHOWN") -- lets switches that mirror game options catch up
+        PlayEmbers()
         Render()
         self:SetAlpha(0)
         UI.Tween(self, 0.15, function(progress)
@@ -1437,6 +1466,7 @@ local function Build()
     end)
     window:SetScript("OnHide", function()
         UI.CloseMenu()
+        PlayEmbers(false)
         DisarmReset()
         renderedKey = nil
         window.search.edit:ClearFocus()
@@ -1507,6 +1537,8 @@ end
 ns:On("OPTION_CHANGED", function(section, key)
     if section == "general" and key == "windowScale" then
         ApplyScale()
+    elseif section == "general" and key == "embers" then
+        PlayEmbers()
     end
     -- Switching a feature folds or unfolds its options, which moves rows;
     -- the category's master switch changes the actions next to the tabs.
@@ -1531,6 +1563,7 @@ ns:On("ALIASES_CHANGED", function()
 end)
 ns:On("PROFILE_CHANGED", function()
     ApplyScale()
+    PlayEmbers()
     RequestRefresh("layout")
 end)
 

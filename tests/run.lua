@@ -1207,7 +1207,8 @@ enable("declineDuels", false)
 -- Settings: appearance tab.
 mock.Click(tabButton("Appearance"))
 local looks = visibleRows()
-check(looks[1].segment:IsShown() and looks[2].swatches:IsShown() and looks[3].dropdown:IsShown(), "theme, colour scheme and window size")
+check(looks[1].segment:IsShown() and looks[2].swatches:IsShown() and looks[3].toggle:IsShown() and looks[4].dropdown:IsShown(),
+    "theme, colour scheme, sparks and window size")
 check(ns.UI.isDark and window.themeButton.icon ~= nil, "the window starts dark")
 local lightButton
 for _, button in ipairs(looks[1].segment.buttons) do
@@ -1271,11 +1272,37 @@ check(ns:GetOption("general", "accent") == "lemon", "reset brings the default lo
 check(ns:GetOption("general", "pauseModifier") == "SHIFT" and ns:GetOption("general", "minimapAngle") == 215, "and touches nothing else")
 
 -- Window size.
-check(looks[3].label:GetText() == "Window size" and looks[3].dropdown.text:GetText() == "100%", "the appearance tab offers the window size")
+check(looks[4].label:GetText() == "Window size" and looks[4].dropdown.text:GetText() == "100%", "the appearance tab offers the window size")
 ns:SetOption("general", "windowScale", 120)
 check(window.scale == 1.2, "changing it rescales the window at once")
 ns:SetOption("general", "windowScale", 100)
 check(window.scale == 1 and (FamulusDB.profile.general or {}).windowScale == nil, "and the default size is not saved")
+
+-- Sparks in the background: animated by the client, only while the window
+-- is open and the option is on.
+local function sparkGroups()
+    local playing, total = 0, 0
+    for _, frame in ipairs({ window, navButton("Settings").parent }) do
+        for _, region in ipairs(frame.regions or {}) do
+            if region.group then
+                total = total + 1
+                if region.group:IsPlaying() and region:IsShown() then
+                    playing = playing + 1
+                end
+            end
+        end
+    end
+    return playing, total
+end
+local sparksPlaying, sparksTotal = sparkGroups()
+check(sparksTotal > 10 and sparksPlaying == sparksTotal, "the sparks rise while the window is open (" .. sparksPlaying .. " of " .. sparksTotal .. ")")
+check(looks[3].label:GetText() == "Sparks in the background" and looks[3].toggle.on, "and have a switch on the appearance tab")
+mock.Click(looks[3])
+mock.Advance(0.1)
+check(ns:GetOption("general", "embers") == false and sparkGroups() == 0, "switching them off stops every one")
+mock.Click(looks[3])
+mock.Advance(0.1)
+check(sparkGroups() == sparksTotal, "switching them on starts them again")
 
 -- Minimap button.
 check(FamulusMinimapButton ~= nil and FamulusMinimapButton:IsShown(), "minimap button exists")
@@ -1285,6 +1312,7 @@ ns:SetOption("general", "minimapButton", true)
 
 SlashCmdList.FAMULUS("")
 check(not window:IsShown(), "/fam closes the window again")
+check(sparkGroups() == 0, "a closed window animates nothing")
 mock.reset()
 SlashCmdList.FAMULUS("status")
 check(lastChat():find("6 of 20", 1, true) ~= nil, "/fam status reports: " .. lastChat())

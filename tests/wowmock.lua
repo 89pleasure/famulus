@@ -48,7 +48,8 @@ for name in
     SetJustifyH SetJustifyV SetWordWrap SetSpacing SetAutoFocus SetMaxLetters
     EnableMouseWheel SetScrollChild AddMessage AddLine
     AddDoubleLine SetOwner SetAltArrowKeyMode TryDisplayMessage
-    SetGradient SetClampRectInsets
+    SetGradient SetClampRectInsets SetHorizTile SetVertTile
+    SetLooping SetOffset SetDuration SetFromAlpha SetToAlpha SetOrder
     ]],
         "%S+"
     )
@@ -249,8 +250,31 @@ local function NewWidget(widgetType, parent)
     return widget
 end
 
+-- Animations: only whether a group is playing matters to the tests.
+function Widget:CreateAnimationGroup()
+    self.group = NewWidget("AnimationGroup", self)
+    return self.group
+end
+function Widget:CreateAnimation(kind)
+    local animation = NewWidget("Animation", self)
+    animation.kind = kind
+    return animation
+end
+function Widget:Play()
+    self.playing = true
+end
+function Widget:Stop()
+    self.playing = false
+end
+function Widget:IsPlaying()
+    return self.playing == true
+end
+
 function Widget:CreateTexture()
-    return NewWidget("Texture", self)
+    local texture = NewWidget("Texture", self)
+    self.regions = self.regions or {}
+    self.regions[#self.regions + 1] = texture
+    return texture
 end
 function Widget:CreateFontString()
     return NewWidget("FontString", self)

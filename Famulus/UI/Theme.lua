@@ -27,6 +27,7 @@ UI.media = {
     sparkle = MEDIA .. "sparkle.tga",
     tag = MEDIA .. "tag.tga",
     shadow = MEDIA .. "shadow.tga",
+    grain = MEDIA .. "grain.tga",
     logo = MEDIA .. "logo.tga",
     logoRound = MEDIA .. "logo-round.tga",
 }
@@ -140,6 +141,9 @@ local washes = {
         sheen = { 1, 1, 1, 0.10 }, -- light catching the top edge of the window
         sheenSoft = { 1, 1, 1, 0.06 }, -- the same on a card
         sunken = { 0, 0, 0, 0.16 }, -- rows that lie deeper in their card
+        grain = { 1, 1, 1, 0.03 }, -- noise over the grounds
+        grainEnd = { 1, 1, 1, 0 }, -- where it fades out
+        dusk = { 0, 0, 0, 0.22 }, -- the grounds grow darker towards the bottom
         shadow = { 0, 0, 0, 0.55 },
         shadowSoft = { 0, 0, 0, 0.45 },
         warning = hex("f5b14c"),
@@ -154,6 +158,9 @@ local washes = {
         sheen = { 1, 1, 1, 0 },
         sheenSoft = { 1, 1, 1, 0 },
         sunken = { 0, 0, 0, 0.03 },
+        grain = { 0, 0, 0, 0.025 },
+        grainEnd = { 0, 0, 0, 0 },
+        dusk = { 0, 0, 0, 0.045 },
         shadow = { 0, 0, 0, 0.22 },
         shadowSoft = { 0, 0, 0, 0.18 },
         warning = hex("b7791f"),
@@ -212,6 +219,8 @@ local function Compose(theme, accent)
     colors.accentEdge = mix(base, BLACK, 0.38) -- border of a filled button
     colors.accentRim = mix(base, WHITE, 0.30) -- light line just inside that border
     colors.accentRim2 = mix(bright, WHITE, 0.30)
+    colors.ember = alpha(bright, 1) -- rising sparks; their animation sets the opacity
+    colors.clear = { 0, 0, 0, 0 }
     colors.cardActive = alpha(base, dark and 0.26 or 0.45) -- border of a card whose feature is on
     UI.isDark = dark
     return true

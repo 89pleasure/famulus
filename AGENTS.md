@@ -241,6 +241,18 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Kartenrand; Options-Zeilen tragen einen Punkt, keinen Winkel und keine Führungslinie; der
   Hauptknopf („Speichern“) hat einen waagerechten Verlauf, einen dunkleren Rand, eine helle Linie
   innen und einen Schatten, aber keinen Verlauf von oben nach unten (wirkte „plastisch“).
+- **Hintergrund (2026-11-19, Wunsch des Auftraggebers):** Eine feine Körnung (`grain.tga`, reines
+  Rauschen, ein Texel je Bildschirmpixel über `SetTexCoord`, `UI.Grain`) liegt als Band über die
+  ganze Fensterbreite, Seitenleiste und Inhalt gleich, so hoch wie der Kopf (`GRAIN_BAND`), und
+  läuft unter den Reitern aus. Entscheidungen des Auftraggebers nach Blicken ins Spiel: eine erste
+  Fassung mit wolkiger Schicht sah fleckig aus; überall gleich war die Körnung zu viel; aus fünf
+  umschaltbaren Varianten wählte er „Seitenleiste und Kopf“, aber als ein durchgehendes Band in
+  Kopfhöhe. Die Auswahl im Fenster ist wieder entfernt. Der Inhalt wird nach unten etwas dunkler.
+  Dazu steigen kleine Funken auf (`UI.Embers`): Texturen mit Animationen des Clients
+  (`AnimationGroup`, `Alpha` und `Translation`), also ohne `OnUpdate` und ohne Lua pro Frame.
+  Sie laufen nur bei offenem Fenster und liegen hinter Karten und Einträgen. Abschaltbar unter
+  Einstellungen › Darstellung (`general.embers`, Standard an). Im Spiel bestätigt: Körnung und
+  Funken laufen. Noch nicht gesehen: das Band in der Seitenleiste und sein Auslaufen.
 - **Karten:** In Kategorie-Reitern hat jedes Feature eine eigene Karte, zusammen mit seinen
   Optionen (`FeatureBlocks`, Abstand `CARD_GAP`). Die Suche gruppiert weiter je Reiter.
 - **Technik dazu:** `UI.Shade(texture, richtung, von, nach)` für Verläufe (`SetGradient`, folgt dem

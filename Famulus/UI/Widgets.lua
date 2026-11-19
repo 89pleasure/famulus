@@ -225,6 +225,100 @@ function UI.Halo(parent, anchor, size, token, layer)
     return halo
 end
 
+-- Fine noise over a ground, so that large plain areas do not look flat.
+-- The texture repeats, one of its texels per screen pixel, so the grain is
+-- crisp at every UI scale. left, top, right, bottom: distances from the
+-- frame's edges; width, height: size of the frame.
+local GRAIN_TEXELS = 128
+
+-- fade: the grain thins out towards the bottom of its area.
+function UI.Grain(frame, left, top, right, bottom, width, height, fade)
+    local grain = frame:CreateTexture(nil, "BACKGROUND", nil, 4)
+    grain:SetTexture(UI.media.grain, "REPEAT", "REPEAT")
+    grain:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -top)
+    grain:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -right, bottom)
+    local tile = GRAIN_TEXELS * UI.Pixel(frame)
+    grain:SetTexCoord(0, (width - left - right) / tile, 0, (height - top - bottom) / tile)
+    if fade then
+        UI.Shade(grain, "VERTICAL", "grain", "grainEnd", { textured = true })
+    else
+        UI.Tint(grain, "grain")
+    end
+    return grain
+end
+
+-- Sparks: small glowing dots that rise, drift a little and fade, each in
+-- its own rhythm. They are textures of `frame` (so they lie behind its
+-- child frames) and are moved by the client's own animations; no Lua runs
+-- per frame. left, width, height: the area they spread over, measured from
+-- the frame's top left corner. Returns an object with :SetPlaying(bool).
+function UI.Embers(frame, count, left, width, height, seed)
+    local embers = { dots = {}, playing = false }
+    -- Own little generator: the sparks sit in the same places every time.
+    local state = seed
+    local function Random()
+        state = (state * 16807) % 2147483647
+        return state / 2147483647
+    end
+
+    for i = 1, count do
+        local dot = frame:CreateTexture(nil, "BORDER")
+        dot:SetTexture(UI.media.shadow)
+        local size = 5 + Random() * 8
+        dot:SetSize(size, size)
+        dot:SetPoint("CENTER", frame, "TOPLEFT", left + 10 + Random() * (width - 20), -(height * 0.18 + Random() * height * 0.78))
+        UI.Tint(dot, "ember")
+        dot:Hide()
+
+        local duration = 5 + Random() * 6
+        local rise, drift = 28 + Random() * 52, (Random() - 0.5) * 26
+        local peak = 0.3 + Random() * 0.5
+
+        local group = dot:CreateAnimationGroup()
+        group:SetLooping("REPEAT")
+        -- A pause of its own length first, so the sparks do not start together.
+        local rest = group:CreateAnimation("Alpha")
+        rest:SetFromAlpha(0)
+        rest:SetToAlpha(0)
+        rest:SetDuration(0.2 + Random() * 5)
+        rest:SetOrder(1)
+        -- Then it lights up quickly and dies away slowly while it rises.
+        local function Phase(order, share, from, to)
+            local fade = group:CreateAnimation("Alpha")
+            fade:SetFromAlpha(from)
+            fade:SetToAlpha(to)
+            fade:SetDuration(duration * share)
+            fade:SetOrder(order)
+            local move = group:CreateAnimation("Translation")
+            move:SetOffset(drift * share, rise * share)
+            move:SetDuration(duration * share)
+            move:SetOrder(order)
+        end
+        Phase(2, 0.3, 0, peak)
+        Phase(3, 0.7, peak, 0)
+
+        embers.dots[i] = { texture = dot, group = group }
+    end
+
+    function embers:SetPlaying(playing)
+        playing = playing and true or false
+        if playing == self.playing then
+            return
+        end
+        self.playing = playing
+        for _, dot in ipairs(self.dots) do
+            dot.texture:SetShown(playing)
+            if playing then
+                dot.group:Play()
+            else
+                dot.group:Stop()
+            end
+        end
+    end
+
+    return embers
+end
+
 ---------------------------------------------------------------------------
 -- Fills, lines, text, icons
 ---------------------------------------------------------------------------

@@ -160,6 +160,22 @@ def shadow(x, y):
 
 write_tga("shadow.tga", 64, shadow)
 
+# Grain: fine noise laid over the grounds of the window, one texel per screen
+# pixel. White with varying alpha. Plain noise only: a cloudy layer on top
+# of it looked like stains in the game.
+GRAIN = 128
+
+
+def grain():
+    import random
+
+    rng = random.Random(7)  # fixed, so the file is the same on every run
+    fine = [[rng.random() for _ in range(GRAIN)] for _ in range(GRAIN)]
+    return lambda x, y: white(fine[int(y)][int(x)])
+
+
+write_tga("grain.tga", GRAIN, grain())
+
 # Logo: a blazing flame with a soft glow, in its own colours (it does not
 # follow the colour scheme). logo.tga is the flame alone, for the settings
 # window and the addon list; logo-round.tga sets it on a dark disc for the
