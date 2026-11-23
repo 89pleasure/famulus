@@ -73,17 +73,24 @@ function journey:SKILL_LINES_CHANGED()
         return
     end
     for _, index in pairs({ GetProfessions() }) do
-        local name, _, rank, _, _, _, skillLine = GetProfessionInfo(index)
+        local name, icon, rank, _, _, _, skillLine = GetProfessionInfo(index)
+        -- The profession's icon goes into the entry, for its picture.
+        icon = not ns.IsSecret(icon) and type(icon) == "number" and icon or nil
         if type(rank) == "number" and type(skillLine) == "number" then
             local before = Chronicle.SeeSkill(skillLine, rank)
             local text = ns.ChatService.IsPlainText(name) and name or nil
             if (not before or rank < before) and rank < SKILL_STEP then
                 -- New, or given up and begun again.
                 if self.skillsKnown then
-                    Chronicle.Add("profession", { skill = skillLine, name = text })
+                    Chronicle.Add("profession", { skill = skillLine, name = text, icon = icon })
                 end
             elseif before and math.floor(rank / SKILL_STEP) > math.floor(before / SKILL_STEP) then
-                Chronicle.Add("skill", { skill = skillLine, name = text, rank = math.floor(rank / SKILL_STEP) * SKILL_STEP })
+                Chronicle.Add("skill", {
+                    skill = skillLine,
+                    name = text,
+                    icon = icon,
+                    rank = math.floor(rank / SKILL_STEP) * SKILL_STEP,
+                })
             end
         end
     end
@@ -182,8 +189,9 @@ function journey:ACHIEVEMENT_EARNED(_, achievementID, alreadyEarned)
     if alreadyEarned then
         return
     end
-    local _, name = GetAchievementInfo(achievementID)
-    Chronicle.Add("achievement", { id = achievementID, name = name })
+    local _, name, _, _, _, _, _, _, _, icon = GetAchievementInfo(achievementID)
+    icon = not ns.IsSecret(icon) and type(icon) == "number" and icon or nil
+    Chronicle.Add("achievement", { id = achievementID, name = name, icon = icon })
 end
 
 -- A zone is an arrival once per character: the first time it is entered on

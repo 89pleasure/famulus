@@ -641,10 +641,34 @@ local function ItemIcon(itemID)
     return icon
 end
 
+-- The picture of an entry: an icon of the game. Its own, where it has one
+-- (written down with the entry, or the item's or the spell's), else the one
+-- of its kind. A level and a profession's milestone show their number on it.
+local function EntryTexture(entry, kind, special)
+    local recorded = tonumber(entry.icon)
+    if recorded then
+        return recorded
+    end
+    if kind == "item" then
+        local icon = ItemIcon(entry.item)
+        if icon then
+            return icon
+        end
+    elseif kind == "ability" and special and C_Spell and C_Spell.GetSpellTexture then
+        local icon = C_Spell.GetSpellTexture(special.spell)
+        if not ns.IsSecret(icon) and type(icon) == "number" then
+            return icon
+        end
+    end
+    return UI.gameIcons[kind == "skill" and "profession" or kind]
+end
+
 -- An entry as the book shows it (see UI/Book.lua).
 local function ChronicleEvent(entry)
     local Chronicle = ns.ChronicleService
-    local title, detail = Chronicle.Text(entry)
+    -- The book says whose event it is in the strip below the card, so its
+    -- headline does not; the live feed has no strip and names them.
+    local title, detail = Chronicle.Text(entry, true)
     local kind = entry.k == "friendLevel" and "level" or entry.k
     local own, other = Chronicle.IsOwn(entry), Chronicle.OtherCharacter(entry)
     -- An ability or an item from the service's tables may bring a picture.
@@ -652,20 +676,22 @@ local function ChronicleEvent(entry)
         or kind == "item" and Chronicle.Item(entry.item) or nil
     local chip
     if not own then
-        chip = { initial = Initial((Chronicle.Companion(entry))), text = L.c_companion }
+        local name = Chronicle.Companion(entry)
+        chip = { initial = Initial(name), text = name }
     elseif other then
         chip = { initial = Initial(other), text = other }
     end
     return {
         kind = kind,
         title = title,
+        fullTitle = (Chronicle.Text(entry)),
         detail = detail,
         when = date("%H:%M", entry.t),
         number = kind == "level" and tonumber(entry.level) or kind == "skill" and tonumber(entry.rank) or nil,
         -- The player's own level-ups and what the tables mark as great are the milestones of the book.
         icon = special and special.picture or nil,
-        -- An item shows the icon the game gives it; without one, the chest.
-        texture = kind == "item" and ItemIcon(entry.item) or nil,
+        -- The picture is an icon of the game.
+        texture = EntryTexture(entry, kind, special),
         -- A profession opens on a click: the player's own, or the recipe
         -- book of a companion. Not those of the player's other characters.
         onClick = (kind == "profession" or kind == "skill")
@@ -686,15 +712,20 @@ UI.ChronicleStory = ChronicleEvent
 local function TitleChapter(chapter)
     local counts, best, bestCount = {}, nil, 0
     local low, high
+    -- Sample entries do not name a chapter that has real ones.
+    local real = false
     for _, entry in ipairs(chapter.entries) do
-        local zone = entry.zone
+        real = real or not entry.demo
+    end
+    for _, entry in ipairs(chapter.entries) do
+        local zone = not (real and entry.demo) and entry.zone
         if type(zone) == "string" and zone ~= "" then
             counts[zone] = (counts[zone] or 0) + 1
             if counts[zone] > bestCount then
                 best, bestCount = zone, counts[zone]
             end
         end
-        local level = ns.ChronicleService.IsOwn(entry) and tonumber(entry.level)
+        local level = not (real and entry.demo) and ns.ChronicleService.IsOwn(entry) and tonumber(entry.level)
         if level then
             low, high = math.min(low or level, level), math.max(high or level, level)
         end

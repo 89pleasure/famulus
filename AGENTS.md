@@ -357,13 +357,54 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Ereignisse, eine Zählung wäre nicht stabil).
   - Bilder sind eigene Symbole (`skull.tga`, `swords.tga`, `peaks.tga`, `star.tga`, 64 px) oder
     bei Stufen die Zahl; Tod und Boss haben feste eigene Farbtöne, der Rest folgt der Farbwelt.
-    Der eigene Stufenaufstieg ist der Meilenstein: größere Karte, Akzentrand, Schein.
+    Der eigene Stufenaufstieg ist der Meilenstein: größere Karte, Akzentrand, Akzentmarke links
+    (der Schein ist seit dem Angleichen an die Options-Karten entfallen).
   - Ereignisse von Gefährten und von eigenen anderen Charakteren tragen eine Marke mit
     Anfangsbuchstabe.
   - Überschriften und Stufenzahl stehen in der Buchschrift des Spiels, gelesen aus dem
     Font-Objekt `QuestTitleFont` (`UI.SetDisplayFont`), damit jede Sprache ihre Datei bekommt;
     fehlt das Objekt, nimmt das Fenster Inter. Ob es `QuestTitleFont` im Forever-Client gibt,
     ist unbestätigt. Kursive Schrift wie im Entwurf gibt es nicht.
+- **Überarbeitung nach dem ersten Screenshot (2026-11-19, vier Vorschläge des Assistenten, vom
+  Auftraggeber alle angenommen):**
+  1. **Name im Streifen:** Die Überschrift eines Gefährten-Ereignisses nennt ihn im Buch nicht mehr
+     („Schlafsack erhalten“ statt „Mira erhält: Schlafsack“); der Name (oder Alias) steht mit dem
+     Anfangsbuchstaben im vertieften Streifen unten. `ChronicleService.Text(entry, true)` liefert
+     die Überschrift ohne Namen; die Einblendung hat keinen Streifen und nimmt `story.fullTitle`.
+  2. **Symbole füllen den Rahmen:** Der Rahmen hat nur noch leicht runde Ecken (5 px), das Symbol
+     liegt zwei Pixel vom Rand und ist stärker beschnitten (10 % je Seite), damit der schwarze
+     Eigenrand der Spielsymbole verschwindet.
+  3. **Spalten laufen unabhängig:** Die Karten wechseln weiter die Seite, aber jede Seite läuft für
+     sich weiter, sodass die Seiten ineinandergreifen (vorher belegte jedes Ereignis eine eigene
+     Zeile). Nur die Punkte auf der Linie halten Abstand (`DOT_GAP`) und bleiben in zeitlicher
+     Reihenfolge. Die Linie gehört jetzt zum Kapitel (`book.trails`); die Uhrzeit steht nicht
+     mehr frei auf der Gegenseite (siehe unten).
+  4. **Zahl auf Symbol:** Stufen und Berufs-Meilensteine zeigen ihre Zahl auf einem abgedunkelten
+     Spielsymbol (Stufe: `UI.gameIcons.level`, Beruf: das Berufssymbol) statt auf einer flachen
+     Kachel.
+  Im Spiel gesehen (zweiter Screenshot): Alle Spielsymbole laden, auch die fest gewählten für
+  Stufe, Boss, Gebiet und das Reitsymbol aus dem Zauber. Danach nachgebessert (Entscheidungen des
+  Assistenten, noch nicht bestätigt): Die Uhrzeit steht am Ende der Zeile unter der Überschrift
+  („in Tanaris  ·  22:07“) statt in der Kartenecke, wo sie der Überschrift Breite nahm; die Punkte
+  auf der Linie sind kleiner (22 px) und haben einen kurzen Strich zu ihrer Karte, weil bei
+  ineinandergreifenden Spalten sonst unklar ist, welcher Punkt zu welcher Seite gehört; die
+  Abdunklung unter einer Zahl ist kräftiger; Beispieleinträge benennen kein Kapitel, das echte
+  Einträge hat.
+- **Der Bildrahmen ist im Buch bei jedem Ereignis gleich groß** (54 px; Vorgabe des Auftraggebers,
+  2026-11-19, ihm gefällt die Größe bei Berufen und Gefährten). Auch ein Meilenstein hat keinen
+  größeren Rahmen; nur seine Karte ist etwas höher.
+- **Bilder sind Symbole des Spiels (Wunsch des Auftraggebers, 2026-11-19):** Sie sind eckig und es
+  gibt sehr viele; die eigenen Zeichnungen (`skull.tga` usw.) stehen nur noch klein auf dem Punkt
+  der Zeitlinie und als Rückfall. Reihenfolge (`EntryTexture` in `UI/Options.lua`):
+  1. das Symbol, das mit dem Eintrag gespeichert ist (`entry.icon`, eine Datei-ID): bei Berufen
+     aus `GetProfessionInfo`, bei Herausforderungen aus `GetAchievementInfo`; es wird mitgeteilt;
+  2. das Symbol des Gegenstands (`C_Item.GetItemIconByID`) oder des Zaubers einer Fähigkeit
+     (`C_Spell.GetSpellTexture`);
+  3. das Symbol der Art aus `UI.gameIcons` (`UI/Theme.lua`): Tod, Boss, Gebiet, Herausforderung,
+     Beruf, Fähigkeit, Gegenstand.
+  Die Namen in `UI.gameIcons` sind Symbole aus Vanilla und im Forever-Client ungeprüft;
+  `/fam test` meldet je Art (Gruppe `media`, „icon …“), ob der Client die Datei hat. Die
+  Symbole werden nicht eingefärbt und folgen der Farbwelt nicht; der Rahmen darum schon.
 - **`ownJourney`:** `PLAYER_LEVEL_UP`, `PLAYER_DEAD`, `BOSS_KILL`, `ACHIEVEMENT_EARNED` und
   `ZONE_CHANGED_NEW_AREA`. Ein Gebiet hinterlässt je Charakter genau eine „Ankunft“
   (`FamulusCharDB.zones`), und nur, wenn er es neu entdeckt (Wunsch des Auftraggebers, 2026-11-19):
@@ -510,6 +551,40 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   - Die Karte nutzt die Bilder des Buchs (`UI.BookPictures`, `UI.ChronicleStory`): Symbol, Zahl
     oder Gegenstandssymbol. Höchstens drei Karten untereinander, die neueste oben; sie fangen die
     Maus nicht.
+  - **Form „Wappen auf dem Band“ (vom Auftraggeber am Mockup gewählt, 2026-11-19, Entwurf B1):**
+    Das Bild ist ein eckiges Wappen (72 px, Ecken 14, Rand zwei Pixel in der Farbe der Art) und
+    steht mittig auf einem Band (56 px hoch), 14 px vom linken Bandende; es ragt oben und unten je
+    8 px heraus. Seine Vorgaben: Das Bild ist größer als die Fläche hinter dem Text, links vom
+    Wappen bleibt Band sichtbar, und das Band darf gegenüber dem Wappen nicht zu schmal sein.
+    Verworfen: Medaillon (rund, Text schiebt sich darunter hervor), Banner (Bild mittig über
+    zentriertem Text), ein Wappen, das nur nach oben ragt (B2), und das erste Wappen mit 40 px
+    hohem Band ohne Rand links. Das Band ist so breit, wie sein Text braucht (230 bis 460 px);
+    die Karten stehen linksbündig übereinander (Vorgabe des Auftraggebers), nicht mittig;
+    Meilensteine (`story.big`) tragen Akzentrand und Marke (siehe unten). Das Wappen im Spiel gesehen (Auftraggeber bat danach um linksbündige Karten).
+  - **Wappen im Band (Entscheidung des Auftraggebers, 2026-11-19, nach dem Blick ins Spiel):** Das
+    Wappen ragt nicht mehr über das Band hinaus, sondern steht darin (Band 64 px hoch, Wappen
+    48 px); die Lücke von 14 px links vom Wappen bleibt. Im Spiel gesehen und bestätigt („so ist
+    gut“). Die Angaben zum Überstand im Absatz
+    darüber sind damit überholt.
+  - **Aussehen wie die Options-Karten (Wunsch des Auftraggebers, 2026-11-19):** Die Karte eines
+    Ereignisses im Buch und das Band der Einblendung sind gebaut wie die Karte eines Features im
+    Fenster (`CreateCard` in `UI/Options.lua`): Grund `card` mit Haarlinie und Lichtkante; was
+    heraussticht (dort ein laufendes Feature, hier ein Meilenstein), hat Akzentrand `cardActive`
+    und die Akzentmarke links. Der Schein hinter Meilensteinen ist dafür entfallen. Im Buch
+    zusätzlich: Überschrift 13 px medium wie die Zeilen, das Leuchten unter der Maus (`hover`)
+    bei klickbaren Karten, und „wessen Ereignis“ steht in einem vertieften Streifen unten
+    (`sunken`, wie eine Option unter ihrem Feature) statt als Marke im Text. Die Einblendung
+    trägt dazu den Grund des Fensters: Körnung, die nach unten ausläuft (`UI.Grain`), und die
+    Abdunklung nach unten (`dusk`). Was „an den Options-Boxen orientieren“ genau heißen sollte,
+    hat der Assistent so ausgelegt; vom Auftraggeber im Spiel noch nicht gesehen.
+  - **Der eigene Stufenaufstieg wird nicht eingeblendet** (Entscheidung des Auftraggebers,
+    2026-11-19): Das Spiel zeigt ihn selbst groß an. Er steht weiter in der Chronik; der Schalter
+    „Stufenaufstiege“ gilt nur für Gefährten.
+  - **Offen (2026-11-19):** Beim Aufstieg auf Stufe 20 hat der Auftraggeber keine Karte gesehen
+    („glaube ich“). Der Eintrag stand korrekt in den gespeicherten Daten, die Einblendung war an,
+    Dauer 4 Sekunden, Platz rechts der Mitte. Ob die Karte nicht kam oder übersehen wurde, ist
+    ungeklärt. Seitdem schreibt das Feature im Entwicklermodus je Karte eine Zeile ins `devLog`
+    (`FEED`, „shown: <art>“ oder „failed: …“; `ns:DevLog`), ohne Namen oder Text.
   - **Platz:** Standard oben in der Mitte; gespeichert accountweit in `FamulusDB.feed` wie die
     Fensterposition. Verschieben im Bearbeitungsmodus des Spiels oder mit `/fam feed`
     (`/fam feed reset` setzt zurück, `/fam feed test` zeigt eine Beispielkarte): Dann zeigt ein markiertes Feld den Platz und lässt sich

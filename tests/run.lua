@@ -1475,6 +1475,8 @@ do -- professions
     mock.Fire("SKILL_LINES_CHANGED")
     mock.Fire("SKILL_LINES_CHANGED")
     local learned = Chronicle.Entries()[count + 1]
+    check(learned and learned.icon == 136197 and ns.UI.ChronicleStory(learned).texture == 136197,
+        "a profession brings its own icon into the entry and the picture")
     check(#Chronicle.Entries() == count + 1 and learned.k == "profession" and Chronicle.Text(learned) == "Learned Tailoring",
         "a profession learned is written down, once")
     mock.state.professions[2].rank = 74
@@ -1572,11 +1574,16 @@ do -- the live feed: what was just written down appears on screen for a while
     check(ns.features.liveFeed.enabled and ns:GetOption("liveFeed", "zone") == false and ns:GetOption("liveFeed", "level") == true,
         "the feed is on from the start; arrivals in a zone are not shown")
     -- (Two events of a kind within a second count as one; hence the times.)
-    Chronicle.Add("level", { level = 14, t = time() - 20, probe = true })
+    Chronicle.Add("level", { level = 14, t = time() - 19, probe = true })
+    check(#Feed.Shown() == 0, "the player's own level-up is not shown: the game announces it itself")
+    Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 20, probe = true })
     local card = Feed.Shown()[1]
-    check(#Feed.Shown() == 1 and card:IsShown() and card.title:GetText() == "Reached level 14"
-        and card.number:IsShown() and card.number:GetText() == "14" and not card.icon:IsShown(),
-        "a level-up appears as a card with its number")
+    check(#Feed.Shown() == 1 and card:IsShown() and card.title:GetText() == "Learned to ride"
+        and card.photo:IsShown() and not card.icon:IsShown() and not card.number:IsShown(),
+        "an event of the player's own appears as a card with an icon of the game")
+    check(card.crest:GetHeight() < card:GetHeight() and card.crest:GetWidth() < card:GetWidth()
+        and card:GetWidth() >= 230 and card.mark:IsShown() and card.grain ~= nil,
+        "the picture is a crest inside its band; a milestone carries the mark of an active card")
     Chronicle.Add("zone", { zone = "Nowhere", t = time() - 21, probe = true })
     Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 3600, probe = true })
     check(#Feed.Shown() == 1, "a kind that is switched off and old news stay off screen")
@@ -1586,7 +1593,9 @@ do -- the live feed: what was just written down appears on screen for a while
     ns:SetOption("liveFeed", "companions", true)
     Chronicle.Add("item", { item = 211527, name = "Cozy Sleeping Bag", who = "Jaina Proudmoore", probe = true })
     check(#Feed.Shown() == 2 and Feed.Shown()[1].title:GetText() == "Jaina Proudmoore receives: Cozy Sleeping Bag"
-        and Feed.Shown()[1].icon:IsShown(), "a companion's event appears above the older card")
+        and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
+    check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and not Feed.Shown()[1].mark:IsShown(),
+        "a band is as wide as its text needs; a companion's event is no milestone")
     for skill = 1, 3 do
         Chronicle.Add("skill", { skill = skill, name = "Craft " .. skill, rank = 75, probe = true })
     end
@@ -1595,12 +1604,16 @@ do -- the live feed: what was just written down appears on screen for a while
     check(#Feed.Shown() == 3, "a card stays for its time")
     mock.Advance(2)
     check(#Feed.Shown() == 0 and not card:IsShown(), "then it fades out and is gone")
+    Chronicle.Add("level", { level = 15, who = "Jaina Proudmoore", t = time() - 23, probe = true })
+    check(#Feed.Shown() == 1 and Feed.Shown()[1].number:IsShown() and Feed.Shown()[1].number:GetText() == "15",
+        "a companion's level-up appears with its number")
+    Feed.Clear()
     ns:SetOption("liveFeed", "level", false)
-    Chronicle.Add("level", { level = 15, t = time() - 23, probe = true })
+    Chronicle.Add("level", { level = 16, who = "Jaina Proudmoore", t = time() - 24, probe = true })
     check(#Feed.Shown() == 0, "each kind of event has its own switch")
     ns:SetOption("liveFeed", "level", true)
     enable("liveFeed", false)
-    Chronicle.Add("level", { level = 16, t = time() - 24, probe = true })
+    Chronicle.Add("level", { level = 17, who = "Jaina Proudmoore", t = time() - 25, probe = true })
     check(#Feed.Shown() == 0, "switched off, nothing appears")
     enable("liveFeed")
     -- The place: shown and dragged in the game's Edit Mode or with /fam feed.
@@ -1832,21 +1845,30 @@ local function bookFrames(field)
     return list
 end
 local events, heads = bookFrames("story"), bookFrames("chapter")
-check(#visibleRows() == 0 and #events == 6 and events[1].story.title == "Jaina Proudmoore reaches level 20",
+check(#visibleRows() == 0 and #events == 6 and events[1].story.title == "Reached level 20"
+    and events[1].story.fullTitle == "Jaina Proudmoore reaches level 20",
     "everyone: all entries as events of a book, newest first (got " .. #events .. ")")
 check(#heads == 1 and heads[1].chapter.title == "Westfall" and heads[1].chapter.small == "Today"
     and heads[1].chapter.sub:find("6 events", 1, true) ~= nil and heads[1].title:GetText() == "Westfall",
     "a day is a chapter, named after the place most of it happened in: " .. tostring(heads[1] and heads[1].chapter.sub))
 check(events[1].onLeft and not events[2].onLeft and events[3].onLeft, "the cards alternate left and right of the line")
-check(events[1].story.chip and events[1].story.chip.text == "Companion" and events[1].story.chip.initial == "J"
-    and events[1].chipText:IsShown() and not events[2].chipText:IsShown(), "a companion's event says whose it is")
+check(events[2].top > events[1].top and events[2].top < events[1].top + events[1].cardHeight
+    and events[3].top >= events[1].top + events[1].cardHeight
+    and events[2].top + events[2].cardHeight / 2 >= events[1].top + events[1].cardHeight / 2 + 30,
+    "each side runs on by itself: a card reaches into the height of the one across, the dots keep apart")
+check(events[1].story.chip and events[1].story.chip.text == "Jaina Proudmoore" and events[1].story.chip.initial == "J"
+    and events[1].chipText:IsShown() and not events[2].chipText:IsShown(), "a companion's event names them in the strip below, not in the headline")
 check(events[1].number:IsShown() and events[1].number:GetText() == "20" and not events[1].icon:IsShown()
-    and not events[1].story.big and not events[1].glow.parts[1]:IsShown(), "a level shows its number; a companion's is no milestone")
-check(events[6].story.big and events[6].glow.parts[1]:IsShown() and events[6].number:GetText() == "13"
-    and events[6].card:GetHeight() > events[5].card:GetHeight(), "the player's own level-up is a milestone: larger, with a glow")
-check(events[4].story.kind == "death" and events[4].icon:IsShown() and not events[4].number:IsShown()
-    and events[4].when:GetText():match("^%d%d:%d%d$") ~= nil, "other events show a picture and their time")
-check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 60,
+    and events[1].photo:IsShown() and events[1].dim:IsShown() and events[1].story.texture == ns.UI.gameIcons.level
+    and not events[1].story.big and not events[1].bar:IsShown() and events[1].foot:IsShown() and not events[2].foot:IsShown(),
+    "a level shows its number on an icon of the game; a companion's is no milestone")
+check(events[6].story.big and events[6].bar:IsShown() and events[6].number:GetText() == "13"
+    and events[6].card:GetHeight() > events[5].card:GetHeight() and events[6].picture:GetWidth() == events[5].picture:GetWidth(),
+    "the player's own level-up is a milestone: a larger card with the mark of an active card, its picture as large as any")
+check(events[4].story.kind == "death" and events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
+    and events[4].story.texture == ns.UI.gameIcons.death and events[4].detail:GetText():match("%d%d:%d%d$") ~= nil,
+    "other events show an icon of the game and their time")
+check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 40,
     "the page is as long as its book")
 mock.Click(tabButton("My journey"))
 mock.Advance(0.1)
@@ -1870,8 +1892,8 @@ do -- an item is shown with the game's icon of it, in its own colours
         end
     end
     local event = itemEvent()
-    check(event and event.story.texture == nil and event.icon:IsShown() and not event.photo:IsShown(),
-        "an item the client has no icon for shows the chest")
+    check(event and event.story.texture == ns.UI.gameIcons.item and event.photo:IsShown() and not event.icon:IsShown(),
+        "an item the client has no icon for shows the icon of its kind")
     mock.state.itemIcons = { [211527] = 134400 }
     event = itemEvent()
     check(event and event.story.texture == 134400 and event.photo:IsShown() and not event.icon:IsShown()
@@ -1955,7 +1977,8 @@ do -- an item is shown with the game's icon of it, in its own colours
     mock.Advance(0.1)
     mock.Click(tabButton("Companions"))
     mock.Advance(0.1)
-    check(#bookFrames("story") == 1 and not bookFrames("story")[1].photo:IsShown(), "a frame used again forgets the icon")
+    check(#bookFrames("story") == 1 and bookFrames("story")[1].story.texture == ns.UI.gameIcons.level
+        and bookFrames("story")[1].story.item == nil, "a frame used again shows the picture of its new event")
 end
 mock.Click(tabButton("Recording"))
 mock.Advance(0.1)

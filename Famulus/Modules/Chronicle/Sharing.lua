@@ -60,12 +60,12 @@ local FIELDS = {
     level = { level = "n", zone = "s" },
     death = { level = "n", zone = "s" },
     boss = { id = "n", name = "s", zone = "s" },
-    achievement = { id = "n", name = "s" },
+    achievement = { id = "n", name = "s", icon = "n" },
     zone = { level = "n", zone = "s" },
-    profession = { skill = "n", name = "s" },
+    profession = { skill = "n", name = "s", icon = "n" },
     ability = { ability = "s", name = "s", level = "n" },
     item = { item = "n", name = "s", level = "n", zone = "s" },
-    skill = { skill = "n", name = "s", rank = "n" },
+    skill = { skill = "n", name = "s", rank = "n", icon = "n" },
 }
 
 -- The character's own statistics that are shared, by the game's IDs: deaths,

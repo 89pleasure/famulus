@@ -244,6 +244,21 @@ local function CheckMedia()
             Add("media", names[i], "warn", "SetTexture returned " .. Describe(loaded) .. "; look for green squares in the window")
         end
     end
+    -- The game's icons the chronicle uses as pictures.
+    local kinds = {}
+    for kind in pairs(ns.UI.gameIcons or {}) do
+        kinds[#kinds + 1] = kind
+    end
+    table.sort(kinds)
+    for i = 1, #kinds do
+        local texture = probeFrame:CreateTexture()
+        local loaded = texture:SetTexture(ns.UI.gameIcons[kinds[i]])
+        if loaded then
+            Add("media", "icon " .. kinds[i], "ok", "loaded")
+        else
+            Add("media", "icon " .. kinds[i], "warn", "the client has no " .. ns.UI.gameIcons[kinds[i]] .. "; the chronicle's picture stays empty")
+        end
+    end
 end
 
 -- The window uses its own font files. SetFont returns false when the
@@ -508,6 +523,14 @@ local function SetDevEvents(enabled)
         ns:UnregisterEvent("ADDON_ACTION_BLOCKED", devOwner)
         ns:UnregisterEvent("ADDON_ACTION_FORBIDDEN", devOwner)
         ns:UnregisterEvent("LUA_WARNING", devOwner)
+    end
+end
+
+-- A note for the developer log; kept only in developer mode. Never pass
+-- names or other text of the player here.
+function ns:DevLog(kind, text)
+    if ns.global and ns.global.dev == true then
+        Log(kind, text)
     end
 end
 

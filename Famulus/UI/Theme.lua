@@ -13,6 +13,21 @@ local UI = {}
 ns.UI = UI
 
 local MEDIA = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Media\\"
+-- Icons of the game, for the pictures of the chronicle: one per kind of
+-- event, used where an event brings no icon of its own (an item's, a
+-- spell's, a profession's). The self-test checks that the client has them.
+local ICONS = "Interface\\Icons\\"
+UI.gameIcons = {
+    level = ICONS .. "Spell_Holy_GreaterBlessingofKings", -- the number stands on it
+    death = ICONS .. "INV_Misc_Bone_HumanSkull_01",
+    boss = ICONS .. "Ability_DualWield",
+    zone = ICONS .. "INV_Misc_Map_01",
+    achievement = ICONS .. "Spell_Holy_ChampionsBond",
+    profession = ICONS .. "Trade_BlackSmithing",
+    ability = ICONS .. "Spell_Nature_Swiftness",
+    item = ICONS .. "INV_Misc_Bag_08",
+}
+
 UI.media = {
     circle = MEDIA .. "circle.tga",
     chevron = MEDIA .. "chevron.tga",

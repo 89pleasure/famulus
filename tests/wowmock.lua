@@ -125,6 +125,7 @@ end
 function Widget:GetStringWidth()
     return #(self.text or "") * 6.5
 end
+Widget.GetUnboundedStringWidth = Widget.GetStringWidth
 function Widget:GetStringHeight()
     local width = self.width or 0
     local lines = 1
@@ -903,7 +904,7 @@ end
 function GetProfessionInfo(index)
     local info = (mock.state.professions or {})[index]
     if info then
-        return info.name, "icon", info.rank, 300, 0, 0, info.id
+        return info.name, 136000 + info.id, info.rank, 300, 0, 0, info.id
     end
 end
 -- mock.state.riding = <rank of the riding skill line>; mock.state.spells = { [id] = true }

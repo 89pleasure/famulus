@@ -383,10 +383,17 @@ function ChronicleService.Entries()
 end
 
 -- Headline and detail line of an entry.
-function ChronicleService.Text(entry)
+-- Headline and detail of an entry. anonymous: the headline does not name
+-- the companion ("Reached level 20" instead of "Jaina reaches level 20"),
+-- for places that say whose event it is by other means.
+function ChronicleService.Text(entry, anonymous)
     local spec = kinds[entry.k]
     if not spec then
         return "", nil
+    end
+    local told = entry
+    if anonymous and entry.who then
+        told = setmetatable({ who = false }, { __index = entry })
     end
     local detail = spec.detail and spec.detail(entry) or nil
     -- Under an alias, the character's name stands in the detail line.
@@ -400,7 +407,7 @@ function ChronicleService.Text(entry)
             detail = detail and (detail .. "  ·  " .. via) or via
         end
     end
-    return spec.title(entry), detail
+    return spec.title(told), detail
 end
 
 -- A companion as the player knows them: alias first, then the name.

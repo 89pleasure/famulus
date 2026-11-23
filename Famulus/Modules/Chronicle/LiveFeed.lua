@@ -48,11 +48,23 @@ local function OnChronicleChanged(entry)
     if entry.who and not feed:Get("companions") then
         return
     end
+    -- The player's own level-up is announced by the game itself.
+    if kind == "level" and not entry.who then
+        return
+    end
     local UI = ns.UI
     if not (UI and UI.Feed and UI.ChronicleStory) then
         return
     end
-    UI.Feed.Show(UI.ChronicleStory(entry), feed.SECONDS[feed:Get("duration")] or feed.SECONDS.normal)
+    -- In developer mode the log says whether the card came up, so that "it
+    -- did not appear" can be told from "it was overlooked".
+    local ok, problem = pcall(function()
+        UI.Feed.Show(UI.ChronicleStory(entry), feed.SECONDS[feed:Get("duration")] or feed.SECONDS.normal)
+    end)
+    ns:DevLog("FEED", ok and ("shown: " .. tostring(kind)) or ("failed: " .. tostring(kind) .. ": " .. tostring(problem)))
+    if not ok then
+        error(problem, 0)
+    end
 end
 
 function feed:OnEnable()

@@ -394,7 +394,7 @@ SlashCmdList.FAMULUS = function(input)
         if command == "feed test" then
             -- A sample card, to see place, look and timing.
             local level = UnitLevel and tonumber(UnitLevel("player")) or 1
-            Feed.Show({ kind = "level", title = L.c_level:format(level), number = level },
+            Feed.Show({ kind = "level", title = L.c_level:format(level), number = level, big = true },
                 ns.features.liveFeed.SECONDS[ns:GetOption("liveFeed", "duration")])
         elseif command == "feed reset" then
             Feed.ResetPlace()
