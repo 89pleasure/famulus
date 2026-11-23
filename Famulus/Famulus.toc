@@ -24,6 +24,7 @@ Modules\Aliases\AliasService.lua
 Modules\Aliases\ChatAliases.lua
 Modules\Aliases\TooltipAliases.lua
 Modules\Aliases\AliasMenu.lua
+Modules\Aliases\AccountAliases.lua
 Modules\Aliases\GuildyAliases.lua
 Modules\Chronicle\ChronicleService.lua
 Modules\Chronicle\OwnJourney.lua

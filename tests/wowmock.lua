@@ -524,6 +524,42 @@ C_FriendList = {
         record("C_FriendList.ShowFriends")
     end,
 }
+-- Battle.net friends:
+-- mock.state.bnFriends = { { battleTag = "Anna#1234", games = { { characterName = "Jaina Proudmoore" } } }, ... }
+-- A game without wowProjectID counts as this game; the first one is what the
+-- friends list shows.
+WOW_PROJECT_ID = 99
+local function bnGame(friend, index)
+    local game = friend and friend.games and friend.games[index]
+    if not game then
+        return nil
+    end
+    return {
+        characterName = game.characterName,
+        wowProjectID = game.wowProjectID or WOW_PROJECT_ID,
+        isOnline = true,
+    }
+end
+function BNGetNumFriends()
+    record("BNGetNumFriends")
+    return #(mock.state.bnFriends or {})
+end
+C_BattleNet = {
+    GetFriendAccountInfo = function(index)
+        local friend = (mock.state.bnFriends or {})[index]
+        if not friend then
+            return nil
+        end
+        return { battleTag = friend.battleTag, accountName = "|Kq" .. index .. "|k", gameAccountInfo = bnGame(friend, 1) or { isOnline = false } }
+    end,
+    GetFriendNumGameAccounts = function(index)
+        local friend = (mock.state.bnFriends or {})[index]
+        return friend and #(friend.games or {}) or 0
+    end,
+    GetFriendGameAccountInfo = function(index, gameIndex)
+        return bnGame((mock.state.bnFriends or {})[index], gameIndex)
+    end,
+}
 -- Addon messages: what was sent is collected in mock.sent.
 mock.sent = {}
 C_ChatInfo = {

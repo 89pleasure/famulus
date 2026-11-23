@@ -18,7 +18,8 @@ Bibliotheken, keine Abhängigkeiten.
 |---|---|---|
 | Aliase | Alias statt Charaktername im Chat (wahlweise „Alias (Name)“) | **an** |
 | Aliase | Alias als Zeile im Tooltip eines Spielers | **an** |
-| Aliase | „Alias festlegen“ im Kontextmenü von Spielern | **an** |
+| Aliase | „Alias festlegen“ im Kontextmenü von Spielern und Battle.net-Freunden | **an** |
+| Aliase | Charaktere von Battle.net-Freunden mit Alias merken (lauscht nur, solange es einen solchen Alias gibt) | **an** |
 | Aliase | Alias statt Charaktername im Addon Guildy (nur sichtbar, wenn Guildy geladen ist) | **an** |
 | Chronik | Eigene Reise aufzeichnen (Stufen, Tode, Bosse, Herausforderungen, Gebiete, Berufe, Fähigkeiten, Gegenstände) | aus |
 | Chronik | Stufenaufstiege der Freundesliste festhalten | aus |
@@ -40,6 +41,12 @@ und nichts lauscht auf das Spiel; die Auswahl der einzelnen Funktionen bleibt er
 „Aliase“ ein (Charaktername, Alias) oder per Rechtsklick auf einen Spieler. Die Liste gilt für den
 ganzen Account und bleibt von Profilen und „Zurücksetzen“ unberührt. Flüstern, Einladen und
 Links benutzen weiter den echten Namen.
+
+Für einen **Battle.net-Freund** genügt ein Alias für alle seine Charaktere: Trage statt des
+Charakternamens seinen BattleTag ein (`Name#1234`) oder wähle im Kontextmenü „Alias für alle
+Charaktere festlegen“. Famulus merkt sich jeden Charakter, mit dem der Freund online ist; ein
+Charakter, den du noch nie online gesehen hast, bekommt den Alias erst dann. Ein Alias, den du
+einem einzelnen Charakter gibst, hat Vorrang.
 
 Grundregel für die Standardwerte: Was auf Spielereignisse lauscht oder Nachrichten an andere
 Spieler schickt, ist anfangs aus.

@@ -176,8 +176,8 @@ check(type(FamulusDB) == "table" and type(FamulusDB.profile) == "table", "databa
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
-check(total == 8, "8 features registered (got " .. total .. ")")
-check(active == 5, "5 features on by default (got " .. active .. ")")
+check(total == 9, "9 features registered (got " .. total .. ")")
+check(active == 6, "6 features on by default (got " .. active .. ")")
 for _, feature in ipairs(ns.featureList) do
     local harmless = feature.id == "liveFeed" or feature.category == "aliases"
     check(feature.enabled == harmless, "only the harmless features are on by default: " .. feature.id)
@@ -282,9 +282,9 @@ check(menuTexts(entries) == "-|Set alias", "a player without alias gets one entr
 entries = mock.OpenMenu("MENU_UNIT_TARGET", { unit = "mouseover", name = "Jaina", surname = "Proudmoore" })
 check(menuTexts(entries) == "-|Change alias|Remove alias", "a player with alias can change or remove it: " .. menuTexts(entries))
 check(#mock.OpenMenu("MENU_UNIT_TARGET", { unit = "target", name = "Thrall" }) == 0, "creatures get no entry")
-check(#mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Someone", bnetIDAccount = 7 }) == 0, "nor do Battle.net accounts")
+check(#mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Someone", bnetIDAccount = 7 }) == 0, "nor does a Battle.net friend whose BattleTag is unknown")
 check(#mock.OpenMenu("MENU_UNIT_FRIEND", {}) == 0, "nor a menu without a name")
-check(Menu.callbacks.MENU_UNIT_BN_FRIEND == nil and Menu.callbacks.MENU_UNIT_SELF == nil, "menus that are not about another character are not touched")
+check(Menu.callbacks.MENU_UNIT_SELF == nil, "menus that are not about another player are not touched")
 mock.reset()
 entries[3].click()
 check(Aliases.Get("Jaina Proudmoore") == nil and lastChat():find("Jaina Proudmoore", 1, true) ~= nil, "removing from the menu works and is reported in one line")
@@ -323,6 +323,71 @@ mock.loadedAddons.Guildy = true
 guildy.available = nil
 ns:SyncFeature(guildy)
 check(guildy.enabled, "with Guildy back it runs again")
+
+-- Battle.net: an alias for a BattleTag covers every character of the account.
+local accountAliases = ns.features.accountAliases
+check(accountAliases.enabled and ns:CountRegisteredEvents() == 0, "without an alias for an account the friends list is not watched")
+check(Aliases.BattleTag(" Anna#1234 ") == "Anna#1234" and Aliases.BattleTag("Jaina Proudmoore") == nil
+    and Aliases.BattleTag("Anna#") == nil and Aliases.BattleTag(mock.SECRET) == nil, "a BattleTag is told apart from a character name")
+mock.state.bnFriends = {
+    { battleTag = "Anna#1234", games = { { characterName = "Jaina Proudmoore" } } },
+    { battleTag = "Bert#77", games = { { characterName = "Other Game", wowProjectID = 1 }, { characterName = "Varian Wrynn" } } },
+    { battleTag = "Carl#5", games = {} },
+}
+check(Aliases.Set("anna#1234", "Anna") and Aliases.AccountCount() == 1 and Aliases.Count() == 2, "an alias can be set for a BattleTag")
+check(FamulusDB.accountAliases["anna#1234"].alias == "Anna" and FamulusDB.aliases["anna#1234"] == nil and FamulusDB.profile.accountAliases == nil,
+    "it is saved account-wide in a list of its own")
+check(FamulusDB.accountAliases["anna#1234"].tag == "Anna#1234", "a BattleTag typed by hand takes the spelling of the friends list")
+check(Aliases.Get("Jaina", "Proudmoore") == "Anna", "the character the friend is online on has the alias at once")
+check(Aliases.Get("Varian Wrynn") == nil, "characters of other friends do not")
+check(ns:CountRegisteredEvents() == #accountAliases.EVENTS, "from now on the friends list is watched")
+mock.state.bnFriends[1].games[1].characterName = "Sylvanas Windrunner"
+mock.Fire("BN_FRIEND_INFO_CHANGED", 1)
+check(Aliases.Get("Sylvanas-Windrunner") == "Anna" and Aliases.Get("Jaina Proudmoore") == "Anna", "a character the friend switches to is added, the first one is kept")
+mock.state.bnFriends[1].games[2] = { characterName = "Tyrande" }
+mock.Fire("BN_FRIEND_ACCOUNT_ONLINE", 4711)
+check(Aliases.Get("Tyrande") == "Anna", "an event without a place in the list reads the whole list")
+Aliases.Set("Bert#77", "Bert")
+check(Aliases.Get("Varian Wrynn") == "Bert" and Aliases.Get("Other Game") == nil, "characters of other games are ignored")
+Aliases.Set("Jaina Proudmoore", "Jay")
+check(Aliases.Get("Jaina Proudmoore") == "Jay" and select(2, Aliases.Account("Jaina Proudmoore")) == "Anna", "an alias of the character itself wins over the account's")
+Aliases.Set("Jaina Proudmoore", nil)
+check(Aliases.Get("Jaina Proudmoore") == "Anna" and Aliases.GetOwn("Jaina Proudmoore") == nil and Aliases.GetOwn("Anna#1234") == "Anna",
+    "without it the account's alias is back; GetOwn tells the two apart")
+check(mock.SenderName("CHAT_MSG_SAY", "Sylvanas-Windrunner", "Sylvanas-Windrunner") == "Anna" and Format("Varian Wrynn") == "Bert",
+    "chat and Guildy show the account's alias")
+local accountList = Aliases.List()
+check(#accountList == 3 and accountList[1].account and accountList[1].name == "Anna#1234"
+    and table.concat(accountList[1].chars, ",") == "Jaina Proudmoore,Sylvanas Windrunner,Tyrande" and not accountList[3].account,
+    "the list names an account by its BattleTag, with its characters")
+entries = mock.OpenMenu("MENU_UNIT_BN_FRIEND", { bnetIDAccount = 3, accountInfo = { battleTag = "Carl#5" } })
+check(menuTexts(entries) == "-|Set alias for all characters", "a Battle.net friend's menu offers an alias for the account: " .. menuTexts(entries))
+entries = mock.OpenMenu("MENU_UNIT_BN_FRIEND_OFFLINE", { bnetIDAccount = 1, battleTag = "Anna#1234" })
+check(menuTexts(entries) == "-|Change alias for all characters|Remove alias for all characters", "with an alias it can be changed or removed: " .. menuTexts(entries))
+entries = mock.OpenMenu("MENU_UNIT_FRIEND", { name = "Tyrande" })
+check(menuTexts(entries) == "-|Set alias|Change alias for all characters|Remove alias for all characters",
+    "a character of such an account offers both: " .. menuTexts(entries))
+mock.state.bnFriends[3].games[1] = { characterName = "Anduin Wrynn" }
+entries = mock.OpenMenu("MENU_UNIT_PARTY", { name = "Anduin", surname = "Wrynn" })
+check(menuTexts(entries) == "-|Set alias|Set alias for all characters", "so does a character a Battle.net friend is online on: " .. menuTexts(entries))
+entries = mock.OpenMenu("MENU_UNIT_BN_FRIEND", { bnetIDAccount = 2, battleTag = "Bert#77" })
+mock.reset()
+entries[3].click()
+check(Aliases.Get("Varian Wrynn") == nil and Aliases.AccountCount() == 1 and lastChat():find("Bert#77", 1, true) ~= nil,
+    "removing an account's alias takes it from all its characters, reported in one line")
+enable("accountAliases", false)
+check(ns:CountRegisteredEvents() == 0 and Aliases.Get("Tyrande") == "Anna", "switched off, the friends list is left alone and known characters keep the alias")
+enable("accountAliases")
+check(ns:CountRegisteredEvents() == #accountAliases.EVENTS, "switched on, it is watched again")
+FamulusDB.accountAliases.broken = "x"
+FamulusDB.accountAliases["x#1"] = { tag = "Y#2", alias = "a", chars = {} }
+ns:Fire("DATABASE_READY")
+check(Aliases.AccountCount() == 1 and Aliases.Count() == 2 and Aliases.Get("Tyrande") == "Anna" and FamulusDB.accountAliases.broken == nil
+    and FamulusDB.accountAliases["x#1"] == nil, "saved accounts and their characters are read, broken entries are dropped")
+Aliases.Set("Anna#1234", nil)
+check(Aliases.Get("Tyrande") == nil and FamulusDB.accountAliases == nil and ns:CountRegisteredEvents() == 0,
+    "without the last account alias its characters are forgotten and the friends list is no longer watched")
+mock.state.bnFriends = nil
 
 -- The category switch stops all of them; the list itself stays.
 ns:SetOption("categories", "aliases", false)
@@ -385,12 +450,12 @@ check(window.title:GetText() == "Aliases" and window.subtitle:GetText() == ns.L.
 check(navButton("Aliases") and navButton("Chronicle") and navButton("Settings") and navButton("About"),
     "the sidebar lists the main features and the addon's own pages")
 check(not navButton("Quality of Life") and not navButton("Journal"), "and nothing else")
-check(navButton("Aliases").selected and navButton("Aliases").count:GetText() == "4/4",
+check(navButton("Aliases").selected and navButton("Aliases").count:GetText() == "5/5",
     "the main feature is selected and counts its active features")
 mock.Click(tabButton("Display"))
 check(tabButton("Display").selected and window.section.desc:GetText() == ns.L.ui_tab_display_desc, "the line under the tabs describes the tab")
 local rows = visibleRows()
-check(#rows == 6, "the display tab shows the four features and their options (got " .. #rows .. ")")
+check(#rows == 7, "the display tab shows the five features and their options (got " .. #rows .. ")")
 check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
 mock.Click(window.resetButton)
 check(window.resetButton.label:GetText() == "Reset", "and a click on it does nothing")
@@ -406,7 +471,7 @@ local function visibleCards()
     return list
 end
 local aliasCards = visibleCards()
-check(#aliasCards == 4 and #aliasCards[1].block.items == 2, "every feature has its own card, together with its options")
+check(#aliasCards == 5 and #aliasCards[1].block.items == 2, "every feature has its own card, together with its options")
 check(aliasCards[1].mark:IsShown() and aliasCards[2].mark:IsShown(), "the card of a running feature wears the accent mark")
 
 -- Toggle through the row itself.
@@ -418,13 +483,13 @@ check(not isFolded(optionRow) and optionRow.desc:IsShown() and not optionRow.dis
 mock.Click(rows[1])
 check(not ns.features.chatAliases.enabled, "clicking a row switches the feature off")
 mock.Advance(0.3)
-check(#visibleRows() == 6 and isFolded(optionRow), "the option of a switched-off feature is a slim row without help text")
+check(#visibleRows() == 7 and isFolded(optionRow), "the option of a switched-off feature is a slim row without help text")
 check(optionRow.disabled and optionRow.dropdown:IsShown(), "it is greyed out but shows its value")
 check(optionRow.bullet:IsShown() and not rows[1].bullet:IsShown(), "options are marked with a dot below their feature")
 check(optionRow.sunkenLast.parts[1]:IsShown() and not optionRow.sunken:IsShown(), "an option that ends its card has the rounded ground")
 check(not aliasCards[1].mark:IsShown() and aliasCards[2].mark:IsShown(), "the card of a switched-off feature loses the mark")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
-check(navButton("Aliases").count:GetText() == "3/4", "the sidebar counts it")
+check(navButton("Aliases").count:GetText() == "4/5", "the sidebar counts it")
 ns:SetOption("chatAliases", "style", "both")
 mock.Advance(0.3)
 check(optionRow.dropdown.text:GetText() == ns.L.o_chatAliases_style_both and isFolded(optionRow), "a chosen value shows while folded as well")
@@ -593,10 +658,10 @@ local aliasRows = visibleRows()
 check(#aliasRows == 2, "the list tab shows the input row and an empty hint (got " .. #aliasRows .. ")")
 local editor = aliasRows[1].editor
 check(editor ~= nil and editor:IsVisible() and aliasRows[2].item.kind == "info", "the input row comes before the hint")
-check(editor.name.placeholder:GetText() == "Character name" and editor.save.label:GetText() == "Save", "the input row is labelled")
-check(navButton("Aliases").count:GetText() == "4/4", "the sidebar counts the alias features")
+check(editor.name.placeholder:GetText() == "Character or BattleTag#1234" and editor.save.label:GetText() == "Save", "the input row is labelled")
+check(navButton("Aliases").count:GetText() == "5/5", "the sidebar counts the alias features")
 mock.Click(tabButton("Display"))
-check(#visibleRows() == 6 and window.resetButton:IsShown(), "the display tab shows the four features with their options, and reset")
+check(#visibleRows() == 7 and window.resetButton:IsShown(), "the display tab shows the five features with their options, and reset")
 mock.Click(window.master)
 mock.Advance(0.1)
 check(navButton("Aliases").count:GetText() == "OFF" and navButton("Aliases").label:GetAlpha() < 1, "a switched-off area reads OFF in the sidebar")
@@ -647,6 +712,31 @@ end
 mock.Click(annieRow.remove)
 mock.Advance(0.1)
 check(ns.AliasService.Get("Jaina Proudmoore") == nil and #visibleRows() == 2, "the remove button deletes the alias")
+editor:Load("", "")
+-- A BattleTag in the name field makes it an alias for the whole account.
+mock.state.bnFriends = { { battleTag = "Anna#1234", games = {} } }
+editor.name.edit:SetText("Anna#1234")
+editor.alias.edit:SetText("Anna")
+mock.Click(editor.save)
+mock.Advance(0.1)
+local accountRow = visibleRows()[2]
+check(ns.AliasService.AccountCount() == 1 and accountRow.label:GetText() == "Anna"
+    and accountRow.desc:GetText() == "Battle.net  ·  Anna#1234  ·  no character seen yet",
+    "a BattleTag in the name field sets an alias for the account: " .. tostring(accountRow.desc:GetText()))
+mock.state.bnFriends[1].games[1] = { characterName = "Jaina Proudmoore" }
+mock.Fire("BN_FRIEND_INFO_CHANGED", 1)
+mock.Advance(0.1)
+accountRow = visibleRows()[2]
+check(accountRow.desc:GetText() == "Battle.net  ·  Anna#1234  ·  Jaina Proudmoore", "the open list shows a character as soon as it is seen")
+window.search.edit:SetText("proudm")
+check(#visibleRows() == 1 and visibleRows()[1].item.entry.account, "search finds the account by one of its characters")
+window.search.edit:SetText("")
+mock.Click(visibleRows()[2])
+check(editor.name.edit:GetText() == "Anna#1234" and editor.alias.edit:GetText() == "Anna", "clicking the account loads its BattleTag into the input row")
+mock.Click(visibleRows()[2].remove)
+mock.Advance(0.1)
+check(ns.AliasService.Count() == 1 and FamulusDB.accountAliases == nil and ns:CountRegisteredEvents() == 0, "the remove button deletes the account's alias")
+mock.state.bnFriends = nil
 editor:Load("", "")
 -- From the context menu: the window opens on the list with the name filled in.
 mock.Click(tabButton("Display"))
@@ -794,7 +884,7 @@ check(not window:IsShown(), "/fam closes the window again")
 check(sparkGroups() == 0, "a closed window animates nothing")
 mock.reset()
 SlashCmdList.FAMULUS("status")
-check(lastChat():find("5 of 8", 1, true) ~= nil, "/fam status reports: " .. lastChat())
+check(lastChat():find("6 of 9", 1, true) ~= nil, "/fam status reports: " .. lastChat())
 
 ---------------------------------------------------------------------------
 section("Chronicle")

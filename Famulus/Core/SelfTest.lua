@@ -228,6 +228,33 @@ local function CheckNames()
         shape = shape .. ", second value " .. (ns.IsSecret(second) and "secret" or type(second))
         Add("names", "UnitName(player)", "ok", shape)
     end
+    -- An alias for a BattleTag finds its characters through the Battle.net
+    -- friends list: how many friends it shows in this game, and how their
+    -- character names are spelled.
+    if BNGetNumFriends and C_BattleNet and C_BattleNet.GetFriendAccountInfo then
+        local total = BNGetNumFriends()
+        local inGame, shapes = 0, {}
+        if not ns.IsSecret(total) and type(total) == "number" then
+            for i = 1, total do
+                local info = C_BattleNet.GetFriendAccountInfo(i)
+                local game = type(info) == "table" and info.gameAccountInfo
+                local name = type(game) == "table" and game.characterName
+                if ns.ChatService.IsPlainText(name) and game.wowProjectID == WOW_PROJECT_ID then
+                    inGame = inGame + 1
+                    shapes[string.find(name, "%s") and "space" or string.find(name, "-", 1, true) and "hyphen" or "one word"] = true
+                end
+            end
+        end
+        local seen = {}
+        for shape in pairs(shapes) do
+            seen[#seen + 1] = shape
+        end
+        table.sort(seen)
+        Add("names", "Battle.net friends", "ok", string.format("%s friends, %d on a character of this game (project %s), names: %s",
+            Describe(total), inGame, Describe(WOW_PROJECT_ID), #seen > 0 and table.concat(seen, ", ") or "none seen"))
+    else
+        Add("names", "Battle.net friends", "warn", "BNGetNumFriends or C_BattleNet.GetFriendAccountInfo is missing")
+    end
     local menu = ns.features.aliasMenu
     if menu and Menu and Menu.GetOpenMenuTags then
         Add("names", "context menu", "ok", #menu.TAGS .. " menu tags hooked while the feature is on")

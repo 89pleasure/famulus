@@ -13,7 +13,7 @@ local _, ns = ...
 local L = ns.L
 local UI = ns.UI
 
-local WIDTH, HEIGHT = 880, 590
+local WIDTH, HEIGHT = 960, 650
 local SIDEBAR, PAD, RADIUS = 224, 28, 12
 local CONTENT_W = WIDTH - SIDEBAR - PAD * 2
 local HEADER = 84
@@ -195,7 +195,12 @@ local function AliasItems()
                 return entry.alias
             end,
             desc = function()
-                return entry.name
+                if not entry.account then
+                    return entry.name
+                end
+                -- An account: its BattleTag, then the characters known so far.
+                local chars = #entry.chars > 0 and table.concat(entry.chars, ", ") or L.ui_alias_account_empty
+                return L.ui_alias_account_chars:format(L.ui_alias_account:format(entry.name), chars)
             end,
         }
     end
@@ -1764,8 +1769,9 @@ function ns:ToggleOptions()
     window:SetShown(not window:IsShown())
 end
 
--- Opens the aliases page with the character in the input row, so that only
--- the alias is left to type. Used by the context menu and the list itself.
+-- Opens the aliases page with the character or BattleTag in the input row,
+-- so that only the alias is left to type. Used by the context menu and the
+-- list itself.
 function ns:EditAlias(name)
     if not window then
         Build()
@@ -1779,7 +1785,7 @@ function ns:EditAlias(name)
     end
     window.scroll:ScrollToTop()
     if aliasEditor then
-        aliasEditor:Load(name, ns.AliasService.Get(name))
+        aliasEditor:Load(name, ns.AliasService.GetOwn(name))
     end
 end
 
