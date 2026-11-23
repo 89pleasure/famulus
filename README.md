@@ -32,12 +32,13 @@ Reiter, rechts außen **Einstellungen** und **Über**; links die Unterbereiche d
 Die Chronik erzählt die Reise deiner Charaktere und deiner Gefährten als Bilderbuch und tauscht sie
 auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus ebenfalls nutzen, auch über
 gemeinsame Gefährten, wenn jemand offline ist. Besiegt ihr einen Boss als Gruppe, nennt die Chronik,
-wer dabei war. Die Aliase haben ihre Namensliste und einen Unterbereich „Einstellungen“. Die
-Weggefährten listen alle, mit denen du gespielt hast, nach dem letzten Mal oder nach der gemeinsamen
-Zeit; ein Klick vergibt einen Alias. Diese Liste bleibt auf deinem Rechner, nichts davon wird
-verschickt. Fünf Farbwelten, die Funken im Hintergrund und die Fenstergröße stehen unter
-Einstellungen › Darstellung. Die Suche links findet Einstellungen, Aliase und Weggefährten auf allen
-Seiten.
+wer dabei war. Neben dem Buch zeigt eine Spalte deine Woche in Zahlen, deine Berufe und deine
+Gefährten mit Stufe und Online-Stand; ein Klick auf einen Gefährten zeigt nur seine Ereignisse. Die
+Aliase haben ihre Namensliste und einen Unterbereich „Einstellungen“. Die Weggefährten listen alle,
+mit denen du gespielt hast, nach dem letzten Mal oder nach der gemeinsamen Zeit; ein Klick vergibt
+einen Alias. Diese Liste bleibt auf deinem Rechner, nichts davon wird verschickt. Fünf Farbwelten,
+die Funken im Hintergrund und die Fenstergröße stehen unter Einstellungen › Darstellung. Die Suche
+links findet Einstellungen, Aliase und Weggefährten auf allen Seiten.
 
 Jede Kategorie hat links neben dem Namen der Funktion einen **Hauptschalter**. Ist er aus, läuft dort nichts
 und nichts lauscht auf das Spiel; die Auswahl der einzelnen Funktionen bleibt erhalten.

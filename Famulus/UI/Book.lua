@@ -6,13 +6,15 @@
 --   local height = book:SetChapters(chapters, footer)
 --
 --   chapters = { {
---       small = "Today",                -- line above the heading, or nil
+--       small = "Today",                -- left of the heading, or nil
 --       title = "Redridge Mountains",
---       sub = "Level 20 to 24  ·  5 events",
+--       sub = "Level 20 to 24  ·  5 events", -- right of the heading
 --       events = { {
 --           kind = "level",             -- see PICTURES
 --           title = "Reached level 24", detail = "in Lakeshire" or nil,
 --           when = "21:14",
+--           times = { "20:02", "21:14" }, -- instead of `when`: an event that
+--           count = 2,                  -- happened several times (a bundle)
 --           number = 24,                -- shown in the picture of a level
 --           icon = "horseshoe",         -- optional: a picture of its own (UI.media)
 --           onClick = function() end,   -- optional: what a click on the card does
@@ -37,7 +39,11 @@ local DOT = 22
 local FOOT = 30 -- the sunken strip that says whose event it is
 local PHOTO_INSET = 2 -- an icon of the game fills its frame but for a fine line
 local DOT_GAP = DOT + 12 -- between the dots of two events on the line
-local ORNAMENT = 120 -- length of each line beside the heading's mark
+local HEAD_TOP, HEAD_BOTTOM = 6, 16 -- room above and below a chapter's heading
+local HEAD_GAP = 16 -- between the place and the words beside it
+local CHAPTER_GAP = 16 -- below a chapter's last card
+local CHIP_H, CHIP_GAP, CHIP_PAD = 18, 4, 6 -- the times of a bundle
+local MAX_TIMES = 10 -- plates for times; more are counted on the last one
 
 -- Per kind: the picture's icon (none: the number), its colours, and the
 -- icon on the line.
@@ -59,55 +65,63 @@ local PICTURES = {
 -- Chapter heading
 ---------------------------------------------------------------------------
 
+-- One line: the day, the place in the game's book font, and what happened,
+-- between two lines that fade out towards the edges.
 local function CreateHead(book)
     local head = CreateFrame("Frame", nil, book)
     head:SetWidth(book.width)
+    head.half = book.width / 2
 
-    local function Centered(text)
-        text:SetWidth(book.width)
-        text:SetJustifyH("CENTER")
-        return text
-    end
-    head.small = Centered(UI.Text(head, 11, "textMuted", "medium"))
     head.title = head:CreateFontString(nil, "OVERLAY")
-    UI.SetDisplayFont(head.title, 24)
+    UI.SetDisplayFont(head.title, 22)
     UI.Ink(head.title, "accent2")
-    head.title:SetJustifyV("TOP")
-    Centered(head.title)
-    head.sub = Centered(UI.Text(head, 12, "textDim"))
+    head.title:SetWordWrap(false)
+    head.title:SetPoint("TOP", head, "TOP", 0, -HEAD_TOP)
+    head.small = UI.Text(head, 11, "textMuted", "medium")
+    head.small:SetWordWrap(false)
+    head.small:SetJustifyV("MIDDLE")
+    head.small:SetPoint("RIGHT", head.title, "LEFT", -HEAD_GAP, 0)
+    head.sub = UI.Text(head, 12, "textDim")
+    head.sub:SetWordWrap(false)
+    head.sub:SetJustifyV("MIDDLE")
+    head.sub:SetPoint("LEFT", head.title, "RIGHT", HEAD_GAP, 0)
 
-    -- A small mark between two lines that fade out to the sides.
-    head.mark = UI.Icon(head, "sparkle", 9, "accent")
     head.left = head:CreateTexture(nil, "BORDER")
-    head.left:SetSize(ORNAMENT, UI.Pixel(head))
-    head.left:SetPoint("RIGHT", head.mark, "LEFT", -8, 0)
+    head.left:SetHeight(UI.Pixel(head))
     UI.Shade(head.left, "HORIZONTAL", "accentNone", "accentLine")
     head.right = head:CreateTexture(nil, "BORDER")
-    head.right:SetSize(ORNAMENT, UI.Pixel(head))
-    head.right:SetPoint("LEFT", head.mark, "RIGHT", 8, 0)
+    head.right:SetHeight(UI.Pixel(head))
     UI.Shade(head.right, "HORIZONTAL", "accentLine", "accentNone")
     return head
 end
 
+-- A line from the edge to the words beside the place; none where there is
+-- no room for it.
+local function HeadLine(line, words, anchor, side, length)
+    line:SetShown(length >= 16)
+    line:ClearAllPoints()
+    local offset = words and 12 or HEAD_GAP
+    if side == "LEFT" then
+        line:SetPoint("RIGHT", anchor, "LEFT", -offset, 0)
+    else
+        line:SetPoint("LEFT", anchor, "RIGHT", offset, 0)
+    end
+    line:SetWidth(math.max(1, length))
+end
+
 local function HeadSet(head, chapter)
     head.chapter = chapter
-    local y = 4
-    local function Place(text, value, gap)
-        text:SetShown(value ~= nil)
-        if value == nil then
-            return
-        end
-        text:SetText(value)
-        text:ClearAllPoints()
-        text:SetPoint("TOP", head, "TOP", 0, -y)
-        y = y + text:GetStringHeight() + gap
-    end
-    Place(head.small, chapter.small, 4)
-    Place(head.title, chapter.title or "", 5)
-    Place(head.sub, chapter.sub, 4)
-    head.mark:ClearAllPoints()
-    head.mark:SetPoint("CENTER", head, "TOP", 0, -(y + 8))
-    head.height = math.floor(y + 8 + 22 + 0.5)
+    head.title:SetText(chapter.title or "")
+    head.small:SetShown(chapter.small ~= nil)
+    head.small:SetText(chapter.small or "")
+    head.sub:SetShown(chapter.sub ~= nil)
+    head.sub:SetText(chapter.sub or "")
+    local taken = head.title:GetStringWidth() / 2 + HEAD_GAP
+    local left = chapter.small and head.small:GetStringWidth() + 12 or 0
+    local right = chapter.sub and head.sub:GetStringWidth() + 12 or 0
+    HeadLine(head.left, chapter.small, chapter.small and head.small or head.title, "LEFT", head.half - taken - left)
+    HeadLine(head.right, chapter.sub, chapter.sub and head.sub or head.title, "RIGHT", head.half - taken - right)
+    head.height = math.floor(HEAD_TOP + head.title:GetStringHeight() + HEAD_BOTTOM + 0.5)
     head:SetHeight(head.height)
 end
 
@@ -216,6 +230,17 @@ local function CreateEvent(book)
     event.number:SetJustifyH("CENTER")
     event.number:SetShadowOffset(1, -1)
     event.number:SetShadowColor(0, 0, 0, 0.9)
+    -- How often a bundled event happened, in the picture's corner.
+    event.badge = CreateFrame("Frame", nil, picture)
+    event.badge:SetHeight(16)
+    event.badge:SetPoint("BOTTOMRIGHT", -3, 3)
+    event.badgeGround = UI.Round(event.badge, "deathLine", 4)
+    event.badgeText = UI.Text(event.badge, 11, "deathInk", "semibold")
+    event.badgeText:SetPoint("CENTER")
+    event.badgeText:SetJustifyH("CENTER")
+    event.badgeText:SetJustifyV("MIDDLE")
+    event.badge:Hide()
+    event.plates = {} -- the times of a bundle
 
     event.title = UI.Text(card, 13, "text", "medium")
     event.title:SetSpacing(1)
@@ -233,6 +258,48 @@ local function CreateEvent(book)
 end
 
 UI.BookPictures = PICTURES
+
+-- The times of a bundle as small plates, row after row within `width`.
+-- Notes each plate's place below the first one (plate.x, plate.y) and
+-- returns the height they take; without times, hides them.
+local function LayTimes(event, times, width)
+    local list = times or {}
+    if #list > MAX_TIMES then
+        list = {}
+        for i = 1, MAX_TIMES - 1 do
+            list[i] = times[i]
+        end
+        list[MAX_TIMES] = "+" .. (#times - MAX_TIMES + 1)
+    end
+    local x, y = 0, 0
+    for index, text in ipairs(list) do
+        local plate = event.plates[index]
+        if not plate then
+            plate = CreateFrame("Frame", nil, event.card)
+            plate:SetHeight(CHIP_H)
+            UI.Card(plate, "field", "cardBorder", 5)
+            plate.text = UI.Text(plate, 11, "textDim", "medium")
+            plate.text:SetPoint("CENTER")
+            plate.text:SetJustifyH("CENTER")
+            plate.text:SetJustifyV("MIDDLE")
+            event.plates[index] = plate
+        end
+        plate.text:SetText(text)
+        local plateWidth = math.floor(plate.text:GetStringWidth() + CHIP_PAD * 2 + 0.5)
+        plate:SetWidth(plateWidth)
+        if x > 0 and x + plateWidth > width then
+            x, y = 0, y + CHIP_H + CHIP_GAP
+        end
+        plate.x, plate.y = x, y
+        plate:Show()
+        x = x + plateWidth + CHIP_GAP
+    end
+    for index = #list + 1, #event.plates do
+        event.plates[index]:Hide()
+    end
+    event.plateCount = #list
+    return #list > 0 and y + CHIP_H or 0
+end
 
 -- onLeft: the card stands left of the line. Sets event.cardHeight.
 local function EventSet(event, story, onLeft, width)
@@ -272,6 +339,15 @@ local function EventSet(event, story, onLeft, width)
         event.number:SetText(tostring(number))
     end
     event.mark:SetTexture(UI.media[icon or story.icon or look.mark] or UI.media[look.mark])
+    -- A bundle without a number counts its events in the corner.
+    local counted = story.count ~= nil and not number
+    event.badge:SetShown(counted)
+    if counted then
+        event.badgeText:SetText(tostring(story.count))
+        event.badge:SetWidth(math.max(16, math.floor(event.badgeText:GetStringWidth() + 8 + 0.5)))
+        event.badgeGround:SetColor(look.border)
+        UI.Ink(event.badgeText, look.ink)
+    end
 
     -- Text: headline, detail, and whom it is about.
     event.title:SetWidth(textWidth)
@@ -279,9 +355,10 @@ local function EventSet(event, story, onLeft, width)
     UI.SetFont(event.title, big and 15 or 13, big and "semibold" or "medium")
     UI.Ink(event.title, look.title or "text")
     local textHeight = event.title:GetStringHeight()
-    -- The time closes the line below the headline.
+    -- The time closes the line below the headline; a bundle lists its
+    -- times below that line instead.
     local detail = story.detail
-    if story.when then
+    if story.when and not story.times then
         detail = detail and (detail .. "  ·  " .. story.when) or story.when
     end
     event.detail:SetShown(detail ~= nil)
@@ -289,6 +366,11 @@ local function EventSet(event, story, onLeft, width)
         event.detail:SetWidth(textWidth)
         event.detail:SetText(detail)
         textHeight = textHeight + 4 + event.detail:GetStringHeight()
+    end
+    local platesTop = textHeight + 6
+    local platesHeight = LayTimes(event, story.times, textWidth)
+    if platesHeight > 0 then
+        textHeight = platesTop + platesHeight
     end
     -- Whose event it is stands in a sunken strip below, like an option
     -- under its feature.
@@ -325,6 +407,11 @@ local function EventSet(event, story, onLeft, width)
     if detail then
         event.detail:ClearAllPoints()
         event.detail:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -4)
+    end
+    for index = 1, event.plateCount do
+        local plate = event.plates[index]
+        plate:ClearAllPoints()
+        plate:SetPoint("TOPLEFT", card, "TOPLEFT", left + plate.x, -(top + platesTop + plate.y))
     end
 
     -- The dot at the height of the card's middle.
@@ -404,7 +491,7 @@ function UI.Book(parent, width)
             trail:SetPoint("TOP", self, "TOP", 0, -start)
             trail:SetHeight(math.max(1, y - GAP - start))
             trail:SetShown(#chapter.events > 0)
-            y = y + 10
+            y = y + CHAPTER_GAP
         end
         for index = #chapters + 1, #self.heads do
             self.heads[index]:Hide()

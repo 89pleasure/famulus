@@ -402,6 +402,43 @@ function ChronicleService.ProfileNames()
     return names
 end
 
+-- The companions the chronicle knows: whoever has an entry or a profile, the
+-- one heard of most recently first. Each { who = <character name>, last =
+-- <newest entry, or nil>, level = <highest level known, or nil>, profile =
+-- <profile, or nil> }.
+function ChronicleService.Companions()
+    local entries, found, list = ChronicleService.Entries(), {}, {}
+    for i = #entries, 1, -1 do
+        local entry = entries[i]
+        local who = entry.who
+        if type(who) == "string" then
+            local companion = found[who]
+            if not companion then
+                companion = { who = who, last = entry }
+                found[who] = companion
+                list[#list + 1] = companion
+            end
+            if not companion.level and (entry.k == "level" or entry.k == "friendLevel") then
+                companion.level = tonumber(entry.level)
+            end
+        end
+    end
+    for _, who in ipairs(ChronicleService.ProfileNames()) do
+        local companion = found[who]
+        if not companion then
+            companion = { who = who }
+            found[who] = companion
+            list[#list + 1] = companion
+        end
+        companion.profile = ChronicleService.Profile(who)
+        local level = tonumber(companion.profile.level)
+        if level and level > (companion.level or 0) then
+            companion.level = level
+        end
+    end
+    return list
+end
+
 function ChronicleService.Character()
     return character
 end
@@ -438,6 +475,46 @@ function ChronicleService.Text(entry, anonymous)
         end
     end
     return spec.title(told), detail
+end
+
+-- Several entries told as one, the way the book bundles what repeats: deaths
+-- in one place, or levels of one companion. run: the entries, newest first,
+-- all of one kind and one person. Headline and detail like Text.
+function ChronicleService.TextRun(run, anonymous)
+    local newest, count = run[1], #run
+    local name = newest.who and not anonymous and (Companion(newest)) or nil
+    local zone, low, high = Place(newest), nil, nil
+    for _, entry in ipairs(run) do
+        local level = tonumber(entry.level)
+        if level then
+            low, high = math.min(low or level, level), math.max(high or level, level)
+        end
+        if Place(entry) ~= zone then
+            zone = nil
+        end
+    end
+    local title, detail
+    if newest.k == "death" then
+        if name then
+            title = zone and L.c_their_deaths:format(name, count, zone) or L.c_their_deaths_nowhere:format(name, count)
+        else
+            title = zone and L.c_deaths:format(count, zone) or L.c_deaths_nowhere:format(count)
+        end
+        if low then
+            detail = low == high and L.c_at_level:format(low) or L.c_at_levels:format(low, high)
+        end
+    else
+        low, high = low or 0, high or 0
+        title = name and L.c_their_levels:format(name, low, high) or L.c_levels:format(low, high)
+        detail = zone and L.c_in:format(zone) or nil
+    end
+    if newest.who then
+        local _, realName = Companion(newest)
+        if realName then
+            detail = detail and (realName .. "  ·  " .. detail) or realName
+        end
+    end
+    return title, detail
 end
 
 -- A companion as the player knows them: alias first, then the name.
@@ -481,6 +558,41 @@ function ChronicleService.SeeZone(zone)
     end
     FamulusCharDB.zones[zone] = true
     return true
+end
+
+-- The professions of the character that is playing, as the client lists
+-- them: { name = <or nil>, icon = <file ID or nil>, rank, max = <or nil>,
+-- skill = <skill line> }. OwnJourney looks for milestones in them; the
+-- window shows them.
+local function Indices(...)
+    local list = {}
+    for i = 1, select("#", ...) do
+        local index = select(i, ...)
+        if index then
+            list[#list + 1] = index
+        end
+    end
+    return list
+end
+
+function ChronicleService.Professions()
+    local list = {}
+    if not (GetProfessions and GetProfessionInfo) then
+        return list
+    end
+    for _, index in ipairs(Indices(GetProfessions())) do
+        local name, icon, rank, max, _, _, skillLine = GetProfessionInfo(index)
+        if not ns.IsSecret(rank) and type(rank) == "number" and type(skillLine) == "number" then
+            list[#list + 1] = {
+                name = IsPlainText(name) and name or nil,
+                icon = not ns.IsSecret(icon) and type(icon) == "number" and icon or nil,
+                rank = rank,
+                max = not ns.IsSecret(max) and type(max) == "number" and max > 0 and max or nil,
+                skill = skillLine,
+            }
+        end
+    end
+    return list
 end
 
 -- Remembers the rank of one of this character's professions; returns the
@@ -559,6 +671,41 @@ local function OnlineGUID(name)
         end
     end
     return nil
+end
+
+-- Who is online now, from one look at the friends list and the guild roster:
+-- a function that answers for a character name. For the window, which asks
+-- for many companions at once.
+function ChronicleService.OnlineCheck()
+    local keys = {}
+    if C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetFriendInfoByIndex then
+        for i = 1, C_FriendList.GetNumFriends() or 0 do
+            local info = C_FriendList.GetFriendInfoByIndex(i)
+            if info and info.connected and IsPlainText(info.name) then
+                keys[#keys + 1] = NameKey(info.name)
+            end
+        end
+    end
+    if IsInGuild and IsInGuild() and GetNumGuildMembers and GetGuildRosterInfo then
+        for i = 1, GetNumGuildMembers() or 0 do
+            local member, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
+            if isOnline and IsPlainText(member) then
+                keys[#keys + 1] = NameKey(member)
+            end
+        end
+    end
+    return function(name)
+        if not IsPlainText(name) then
+            return false
+        end
+        local key = NameKey(name)
+        for _, each in ipairs(keys) do
+            if each == key or each:sub(1, #key + 1) == key .. "-" then
+                return true
+            end
+        end
+        return false
+    end
 end
 
 -- Whether a profession has a recipe book that can be shown.
@@ -641,7 +788,11 @@ function ChronicleService.Demo()
         { 2 * day + 5 * hour, "zone", { zone = zone[1], level = 37 } },
         { 2 * day + 4 * hour, "profession", { skill = 197, name = name.tailoring } },
         { 2 * day + 3.5 * hour, "death", { zone = zone[1], level = 37 } },
+        -- Repeated right away, these share a card in the book.
+        { 2 * day + 3.4 * hour, "death", { zone = zone[1], level = 37 } },
+        { 2 * day + 3.2 * hour, "death", { zone = zone[1], level = 37 } },
         { 2 * day + 3 * hour, "level", { level = 38, zone = zone[1] } },
+        { 2 * day + 2.2 * hour, "level", { level = 39, zone = zone[3], who = mira } },
         { 2 * day + 2 * hour, "level", { level = 40, zone = zone[3], who = mira } },
         { 2 * day + 1 * hour, "achievement", { id = 1, name = name.challenge } },
         { day + 6 * hour, "skill", { skill = 186, name = name.mining, rank = 225 } },

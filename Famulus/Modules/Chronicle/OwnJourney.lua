@@ -69,29 +69,22 @@ local SKILL_STEP = 75
 
 function journey:SKILL_LINES_CHANGED()
     self:CheckAbilities() -- some are known by a skill line
-    if not (GetProfessions and GetProfessionInfo) then
-        return
-    end
-    for _, index in pairs({ GetProfessions() }) do
-        local name, icon, rank, _, _, _, skillLine = GetProfessionInfo(index)
+    for _, profession in ipairs(Chronicle.Professions()) do
+        local rank, skillLine = profession.rank, profession.skill
+        local before = Chronicle.SeeSkill(skillLine, rank)
         -- The profession's icon goes into the entry, for its picture.
-        icon = not ns.IsSecret(icon) and type(icon) == "number" and icon or nil
-        if type(rank) == "number" and type(skillLine) == "number" then
-            local before = Chronicle.SeeSkill(skillLine, rank)
-            local text = ns.ChatService.IsPlainText(name) and name or nil
-            if (not before or rank < before) and rank < SKILL_STEP then
-                -- New, or given up and begun again.
-                if self.skillsKnown then
-                    Chronicle.Add("profession", { skill = skillLine, name = text, icon = icon })
-                end
-            elseif before and math.floor(rank / SKILL_STEP) > math.floor(before / SKILL_STEP) then
-                Chronicle.Add("skill", {
-                    skill = skillLine,
-                    name = text,
-                    icon = icon,
-                    rank = math.floor(rank / SKILL_STEP) * SKILL_STEP,
-                })
+        if (not before or rank < before) and rank < SKILL_STEP then
+            -- New, or given up and begun again.
+            if self.skillsKnown then
+                Chronicle.Add("profession", { skill = skillLine, name = profession.name, icon = profession.icon })
             end
+        elseif before and math.floor(rank / SKILL_STEP) > math.floor(before / SKILL_STEP) then
+            Chronicle.Add("skill", {
+                skill = skillLine,
+                name = profession.name,
+                icon = profession.icon,
+                rank = math.floor(rank / SKILL_STEP) * SKILL_STEP,
+            })
         end
     end
 end

@@ -19,6 +19,10 @@ local CONTENT_W = WIDTH - SIDEBAR - PAD * 2
 -- HEAD: the band across the top with the logo and the pages as tabs.
 -- HEADER: title and description of what the content shows, below it.
 local HEAD, HEADER = 76, 84
+-- The chronicle's story tabs: the book, and beside it a rail that stays put
+-- while the book scrolls.
+local BOOK_W, RAIL_GAP = 600, 28
+local RAIL_W = CONTENT_W - BOOK_W - RAIL_GAP
 local NAV_ROW = 34
 local BLOCK_GAP, BLOCK_TITLE, CARD_GAP = 22, 24, 8
 
@@ -36,6 +40,8 @@ local pages, pageOrder = {}, {}
 local currentPage, selectedTabs, searchText = nil, {}, ""
 local rows, cards, navButtons = {}, {}, {}
 local renderedKey -- page, tab or search the rows were last laid out for
+local railKey -- page and tab the chronicle's rail was last filled for
+local chronicleWho -- the companion the chronicle's book is narrowed to, or nil
 local resetArmed, resetToken = false, 0
 local aliasEditor -- input row of the aliases page, once it has been shown
 local embers = {} -- the sparks in the background, one set per ground
@@ -459,6 +465,16 @@ local CHRONICLE_EMPTY_ITEM = {
         return L.c_empty_desc
     end,
 }
+-- The book narrowed to a companion who has nothing in it yet.
+local CHRONICLE_EMPTY_WHO_ITEM = {
+    kind = "info",
+    label = function()
+        return L.c_empty_who:format((ns.ChronicleService.Companion({ who = chronicleWho })))
+    end,
+    desc = function()
+        return L.c_empty_who_desc
+    end,
+}
 
 -- A function that opens the profession window of a skill line, or nil if
 -- this client cannot.
@@ -573,6 +589,39 @@ end
 -- The live feed shows an entry the same way (Modules/Chronicle/LiveFeed.lua).
 UI.ChronicleStory = ChronicleEvent
 
+-- Whether two entries next to each other in the book tell the same thing
+-- again: deaths in one place, or levels of one companion. They then share a
+-- card. The player's own level-ups stay milestones of their own.
+local function SameRun(a, b)
+    local kindA = a.k == "friendLevel" and "level" or a.k
+    local kindB = b.k == "friendLevel" and "level" or b.k
+    if kindA ~= kindB or a.who ~= b.who or a.c ~= b.c then
+        return false
+    end
+    if kindA == "death" then
+        return a.zone == b.zone
+    end
+    return kindA == "level" and a.who ~= nil
+end
+
+-- A run of entries as one event of the book: the look of the newest, one
+-- sentence for all, and each one's time, the earliest first.
+local function ChronicleRun(run)
+    local event = ChronicleEvent(run[1])
+    if #run == 1 then
+        return event
+    end
+    local Chronicle = ns.ChronicleService
+    event.title, event.detail = Chronicle.TextRun(run, true)
+    event.fullTitle = (Chronicle.TextRun(run))
+    event.count = #run
+    event.times = {}
+    for index = #run, 1, -1 do
+        event.times[#event.times + 1] = date("%H:%M", run[index].t)
+    end
+    return event
+end
+
 -- Heading of a chapter: the place most of its events happened in, above it
 -- the day, below it the levels gained and the number of events.
 local function TitleChapter(chapter)
@@ -604,24 +653,26 @@ local function TitleChapter(chapter)
     elseif low then
         parts[#parts + 1] = L.c_ch_level:format(low)
     end
-    local count = #chapter.events
+    local count = #chapter.entries
     parts[#parts + 1] = count == 1 and L.c_ch_event or L.c_ch_events:format(count)
     chapter.sub = table.concat(parts, "  ·  ")
     chapter.entries = nil
 end
 
--- One chapter per day, the newest event first. wanted(entry): which entries.
--- Returns nil if there is nothing to tell, else the chapters and a closing
--- line if older events were left out.
+-- One chapter per day, the newest event first; what repeats right away
+-- shares a card (SameRun). wanted(entry): which entries; a companion chosen
+-- in the rail narrows them further. Returns nil if there is nothing to tell,
+-- else the chapters and a closing line if older events were left out.
 local function ChronicleBook(wanted)
     local Chronicle = ns.ChronicleService
     local entries = Chronicle.Entries()
     local now = time()
     local today, yesterday = DayKey(now), DayKey(now - 86400)
     local chapters, chapter, chapterKey, shown, more = {}, nil, nil, 0, false
+    local run
     for i = #entries, 1, -1 do
         local entry = entries[i]
-        if wanted(entry) then
+        if wanted(entry) and (not chronicleWho or entry.who == chronicleWho) then
             if shown == CHRONICLE_ROWS then
                 more = true
                 break
@@ -629,11 +680,17 @@ local function ChronicleBook(wanted)
             shown = shown + 1
             local key = DayKey(entry.t)
             if key ~= chapterKey then
-                chapter = { day = DayTitle(key, today, yesterday), events = {}, entries = {} }
+                chapter = { day = DayTitle(key, today, yesterday), runs = {}, entries = {} }
                 chapters[#chapters + 1] = chapter
                 chapterKey = key
+                run = nil
             end
-            chapter.events[#chapter.events + 1] = ChronicleEvent(entry)
+            if run and SameRun(run[#run], entry) then
+                run[#run + 1] = entry
+            else
+                run = { entry }
+                chapter.runs[#chapter.runs + 1] = run
+            end
             chapter.entries[#chapter.entries + 1] = entry
         end
     end
@@ -641,48 +698,148 @@ local function ChronicleBook(wanted)
         return nil
     end
     for _, each in ipairs(chapters) do
+        each.events = {}
+        for index, eachRun in ipairs(each.runs) do
+            each.events[index] = ChronicleRun(eachRun)
+        end
+        each.runs = nil
         TitleChapter(each)
     end
     return chapters, more and L.c_more or nil
 end
 
--- What companions told about themselves, one row each.
-local function ChronicleProfiles()
-    local Chronicle = ns.ChronicleService
-    local items = {}
-    for _, who in ipairs(Chronicle.ProfileNames()) do
-        items[#items + 1] = {
-            kind = "info",
-            label = function()
-                return (Chronicle.Companion({ who = who }))
-            end,
-            desc = function()
-                local profile = Chronicle.Profile(who) or {}
-                local parts = {}
-                local _, realName = Chronicle.Companion({ who = who })
-                parts[#parts + 1] = realName
-                if (tonumber(profile.level) or 0) > 0 then
-                    parts[#parts + 1] = L.c_p_level:format(profile.level)
-                end
-                for _, id in ipairs(ns.features.sharing.STATISTICS) do
-                    local value = type(profile.stats) == "table" and tonumber(profile.stats[id])
-                    if value then
-                        parts[#parts + 1] = L["c_stat_" .. id]:format(value)
-                    end
-                end
-                return table.concat(parts, "  ·  ")
-            end,
-        }
+---------------------------------------------------------------------------
+-- The rail beside the book (UI/Rail.lua): the week in numbers, the
+-- companions, the professions, the companions' profiles.
+---------------------------------------------------------------------------
+
+local WEEK = 7 * 86400
+
+-- When an entry happened, briefly: the time today, else the day.
+local function TimeOrDay(timestamp)
+    local now = time()
+    local key, today = DayKey(timestamp), DayKey(now)
+    if key == today then
+        return date("%H:%M", timestamp)
     end
-    if #items == 0 then
+    return DayTitle(key, today, DayKey(now - 86400))
+end
+
+local function Number(value)
+    if BreakUpLargeNumbers then
+        return BreakUpLargeNumbers(value)
+    end
+    return tostring(value)
+end
+
+-- What the character that is playing did in the last seven days.
+local function ChronicleWeek()
+    local Chronicle = ns.ChronicleService
+    local character = Chronicle.Character()
+    local since = time() - WEEK
+    local counts = { level = 0, death = 0, zone = 0, profession = 0, skill = 0 }
+    local entries = Chronicle.Entries()
+    for i = #entries, 1, -1 do
+        local entry = entries[i]
+        if entry.t < since then
+            break
+        end
+        if Chronicle.IsOwn(entry) and (not character or entry.c == character) and counts[entry.k] then
+            counts[entry.k] = counts[entry.k] + 1
+        end
+    end
+    local level = UnitLevel and UnitLevel("player")
+    level = not ns.IsSecret(level) and tonumber(level) or nil
+    return {
+        kind = "stats",
+        title = L.c_week,
+        note = character and string.match(character, "^%S+") or nil,
+        stats = {
+            { value = level and tostring(level) or "?", plus = counts.level > 0 and ("+" .. counts.level) or nil, label = L.c_week_level },
+            { value = tostring(counts.death), label = L.c_week_deaths },
+            { value = tostring(counts.zone), label = L.c_week_zones },
+            { value = tostring(counts.profession + counts.skill), label = L.c_week_crafts },
+        },
+    }
+end
+
+-- A companion as the rail shows them; line: what stands below the name.
+local function Person(companion, online, line)
+    local name, realName = ns.ChronicleService.Companion({ who = companion.who })
+    return {
+        key = companion.who,
+        initial = Initial(name),
+        name = name,
+        line = line or realName,
+        level = companion.level and L.c_p_level:format(companion.level) or nil,
+        online = online(companion.who),
+        selected = chronicleWho == companion.who,
+    }
+end
+
+-- A click on a companion narrows the book to them; a second one widens it.
+local function SelectCompanion(who)
+    chronicleWho = chronicleWho ~= who and who or nil
+    Render()
+end
+
+-- The companions, the one heard of last first, each with their latest event.
+local function ChronicleCompanions(companions, online)
+    local people = {}
+    for _, companion in ipairs(companions) do
+        local last = companion.last
+        local line = last and (ns.ChronicleService.Text(last, true) .. "  ·  " .. TimeOrDay(last.t)) or nil
+        people[#people + 1] = Person(companion, online, line)
+    end
+    return {
+        kind = "people",
+        title = L.c_companions,
+        note = tostring(#people),
+        hint = L.c_rail_filter,
+        people = people,
+        onSelect = SelectCompanion,
+    }
+end
+
+-- The professions of the character that is playing, or nil.
+local function ChronicleCrafts()
+    local bars = {}
+    for _, profession in ipairs(ns.ChronicleService.Professions()) do
+        if profession.name then
+            bars[#bars + 1] = { label = profession.name, value = profession.rank, max = profession.max }
+        end
+    end
+    if #bars == 0 then
         return nil
     end
-    return { title = L.c_profiles, note = tostring(#items), items = items }
+    return { kind = "bars", title = L.c_crafts, bars = bars }
+end
+
+-- One card per companion: who they are, and what they told about themselves.
+local function ChronicleBriefs(companions, online)
+    local cards = {}
+    for _, companion in ipairs(companions) do
+        local card = Person(companion, online)
+        card.kind, card.onSelect, card.empty = "brief", SelectCompanion, L.c_no_profile
+        local profile = companion.profile
+        if profile and type(profile.stats) == "table" then
+            card.stats = {}
+            for _, id in ipairs(ns.features.sharing.STATISTICS) do
+                local value = tonumber(profile.stats[id])
+                card.stats[#card.stats + 1] = { value = value and Number(value) or "-", label = L["c_stat_" .. id] }
+            end
+        end
+        cards[#cards + 1] = card
+    end
+    if #cards == 0 then
+        return { { kind = "note", title = L.c_profiles, text = L.c_profiles_empty } }
+    end
+    return cards
 end
 
 function layouts.chronicle()
     local Chronicle = ns.ChronicleService
-    local function Tab(id, wanted)
+    local function Tab(id, wanted, rail)
         return {
             id = id,
             category = "chronicle",
@@ -698,11 +855,12 @@ function layouts.chronicle()
                 if ChronicleBook(wanted) then
                     return {}
                 end
-                return { { items = { CHRONICLE_EMPTY_ITEM } } }
+                return { { items = { chronicleWho and CHRONICLE_EMPTY_WHO_ITEM or CHRONICLE_EMPTY_ITEM } } }
             end,
             book = function()
                 return ChronicleBook(wanted)
             end,
+            rail = rail,
         }
     end
     local record = CategoryTab("chronicle")
@@ -716,24 +874,22 @@ function layouts.chronicle()
     return {
         Tab("everyone", function()
             return true
-        end),
-        Tab("mine", Chronicle.IsOwn),
-        (function()
-            local tab = Tab("companions", function(entry)
-                return not Chronicle.IsOwn(entry)
-            end)
-            local events = tab.blocks
-            -- The profiles stand above the book; alone, they replace the
-            -- "nothing yet" note.
-            tab.blocks = function()
-                local profiles = ChronicleProfiles()
-                if profiles then
-                    return { profiles }
-                end
-                return events()
+        end, function()
+            local companions = Chronicle.Companions()
+            local cards = { ChronicleWeek() }
+            if #companions > 0 then
+                cards[2] = ChronicleCompanions(companions, Chronicle.OnlineCheck())
             end
-            return tab
-        end)(),
+            return cards
+        end),
+        Tab("mine", Chronicle.IsOwn, function()
+            return { ChronicleWeek(), ChronicleCrafts() }
+        end),
+        Tab("companions", function(entry)
+            return not Chronicle.IsOwn(entry)
+        end, function()
+            return ChronicleBriefs(Chronicle.Companions(), Chronicle.OnlineCheck())
+        end),
         record,
     }
 end
@@ -1154,9 +1310,10 @@ local function ControlWidth(row, kind)
     return 0
 end
 
--- last: the row is the last one of its card.
-local function RowSetItem(row, item, index, flat, last)
+-- last: the row is the last one of its card. width: of the card.
+local function RowSetItem(row, item, index, flat, last, width)
     row.item = item
+    row:SetWidth(width)
     local kind = item.kind
     EnsureControls(row, kind)
     if kind == "aliasEdit" then
@@ -1171,7 +1328,7 @@ local function RowSetItem(row, item, index, flat, last)
     local compact = not flat and item.compact ~= nil and item.compact()
     local padding = compact and 10 or 15
     local controlWidth = ControlWidth(row, kind)
-    local textWidth = CONTENT_W - indent - 18 - controlWidth - (controlWidth > 0 and 24 or 0)
+    local textWidth = width - indent - 18 - controlWidth - (controlWidth > 0 and 24 or 0)
 
     -- An option lies a little deeper in the card than its feature, marked
     -- with a dot; the line above it runs from edge to edge.
@@ -1519,7 +1676,7 @@ function Render()
         -- The content is headed by its tab; a page with a single tab by itself.
         window.title:SetText(tab.label and tab.label() or page.title())
         window.subtitle:SetText(tab.desc and tab.desc() or page.desc())
-        key = page.id .. ":" .. tab.id
+        key = page.id .. ":" .. tab.id .. ":" .. (chronicleWho or "")
     end
 
     -- Reset where the tab has settings, the master switch where it belongs
@@ -1528,8 +1685,37 @@ function Render()
     UpdateResetButton()
     RefreshMaster(false)
 
+    -- A tab with a rail leaves it the right part of the content.
+    local railCards = not searching and tab.rail and tab.rail() or nil
+    local width = railCards and BOOK_W or CONTENT_W
+    window.scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -(railCards and PAD + RAIL_GAP + RAIL_W or PAD), 18)
+
     local content = window.scroll.content
     local y, rowCount = 0, 0
+    -- Narrowed to a companion, the book says so above it, with the way back.
+    if railCards and chronicleWho then
+        local bar = window.bookFilter
+        if not bar then
+            bar = CreateFrame("Frame", nil, content)
+            bar:SetSize(BOOK_W, 28)
+            bar.text = UI.Text(bar, 12, "textDim", "medium")
+            bar.text:SetPoint("LEFT", 2, 0)
+            bar.text:SetJustifyV("MIDDLE")
+            bar.clear = UI.Button(bar, function()
+                SelectCompanion(chronicleWho)
+            end, "ghost")
+            bar.clear:SetPoint("LEFT", bar.text, "RIGHT", 6, 0)
+            window.bookFilter = bar
+        end
+        bar.text:SetText(L.c_only_who:format((ns.ChronicleService.Companion({ who = chronicleWho }))))
+        bar.clear:SetLabel(L.c_show_all)
+        bar:ClearAllPoints()
+        bar:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+        bar:Show()
+        y = 40
+    elseif window.bookFilter then
+        window.bookFilter:Hide()
+    end
     for blockIndex, block in ipairs(blocks) do
         local card = cards[blockIndex]
         if not card then
@@ -1541,6 +1727,7 @@ function Render()
         end
         card.title:SetText(block.title or "")
         card.note:SetText(block.note or "")
+        card:SetWidth(width)
         card:ClearAllPoints()
         card:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
 
@@ -1552,7 +1739,7 @@ function Render()
                 row = CreateRow(content)
                 rows[rowCount] = row
             end
-            RowSetItem(row, item, index, searching, index == #block.items)
+            RowSetItem(row, item, index, searching, index == #block.items, width)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(y + offset))
             row:Show()
@@ -1579,7 +1766,7 @@ function Render()
     end
     if chapters then
         if not window.book then
-            window.book = UI.Book(content, CONTENT_W)
+            window.book = UI.Book(content, BOOK_W)
         end
         window.book:ClearAllPoints()
         window.book:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
@@ -1596,6 +1783,29 @@ function Render()
         window.scroll:ScrollToTop()
     end
 
+    -- The rail scrolls by itself, if it is longer than the window.
+    if railCards then
+        if not window.rail then
+            window.railScroll = UI.Scroll(window)
+            window.railScroll:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD + BOOK_W + RAIL_GAP, -HEAD - HEADER)
+            window.railScroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -PAD, 18)
+            window.railScroll.content:SetWidth(RAIL_W)
+            window.rail = UI.Rail(window.railScroll.content, RAIL_W)
+            window.rail:SetPoint("TOPLEFT")
+        end
+        window.railScroll:Show()
+        window.railScroll:SetContentHeight(window.rail:SetCards(railCards))
+        local where = page.id .. ":" .. tab.id
+        if where ~= railKey then
+            railKey = where
+            window.railScroll:ScrollToTop()
+        end
+    elseif window.rail then
+        railKey = nil
+        window.railScroll:SetContentHeight(1) -- its thumb lies outside it
+        window.railScroll:Hide()
+    end
+
     window.search.placeholder:SetText(L.ui_search)
     RefreshHead()
     RefreshSidebar()
@@ -1603,6 +1813,7 @@ end
 
 local function SelectPage(id)
     DisarmReset()
+    chronicleWho = nil
     currentPage = id
     if searchText ~= "" then
         window.search.edit:SetText("") -- triggers Render through the search callback
@@ -1614,6 +1825,7 @@ end
 
 local function SelectTab(id)
     DisarmReset()
+    chronicleWho = nil
     selectedTabs[currentPage] = id
     Render()
 end
@@ -2057,7 +2269,7 @@ local function Build()
         UI.CloseMenu()
         PlayEmbers(false)
         DisarmReset()
-        renderedKey = nil
+        renderedKey, railKey, chronicleWho = nil, nil, nil
         window.search.edit:ClearFocus()
         if aliasEditor then
             aliasEditor:ClearFocus()

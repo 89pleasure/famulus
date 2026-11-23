@@ -1375,6 +1375,95 @@ check(events[4].story.kind == "death" and events[4].photo:IsShown() and not even
     "other events show an icon of the game and their time")
 check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 40,
     "the page is as long as its book")
+check(heads[1].small:IsShown() and heads[1].sub:IsShown() and heads[1].left:IsShown() and heads[1].right:IsShown()
+    and heads[1].height < 50, "a chapter's heading is one line: day, place and numbers between two lines")
+-- Beside the book a rail that stays put: the week in numbers and the companions.
+local rail = window.rail
+local function railCard(kind)
+    for _, card in ipairs(rail.cards) do
+        if card:IsVisible() and card.spec.kind == kind then
+            return card
+        end
+    end
+end
+check(window.book.width == 600 and window.railScroll:IsShown() and railCard("stats") and railCard("people"),
+    "the book leaves room for a rail with the week and the companions")
+local week = railCard("stats").spec.stats
+check(week[1].plus == "+1" and week[2].value == "1" and week[3].value == "1" and week[4].value == "0",
+    "the week in numbers: a level gained, a death, a new zone, no profession")
+local people = railCard("people")
+check(#people.spec.people == 1 and people.spec.people[1].name == "Jaina Proudmoore" and people.spec.people[1].level == "Level 20"
+    and people.spec.people[1].line:find("Reached level 20", 1, true) == 1 and not people.spec.people[1].online,
+    "a companion with their level and latest event, offline")
+do -- a click on a companion narrows the book to them, a second one widens it again
+    mock.Click(people.rows[1])
+    check(#bookFrames("story") == 1 and bookFrames("story")[1].story.chip and window.bookFilter:IsVisible()
+        and window.bookFilter.text:GetText() == "Only events of Jaina Proudmoore" and people.rows[1].selected,
+        "a click on a companion shows only their events, and says so above the book")
+    mock.Click(window.bookFilter.clear)
+    check(#bookFrames("story") == 6 and not window.bookFilter:IsVisible(), "show all brings the whole book back")
+    mock.Click(people.rows[1])
+    mock.Click(tabButton("My journey"))
+    mock.Click(tabButton("Everyone"))
+    check(#bookFrames("story") == 6, "another tab forgets the choice")
+end
+do -- what repeats right away shares a card
+    local now = time()
+    Chronicle.Add("death", { zone = "Duskwood", level = 13, t = now - 50 })
+    Chronicle.Add("death", { zone = "Duskwood", level = 13, t = now - 51 })
+    Chronicle.Add("death", { zone = "Duskwood", level = 12, t = now - 52 })
+    Chronicle.Add("level", { level = 22, who = "Jaina Proudmoore", t = now - 53 })
+    Chronicle.Add("level", { level = 21, who = "Jaina Proudmoore", t = now - 54 })
+    mock.Advance(0.1)
+    local deaths, levels
+    for _, event in ipairs(bookFrames("story")) do
+        if event.story.count and event.story.kind == "death" then
+            deaths = event
+        elseif event.story.count then
+            levels = event
+        end
+    end
+    check(#bookFrames("story") == 8 and bookFrames("chapter")[1].chapter.sub:find("11 events", 1, true) ~= nil,
+        "five entries, two cards; the chapter still counts every event")
+    check(deaths and deaths.story.title == "Fallen 3 times in Duskwood" and deaths.story.detail == "at levels 12 to 13"
+        and deaths.badge:IsShown() and deaths.badgeText:GetText() == "3" and deaths.plateCount == 3
+        and deaths.plates[1].text:GetText() == date("%H:%M", now - 52) and not deaths.detail:GetText():find(":", 1, true),
+        "deaths in one place: one card, how often in the corner, every time below")
+    check(levels and levels.story.title == "Reached levels 21 to 22" and levels.number:GetText() == "22"
+        and not levels.badge:IsShown() and levels.plateCount == 2 and levels.story.fullTitle == "Jaina Proudmoore reaches levels 21 to 22",
+        "a companion's levels in a row: one card from the first to the last")
+    local entries = Chronicle.Entries()
+    for index = #entries, 1, -1 do
+        if entries[index].t <= now - 50 and entries[index].t >= now - 54 then
+            table.remove(entries, index)
+        end
+    end
+    mock.Click(tabButton("My journey"))
+    mock.Click(tabButton("Everyone"))
+end
+do -- my journey: the week and the professions
+    mock.state.professions = { { name = "Tailoring", rank = 92, id = 197 } }
+    mock.Click(tabButton("My journey"))
+    local bars = railCard("bars")
+    check(railCard("stats") and bars and bars.spec.bars[1].label == "Tailoring" and bars.spec.bars[1].value == 92
+        and bars.spec.bars[1].max == 300 and bars.bars[1].value:GetText() == "92 / 300",
+        "my journey: the week, and the character's professions with their points")
+    mock.state.professions = nil
+end
+do -- companions: one profile each, and whether they are online
+    Chronicle.Profile("Jaina Proudmoore", { level = 21, stats = { [60] = 12, [107] = 3456 } })
+    mock.state.friends = { { name = "Jaina Proudmoore", guid = "Player-1-JAINA", connected = true, level = 21 } }
+    mock.Click(tabButton("Companions"))
+    local brief = railCard("brief")
+    check(brief and brief.spec.level == "Level 21" and brief.spec.online and brief.spec.stats[1].value == "12"
+        and brief.spec.stats[1].label == "Deaths" and brief.spec.stats[3].value == "-" and brief.rows[1].state:GetText() == "online",
+        "companions: a profile with their numbers, online from the friends list")
+    mock.Click(brief.rows[1])
+    check(#bookFrames("story") == 1 and window.bookFilter:IsVisible(), "a profile narrows the book as well")
+    FamulusDB.chronicle.profiles = nil
+    mock.state.friends = {}
+    mock.Click(tabButton("Everyone"))
+end
 mock.Click(tabButton("My journey"))
 mock.Advance(0.1)
 events = bookFrames("story")
@@ -1487,8 +1576,9 @@ do -- an item is shown with the game's icon of it, in its own colours
 end
 mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
-check(#visibleRows() == 15 and visibleRows()[1].toggle ~= nil and window.master:IsShown() and #bookFrames("story") == 0,
-    "recording: the four switches, the feed's eleven options and the master switch; no book (got " .. #visibleRows() .. ")")
+check(#visibleRows() == 15 and visibleRows()[1].toggle ~= nil and window.master:IsShown() and #bookFrames("story") == 0
+    and not window.railScroll:IsShown() and visibleRows()[1].width == 900,
+    "recording: the four switches, the feed's eleven options and the master switch; no book, no rail (got " .. #visibleRows() .. ")")
 Chronicle.Clear()
 mock.Advance(0.1)
 mock.Click(tabButton("Everyone"))

@@ -311,14 +311,50 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   (`Modules/Chronicle/ChronicleService.lua`) in `FamulusDB.chronicle` (accountweit, außerhalb der
   Profile, höchstens 2000 Einträge, Art und Werte statt Text). Reiter „Alle“, „Meine Reise“,
   „Gefährten“ und „Einstellungen“ (bis 2026-11-23 „Aufzeichnung“) (`layouts.chronicle`).
+- **Buch mit Randspalte (Entscheidung des Auftraggebers, 2026-11-23, am HTML-Mockup „Famulus
+  Chronik“ gewählt: Variante A mit „Wiederholungen bündeln“ und „Kapitelkopf in einer Zeile“):**
+  Anlass war der erste Screenshot im 1180er-Fenster: Karten 428 px breit bei etwa 170 px Text,
+  vier gleiche Tode untereinander, Kapitelköpfe über 100 px hoch. Verworfen: B, ein breites Buch
+  mit Karten bis 360 px und eigenen Stufenaufstiegen als Band über der Linie. Nur gegen den Mock
+  geprüft, im Spiel noch nicht gesehen.
+  - Auf den drei Erzähl-Reitern ist das Buch 600 px breit (`BOOK_W`, das Maß vor dem Umbau des
+    Fensters); rechts daneben, 28 px Abstand, eine Randspalte von 272 px (`UI.Rail`,
+    `UI/Rail.lua`; ein Reiter liefert sie über `tab.rail`). Sie scrollt nicht mit dem Buch,
+    sondern für sich, falls sie länger als das Fenster ist. Während der Suche und auf
+    „Einstellungen“ gibt es sie nicht; Zeilen und Karten nehmen dann die volle Breite (`RowSetItem`
+    bekommt die Breite übergeben).
+  - „Alle“: Karte „Diese Woche“ (Stufe mit Zahl der Aufstiege, Tode, neu entdeckte Gebiete,
+    Berufe und Meilensteine; nur der gespielte Charakter, letzte sieben Tage, Vorname rechts) und
+    Karte „Gefährten“ (Alias, letztes Ereignis mit Uhrzeit oder Tag, Stufe, online/offline).
+    „Meine Reise“: „Diese Woche“ und „Berufe“ mit Punkten und Balken. „Gefährten“: je Gefährte
+    ein Steckbrief (Stufe, online, die vier geteilten Zahlen), ohne geteilte Zahlen „Noch kein
+    Steckbrief geteilt.“; die Steckbriefe stehen nicht mehr über dem Buch.
+  - Gefährten sind alle mit Eintrag oder Steckbrief (`ChronicleService.Companions`), zuletzt
+    gehörte zuerst. Stufe: die höhere aus letztem Stufeneintrag und Steckbrief. Online:
+    `ChronicleService.OnlineCheck` sieht einmal je Aufbau in Freundesliste und Gildenliste; der
+    Stand gilt beim Aufbau des Fensters und wird nicht nachgeführt, wenn jemand online kommt.
+  - Ein Klick auf einen Gefährten (Liste oder Steckbrief) zeigt im Buch nur seine Ereignisse;
+    darüber steht „Nur Ereignisse von …“ mit „Alle zeigen“, ein zweiter Klick hebt es auf. Ein
+    anderer Reiter, eine andere Seite oder das Schließen vergisst die Wahl (`chronicleWho`).
+  - **Wiederholungen bündeln:** Folgen im Buch direkt aufeinander Tode im selben Gebiet oder
+    Stufenaufstiege desselben Gefährten, teilen sie sich eine Karte (`SameRun`, `ChronicleRun` in
+    `UI/Options.lua`; Satz aus `ChronicleService.TextRun`): „3-mal gefallen in Dunkelküste“ mit
+    der Zahl in der Ecke des Bildes, „Stufe 21 bis 22 erreicht“ mit der höchsten Stufe im Bild.
+    Unter der Zeile stehen alle Uhrzeiten als kleine Plaketten (höchstens zehn, die letzte zählt
+    den Rest). Eigene Stufenaufstiege bleiben einzeln, sie sind die Meilensteine. Die Zahl der
+    Ereignisse im Kapitelkopf zählt weiter jeden Eintrag.
+  - **Kapitelkopf in einer Zeile:** Tag links, Gebiet in der Buchschrift (22 px) in der Mitte,
+    Stufen und Zahl der Ereignisse rechts, außen je eine Linie, die zum Rand hin ausläuft. Etwa
+    36 px hoch statt über 100. Die Zierde mit dem Funken ist entfallen.
 - **Bilderbuch (2026-11-19):** Der Auftraggeber fand den HTML-Entwurf „schon ganz cool“ und ließ
   ihn so umsetzen. Die drei Erzähl-Reiter zeigen keine Zeilen mehr, sondern ein Buch
   (`UI.Book`, `UI/Book.lua`; ein Reiter liefert es über `tab.book`, `Render` legt es unter die
   Karten): je Tag ein Kapitel mit Überschrift, darunter eine Linie in der Mitte, an der die
   Ereignisse abwechselnd links und rechts als Karten hängen, mit Bild, Punkt auf der Linie und
   Uhrzeit auf der Gegenseite. Entscheidungen des Assistenten, noch nicht im Spiel gesehen:
-  - Ein Kapitel heißt nach dem Gebiet, in dem die meisten seiner Ereignisse spielen; darüber der
-    Tag, darunter die erreichten Stufen und die Zahl der Ereignisse. Ohne Gebiet heißt es nach dem
+  - Ein Kapitel heißt nach dem Gebiet, in dem die meisten seiner Ereignisse spielen; daneben der
+    Tag und die erreichten Stufen mit der Zahl der Ereignisse (seit 2026-11-23 in einer Zeile,
+    siehe oben; vorher darüber und darunter). Ohne Gebiet heißt es nach dem
     Tag. Eine Kapitelnummer wie im Entwurf gibt es nicht (gezeigt werden nur die letzten 50
     Ereignisse, eine Zählung wäre nicht stabil).
   - Bilder sind eigene Symbole (`skull.tga`, `swords.tga`, `peaks.tga`, `star.tga`, 64 px) oder
@@ -329,8 +365,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Anfangsbuchstabe.
   - Überschriften und Stufenzahl stehen in der Buchschrift des Spiels, gelesen aus dem
     Font-Objekt `QuestTitleFont` (`UI.SetDisplayFont`), damit jede Sprache ihre Datei bekommt;
-    fehlt das Objekt, nimmt das Fenster Inter. Ob es `QuestTitleFont` im Forever-Client gibt,
-    ist unbestätigt. Kursive Schrift wie im Entwurf gibt es nicht.
+    fehlt das Objekt, nimmt das Fenster Inter. `QuestTitleFont` gibt es im Forever-Client
+    (Screenshot 2026-11-23, deDE: Kapitelüberschriften in der Buchschrift). Kursive Schrift wie
+    im Entwurf gibt es nicht.
 - **Überarbeitung nach dem ersten Screenshot (2026-11-19, vier Vorschläge des Assistenten, vom
   Auftraggeber alle angenommen):**
   1. **Name im Streifen:** Die Überschrift eines Gefährten-Ereignisses nennt ihn im Buch nicht mehr
@@ -419,10 +456,11 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     - Kennt eine Version die `id` eines Gefährten nicht (neueres Addon), zeigt sie den
       mitgeschickten Zaubernamen („… erlernt Schwimmen“).
     - **Kein Zauber- und kein Berufe-Service (geprüft 2026-11-19):** Nur `ownJourney` fragt
-      Zauber und Berufe ab, und die Abfragen sind je ein Aufruf des Clients (`IsPlayerSpell`,
-      `GetProfessions`). Berufe brauchen keine Tabelle, weil der Client sie selbst aufzählt. Ein
-      `SpellService` oder `ProfessionService` lohnt, sobald ein zweites Feature dieselben Daten
-      braucht (etwa Haltbarkeits- oder Berufshelfer); dann die Abfragen dorthin ziehen.
+      Zauber ab (`IsPlayerSpell`). Berufe brauchen keine Tabelle, weil der Client sie selbst
+      aufzählt; seit 2026-11-23 liest sie `ChronicleService.Professions` (Name, Symbol, Punkte,
+      Höchstwert, Fertigkeit) für `ownJourney` und die Randspalte. Ein `SpellService` oder
+      `ProfessionService` lohnt, sobald ein Feature außerhalb der Chronik dieselben Daten braucht
+      (etwa Haltbarkeits- oder Berufshelfer); dann die Abfragen dorthin ziehen.
   - **Besondere Gegenstände (Wunsch des Auftraggebers, 2026-11-19):** dasselbe Prinzip über die
     Gegenstands-ID. Tabelle `ChronicleService.items` mit `item` (ID), optional `picture` (Standard:
     Truhe, `chest.tga`) und `big`. `ownJourney` prüft bei `BAG_UPDATE_DELAYED` mit
@@ -445,8 +483,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     sofort verbraucht wird oder nie in die Taschen kommt, wird so nicht erkannt.
   - Zwei Einträge gleicher Art in derselben Sekunde gelten als Dublette, außer sie unterscheiden
     sich in `skill`, `rank`, `ability` oder `item`.
-- **Beispieleinträge (2026-11-19):** `/fam chronicle demo` schreibt 18 erfundene Einträge über drei
-  Tage (eigene und von zwei erfundenen Gefährten, jede Art einmal), `/fam chronicle demo clear`
+- **Beispieleinträge (2026-11-19):** `/fam chronicle demo` schreibt 21 erfundene Einträge über drei
+  Tage (eigene und von zwei erfundenen Gefährten, jede Art mindestens einmal; seit 2026-11-23 dazu
+  drei Tode hintereinander und zwei Stufen eines Gefährten, damit das Bündeln zu sehen ist), `/fam chronicle demo clear`
   entfernt sie wieder (`ChronicleService.Demo`, `ClearDemo`). Sie tragen `demo = true` und
   verlassen den Client nie: Weder der Live-Versand noch das Nachreichen noch das Weiterreichen
   schickt sie. Gedacht zum Ansehen des Buchs und für Screenshots.
@@ -483,7 +522,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     verbunden und bekommt die eigenen Meilensteine live. Auf einen Gruß folgen bis zu 20 verpasste
     Einträge und die Statistiken.
   - Geteilte Statistiken (IDs des Spiels): 60 Tode, 107 besiegte Kreaturen, 98 Quests, 932 betretene
-    Dungeons. Sie stehen als „Steckbrief“ je Gefährte auf dem Reiter „Gefährten“
+    Dungeons. Sie stehen als „Steckbrief“ je Gefährte in der Randspalte des Reiters „Gefährten“
     (`FamulusDB.chronicle.profiles`).
   - Alles läuft über eine Warteschlange mit Ticker (eine Nachricht je halbe Sekunde, nur solange
     etwas wartet). Während der Chat-Sperre (Bosskampf, gesperrte Karte) bleibt sie stehen.
