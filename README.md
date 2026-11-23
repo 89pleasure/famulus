@@ -1,7 +1,8 @@
 # Famulus
 
-Schlankes Quality-of-Life-Addon für **World of Warcraft: Forever** (Interface 16001) mit
-aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, keine Abhängigkeiten.
+Addon für das gemeinsame Spielen unter Freunden in **World of Warcraft: Forever** (Interface 16001):
+Aliase für andere Spieler und eine Chronik eurer gemeinsamen Reise. Englisch und Deutsch, keine
+Bibliotheken, keine Abhängigkeiten.
 
 ## Installation
 
@@ -15,62 +16,45 @@ aufgeräumtem Einstellungsfenster. Englisch und Deutsch, keine Bibliotheken, kei
 
 | Seite | Funktion | Standard |
 |---|---|---|
-| Händler | Automatisch reparieren (optional zuerst Gildengold) | aus |
-| Händler | Plunder verkaufen | aus |
-| Quests | Quests automatisch annehmen (graue Quests optional ignorieren) | aus |
-| Quests | Quests automatisch abgeben | aus |
-| Beute | Automatisch plündern (spiegelt die Spieloption) | aus |
-| Beute | Beim Aufheben gebundene Beute bestätigen (nur solo) | aus |
-| Beute | Einfacheres Zerstören (Bestätigungswort eintragen) | aus |
-| Soziales | Einladungen von Freunden/Gilde annehmen | aus |
-| Soziales | Duelle ablehnen | aus |
 | Aliase | Alias statt Charaktername im Chat (wahlweise „Alias (Name)“) | **an** |
 | Aliase | Alias als Zeile im Tooltip eines Spielers | **an** |
 | Aliase | „Alias festlegen“ im Kontextmenü von Spielern | **an** |
 | Aliase | Alias statt Charaktername im Addon Guildy (nur sichtbar, wenn Guildy geladen ist) | **an** |
-| Tooltips | Gegenstands- und Zauber-IDs | aus |
-| Tooltips | Tooltip am Mauszeiger | aus |
-| Interface | Koordinaten auf der Weltkarte (Klick setzt die eigene Position in den Chat) | **an** |
-| Interface | Pfeiltasten im Chat ohne Alt | **an** |
-| Interface | Maximale Kameradistanz | aus |
-| Interface | Fehlermeldungs-Spam im Kampf ausblenden | aus |
-| Interface | Screenshot beim Stufenaufstieg | aus |
+| Chronik | Eigene Reise aufzeichnen (Stufen, Tode, Bosse, Herausforderungen, Gebiete, Berufe, Fähigkeiten, Gegenstände) | aus |
+| Chronik | Stufenaufstiege der Freundesliste festhalten | aus |
+| Chronik | Mit Freunden und Gilde teilen (Addon-Nachrichten zwischen Famulus-Nutzern) | aus |
+| Chronik | Ereignisse live als Karte am Bildschirm einblenden | **an** |
 
-**Das Fenster** (`/fam`): Links die Hauptfunktionen (**Quality of Life**, **Aliase**, **Chronik**)
-und das **Tagebuch**, das festhält, was Famulus für dich erledigt und was es bewusst gelassen hat.
-Die Chronik erzählt die Reise deiner Charaktere und deiner Gefährten als Bilderbuch (Stufenaufstiege, Tode,
-Bosse, Herausforderungen, neu entdeckte Gebiete, Berufe, Reiten, besondere Gegenstände) und tauscht sie auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus
-ebenfalls nutzen, auch über gemeinsame Gefährten, wenn jemand offline ist; alle drei Chronik-Funktionen sind standardmäßig aus. Unten die
-Seiten **Einstellungen** und **Über**. Quality of Life teilt sich in Reiter (Händler, Quests, Beute,
-Soziales, Tooltips, Interface); die Aliase haben ihren eigenen Aufbau mit der Namensliste und einem
-Reiter „Anzeige“. Fünf Farbwelten, die Funken im Hintergrund und die
+**Das Fenster** (`/fam`): Links die Hauptfunktionen **Aliase** und **Chronik**, unten die Seiten
+**Einstellungen** und **Über**. Die Chronik erzählt die Reise deiner Charaktere und deiner Gefährten
+als Bilderbuch und tauscht sie auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus
+ebenfalls nutzen, auch über gemeinsame Gefährten, wenn jemand offline ist. Die Aliase haben ihre
+Namensliste und einen Reiter „Anzeige“. Fünf Farbwelten, die Funken im Hintergrund und die
 Fenstergröße stehen unter Einstellungen › Darstellung. Die Suche links findet Einstellungen und
 Aliase auf allen Seiten.
 
-Jeder Reiter einer Kategorie hat rechts unter den Reitern einen **Hauptschalter für die ganze
-Kategorie**. Ist er aus, läuft dort nichts und nichts lauscht auf das Spiel; die Auswahl der
-einzelnen Funktionen bleibt erhalten.
+Jede Kategorie hat rechts unter den Reitern einen **Hauptschalter**. Ist er aus, läuft dort nichts
+und nichts lauscht auf das Spiel; die Auswahl der einzelnen Funktionen bleibt erhalten.
 
 **Aliase** sind eigene Namen für andere Spieler, die nur du siehst. Du trägst sie auf der Seite
 „Aliase“ ein (Charaktername, Alias) oder per Rechtsklick auf einen Spieler. Die Liste gilt für den
 ganzen Account und bleibt von Profilen und „Zurücksetzen“ unberührt. Flüstern, Einladen und
 Links benutzen weiter den echten Namen.
 
-Grundregel für die Standardwerte: Alles, was in deinem Namen handelt (Gold ausgibt, Gegenstände
-verkauft, Quests oder Einladungen annimmt), ist anfangs aus. Die **Pausentaste** (Standard:
-Umschalt) überspringt jede Automatik einmalig.
+Grundregel für die Standardwerte: Was auf Spielereignisse lauscht oder Nachrichten an andere
+Spieler schickt, ist anfangs aus.
 
 ## Was von OneForAll, FlareUI und Polestar gelernt wurde
 
 | Beobachtung bei den Vorbildern | Umsetzung in Famulus |
 |---|---|
 | OneForAll registriert ~38 Events dauerhaft und prüft die Option erst im Handler; FlareUI-Untermodule ebenso | Ein Feature registriert Events erst beim Einschalten. Nach dem Login mit Standardwerten lauscht das Addon auf **kein** Spielereignis |
-| Ungedrosselte `OnUpdate`-Handler (Tooltip-Anker, Minikarten-Drag, Proximity-Scan) | Kein `OnUpdate` im Leerlauf. Kartenkoordinaten laufen nur bei offener Karte (10×/s), Animationen nur solange sie dauern |
+| Ungedrosselte `OnUpdate`-Handler (Tooltip-Anker, Minikarten-Drag, Proximity-Scan) | Kein `OnUpdate` im Leerlauf; Animationen laufen nur, solange sie dauern |
 | FlareUI: Modul umschalten = `/reload`; OneForAll: Sprache/Profil = Reload | Jede Option, die Sprache und das Charakterprofil wirken sofort |
 | Hooks bleiben nach dem Abschalten aktiv | Hooks werden erst beim ersten Einschalten gesetzt und prüfen danach den Zustand; nie genutzte Features hooken nichts |
 | Mehrere MB Daten und UI-Code bei jedem Login (Polestar-Issues: 70–250 MB RAM) | ~200 KB gesamt; das Einstellungsfenster wird erst beim ersten Öffnen gebaut |
 | Taint durch Überschreiben fremder Funktionen und Schreiben in Blizzard-Tabellen | Nur `hooksecurefunc`, keine ersetzten Globals, keine Felder auf Blizzard-Frames |
-| ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 24 Features auf 8 Seiten, eine klare Regel für Standardwerte, eine Sammelzeile pro Aktion (abschaltbar) |
+| ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 8 Features in zwei Bereichen, eine klare Regel für Standardwerte, höchstens eine Chat-Zeile pro Aktion (abschaltbar) |
 | FlareUI ohne Deutsch; Polestar-Sprachen als 18 Zusatz-Addons | enUS und deDE eingebaut, per Test auf Vollständigkeit geprüft |
 | Fehler in einem Teil reißen andere mit | Fehler beim Einschalten schalten nur das betroffene Feature ab; fehlt eine Client-API, wird das Feature als „nicht verfügbar“ angezeigt |
 | Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen und weitergedacht: Hauptfunktionen in der Seitenleiste, Reiter, eigene Farbwelten, runde Ecken, eigene Schrift (Inter) |
@@ -84,14 +68,12 @@ Famulus/
   Core/Locale.lua      Sprachumschaltung zur Laufzeit
   Core/Database.lua    Einstellungen (nur Abweichungen vom Standard werden gespeichert)
   Core/Features.lua    Feature-Registry und Feature-Klasse, Slash-Befehle
-  Core/GameOptions.lua Schalter, die eine Spieloption spiegeln
-  Core/PopupService.lua  Service für Blizzards StaticPopup-Dialoge
-  Core/ChatService.lua   Service für die Chat-Eingabe (Text einsetzen, Chat-Sperre)
+  Core/ChatService.lua   Service für Klartext-Prüfung und Chat-Sperre
   Core/SelfTest.lua    Selbsttest gegen den echten Client (/fam test, /fam dev)
   Locales/             enUS.lua (Referenz), deDE.lua
-  Modules/<Seite>/     eine Datei je Feature, z. B. Interface/ChatArrowKeys.lua;
-                       geteilter Code heißt <Name>Service.lua, z. B. Quests/QuestService.lua
-  UI/                  Theme, Widgets, Einstellungsfenster, Minikartensymbol
+  Modules/<Kategorie>/ eine Datei je Feature, z. B. Aliases/ChatAliases.lua;
+                       geteilter Code heißt <Name>Service.lua, z. B. Aliases/AliasService.lua
+  UI/                  Theme, Widgets, Fenster, Chronik-Buch, Live-Einblendung, Minikartensymbol
   Media/               kleine TGA-Texturen und Symbole (aus tools/make_media.py)
   Media/Fonts/         Inter in drei Schnitten, auf Latein/Griechisch/Kyrillisch gekürzt
                        (aus tools/make_fonts.py, Lizenz: SIL OFL 1.1, LICENSE.txt daneben)
@@ -101,11 +83,11 @@ tools/                 Texturen und Schriften erzeugen, Selbsttest-Bericht lesen
 
 ### Ein Feature hinzufügen
 
-Neue Datei `Modules/Interface/MeinFeature.lua` anlegen und in der `.toc` eintragen:
+Neue Datei `Modules/Chronicle/MeinFeature.lua` anlegen und in der `.toc` eintragen:
 
 ```lua
 local feature = ns:NewFeature({
-    id = "meinFeature", category = "interface", default = false,
+    id = "meinFeature", category = "chronicle", default = false,
     requires = { "C_Irgendwas.Funktion" },   -- fehlt die API, bleibt das Feature aus
 })
 function feature:OnEnable() self:RegisterEvent("SOME_EVENT") end
@@ -119,9 +101,9 @@ Einstellungsfenster entsteht von selbst.
 
 Größere Funktionen bekommen einen eigenen Eintrag in der Seitenleiste: Kategorie in
 `ns.categories` und einen Bereich in `ns.areas` (`Core/Features.lua`) eintragen, dazu
-`L.area_<id>` und `L.area_<id>_desc`. Ohne Weiteres zeigt die Seite je Kategorie einen Reiter; ein
-eigener Aufbau ist eine Funktion in `layouts` (`UI/Options.lua`), die die Reiter liefert, wie bei
-den Aliasen. Das Symbol steht in `AREA_ICONS`.
+`L.area_<id>` und `L.area_<id>_desc`. Der Aufbau der Seite ist eine Funktion in `layouts`
+(`UI/Options.lua`), die die Reiter liefert, wie bei Aliasen und Chronik. Das Symbol steht in
+`AREA_ICONS`.
 
 ### Eine Sprache hinzufügen
 

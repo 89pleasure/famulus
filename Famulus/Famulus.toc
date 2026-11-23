@@ -1,10 +1,10 @@
 ## Interface: 16001
 ## Title: Famulus
-## Notes: Lightweight quality-of-life toolkit with a clean settings window.
-## Notes-deDE: Schlankes Quality-of-Life-Paket mit aufgeräumtem Einstellungsfenster.
+## Notes: Play together: aliases for your friends and a chronicle of your shared journey.
+## Notes-deDE: Gemeinsam spielen: Aliase für deine Freunde und eine Chronik eurer gemeinsamen Reise.
 ## Author: Lenni
 ## Version: 0.1.0
-## Category: Quality of Life
+## Category: Social
 ## IconTexture: Interface\AddOns\Famulus\Media\logo.tga
 ## SavedVariables: FamulusDB
 ## SavedVariablesPerCharacter: FamulusCharDB
@@ -17,22 +17,9 @@ Locales\enUS.lua
 Locales\deDE.lua
 Core\Database.lua
 Core\Features.lua
-Core\GameOptions.lua
-Core\PopupService.lua
 Core\ChatService.lua
-Core\JournalService.lua
 Core\SelfTest.lua
 
-Modules\Vendor\AutoRepair.lua
-Modules\Vendor\SellJunk.lua
-Modules\Quests\QuestService.lua
-Modules\Quests\AutoAccept.lua
-Modules\Quests\AutoTurnIn.lua
-Modules\Loot\AutoLoot.lua
-Modules\Loot\ConfirmBoP.lua
-Modules\Loot\EasyDelete.lua
-Modules\Social\AcceptInvites.lua
-Modules\Social\DeclineDuels.lua
 Modules\Aliases\AliasService.lua
 Modules\Aliases\ChatAliases.lua
 Modules\Aliases\TooltipAliases.lua
@@ -43,13 +30,6 @@ Modules\Chronicle\OwnJourney.lua
 Modules\Chronicle\Companions.lua
 Modules\Chronicle\Sharing.lua
 Modules\Chronicle\LiveFeed.lua
-Modules\Tooltip\TooltipIDs.lua
-Modules\Tooltip\TooltipCursor.lua
-Modules\Interface\MapCoords.lua
-Modules\Interface\ChatArrowKeys.lua
-Modules\Interface\CameraZoom.lua
-Modules\Interface\HideErrors.lua
-Modules\Interface\LevelScreenshot.lua
 
 UI\Theme.lua
 UI\Widgets.lua

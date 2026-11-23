@@ -1,15 +1,15 @@
 -- Feature registry. A feature is the unit the player switches on or off.
 --
 --   local feature = ns:NewFeature({
---       id = "autoRepair",            -- settings section and locale key
---       category = "vendor",          -- page in the settings window
+--       id = "companions",            -- settings section and locale key
+--       category = "chronicle",       -- page in the settings window
 --       default = false,              -- enabled on a fresh install?
---       requires = { "RepairAllItems" },   -- client API the feature needs
+--       requires = { "C_FriendList.GetNumFriends" },  -- client API the feature needs
 --       addon = "Guildy",             -- optional: only for this other addon
---       options = { { key = "guildFunds", type = "toggle", default = false } },
+--       options = { { key = "style", type = "select", default = "alias" } },
 --   })
---   function feature:OnEnable() self:RegisterEvent("MERCHANT_SHOW") end
---   function feature:MERCHANT_SHOW() ... end
+--   function feature:OnEnable() self:RegisterEvent("FRIENDLIST_UPDATE") end
+--   function feature:FRIENDLIST_UPDATE() ... end
 --
 -- Every feature lives in its own file, Modules/<Category>/<Id>.lua. Code that
 -- several features share is a service: a file <Name>Service.lua publishing
@@ -19,7 +19,7 @@
 -- Rules that keep the addon cheap and predictable:
 --   * OnEnable runs only while the feature is switched on. A feature that is
 --     off has no events, no timers and no hooks.
---   * Events, EventRegistry callbacks and tickers registered through the
+--   * Events and tickers registered through the
 --     feature are removed automatically when it is switched off; toggling
 --     never needs a reload. Delayed calls (feature:After) are dropped.
 --   * Hooks cannot be removed in WoW. Install them with feature:HookFunction,
@@ -32,20 +32,16 @@
 --     loaded (## OptionalDeps in the .toc makes it load first).
 --   * Every category has a master switch. While it is off, none of its
 --     features run, whatever their own setting says; the settings are kept.
---   * A feature with `mirror = { cvar = ... }` is a second switch for one of
---     the game's options; Core/GameOptions.lua does all of the work.
 
 local _, ns = ...
 local L = ns.L
 
-ns.categories = { "vendor", "quests", "loot", "social", "aliases", "chronicle", "tooltip", "interface" }
+ns.categories = { "aliases", "chronicle" }
 
--- Main features ("areas") each get an entry in the window's sidebar. An area
--- with several categories shows them as tabs; a larger feature such as the
--- aliases brings a page layout of its own (UI/Options.lua). Every category
--- belongs to exactly one area.
+-- Main features ("areas") each get an entry in the window's sidebar and a
+-- page layout of their own (UI/Options.lua). Every category belongs to
+-- exactly one area.
 ns.areas = {
-    { id = "qol", categories = { "vendor", "quests", "loot", "social", "tooltip", "interface" } },
     { id = "aliases", categories = { "aliases" } },
     { id = "chronicle", categories = { "chronicle" } },
 }
@@ -77,13 +73,7 @@ function ns:NewFeature(def)
     def.enabled = false
     def.options = def.options or {}
     def.events = {}
-    def.callbacks = {}
     def.generation = 0
-    if def.mirror then
-        def.requires = def.requires or {}
-        table.insert(def.requires, "C_CVar.GetCVar")
-        table.insert(def.requires, "C_CVar.SetCVar")
-    end
 
     local values = { enabled = def.default and true or false }
     for _, option in ipairs(def.options) do
@@ -111,29 +101,6 @@ function Feature:UnregisterEvent(event)
     if self.events[event] then
         self.events[event] = nil
         ns:UnregisterEvent(event, self)
-    end
-end
-
--- Callback on Blizzard's EventRegistry (e.g. "ChatFrame.OnEditBoxFocusGained").
--- handler: a function or a method name; called as handler(feature, ...).
--- Returns false on a client without EventRegistry.
-function Feature:RegisterCallback(event, handler)
-    if not (EventRegistry and EventRegistry.RegisterCallback) then
-        return false
-    end
-    if type(handler) ~= "function" then
-        handler = self[handler]
-    end
-    assert(type(handler) == "function", "no handler for " .. event)
-    self.callbacks[event] = true
-    EventRegistry:RegisterCallback(event, handler, self)
-    return true
-end
-
-function Feature:UnregisterCallback(event)
-    if self.callbacks[event] then
-        self.callbacks[event] = nil
-        EventRegistry:UnregisterCallback(event, self)
     end
 end
 
@@ -261,10 +228,6 @@ function Feature:IsAvailable()
     return self.available
 end
 
-function ns:IsOptionAvailable(option)
-    return option.requires == nil or ns.Resolve(option.requires) ~= nil
-end
-
 local function Disable(feature)
     feature.enabled = false
     if feature.OnDisable then
@@ -274,10 +237,6 @@ local function Disable(feature)
         ns:UnregisterEvent(event, feature)
     end
     wipe(feature.events)
-    for event in pairs(feature.callbacks) do
-        EventRegistry:UnregisterCallback(event, feature)
-    end
-    wipe(feature.callbacks)
     feature:StopTicker()
 end
 
@@ -341,9 +300,6 @@ ns:On("OPTION_CHANGED", function(section, key, value)
 end)
 
 ns:On("PROFILE_CHANGED", function()
-    -- Mirrored switches take the game's value into the new profile first, so
-    -- the restart below cannot overwrite the game's option.
-    ns.FollowGameOptions()
     -- A different profile can differ in every option: restart what is running.
     for i = 1, #featureList do
         if featureList[i].enabled then
@@ -407,9 +363,6 @@ SlashCmdList.FAMULUS = function(input)
         ns:Print(L.msg_demo_added:format(ns.ChronicleService.Demo()))
     elseif command == "chronicle demo clear" then
         ns:Print(L.msg_demo_cleared:format(ns.ChronicleService.ClearDemo()))
-    elseif command == "journal clear" then
-        ns.JournalService.Clear()
-        ns:Print(L.msg_journal_cleared)
     else
         ns:ToggleOptions()
     end

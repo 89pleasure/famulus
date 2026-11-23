@@ -7,8 +7,7 @@
 --
 -- A page has tabs; a tab has blocks; a block is one card of rows. Every row
 -- is described by an "item" (label, help text, getter, setter). Main
--- features ("areas", see Core/Features.lua) get their page from a layout:
--- by default one tab per category, or a layout of their own (aliases).
+-- features ("areas", see Core/Features.lua) get their page from a layout.
 
 local _, ns = ...
 local L = ns.L
@@ -22,9 +21,8 @@ local NAV_ROW, NAV_TOP = 34, 142
 local BLOCK_GAP, BLOCK_TITLE, CARD_GAP = 22, 24, 8
 
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
-local MODIFIERS = { "SHIFT", "CTRL", "ALT", "NONE" }
 local WINDOW_SCALES = { 80, 90, 100, 110, 120, 130, 140 }
-local AREA_ICONS = { qol = "sparkle", aliases = "tag", chronicle = "flag" }
+local AREA_ICONS = { aliases = "tag", chronicle = "flag" }
 
 local window
 local pages, pageOrder = {}, {}
@@ -160,9 +158,7 @@ local function FeatureItems(category)
             end
             items[#items + 1] = item
             for _, option in ipairs(feature.options) do
-                if ns:IsOptionAvailable(option) then
-                    items[#items + 1] = OptionItem(feature, option)
-                end
+                items[#items + 1] = OptionItem(feature, option)
             end
         end
     end
@@ -314,14 +310,6 @@ end
 -- Layouts of main features. One returns the tabs of the area's page.
 local layouts = {}
 
-function layouts.default(area)
-    local tabs = {}
-    for _, category in ipairs(area.categories) do
-        tabs[#tabs + 1] = CategoryTab(category)
-    end
-    return tabs
-end
-
 -- Aliases: the list is the heart of the page; where aliases show up is the
 -- second tab. The category's master switch is the same on both.
 function layouts.aliases()
@@ -398,15 +386,7 @@ local function SettingsTabs()
             end
             return list
         end),
-        GeneralItem("pauseModifier", "select", function()
-            local list = {}
-            for i, modifier in ipairs(MODIFIERS) do
-                list[i] = { value = modifier, text = L["mod_" .. modifier] }
-            end
-            return list
-        end),
         GeneralItem("chatOutput", "toggle"),
-        GeneralItem("journal", "toggle"),
         GeneralItem("minimapButton", "toggle"),
         profileItem,
     })
@@ -428,159 +408,27 @@ local function SettingsTabs()
 end
 
 ---------------------------------------------------------------------------
--- Journal: what the automations did and what they left alone, read from
--- the JournalService. Like the alias list this is data, not settings.
+-- Chronicle: the story of the player and their companions. Three tabs
+-- tell it as a picture book, a fourth holds the switches that record it.
 ---------------------------------------------------------------------------
 
-local JOURNAL_ROWS = 80 -- entries on the history tab; older ones stay in the totals
-
-local JOURNAL_EMPTY_ITEM = {
-    kind = "info",
-    label = function()
-        return L.j_empty
-    end,
-    desc = function()
-        return L.j_empty_desc
-    end,
-}
-local JOURNAL_MORE_ITEM = {
-    kind = "info",
-    label = function()
-        return L.j_more
-    end,
-    desc = function()
-        return L.j_more_desc:format(JOURNAL_ROWS)
-    end,
-}
+local function DayKey(timestamp)
+    return date("%Y-%m-%d", timestamp)
+end
 
 -- "Today", "Yesterday" or the date of a day key ("2026-11-19").
 local function DayTitle(key, today, yesterday)
     if key == today then
-        return L.j_today
+        return L.c_today
     elseif key == yesterday then
-        return L.j_yesterday
+        return L.c_yesterday
     end
     local year, month, day = string.match(key, "^(%d+)-(%d+)-(%d+)$")
     if not year then
         return key
     end
-    return (string.gsub(L.j_date, "{(%a)}", { d = day, m = month, y = year }))
+    return (string.gsub(L.c_date, "{(%a)}", { d = day, m = month, y = year }))
 end
-
-local function JournalItem(entry)
-    local Journal = ns.JournalService
-    return {
-        kind = "info",
-        label = function()
-            return (Journal.Text(entry))
-        end,
-        -- Time, the character if it was another one, and what was sold.
-        desc = function()
-            local parts = { date("%H:%M", entry.t) }
-            parts[#parts + 1] = Journal.OtherCharacter(entry)
-            if type(entry.items) == "table" then
-                local names = {}
-                for _, item in ipairs(entry.items) do
-                    if type(item) == "table" and type(item.n) == "string" then
-                        local count = tonumber(item.q) or 1
-                        names[#names + 1] = count > 1 and L.j_item_count:format(count, item.n) or item.n
-                    end
-                end
-                if #names > 0 then
-                    parts[#parts + 1] = table.concat(names, ", ")
-                end
-            end
-            return table.concat(parts, "  ·  ")
-        end,
-        -- What the helper left alone is greyed out.
-        disabled = function()
-            local _, skipped = Journal.Text(entry)
-            return skipped
-        end,
-    }
-end
-
--- One card per day, the newest entry first.
-local function JournalHistory()
-    local Journal = ns.JournalService
-    local entries = Journal.Entries()
-    if #entries == 0 then
-        return { { items = { JOURNAL_EMPTY_ITEM } } }
-    end
-    local now = time()
-    local today, yesterday = Journal.DayKey(now), Journal.DayKey(now - 86400)
-    local blocks, block, blockKey = {}, nil, nil
-    local first = math.max(1, #entries - JOURNAL_ROWS + 1)
-    for i = #entries, first, -1 do
-        local entry = entries[i]
-        local key = Journal.DayKey(entry.t)
-        if key ~= blockKey then
-            block = { title = DayTitle(key, today, yesterday), items = {} }
-            blocks[#blocks + 1] = block
-            blockKey = key
-        end
-        block.items[#block.items + 1] = JournalItem(entry)
-    end
-    for _, dayBlock in ipairs(blocks) do
-        dayBlock.note = tostring(#dayBlock.items)
-    end
-    if first > 1 then
-        blocks[#blocks + 1] = { items = { JOURNAL_MORE_ITEM } }
-    end
-    return blocks
-end
-
--- "3 for 2g" where a count comes with money, the bare count otherwise.
-local function TotalText(counters, counter)
-    local count = counters[counter.key] or 0
-    if counter.money and count > 0 then
-        return L.j_count_money:format(count, ns.FormatMoney(counters[counter.money] or 0))
-    end
-    return tostring(count)
-end
-
-local function JournalTotals()
-    local Journal = ns.JournalService
-    local items = {}
-    for i, counter in ipairs(Journal.counters) do
-        items[i] = {
-            kind = "info",
-            label = function()
-                return L["j_t_" .. counter.key]
-            end,
-            desc = function()
-                return L.j_t_line:format(
-                    TotalText(Journal.Totals("session"), counter),
-                    TotalText(Journal.Totals("week"), counter),
-                    TotalText(Journal.Totals("total"), counter)
-                )
-            end,
-        }
-    end
-    return { { items = items } }
-end
-
-local function JournalTabs()
-    local function Tab(id, blocks)
-        return {
-            id = id,
-            label = function()
-                return L["ui_tab_" .. id]
-            end,
-            desc = function()
-                return L["ui_tab_" .. id .. "_desc"]
-            end,
-            settings = {},
-            blocks = blocks,
-        }
-    end
-    return { Tab("history", JournalHistory), Tab("totals", JournalTotals) }
-end
-
----------------------------------------------------------------------------
--- Chronicle: the story of the player and their companions. Three tabs
--- tell it as a picture book, a fourth holds the switches that record it.
----------------------------------------------------------------------------
 
 local CHRONICLE_ROWS = 50 -- events in the book; older ones stay in the saved data
 
@@ -751,7 +599,7 @@ local function ChronicleBook(wanted)
     local Chronicle = ns.ChronicleService
     local entries = Chronicle.Entries()
     local now = time()
-    local today, yesterday = ns.JournalService.DayKey(now), ns.JournalService.DayKey(now - 86400)
+    local today, yesterday = DayKey(now), DayKey(now - 86400)
     local chapters, chapter, chapterKey, shown, more = {}, nil, nil, 0, false
     for i = #entries, 1, -1 do
         local entry = entries[i]
@@ -761,7 +609,7 @@ local function ChronicleBook(wanted)
                 break
             end
             shown = shown + 1
-            local key = ns.JournalService.DayKey(entry.t)
+            local key = DayKey(entry.t)
             if key ~= chapterKey then
                 chapter = { day = DayTitle(key, today, yesterday), events = {}, entries = {} }
                 chapters[#chapters + 1] = chapter
@@ -874,7 +722,6 @@ end
 
 local function BuildPages()
     for _, area in ipairs(ns.areas) do
-        local layout = layouts[area.id] or layouts.default
         AddPage({
             id = area.id,
             area = area,
@@ -885,21 +732,9 @@ local function BuildPages()
             desc = function()
                 return L["area_" .. area.id .. "_desc"]
             end,
-            tabs = layout(area),
+            tabs = layouts[area.id](),
         })
     end
-
-    AddPage({
-        id = "journal",
-        icon = "book",
-        title = function()
-            return L.area_journal
-        end,
-        desc = function()
-            return L.area_journal_desc
-        end,
-        tabs = JournalTabs(),
-    })
 
     AddPage({
         id = "general",
@@ -1903,7 +1738,6 @@ local function Build()
     window.scroll.content:SetWidth(CONTENT_W)
 
     window:SetScript("OnShow", function(self)
-        ns:Fire("OPTIONS_SHOWN") -- lets switches that mirror game options catch up
         PlayEmbers()
         Render()
         self:SetAlpha(0)
@@ -2006,9 +1840,6 @@ ns:On("LOCALE_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("CHRONICLE_CHANGED", function()
-    RequestRefresh("layout")
-end)
-ns:On("JOURNAL_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("ALIASES_CHANGED", function()

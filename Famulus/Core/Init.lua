@@ -112,7 +112,7 @@ end
 -- Helpers
 ---------------------------------------------------------------------------
 
--- Resolves a dotted global path such as "C_Container.UseContainerItem".
+-- Resolves a dotted global path such as "C_FriendList.GetNumFriends".
 -- Returns nil if any part is missing, so features can declare what they need
 -- and stay switched off on a client that lacks it instead of erroring.
 function ns.Resolve(path)
@@ -136,15 +136,6 @@ function ns.IsSecret(value)
     return issecretvalue ~= nil and issecretvalue(value) or false
 end
 
--- A name for use in chat messages. Secret values may be formatted into a
--- string but not tested, so they are passed through untouched.
-function ns.Label(value)
-    if ns.IsSecret(value) then
-        return value
-    end
-    return value or "?"
-end
-
 local PREFIX = "|cffffb347Famulus|r: "
 
 function ns:Print(text)
@@ -154,39 +145,9 @@ function ns:Print(text)
     end
 end
 
--- Feature feedback ("repaired for 12s"). Can be silenced in the settings.
+-- Feature feedback ("alias removed"). Can be silenced in the settings.
 function ns:Notify(text)
     if self:GetOption("general", "chatOutput") then
         self:Print(text)
     end
-end
-
-function ns.FormatMoney(copper)
-    copper = math.floor(copper or 0)
-    local fn = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetCoinTextureString
-    if fn then
-        return fn(copper)
-    end
-    local gold = math.floor(copper / 10000)
-    local silver = math.floor(copper / 100) % 100
-    local rest = copper % 100
-    if gold > 0 then
-        return string.format("%dg %ds %dc", gold, silver, rest)
-    elseif silver > 0 then
-        return string.format("%ds %dc", silver, rest)
-    end
-    return string.format("%dc", rest)
-end
-
-local modifierChecks = {
-    SHIFT = IsShiftKeyDown,
-    CTRL = IsControlKeyDown,
-    ALT = IsAltKeyDown,
-}
-
--- True while the player holds the "pause automation" modifier. Every
--- automation asks this first, so there is always a way to do things by hand.
-function ns:IsPaused()
-    local check = modifierChecks[self:GetOption("general", "pauseModifier")]
-    return check ~= nil and check() or false
 end

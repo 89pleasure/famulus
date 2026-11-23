@@ -6,8 +6,7 @@
 -- report in FamulusDB.selfTest; the client writes it to disk on /reload or
 -- logout, where it can be read with tools/read_selftest.lua.
 --
--- Everything here is read-only except the camera probe, which changes one
--- CVar and puts it back. Nothing runs, and no event is registered, unless
+-- Everything here is read-only. Nothing runs, and no event is registered, unless
 -- the player asks for it ("/fam test") or switches developer mode on
 -- ("/fam dev").
 
@@ -25,8 +24,6 @@ local EXPECT_PRESENT = {
     "C_AddOns",
     "C_Item.GetItemInfo",
     "C_Spell.GetSpellInfo",
-    "C_GossipInfo",
-    "C_QuestLog",
     "C_Map",
     "C_Timer.After",
     "C_Timer.NewTicker",
@@ -38,30 +35,16 @@ local EXPECT_PRESENT = {
     "ChatFrameUtil.AddSenderNameFilter",
     "Menu.ModifyMenu",
     "UnitNameUnmodified",
-    "ChatFrameUtil.InsertLink",
-    "ChatFrameUtil.OpenChat",
     "C_Map.GetMapInfo",
     "issecretvalue",
     "securecallfunction",
     "hooksecurefunc",
-    "StaticPopup_Hide",
-    "StaticPopup_FindVisible",
-    "StaticPopupDialogs",
     "EventRegistry.RegisterCallback",
-    "CVarCallbackRegistry.RegisterCallback",
 }
 
 local EXPECT_ABSENT = {
     "GetItemInfo",
     "GetSpellInfo",
-}
-
--- Blizzard popups the features close or fill in, by feature.
-local POPUPS = {
-    confirmBoP = { "LOOT_BIND" },
-    acceptInvites = { "PARTY_INVITE" },
-    declineDuels = { "DUEL_REQUESTED" },
-    autoAccept = { "QUEST_ACCEPT" },
 }
 
 -- A printable description of a value that is safe for secret values.
@@ -156,67 +139,6 @@ local function CheckFeatures()
         else
             Add("feature", feature.id, "ok", feature.enabled and "enabled" or "available")
         end
-        for _, option in ipairs(feature.options) do
-            if option.requires and ns.Resolve(option.requires) == nil then
-                Add("feature", feature.id .. "." .. option.key, "warn", "missing API: " .. option.requires)
-            end
-        end
-    end
-end
-
-local function CheckErrorStrings()
-    local list = ns.features.hideErrors and ns.features.hideErrors.blockedGlobals
-    if not list then
-        return
-    end
-    local missing = {}
-    for i = 1, #list do
-        if type(_G[list[i]]) ~= "string" then
-            missing[#missing + 1] = list[i]
-        end
-    end
-    if #missing == 0 then
-        Add("hideErrors", "error strings", "ok", #list .. " of " .. #list .. " exist")
-    else
-        Add("hideErrors", "error strings", "warn", (#list - #missing) .. " of " .. #list .. " exist; missing: " .. table.concat(missing, ", "))
-    end
-end
-
-local function CheckPopups()
-    local dialogs = StaticPopupDialogs
-    if type(dialogs) ~= "table" then
-        Add("popup", "StaticPopupDialogs", "warn", "table not found, popup names cannot be checked")
-        return
-    end
-    local function Check(owner, which)
-        if dialogs[which] ~= nil then
-            Add("popup", which, "ok", owner)
-        else
-            Add("popup", which, "warn", "unknown popup name, used by " .. owner)
-        end
-    end
-    for owner, names in pairs(POPUPS) do
-        for i = 1, #names do
-            Check(owner, names[i])
-        end
-    end
-    local deletePopups = ns.features.easyDelete and ns.features.easyDelete.popups
-    if deletePopups then
-        for i = 1, #deletePopups do
-            Check("easyDelete", deletePopups[i])
-        end
-    end
-    -- easyDelete reaches the edit box through the dialog frame.
-    local dialog = StaticPopup1
-    if dialog then
-        local how = (dialog.GetEditBox and "GetEditBox()") or (dialog.EditBox and "EditBox") or (dialog.editBox and "editBox")
-        if how then
-            Add("popup", "edit box access", "ok", how)
-        else
-            Add("popup", "edit box access", "warn", "StaticPopup1 has no GetEditBox, EditBox or editBox")
-        end
-    else
-        Add("popup", "edit box access", "warn", "StaticPopup1 not found; check easyDelete by hand")
     end
 end
 
@@ -287,98 +209,6 @@ local function CheckFonts()
     end
 end
 
--- chatArrowKeys: every chat edit box should follow the feature's state.
-local function CheckChatArrows()
-    local feature = ns.features.chatArrowKeys
-    if not feature then
-        return
-    end
-    local expected = not feature.enabled
-    local boxes, wrong = 0, {}
-    for i = 1, NUM_CHAT_WINDOWS or 10 do
-        local editBox = _G["ChatFrame" .. i .. "EditBox"]
-        if editBox and editBox.GetAltArrowKeyMode then
-            boxes = boxes + 1
-            if editBox:GetAltArrowKeyMode() ~= expected then
-                wrong[#wrong + 1] = "ChatFrame" .. i
-            end
-        end
-    end
-    if boxes == 0 then
-        Add("chat", "arrow keys", "warn", "no chat edit box with GetAltArrowKeyMode found")
-    elseif #wrong == 0 then
-        Add("chat", "arrow keys", "ok", boxes .. " edit boxes, Alt needed: " .. tostring(expected))
-    else
-        Add("chat", "arrow keys", "warn", "Alt mode differs from the feature in " .. table.concat(wrong, ", "))
-    end
-end
-
-local function CheckCamera()
-    local feature = ns.features.cameraZoom
-    if not (feature and feature.zoomCVar and C_CVar and C_CVar.GetCVar and C_CVar.SetCVar) then
-        return
-    end
-    local cvar = feature.zoomCVar
-    local before = C_CVar.GetCVar(cvar)
-    local default = C_CVar.GetCVarDefault and C_CVar.GetCVarDefault(cvar)
-    if tonumber(before) == nil then
-        Add("camera", cvar, "fail", "CVar not readable: " .. Describe(before))
-        return
-    end
-    if feature.enabled or (InCombatLockdown and InCombatLockdown()) then
-        Add("camera", cvar, "ok", "current " .. before .. ", default " .. Describe(default) .. " (probe skipped)")
-        return
-    end
-    -- Try each candidate, note what the client keeps, then restore.
-    local accepted = {}
-    local highest
-    for i = 1, #feature.zoomCandidates do
-        local target = feature.zoomCandidates[i]
-        pcall(C_CVar.SetCVar, cvar, target)
-        local kept = tonumber(C_CVar.GetCVar(cvar)) or 0
-        accepted[#accepted + 1] = target .. " -> " .. kept
-        if not highest and kept >= target - 0.01 then
-            highest = target
-        end
-    end
-    pcall(C_CVar.SetCVar, cvar, before)
-    local detail = "current " .. before .. ", default " .. Describe(default) .. ", tried " .. table.concat(accepted, "; ")
-    if highest then
-        Add("camera", cvar, "ok", detail)
-    else
-        Add("camera", cvar, "warn", detail .. " (no candidate accepted)")
-    end
-end
-
-local function CheckMap()
-    local map = WorldMapFrame
-    if not map then
-        Add("map", "WorldMapFrame", "warn", "not loaded yet; open the map once and run the test again")
-    else
-        local canvas = map.ScrollContainer
-        if canvas and canvas.GetNormalizedCursorPosition then
-            Add("map", "cursor position", "ok", "ScrollContainer:GetNormalizedCursorPosition")
-        else
-            Add("map", "cursor position", "warn", "WorldMapFrame.ScrollContainer or its cursor method is missing")
-        end
-    end
-    if not (C_Map and C_Map.GetBestMapForUnit and C_Map.GetPlayerMapPosition) then
-        return
-    end
-    local mapID = C_Map.GetBestMapForUnit("player")
-    local position = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
-    if not position then
-        Add("map", "player position", "warn", "no position on map " .. Describe(mapID) .. " (normal inside instances)")
-        return
-    end
-    local x = position:GetXY()
-    if ns.IsSecret(x) then
-        Add("map", "player position", "warn", "position is a secret value here")
-    else
-        Add("map", "player position", "ok", "map " .. Describe(mapID))
-    end
-end
-
 -- The alias features match characters by name. Records how this client
 -- spells names, without storing anybody's name in the report.
 local function CheckNames()
@@ -430,13 +260,8 @@ local CHECKS = {
     CheckClient,
     CheckKnownApi,
     CheckFeatures,
-    CheckErrorStrings,
-    CheckPopups,
     CheckMedia,
     CheckFonts,
-    CheckChatArrows,
-    CheckCamera,
-    CheckMap,
     CheckNames,
     CheckIdleCost,
 }

@@ -176,14 +176,13 @@ check(type(FamulusDB) == "table" and type(FamulusDB.profile) == "table", "databa
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
-check(total == 24, "24 features registered (got " .. total .. ")")
-check(active == 7, "7 features on by default (got " .. active .. ")")
+check(total == 8, "8 features registered (got " .. total .. ")")
+check(active == 5, "5 features on by default (got " .. active .. ")")
 for _, feature in ipairs(ns.featureList) do
-    local harmless = feature.id == "mapCoords" or feature.id == "chatArrowKeys" or feature.id == "liveFeed" or feature.category == "aliases"
+    local harmless = feature.id == "liveFeed" or feature.category == "aliases"
     check(feature.enabled == harmless, "only the harmless features are on by default: " .. feature.id)
 end
 check(ns:CountRegisteredEvents() == 0, "no game event is registered after login (got " .. ns:CountRegisteredEvents() .. ")")
-check(mock.cvars.autoLootDefault == "0" and mock.count("SetCVar") == 0, "a fresh install changes no game setting")
 check(lastChat():find("/fam", 1, true) ~= nil, "first login prints the hint")
 check(next(FamulusDB.profile) == nil, "nothing is saved while everything is on default")
 check(mock.CountOnUpdateFrames() == 0, "no OnUpdate handler runs while idle (got " .. mock.CountOnUpdateFrames() .. ")")
@@ -193,285 +192,6 @@ check(mock.count("Settings.RegisterAddOnCategory") == 1, "entry in the game opti
 local function enable(id, value)
     ns:SetOption(id, "enabled", value ~= false)
 end
-
----------------------------------------------------------------------------
-section("Vendor: repair")
----------------------------------------------------------------------------
-
-setState({ canRepair = true, repairCost = 1200, money = 5000 })
-mock.Fire("MERCHANT_SHOW")
-check(mock.count("RepairAllItems") == 0, "repair does nothing while switched off")
-
-enable("autoRepair")
-check(ns.features.autoRepair.enabled, "switching on works without reload")
-mock.Fire("MERCHANT_SHOW")
-check(mock.count("RepairAllItems") == 1, "repairs when the merchant opens")
-check(lastChat():find("1200c", 1, true) ~= nil, "reports the cost")
-
-mock.reset()
-setState({ canRepair = true, repairCost = 1200, money = 100 })
-mock.Fire("MERCHANT_SHOW")
-check(mock.count("RepairAllItems") == 0, "does not repair without enough gold")
-check(#mock.chat == 1, "says that gold is missing")
-
-mock.reset()
-setState({ canRepair = true, repairCost = 1200, money = 5000, shift = true })
-mock.Fire("MERCHANT_SHOW")
-check(mock.count("RepairAllItems") == 0, "pause key skips the repair")
-
-mock.reset()
-setState({ canRepair = true, repairCost = 1200, money = 5000, canGuildRepair = true })
-ns:SetOption("autoRepair", "guildFunds", true)
-mock.Fire("MERCHANT_SHOW")
-check(mock.calls[1][1] == "RepairAllItems" and mock.calls[1][2] == true, "guild funds are used first")
-mock.Advance(0.6)
-check(mock.count("RepairAllItems") == 1 and lastChat():find("guild", 1, true) ~= nil, "guild repair is reported")
-
-mock.reset()
-setState({ canRepair = true, repairCost = 1200, money = 5000, canGuildRepair = true, guildRepairFails = true })
-mock.Fire("MERCHANT_SHOW")
-mock.Advance(0.6)
-check(mock.count("RepairAllItems") == 2, "falls back to own gold when the guild does not pay")
-
-mock.reset()
-ns:SetOption("general", "chatOutput", false)
-setState({ canRepair = true, repairCost = 50, money = 5000 })
-ns:SetOption("autoRepair", "guildFunds", false)
-mock.Fire("MERCHANT_SHOW")
-check(mock.count("RepairAllItems") == 1 and #mock.chat == 0, "chat feedback can be switched off")
-ns:SetOption("general", "chatOutput", true)
-
-enable("autoRepair", false)
-check(ns:CountRegisteredEvents() == 0, "switching off removes the event again")
-
----------------------------------------------------------------------------
-section("Vendor: sell junk")
----------------------------------------------------------------------------
-
-local function bags()
-    return {
-        [0] = {
-            { itemID = 1, quality = 0, stackCount = 5, hyperlink = "junk1" },
-            { itemID = 2, quality = 1, stackCount = 1, hyperlink = "white" },
-            false,
-            { itemID = 3, quality = 0, stackCount = 1, hyperlink = "worthless", hasNoValue = true },
-        },
-        [1] = {
-            { itemID = 4, quality = 0, stackCount = 2, hyperlink = "junk2" },
-            { itemID = 5, quality = 0, stackCount = 1, hyperlink = "locked", isLocked = true },
-        },
-    }
-end
-local prices = { junk1 = 10, junk2 = 100, locked = 7 }
-
-enable("sellJunk")
-setState({ bags = bags(), prices = prices })
-MerchantFrame.shown = true
-mock.Fire("MERCHANT_SHOW")
-check(mock.count("UseContainerItem") == 0, "selling is spread over time, not done in one burst")
-mock.Advance(1)
-check(mock.count("UseContainerItem") == 2, "sells the two sellable grey items (got " .. mock.count("UseContainerItem") .. ")")
-check(lastChat():find("2", 1, true) and lastChat():find("250c", 1, true), "reports count and value: " .. lastChat())
-check(mock.ActiveTimers() == 0, "the sell ticker stops when done")
-
-mock.reset()
-setState({ bags = bags(), prices = prices })
-mock.Fire("MERCHANT_SHOW")
-mock.Advance(0.16)
-MerchantFrame.shown = false
-mock.Fire("MERCHANT_CLOSED")
-mock.Advance(1)
-check(mock.count("UseContainerItem") == 1, "stops selling when the merchant closes")
-check(mock.ActiveTimers() == 0, "no ticker left after closing")
-
-mock.reset()
-setState({ bags = bags(), prices = prices })
-MerchantFrame.shown = true
-mock.Fire("MERCHANT_SHOW")
-enable("sellJunk", false)
-mock.Advance(1)
-check(mock.count("UseContainerItem") == 0, "switching the feature off stops a running sale")
-MerchantFrame.shown = false
-
----------------------------------------------------------------------------
-section("Quests")
----------------------------------------------------------------------------
-
-local gossip = {
-    activeQuests = {
-        { questID = 10, isComplete = false },
-        { questID = 11, isComplete = true, repeatable = true },
-        { questID = 12, isComplete = true },
-    },
-    availableQuests = {
-        { questID = 20, isTrivial = true },
-        { questID = 21, repeatable = true },
-        { questID = 22 },
-    },
-}
-setState(gossip)
-mock.Fire("GOSSIP_SHOW")
-check(#mock.calls == 0, "gossip is untouched while both quest features are off")
-
-enable("autoAccept")
-mock.Fire("GOSSIP_SHOW")
-check(mock.count("SelectAvailableQuest") == 1 and mock.calls[1][2] == 22, "picks the first normal quest, skipping trivial and repeatable ones")
-
-mock.reset()
-ns:SetOption("autoAccept", "skipTrivial", false)
-mock.Fire("GOSSIP_SHOW")
-check(mock.calls[1][2] == 20, "trivial quests are taken when the option allows it")
-ns:SetOption("autoAccept", "skipTrivial", true)
-
-mock.reset()
-enable("autoTurnIn")
-mock.Fire("GOSSIP_SHOW")
-check(#mock.calls == 1 and mock.calls[1][1] == "SelectActiveQuest" and mock.calls[1][2] == 12, "turn-in goes first and makes exactly one selection")
-
-mock.reset()
-setState({ questID = 30 })
-mock.Fire("QUEST_DETAIL")
-check(mock.count("AcceptQuest") == 1, "accepts an offered quest")
-mock.reset()
-setState({ questID = 30, shift = true })
-mock.Fire("QUEST_DETAIL")
-check(mock.count("AcceptQuest") == 0, "pause key lets the player read the quest")
-setState({ questID = 30, pvpQuest = true })
-mock.Fire("QUEST_DETAIL")
-check(mock.count("AcceptQuest") == 0, "never accepts a PvP-flagging quest")
-setState({ questID = 30, trivial = { [30] = true } })
-mock.Fire("QUEST_DETAIL")
-check(mock.count("AcceptQuest") == 0, "does not accept trivial quests")
-
-mock.reset()
-setState({ questID = 31, completable = true })
-mock.Fire("QUEST_PROGRESS")
-check(mock.count("CompleteQuest") == 1, "continues a completable quest")
-mock.reset()
-setState({ questID = 31, completable = true, questCost = 500 })
-mock.Fire("QUEST_PROGRESS")
-check(mock.count("CompleteQuest") == 0, "never hands in a quest that costs gold")
-setState({ questID = 31, completable = true, repeatable = { [31] = true } })
-mock.Fire("QUEST_PROGRESS")
-check(mock.count("CompleteQuest") == 0, "never hands in a repeatable quest")
-
-mock.reset()
-setState({ questID = 31, choices = 1 })
-mock.Fire("QUEST_COMPLETE")
-check(mock.count("GetQuestReward") == 1, "takes the reward when there is nothing to choose")
-mock.reset()
-setState({ questID = 31, choices = 3 })
-mock.Fire("QUEST_COMPLETE")
-check(mock.count("GetQuestReward") == 0, "leaves the reward choice to the player")
-
-enable("autoAccept", false)
-check(ns:CountRegisteredEvents() == 4, "turn-in alone keeps the shared quest list events (got " .. ns:CountRegisteredEvents() .. ")")
-enable("autoTurnIn", false)
-check(ns:CountRegisteredEvents() == 0, "all quest events are gone when both are off (got " .. ns:CountRegisteredEvents() .. ")")
-
----------------------------------------------------------------------------
-section("Loot and items")
----------------------------------------------------------------------------
-
-mock.cvars.autoLootDefault = "0"
-local eventsBeforeLoot = ns:CountRegisteredEvents()
-enable("autoLoot")
-check(mock.cvars.autoLootDefault == "1", "auto loot switches on the game's option")
-check(ns:CountRegisteredEvents() == eventsBeforeLoot, "and listens to nothing")
-enable("autoLoot", false)
-check(mock.cvars.autoLootDefault == "0", "switching off clears the game's option as well")
-
--- Changed in the game's options: the switch follows when the window opens
--- (and at login), without writing the option back.
-mock.cvars.autoLootDefault = "1"
-mock.reset()
-ns:Fire("OPTIONS_SHOWN")
-check(ns.features.autoLoot.enabled and ns:GetOption("autoLoot", "enabled") == true, "the switch shows the game's option once it was switched on there")
-check(mock.count("SetCVar") == 0, "following the game writes nothing")
-mock.cvars.autoLootDefault = "0"
-ns:Fire("OPTIONS_SHOWN")
-check(not ns.features.autoLoot.enabled and ns:GetOption("autoLoot", "enabled") == false, "and once it was switched off there")
-check(mock.count("SetCVar") == 0, "still without writing")
-mock.SetGameOption("autoLootDefault", "1")
-check(ns.features.autoLoot.enabled, "the switch follows the game's options at once, with the window open")
-mock.SetGameOption("autoLootDefault", "0")
-check(not ns.features.autoLoot.enabled and mock.count("SetCVar") == 0, "both ways, without writing")
-
--- The category switch stops the feature but leaves the game's option alone.
-enable("autoLoot")
-ns:SetOption("categories", "loot", false)
-check(not ns.features.autoLoot.enabled and mock.cvars.autoLootDefault == "1", "switching the loot category off keeps the game's auto loot")
-ns:SetOption("categories", "loot", true)
-check(ns.features.autoLoot.enabled and mock.cvars.autoLootDefault == "1", "switching it on again changes nothing either")
-enable("autoLoot", false)
-check(mock.cvars.autoLootDefault == "0", "only the feature's own switch clears it")
-
--- Neither a page reset nor a profile switch may write the game's option.
-mock.SetGameOption("autoLootDefault", "1")
-check(ns:IsSectionDefault("autoLoot"), "a switch that only follows the game counts as untouched")
-mock.reset()
-ns:ResetSections({ "autoLoot" })
-check(ns.features.autoLoot.enabled and mock.cvars.autoLootDefault == "1" and mock.count("SetCVar") == 0,
-    "resetting its page keeps the game's auto loot")
-ns:SetUseCharacterProfile(true)
-mock.SetGameOption("autoLootDefault", "0")
-mock.reset()
-ns:SetUseCharacterProfile(false)
-check(not ns.features.autoLoot.enabled and ns:GetOption("autoLoot", "enabled") == false,
-    "a profile switch takes the game's value into the new profile")
-check(mock.cvars.autoLootDefault == "0" and mock.count("SetCVar") == 0, "instead of writing its own")
-FamulusCharDB.profile = nil
-
-enable("confirmBoP")
-mock.reset()
-setState({ inGroup = true })
-mock.Fire("LOOT_BIND_CONFIRM", 2)
-check(mock.count("ConfirmLootSlot") == 0, "bind-on-pickup stays a question in a group")
-setState({})
-mock.Fire("LOOT_BIND_CONFIRM", 2)
-mock.Advance(0.05)
-check(mock.count("ConfirmLootSlot") == 1 and mock.count("StaticPopup_Hide") == 1, "confirms and closes the popup when solo")
-enable("confirmBoP", false)
-
-enable("easyDelete")
-local editBox = CreateFrame("EditBox")
-local dialog = CreateFrame("Frame")
-dialog.editBoxWidget = editBox
-setState({ popups = { DELETE_GOOD_ITEM = dialog } })
-mock.Fire("DELETE_ITEM_CONFIRM")
-mock.Advance(0.05)
-check(editBox:GetText() == "DELETE", "fills in the delete confirmation word")
-enable("easyDelete", false)
-
----------------------------------------------------------------------------
-section("Social")
----------------------------------------------------------------------------
-
-enable("acceptInvites")
-setState({})
-mock.Fire("PARTY_INVITE_REQUEST", "Stranger", false, false, false, true, false, "Player-1-NOBODY")
-check(mock.count("AcceptGroup") == 0, "invites from strangers stay untouched")
-mock.Fire("PARTY_INVITE_REQUEST", "Friend", false, false, false, true, false, "Player-1-FRIEND")
-check(mock.count("AcceptGroup") == 1, "accepts a friend's invite")
-check(mock.count("StaticPopup_Hide") == 0, "does not close the popup before the group exists")
-mock.Fire("GROUP_ROSTER_UPDATE")
-check(mock.count("StaticPopup_Hide") == 1, "closes the popup once in the group")
-mock.Fire("GROUP_ROSTER_UPDATE")
-check(mock.count("StaticPopup_Hide") == 1, "and stops listening to roster updates")
-mock.Fire("PARTY_INVITE_REQUEST", "Guildie", false, false, false, true, false, "Player-1-GUILD")
-check(mock.count("AcceptGroup") == 2, "accepts a guild member's invite")
-mock.Fire("PARTY_INVITE_REQUEST", "NoGuid")
-check(mock.count("AcceptGroup") == 2, "an invite without sender id is left alone")
-mock.Fire("PARTY_INVITE_REQUEST", "Hidden", false, false, false, true, false, mock.SECRET)
-check(mock.count("AcceptGroup") == 2, "and so is one with a secret sender id")
-enable("acceptInvites", false)
-
-enable("declineDuels")
-mock.reset()
-mock.Fire("DUEL_REQUESTED", "Rival")
-mock.Advance(0.05)
-check(mock.count("CancelDuel") == 1 and lastChat():find("Rival", 1, true) ~= nil, "declines duels and says who asked")
-enable("declineDuels", false)
 
 ---------------------------------------------------------------------------
 section("Aliases")
@@ -623,267 +343,6 @@ GameTooltip.AddDoubleLine = nil
 setState({})
 
 ---------------------------------------------------------------------------
-section("Tooltips")
----------------------------------------------------------------------------
-
--- The alias line (on by default) installed the first hook at login.
-check(#TooltipDataProcessor.postCalls == 1, "no item or spell hook is installed while the feature is off")
-table.remove(TooltipDataProcessor.postCalls, 1)
-local lines = 0
-GameTooltip.AddDoubleLine = function()
-    lines = lines + 1
-end
-enable("tooltipIDs")
-check(#TooltipDataProcessor.postCalls == 2, "item and spell hooks are installed on first use")
-TooltipDataProcessor.postCalls[1].fn(GameTooltip, { id = 6948 })
-check(lines == 1, "adds the ID line")
-TooltipDataProcessor.postCalls[1].fn(GameTooltip, { id = mock.SECRET })
-check(lines == 1, "but not for a secret ID")
-TooltipDataProcessor.postCalls[1].fn(CreateFrame("GameTooltip"), { id = 6948 })
-check(lines == 1, "leaves other tooltips alone")
-enable("tooltipIDs", false)
-TooltipDataProcessor.postCalls[1].fn(GameTooltip, { id = 6948 })
-check(lines == 1, "the hook is inert after switching off")
-enable("tooltipIDs")
-check(#TooltipDataProcessor.postCalls == 2, "switching on again does not hook twice")
-enable("tooltipIDs", false)
-
-local owners = 0
-GameTooltip.SetOwner = function()
-    owners = owners + 1
-end
-enable("tooltipCursor")
-GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
-check(owners == 1, "tooltip is re-anchored to the cursor")
-enable("tooltipCursor", false)
-GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
-check(owners == 1, "and left alone when switched off")
-enable("tooltipCursor")
-GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
-check(owners == 2, "switching on again does not hook twice")
-enable("tooltipCursor", false)
-
----------------------------------------------------------------------------
-section("Interface")
----------------------------------------------------------------------------
-
-check(mock.CountOnUpdateFrames() == 0, "map coordinates do not update while the map is closed")
-WorldMapFrame.shown = true
-check(mock.CountOnUpdateFrames() == 1, "they update only while the map is open")
-mock.Advance(0.3)
-WorldMapFrame.shown = false
-enable("mapCoords", false)
-WorldMapFrame.shown = true
-check(mock.CountOnUpdateFrames() == 0, "and not at all when switched off")
-WorldMapFrame.shown = false
-enable("mapCoords")
-
-local coordFrame
-for _, frame in ipairs(mock.frames) do
-    if frame.parent == WorldMapFrame and frame.scripts.OnUpdate then
-        coordFrame = frame
-    end
-end
-check(coordFrame and coordFrame.mouseEnabled == true, "the coordinate field takes clicks by default")
-
-local function coordWidthAt(x, y)
-    local original = C_Map.GetPlayerMapPosition
-    C_Map.GetPlayerMapPosition = function()
-        return x and { GetXY = function() return x, y end } or nil
-    end
-    coordFrame.scripts.OnShow(coordFrame)
-    C_Map.GetPlayerMapPosition = original
-    return coordFrame:GetWidth()
-end
-local wideWidth = coordWidthAt(0.4567, 0.1234)
-check(coordWidthAt(0.05, 0.07) == wideWidth and coordWidthAt(nil) == wideWidth,
-    "the field keeps its width whatever the numbers are")
-do
-    local original = C_Map.GetPlayerMapPosition
-    C_Map.GetPlayerMapPosition = function()
-        return { GetXY = function() return mock.SECRET, mock.SECRET end }
-    end
-    mock.reset()
-    coordFrame.scripts.OnShow(coordFrame)
-    coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
-    check(mock.count("ChatFrameUtil.OpenChat") == 0 and mock.count("ChatFrameUtil.InsertLink") == 0,
-        "a secret position is neither shown nor sent")
-    C_Map.GetPlayerMapPosition = original
-end
-coordFrame.scripts.OnEnter(coordFrame)
-coordFrame.scripts.OnLeave(coordFrame)
-mock.reset()
-setState({})
-coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
-check(mock.count("ChatFrameUtil.OpenChat") == 1 and mock.calls[#mock.calls][2] == "Elwynn Forest 45.7, 12.3",
-    "a click opens the chat input with zone and player position")
-mock.reset()
-setState({ chatOpen = true })
-coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
-check(mock.count("ChatFrameUtil.InsertLink") == 1 and mock.count("ChatFrameUtil.OpenChat") == 0,
-    "an open chat input gets the position at its cursor")
--- The click takes the focus from an empty chat input; the game then closes
--- the input and resets its chat type before our click handler runs.
-mock.reset()
-setState({})
-local yellBox = CreateFrame("EditBox")
-yellBox.attributes = { chatType = "YELL" }
-coordFrame.scripts.OnEnter(coordFrame)
-EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusLost", yellBox)
-coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
-check(mock.calls[#mock.calls][1] == "ChatFrameUtil.OpenChat" and mock.calls[#mock.calls][2] == "/y Elwynn Forest 45.7, 12.3",
-    "a chat input closed by the click is reopened with its chat type (got " .. tostring(mock.calls[#mock.calls][2]) .. ")")
-coordFrame.scripts.OnLeave(coordFrame)
-local coordCallbacks = 0
-for _, owners in pairs(EventRegistry.callbacks) do
-    if owners[ns.features.mapCoords] then
-        coordCallbacks = coordCallbacks + 1
-    end
-end
-check(coordCallbacks == 0, "the field listens to the chat input only while hovered")
-mock.reset()
-coordFrame.scripts.OnEnter(coordFrame)
-coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
-check(mock.calls[#mock.calls][2] == "Elwynn Forest 45.7, 12.3", "a remembered chat type is forgotten after leaving the field")
-coordFrame.scripts.OnLeave(coordFrame)
-mock.reset()
-coordFrame.scripts.OnMouseUp(coordFrame, "RightButton")
-check(#mock.calls == 0, "only the left button inserts")
-local chatInfoBefore = C_ChatInfo
-C_ChatInfo = { InChatMessagingLockdown = function() return true end }
-coordFrame.scripts.OnMouseUp(coordFrame, "LeftButton")
-check(#mock.calls == 0, "nothing is inserted during chat lockdown")
-C_ChatInfo = chatInfoBefore
-ns:SetOption("mapCoords", "clickToChat", false)
-check(coordFrame.mouseEnabled == false and coordFrame.scripts.OnMouseUp == nil,
-    "with the option off the field leaves clicks to the map")
-ns:SetOption("mapCoords", "clickToChat", true)
-check(coordFrame.mouseEnabled == true, "and takes them again when it is back on")
-
-check(ChatFrame1EditBox:GetAltArrowKeyMode() == false and ChatFrame2EditBox:GetAltArrowKeyMode() == false, "chat arrow keys work without Alt after login")
-ChatFrame1EditBox:SetAltArrowKeyMode(true)
-EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", ChatFrame1EditBox)
-check(ChatFrame1EditBox:GetAltArrowKeyMode() == false, "a reset mode is fixed again when the chat box gets focus")
-local whisperBox = CreateFrame("EditBox", "ChatFrame11EditBox")
-whisperBox.altArrowKeyMode = true
-EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", whisperBox)
-check(whisperBox:GetAltArrowKeyMode() == false, "chat windows opened after login are covered as well")
-enable("chatArrowKeys", false)
-check(ChatFrame1EditBox:GetAltArrowKeyMode() == true and whisperBox:GetAltArrowKeyMode() == true, "switching off gives every touched chat box its Alt mode back")
-local chatCallbacksLeft = 0
-for _, owners in pairs(EventRegistry.callbacks) do
-    if owners[ns.features.chatArrowKeys] then
-        chatCallbacksLeft = chatCallbacksLeft + 1
-    end
-end
-check(chatCallbacksLeft == 0, "EventRegistry callbacks are removed when switched off (got " .. chatCallbacksLeft .. ")")
-whisperBox.altArrowKeyMode = true
-EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusGained", whisperBox)
-check(whisperBox:GetAltArrowKeyMode() == true, "and focus no longer changes anything")
-enable("chatArrowKeys")
-check(ChatFrame2EditBox:GetAltArrowKeyMode() == false, "switching on again applies at once")
-
--- Chat history: Enter remembers the line, Up and Down step through it.
-local chatBox = ChatFrame1EditBox
-local function press(key)
-    chatBox.scripts.OnKeyDown(chatBox, key)
-end
-local function send(text, attributes)
-    chatBox.attributes = attributes or { chatType = "SAY" }
-    chatBox:SetText(text)
-    press("ENTER")
-    mock.Advance(0.1)
-    chatBox:SetText("")
-end
-press("UP")
-check(chatBox:GetText() == "", "Up does nothing while nothing was sent")
-send("hello there")
-send("/cast Fireball")
-send("/dance")
-send("see you", { chatType = "WHISPER", tellTarget = "Thrall" })
-check((chatBox.historyCleared or 0) > 0, "the client's own history is emptied so it cannot compete")
-chatBox:SetText("half typed")
-press("UP")
-check(chatBox:GetText() == "/w Thrall see you", "Up brings back the last line with its whisper target")
-check(chatBox.cursor == #"/w Thrall see you", "with the cursor at the end")
-press("UP")
-check(chatBox:GetText() == "/dance", "harmless commands are kept")
-press("UP")
-check(chatBox:GetText() == "/s hello there", "secure commands such as /cast are skipped")
-press("UP")
-check(chatBox:GetText() == "/s hello there", "Up stops at the oldest line")
-press("DOWN")
-press("DOWN")
-press("DOWN")
-check(chatBox:GetText() == "half typed", "Down past the newest line gives back what was typed")
-chatBox.attributes = { chatType = "SAY" }
-chatBox:SetText("from the game")
-EventRegistry:TriggerEvent("ChatFrame.OnEditBoxPreSendText", chatBox)
-mock.Advance(0.1)
-chatBox:SetText("")
-press("UP")
-check(chatBox:GetText() == "/s from the game", "a send announced by the game is remembered as well")
-EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusLost", chatBox)
-send("twice")
-send("twice")
-press("UP")
-press("UP")
-check(chatBox:GetText() == "/s from the game", "the same line twice in a row is kept once")
-EventRegistry:TriggerEvent("ChatFrame.OnEditBoxFocusLost", chatBox)
-chatBox:SetText("")
-AutoCompleteBox.shown, AutoCompleteBox.parent = true, chatBox
-press("UP")
-check(chatBox:GetText() == "", "the arrows belong to the name list while it is open")
-AutoCompleteBox.shown, AutoCompleteBox.parent = false, nil
-enable("chatArrowKeys", false)
-press("UP")
-check(chatBox:GetText() == "", "switched off, the hook stays silent")
-enable("chatArrowKeys")
-press("UP")
-check(chatBox:GetText() ~= "", "switched on again, the lines are still there")
-chatBox:SetText("")
-chatBox.attributes = nil
-
-mock.reset()
-enable("cameraZoom")
-check(mock.cvars.cameraDistanceMaxZoomFactor == "2.6", "camera takes the highest factor the client accepts")
-enable("cameraZoom", false)
-check(mock.cvars.cameraDistanceMaxZoomFactor == "1.9", "switching off restores the player's own value")
-
-local shown = {}
-UIErrorsFrame.TryDisplayMessage = function(_, _, message)
-    shown[#shown + 1] = message
-end
-enable("hideErrors")
-check(not UIErrorsFrame.events.UI_ERROR_MESSAGE, "takes the error event away from the game's frame")
-mock.Fire("UI_ERROR_MESSAGE", 1, ERR_OUT_OF_RAGE)
-mock.Fire("UI_ERROR_MESSAGE", 1, "Inventory is full.")
-check(#shown == 1 and shown[1] == "Inventory is full.", "hides spam, keeps real errors")
-enable("hideErrors", false)
-UIErrorsFrame.events.UI_ERROR_MESSAGE = nil
-enable("hideErrors")
-enable("hideErrors", false)
-check(UIErrorsFrame.events.UI_ERROR_MESSAGE == true, "gives the event back when switched off")
-
-enable("levelScreenshot")
-mock.reset()
-mock.Fire("PLAYER_LEVEL_UP", 12)
-mock.Advance(2)
-check(mock.count("Screenshot") == 1, "screenshot after level up")
-mock.reset()
-mock.Fire("PLAYER_LEVEL_UP", 13)
-enable("levelScreenshot", false)
-mock.Advance(2)
-check(mock.count("Screenshot") == 0, "a delayed call is dropped when the feature is switched off")
-enable("levelScreenshot")
-mock.Fire("PLAYER_LEVEL_UP", 14)
-enable("levelScreenshot", false)
-enable("levelScreenshot")
-mock.Advance(2)
-check(mock.count("Screenshot") == 0, "and also when it was switched off and on again in the meantime")
-enable("levelScreenshot", false)
-
----------------------------------------------------------------------------
 section("Settings window")
 ---------------------------------------------------------------------------
 
@@ -921,25 +380,22 @@ local function tabButton(text)
     end
 end
 
-check(window.title:GetText() == "Quality of Life" and window.subtitle:GetText() == ns.L.area_qol_desc,
-    "the first page is Quality of Life, described in the header")
-check(window.tabs:IsShown() and tabButton("Vendors") and tabButton("Interface") and tabButton("Vendors").selected,
-    "its categories are tabs, starting with Vendors")
-check(window.section.desc:GetText() == ns.L.cat_vendor_desc, "the line under the tabs describes the tab")
-check(navButton("Quality of Life") and navButton("Aliases") and navButton("Chronicle") and navButton("Journal") and navButton("Settings") and navButton("About"),
+check(window.title:GetText() == "Aliases" and window.subtitle:GetText() == ns.L.area_aliases_desc,
+    "the first page is the aliases, described in the header")
+check(navButton("Aliases") and navButton("Chronicle") and navButton("Settings") and navButton("About"),
     "the sidebar lists the main features and the addon's own pages")
-check(navButton("Quality of Life").selected and navButton("Quality of Life").count:GetText() == "2/16",
+check(not navButton("Quality of Life") and not navButton("Journal"), "and nothing else")
+check(navButton("Aliases").selected and navButton("Aliases").count:GetText() == "4/4",
     "the main feature is selected and counts its active features")
+mock.Click(tabButton("Display"))
+check(tabButton("Display").selected and window.section.desc:GetText() == ns.L.ui_tab_display_desc, "the line under the tabs describes the tab")
 local rows = visibleRows()
-check(#rows == 3, "vendor tab shows repair, its guild option and junk (got " .. #rows .. ")")
-local optionRow = rows[2]
-local function isFolded(row)
-    return row.item.child and not row.desc:IsShown() and row.height < rows[1].height
-end
-check(isFolded(optionRow), "the option of a switched-off feature is a slim row without help text")
-check(optionRow.disabled and optionRow.toggle:IsShown() and not optionRow.toggle.on, "it is greyed out but shows its value")
-check(optionRow.bullet:IsShown() and not rows[1].bullet:IsShown(), "options are marked with a dot below their feature")
-check(optionRow.sunkenLast.parts[1]:IsShown() and not optionRow.sunken:IsShown(), "an option that ends its card has the rounded ground")
+check(#rows == 6, "the display tab shows the four features and their options (got " .. #rows .. ")")
+check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
+mock.Click(window.resetButton)
+check(window.resetButton.label:GetText() == "Reset", "and a click on it does nothing")
+local master = window.master
+check(master:IsShown() and master.toggle.on and master.caption:GetText() == "ON", "the tab carries the category's master switch, labelled ON")
 local function visibleCards()
     local list = {}
     for _, frame in ipairs(mock.frames) do
@@ -949,67 +405,63 @@ local function visibleCards()
     end
     return list
 end
-local vendorCards = visibleCards()
-check(#vendorCards == 2 and #vendorCards[1].block.items == 2, "every feature has its own card, together with its options")
-check(not vendorCards[1].mark:IsShown() and not vendorCards[2].mark:IsShown(), "cards of switched-off features are unmarked")
-enable("sellJunk")
-mock.Advance(0.1)
-check(vendorCards[2].mark:IsShown() and not vendorCards[1].mark:IsShown(), "the card of a running feature wears the accent mark")
-enable("sellJunk", false)
-mock.Advance(0.1)
-check(not vendorCards[2].mark:IsShown(), "and loses it when the feature is switched off")
-ns:SetOption("autoRepair", "guildFunds", true)
-mock.Advance(0.3)
-check(optionRow.toggle.on and isFolded(optionRow), "a chosen value shows while folded as well")
-mock.Click(optionRow)
-check(ns:GetOption("autoRepair", "guildFunds") == true, "and clicks on it do nothing")
-ns:SetOption("autoRepair", "guildFunds", false)
-mock.Advance(0.3)
-check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
-mock.Click(window.resetButton)
-check(window.resetButton.label:GetText() == "Reset", "and a click on it does nothing")
-local master = window.master
-check(master:IsShown() and master.toggle.on and master.caption:GetText() == "ON", "the tab carries the category's master switch, labelled ON")
+local aliasCards = visibleCards()
+check(#aliasCards == 4 and #aliasCards[1].block.items == 2, "every feature has its own card, together with its options")
+check(aliasCards[1].mark:IsShown() and aliasCards[2].mark:IsShown(), "the card of a running feature wears the accent mark")
 
 -- Toggle through the row itself.
+local optionRow = rows[2]
+local function isFolded(row)
+    return row.item.child and not row.desc:IsShown() and row.height < rows[1].height
+end
+check(not isFolded(optionRow) and optionRow.desc:IsShown() and not optionRow.disabled, "the option of a running feature is open")
 mock.Click(rows[1])
-check(ns.features.autoRepair.enabled, "clicking a row switches the feature on")
+check(not ns.features.chatAliases.enabled, "clicking a row switches the feature off")
 mock.Advance(0.3)
-check(#visibleRows() == 3 and not isFolded(optionRow) and optionRow.desc:IsShown(), "its option unfolds with its help text")
-check(not optionRow.disabled, "and can be used")
+check(#visibleRows() == 6 and isFolded(optionRow), "the option of a switched-off feature is a slim row without help text")
+check(optionRow.disabled and optionRow.dropdown:IsShown(), "it is greyed out but shows its value")
+check(optionRow.bullet:IsShown() and not rows[1].bullet:IsShown(), "options are marked with a dot below their feature")
+check(optionRow.sunkenLast.parts[1]:IsShown() and not optionRow.sunken:IsShown(), "an option that ends its card has the rounded ground")
+check(not aliasCards[1].mark:IsShown() and aliasCards[2].mark:IsShown(), "the card of a switched-off feature loses the mark")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
-check(navButton("Quality of Life").count:GetText() == "3/16", "the sidebar counts it")
+check(navButton("Aliases").count:GetText() == "3/4", "the sidebar counts it")
+ns:SetOption("chatAliases", "style", "both")
+mock.Advance(0.3)
+check(optionRow.dropdown.text:GetText() == ns.L.o_chatAliases_style_both and isFolded(optionRow), "a chosen value shows while folded as well")
+mock.Click(optionRow)
+mock.Advance(0.05)
+local menuOpen = false
+for _, frame in ipairs(mock.frames) do
+    menuOpen = menuOpen or (frame.value == "alias" and frame.check ~= nil and frame:IsVisible())
+end
+check(not menuOpen and ns:GetOption("chatAliases", "style") == "both", "and clicks on it do nothing")
+ns:SetOption("chatAliases", "style", "alias")
 
 -- Master switch: everything on the tab stops, the choices stay.
-local eventsWithRepair = ns:CountRegisteredEvents()
 mock.Click(master)
 mock.Advance(0.3)
-check(not ns:IsCategoryEnabled("vendor") and not ns.features.autoRepair.enabled, "the master switch stops the features of its category")
-check(ns:CountRegisteredEvents() == eventsWithRepair - 1, "and their game events are unregistered")
-check(ns:GetOption("autoRepair", "enabled") == true, "the feature's own setting is kept")
+check(not ns:IsCategoryEnabled("aliases") and not ns.features.tooltipAliases.enabled, "the master switch stops the features of its category")
+check(mock.CountSenderFilters() == 0, "nothing of a switched-off category reacts to the game")
+check(ns:GetOption("tooltipAliases", "enabled") == true and ns:GetOption("chatAliases", "enabled") == false, "the features' own settings are kept")
 check(not master.toggle.on and master.caption:GetText() == "OFF", "the switch reads OFF")
-check(window.section.desc:GetText() == ns.L.cat_vendor_desc, "the description stays")
-check(rows[1].disabled and rows[1].toggle.on, "feature rows are greyed out but still show the choice")
-check(tabButton("Vendors").label:GetAlpha() < 1 and tabButton("Quests").label:GetAlpha() == 1, "the tab of the category is greyed out, no other")
-check(navButton("Quality of Life").count:GetText() == "2/16", "the area keeps counting its other categories")
-check(FamulusDB.profile.categories.vendor == false, "the switch is saved")
-setState({ canRepair = true, repairCost = 1200, money = 5000 })
-mock.Fire("MERCHANT_SHOW")
-check(mock.count("RepairAllItems") == 0, "nothing of a switched-off category reacts to the game")
-enable("sellJunk")
-check(not ns.features.sellJunk.enabled, "a feature cannot be started while its category is off")
-enable("sellJunk", false)
-check(ns.features.mapCoords.enabled, "other categories keep running")
+check(window.section.desc:GetText() == ns.L.ui_tab_display_desc, "the description stays")
+check(rows[3].disabled and rows[3].toggle.on, "feature rows are greyed out but still show the choice")
+check(tabButton("Display").label:GetAlpha() < 1, "the tab of the category is greyed out")
+check(FamulusDB.profile.categories.aliases == false, "the switch is saved")
+enable("chatAliases")
+check(not ns.features.chatAliases.enabled, "a feature cannot be started while its category is off")
+enable("chatAliases", false)
+check(ns.features.liveFeed.enabled, "other categories keep running")
 mock.Click(master)
 mock.Advance(0.3)
-check(ns.features.autoRepair.enabled and FamulusDB.profile.categories == nil, "switching the category on again resumes the features")
-check(tabButton("Vendors").label:GetAlpha() == 1, "and the tab is back to normal")
+check(ns.features.tooltipAliases.enabled and FamulusDB.profile.categories == nil, "switching the category on again resumes the features")
+check(tabButton("Display").label:GetAlpha() == 1, "and the tab is back to normal")
 check(master.toggle.on and master.caption:GetText() == "ON", "as is the switch")
 
 mock.Click(rows[1])
-check(not ns.features.autoRepair.enabled, "and off again")
+check(ns.features.chatAliases.enabled, "and the feature on again")
 mock.Advance(0.3)
-check(#visibleRows() == 3 and isFolded(optionRow) and optionRow.disabled, "which folds the option again")
+check(not isFolded(optionRow) and optionRow.desc:IsShown() and not optionRow.disabled, "which unfolds its option with its help text")
 check(window.resetButton.disabled, "back on defaults, reset is greyed out again")
 mock.Click(master)
 mock.Advance(0.3)
@@ -1019,27 +471,26 @@ mock.Advance(0.3)
 window.scroll:SetVerticalScroll(30)
 mock.Click(rows[1])
 mock.Advance(0.3)
-check(window.scroll:GetVerticalScroll() == 30, "unfolding does not make the page jump")
 mock.Click(rows[1])
 mock.Advance(0.3)
+check(window.scroll:GetVerticalScroll() == 30, "folding and unfolding do not make the page jump")
 window.scroll:SetVerticalScroll(0)
 
 -- Tabs.
-mock.Click(tabButton("Interface"))
-check(tabButton("Interface").selected and window.section.desc:GetText() == ns.L.cat_interface_desc, "a click on a tab opens it")
-check(visibleRows()[1].item.label() == ns.L.f_mapCoords, "with the features of its category")
+mock.Click(tabButton("Names"))
+check(tabButton("Names").selected and window.section.desc:GetText() == ns.L.ui_tab_names_desc, "a click on a tab opens it")
 mock.Advance(0.3)
 check(mock.CountOnUpdateFrames() == 0, "the sliding tab bar comes to rest")
+mock.Click(tabButton("Display"))
 mock.Click(navButton("Settings"))
-mock.Click(navButton("Quality of Life"))
-check(tabButton("Interface").selected, "a page remembers its tab")
-mock.Click(tabButton("Vendors"))
+mock.Click(navButton("Aliases"))
+check(tabButton("Display").selected, "a page remembers its tab")
 
 -- Every page and tab renders, in both languages.
 for _, language in ipairs({ "enUS", "deDE" }) do
     ns:SetOption("general", "language", language)
     mock.Advance(0.1)
-    for _, page in ipairs({ "area_qol", "area_aliases", "cat_general", "cat_about" }) do
+    for _, page in ipairs({ "area_aliases", "area_chronicle", "cat_general", "cat_about" }) do
         local button = navButton(ns.L[page])
         check(button ~= nil, "navigation entry for " .. page .. " in " .. language)
         if button then
@@ -1085,8 +536,8 @@ for _, category in ipairs(ns.categories) do
 end
 
 -- Search across pages.
-window.search.edit:SetText("repar")
-check(window.title:GetText() == "Suche" and #visibleRows() >= 1, "search finds the repair feature in German")
+window.search.edit:SetText("kontextm")
+check(window.title:GetText() == "Suche" and #visibleRows() >= 1, "search finds the context menu feature in German")
 check(window.search.clear:IsShown(), "the search field offers a clear button while it has text")
 check(not window.master:IsShown() and not window.tabs:IsShown(), "search results have neither tabs nor a master switch")
 local firstCard
@@ -1095,7 +546,7 @@ for _, frame in ipairs(mock.frames) do
         firstCard = firstCard or frame
     end
 end
-check(firstCard and firstCard.title:GetText() == "Quality of Life  ·  Händler", "hits are grouped by where they live")
+check(firstCard and firstCard.title:GetText() == "Aliase  ·  Anzeige", "hits are grouped by where they live")
 window.search.edit:SetText("zzzz")
 check(#visibleRows() == 0, "search with no hit shows no rows")
 mock.Click(window.search.clear)
@@ -1105,33 +556,33 @@ check(not window.search.clear:IsShown(), "and disappears again")
 -- Reset.
 ns:SetOption("general", "language", "enUS")
 mock.Advance(0.1)
-mock.Click(navButton("Quality of Life"))
-mock.Click(tabButton("Vendors"))
-check(tabButton("Vendors").selected, "back on the vendor tab")
-enable("autoRepair")
-enable("sellJunk")
-enable("autoAccept")
+mock.Click(navButton("Aliases"))
+mock.Click(tabButton("Display"))
+check(tabButton("Display").selected, "back on the display tab")
+enable("chatAliases", false)
+enable("tooltipAliases", false)
+enable("liveFeed", false)
 mock.Advance(0.1)
-ns:SetOption("categories", "vendor", false)
+ns:SetOption("categories", "aliases", false)
 mock.Advance(0.1)
 mock.Click(window.resetButton)
 mock.Advance(0.1)
-check(ns.features.sellJunk ~= nil and ns:GetOption("sellJunk", "enabled") == true, "the first click on reset changes nothing")
+check(ns:GetOption("tooltipAliases", "enabled") == false, "the first click on reset changes nothing")
 check(window.resetButton.label:GetText() == "Really reset?", "it asks for confirmation instead")
 mock.Advance(4.1)
 check(window.resetButton.label:GetText() == "Reset", "the question goes away by itself")
 mock.Click(window.resetButton)
-mock.Click(tabButton("Quests"))
-mock.Click(tabButton("Vendors"))
+mock.Click(tabButton("Names"))
+mock.Click(tabButton("Display"))
 check(window.resetButton.label:GetText() == "Reset", "and when the tab is left")
 mock.Click(window.resetButton)
 mock.Click(window.resetButton)
 mock.Advance(4.1)
-check(not ns.features.autoRepair.enabled and not ns.features.sellJunk.enabled, "the second click puts the tab back to defaults")
+check(ns.features.chatAliases.enabled and ns.features.tooltipAliases.enabled, "the second click puts the tab back to defaults")
 check(window.resetButton.disabled and window.resetButton.label:GetText() == "Reset", "after which reset is greyed out")
-check(ns:IsCategoryEnabled("vendor"), "including the category's master switch")
-check(ns.features.autoAccept.enabled, "other tabs of the page are left alone")
-enable("autoAccept", false)
+check(ns:IsCategoryEnabled("aliases"), "including the category's master switch")
+check(ns:GetOption("liveFeed", "enabled") == false, "other pages are left alone")
+enable("liveFeed")
 
 -- Aliases page: the list first, where aliases show on the second tab.
 mock.Click(navButton("Aliases"))
@@ -1182,7 +633,7 @@ window.search.edit:SetText("annie")
 check(#visibleRows() == 1 and visibleRows()[1].item.kind == "alias", "search finds an alias")
 window.search.edit:SetText("proudm")
 check(#visibleRows() == 1, "and a character name")
-mock.Click(navButton("Quality of Life"))
+mock.Click(navButton("Chronicle"))
 window.search.edit:SetText("proudm")
 mock.Click(visibleRows()[1])
 check(window.search.edit:GetText() == "" and window.title:GetText() == "Aliases" and tabButton("Names").selected and editor.alias.edit:GetText() == "Annie",
@@ -1199,7 +650,7 @@ check(ns.AliasService.Get("Jaina Proudmoore") == nil and #visibleRows() == 2, "t
 editor:Load("", "")
 -- From the context menu: the window opens on the list with the name filled in.
 mock.Click(tabButton("Display"))
-mock.Click(navButton("Quality of Life"))
+mock.Click(navButton("Chronicle"))
 SlashCmdList.FAMULUS("")
 check(not window:IsShown(), "window closed for the menu test")
 mock.OpenMenu("MENU_UNIT_PLAYER", { name = "Varian", surname = "Wrynn" })[2].click()
@@ -1220,31 +671,32 @@ mock.Click(navButton("Settings"))
 mock.Click(tabButton("General"))
 check(tabButton("General").selected and tabButton("Appearance"), "the settings page has a general and an appearance tab")
 local generalRows = visibleRows()
-mock.Click(generalRows[2]) -- pause key
+check(#generalRows == 4, "language, chat feedback, minimap button and character profile (got " .. #generalRows .. ")")
+mock.Click(generalRows[1]) -- language
 mock.Advance(0.05)
 local picked = false
 for _, frame in ipairs(mock.frames) do
-    if frame.value == "CTRL" and frame.check and frame:IsVisible() then
+    if frame.value == "enUS" and frame.check and frame:IsVisible() then
         mock.Click(frame)
         picked = true
         break
     end
 end
-check(picked and ns:GetOption("general", "pauseModifier") == "CTRL", "dropdown changes the pause key")
+check(picked and ns:GetOption("general", "language") == "enUS", "dropdown changes the language")
 mock.Advance(0.1)
 check(not window.resetButton.disabled, "a changed setting makes the tab resettable")
-ns:SetOption("general", "pauseModifier", "SHIFT")
+ns:SetOption("general", "language", "auto")
 
 -- Character profile.
-enable("declineDuels")
-mock.Click(generalRows[6])
+enable("tooltipAliases", false)
+mock.Click(generalRows[4])
 mock.Advance(0.1)
-check(ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "character profile starts as a copy")
-enable("declineDuels", false)
-mock.Click(generalRows[6])
+check(ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "character profile starts as a copy")
+enable("tooltipAliases")
+mock.Click(generalRows[4])
 mock.Advance(0.1)
-check(not ns:UsesCharacterProfile() and ns.features.declineDuels.enabled, "switching back restores the account settings")
-enable("declineDuels", false)
+check(not ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "switching back restores the account settings")
+enable("tooltipAliases")
 
 -- Settings: appearance tab.
 mock.Click(tabButton("Appearance"))
@@ -1296,7 +748,7 @@ mock.Click(window.resetButton)
 mock.Click(window.resetButton)
 mock.Advance(4.1)
 check(ns:GetOption("general", "accent") == "lemon", "reset brings the default look back")
-check(ns:GetOption("general", "pauseModifier") == "SHIFT" and ns:GetOption("general", "minimapAngle") == 215, "and touches nothing else")
+check(ns:GetOption("general", "language") == "auto" and ns:GetOption("general", "minimapAngle") == 215, "and touches nothing else")
 
 -- Window size.
 check(looks[3].label:GetText() == "Window size" and looks[3].dropdown.text:GetText() == "100%", "the appearance tab offers the window size")
@@ -1342,82 +794,7 @@ check(not window:IsShown(), "/fam closes the window again")
 check(sparkGroups() == 0, "a closed window animates nothing")
 mock.reset()
 SlashCmdList.FAMULUS("status")
-check(lastChat():find("7 of 24", 1, true) ~= nil, "/fam status reports: " .. lastChat())
-
----------------------------------------------------------------------------
-section("Journal")
----------------------------------------------------------------------------
-
-local Journal = ns.JournalService
-local stateBeforeJournal = mock.state
-local kindsLogged = {}
-for _, entry in ipairs(Journal.Entries()) do
-    kindsLogged[entry.k] = true
-end
-check(kindsLogged.repair and kindsLogged.junk and kindsLogged.invite and kindsLogged.duel,
-    "the automations exercised above wrote into the journal")
-check(kindsLogged.questAccepted and kindsLogged.questTurnedIn, "the quest features report as well, without a chat line")
-check(type(FamulusDB.journal) == "table" and FamulusDB.profile.journal == nil, "the journal is data beside the profiles")
-Journal.Clear()
-check(#Journal.Entries() == 0 and FamulusDB.journal == nil, "clearing removes it from the saved file")
-
-enable("autoRepair")
-mock.reset()
-setState({ canRepair = true, repairCost = 1200, money = 5000 })
-mock.Fire("MERCHANT_SHOW")
-local repairEntry = Journal.Entries()[1]
-check(#Journal.Entries() == 1 and repairEntry.k == "repair" and repairEntry.cost == 1200 and type(repairEntry.t) == "number",
-    "a repair is written down with its cost and time")
-check(#mock.chat == 1 and lastChat():find(Journal.Text(repairEntry), 1, true) ~= nil, "and says the same sentence in chat, once")
-check(Journal.Totals("session").repairs == 1 and Journal.Totals("week").repairs == 1 and Journal.Totals("total").repairSpent == 1200,
-    "the totals count it for the session, the week and all time")
-local englishSentence = Journal.Text(repairEntry)
-ns:SetOption("general", "language", "deDE")
-check(Journal.Text(repairEntry) ~= englishSentence and Journal.Text(repairEntry):find("repariert", 1, true) ~= nil,
-    "an entry holds values, not text: its sentence follows the language")
-ns:SetOption("general", "language", "auto")
-
-setState({ canRepair = true, repairCost = 9000, money = 10 })
-mock.Fire("MERCHANT_SHOW")
-mock.Fire("MERCHANT_SHOW")
-local _, leftAlone = Journal.Text(Journal.Entries()[2] or repairEntry)
-check(#Journal.Entries() == 2 and leftAlone, "what was left alone is written once, not on every visit")
-check(Journal.Totals("session").repairs == 1, "and does not count as done")
-
-ns:SetOption("general", "journal", false)
-mock.reset()
-setState({ canRepair = true, repairCost = 300, money = 5000 })
-mock.Fire("MERCHANT_SHOW")
-check(#Journal.Entries() == 2 and #mock.chat == 1, "with the journal switched off nothing is stored; the chat line stays")
-ns:SetOption("general", "journal", true)
-enable("autoRepair", false)
-setState(stateBeforeJournal)
-
--- The page.
-if not window:IsShown() then
-    SlashCmdList.FAMULUS("")
-end
-mock.Click(navButton("Journal"))
-mock.Advance(0.1)
-check(window.title:GetText() == "Journal" and tabButton("History") and tabButton("Totals") and tabButton("History").selected,
-    "the journal has its own page with history and totals")
-local journalRows = visibleRows()
-check(#journalRows == 2 and journalRows[2].label:GetText() == Journal.Text(repairEntry), "the history lists the newest entry first")
-check(journalRows[1].disabled and not journalRows[2].disabled, "what was left alone is greyed out")
-check(not window.resetButton:IsShown() and not window.master:IsShown(), "a diary has nothing to reset or to switch")
-mock.Click(tabButton("Totals"))
-mock.Advance(0.1)
-local totalRows = visibleRows()
-check(#totalRows == #Journal.counters and totalRows[1].label:GetText() == "Repairs"
-    and totalRows[1].desc:GetText():find("This session: 1 for", 1, true) ~= nil, "the totals add up per kind")
-SlashCmdList.FAMULUS("journal clear")
-mock.Advance(0.1)
-mock.Click(tabButton("History"))
-mock.Advance(0.1)
-check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nothing to report yet", "/fam journal clear empties it, and the page says so")
-mock.Click(navButton("Quality of Life"))
-SlashCmdList.FAMULUS("")
-check(not window:IsShown(), "window closed again")
+check(lastChat():find("5 of 8", 1, true) ~= nil, "/fam status reports: " .. lastChat())
 
 ---------------------------------------------------------------------------
 section("Chronicle")
@@ -1830,6 +1207,7 @@ if not window:IsShown() then
     SlashCmdList.FAMULUS("")
 end
 mock.Click(navButton("Chronicle"))
+mock.Click(tabButton("Everyone")) -- the page remembers the tab the window tests left it on
 mock.Advance(0.1)
 check(window.title:GetText() == "Chronicle" and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Recording"),
     "the chronicle has its own page: everyone, my journey, companions, recording")
@@ -1990,7 +1368,7 @@ mock.Click(tabButton("Everyone"))
 mock.Advance(0.1)
 check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nothing recorded yet" and #bookFrames("story") == 0,
     "an empty chronicle says how to begin")
-mock.Click(navButton("Quality of Life"))
+mock.Click(navButton("Aliases"))
 SlashCmdList.FAMULUS("")
 
 ---------------------------------------------------------------------------
@@ -2019,39 +1397,22 @@ check(result.summary.fail == 0, "no check fails against the mock (got " .. resul
 for _, feature in ipairs(ns.featureList) do
     check(findCheck(result, "feature", feature.id) ~= nil, "report covers feature " .. feature.id)
 end
-check(findCheck(result, "api", "C_Container").status == "ok", "present API is reported ok")
+check(findCheck(result, "api", "C_Timer.After").status == "ok", "present API is reported ok")
 check(findCheck(result, "api", "MenuUtil").status == "warn", "API missing from the client is a warning")
 check(findCheck(result, "api", "GetItemInfo").status == "ok", "removed API is confirmed as removed")
-check(findCheck(result, "hideErrors", "error strings").detail:find("2 of 27", 1, true) ~= nil, "counts the error strings the client knows")
-check(findCheck(result, "popup", "PARTY_INVITE").status == "ok", "known popup name is ok")
-check(findCheck(result, "chat", "arrow keys").status == "ok", "the chat boxes match the arrow key feature")
-ChatFrame2EditBox:SetAltArrowKeyMode(true)
-check(findCheck(ns:RunSelfTest(), "chat", "arrow keys").detail:find("ChatFrame2", 1, true) ~= nil, "a chat box out of line is named in the report")
-ChatFrame2EditBox:SetAltArrowKeyMode(false)
-mock.reset()
-check(findCheck(result, "popup", "DELETE_GOOD_QUEST_ITEM").status == "warn", "unknown popup name is a warning")
-check(findCheck(result, "camera", "cameraDistanceMaxZoomFactor").detail:find("4 -> 1.9; 2.6 -> 2.6", 1, true) ~= nil, "camera probe records what the client accepts")
-check(mock.cvars.cameraDistanceMaxZoomFactor == "1.9", "camera probe restores the player's value")
 check(result.idle.events == eventsBefore and ns:CountRegisteredEvents() == eventsBefore, "the test registers no events")
 check(#mock.frames - framesBeforeTest == 1, "the test creates one hidden probe frame")
 SlashCmdList.FAMULUS("test")
 check(#mock.frames - framesBeforeTest == 1, "and reuses it on the next run")
 
 -- A feature that needs API the client lacks is a failure in the report.
-local needy = ns:NewFeature({ id = "fastLootProbe", category = "loot", requires = { "C_Nope.Missing" } })
+local needy = ns:NewFeature({ id = "fastLootProbe", category = "chronicle", requires = { "C_Nope.Missing" } })
 mock.reset()
 result = ns:RunSelfTest()
 check(findCheck(result, "feature", "fastLootProbe").status == "fail" and result.summary.fail == 1, "missing required API fails the feature")
 ns.features.fastLootProbe = nil
 table.remove(ns.featureList)
 check(needy.enabled == false, "the probe feature never ran")
-
--- Camera probe is skipped in combat.
-setState({ inCombat = true })
-mock.reset()
-result = ns:RunSelfTest()
-check(mock.count("SetCVar") == 0, "no CVar is touched in combat")
-setState({})
 
 -- Developer mode.
 mock.reset()
@@ -2089,24 +1450,24 @@ check(ns:CountRegisteredEvents() == eventsBefore, "idle cost is back to normal a
 section("Saved settings")
 ---------------------------------------------------------------------------
 
-enable("sellJunk")
-check(FamulusDB.profile.sellJunk and FamulusDB.profile.sellJunk.enabled == true, "a changed option is saved")
-enable("sellJunk", false)
-check(FamulusDB.profile.sellJunk == nil, "an option back on default is removed from the saved file")
+enable("companions")
+check(FamulusDB.profile.companions and FamulusDB.profile.companions.enabled == true, "a changed option is saved")
+enable("companions", false)
+check(FamulusDB.profile.companions == nil, "an option back on default is removed from the saved file")
 
 -- A character profile starts as a copy of the account profile and then goes
 -- its own way; switching restarts the features with the other choices.
 local idleEvents = ns:CountRegisteredEvents()
 ns:SetUseCharacterProfile(true)
 check(ns:UsesCharacterProfile(), "the character profile can be switched on")
-enable("sellJunk")
-check(ns.features.sellJunk.enabled and FamulusCharDB.profile.sellJunk.enabled == true and FamulusDB.profile.sellJunk == nil,
+enable("companions")
+check(ns.features.companions.enabled and FamulusCharDB.profile.companions.enabled == true and FamulusDB.profile.companions == nil,
     "its changes stay out of the account profile")
 ns:SetUseCharacterProfile(false)
-check(not ns.features.sellJunk.enabled and ns:CountRegisteredEvents() == idleEvents,
+check(not ns.features.companions.enabled and ns:CountRegisteredEvents() == idleEvents,
     "switching back stops what only the character profile ran")
 ns:SetUseCharacterProfile(true)
-check(ns.features.sellJunk.enabled, "and switching again starts it with the kept choices")
+check(ns.features.companions.enabled, "and switching again starts it with the kept choices")
 ns:SetUseCharacterProfile(false)
 FamulusCharDB.profile = nil
 

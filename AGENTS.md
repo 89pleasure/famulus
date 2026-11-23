@@ -1,8 +1,9 @@
 # Famulus – Projektwissen für KI-Assistenten
 
-Famulus ist ein Quality-of-Life-Addon für **World of Warcraft: Forever**. Diese Datei hält fest,
-was der Auftraggeber will, was entschieden wurde und was man über den Forever-Client wissen muss.
-Stand: 2026-11-18, Version 0.1.0.
+Famulus ist ein Addon für **World of Warcraft: Forever**, das das gemeinsame Spielen unter Freunden
+und in der Community verbessert, erleichtert und erweitert. Diese Datei hält fest, was der
+Auftraggeber will, was entschieden wurde und was man über den Forever-Client wissen muss.
+Stand: 2026-11-23, Version 0.1.0.
 
 ## Vorgaben des Auftraggebers
 
@@ -11,15 +12,23 @@ Der Auftraggeber spielt WoW Forever und hat drei Sammel-Addons ausprobiert, die 
 Folgendes konzentrieren und beschränken:
 
 1. **Modernes, übersichtliches Layout.** Polestar gefällt ihm bisher am besten.
-2. **Vorerst nur Quality-of-Life-Funktionen.** Keine Unitframes, Aktionsleisten, Guides,
-   Schadensanzeigen oder Ähnliches.
+2. **Gemeinsames Spielen im Mittelpunkt (Entscheidung des Auftraggebers, 2026-11-23).** Famulus
+   soll das Spielen unter Freunden und in der Community verbessern, erleichtern oder erweitern.
+   Die Funktionen sind die **Aliase** und die **Chronik**. Keine Unitframes, Aktionsleisten,
+   Guides, Schadensanzeigen oder Ähnliches.
+   - **Quality of Life entfernt (2026-11-23):** „Das machen unzählige andere Addons schon.“
+     Entfernt sind die 16 QoL-Features (Händler, Quests, Beute, Soziales, Tooltips, Interface),
+     das Tagebuch (es führte nur Buch über diese Automatiken), die Pausentaste, der Baustein
+     `mirror` (`Core/GameOptions.lua`), `PopupService`, `QuestService` und die Selbsttest-Prüfungen
+     dafür. Wer nachsehen will, wie sie gebaut waren: Git-Verlauf bis Commit `66f68ec`.
+     Nicht wieder einbauen, ohne zu fragen.
 3. **Schwachstellen der drei Vorbilder analysieren und daraus lernen.**
 4. **Performance-optimiert.**
 5. **Mehrsprachig.** Englisch und Deutsch reichen vorerst.
 
 **Veröffentlichung:** Famulus soll später veröffentlicht werden (Stand 2026-11-16, Zeitpunkt und
 Plattform offen). Vorerst nicht: Feature-Set und Design sind noch lange nicht fertig und haben
-Vorrang vor Release-Arbeit und der Testrunde der Automatiken. Entscheidungen deshalb so treffen, dass sie für fremde Spieler taugen: saubere
+Vorrang vor Release-Arbeit. Entscheidungen deshalb so treffen, dass sie für fremde Spieler taugen: saubere
 Versionierung, keine Annahmen über die eigene Addon-Sammlung, Verhalten neben anderen Addons im Blick.
 
 Arbeitsweise: Er schreibt Deutsch und möchte Antworten auf Deutsch. Code, Kommentare und
@@ -42,49 +51,12 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
     (Screenshot geprüft).
   - `Texture:SetGradient("VERTICAL", CreateColor(...), CreateColor(...))` funktioniert; der
     Fensterrahmen zeigt den Verlauf.
-  - `cameraZoom`: Der CVar `cameraDistanceMaxZoomFactor` nimmt 4,0 an (Standard 1,0). Ob die Kamera
-    dann wirklich weiter herauszoomt als bei 2,6, ist nicht geprüft.
-  - Popups: Alle benutzten Namen existieren in `StaticPopupDialogs` (`LOOT_BIND`, `PARTY_INVITE`,
-    `DUEL_REQUESTED`, `QUEST_ACCEPT`, `DELETE_GOOD_ITEM`, `DELETE_GOOD_QUEST_ITEM`); der Dialog hat
-    `GetEditBox()`.
-  - `hideErrors`: Alle 27 Fehlertext-Globals aus `BLOCKED_GLOBALS` existieren.
-  - `mapCoords`: `WorldMapFrame.ScrollContainer:GetNormalizedCursorPosition` existiert, die
-    Spielerposition ist lesbar.
   - Speicher: 360 KB bei 6 aktiven Features und 5 Spielereignissen.
-- **Spielrunde 2026-11-16:**
-  - `autoRepair` funktioniert.
-  - `chatArrowKeys` wirkte nicht. Blizzards Chat-Eingabefeld (`ChatFrameEditBoxTemplate`) setzt
-    `ignoreArrows="true"`, und Blizzards Autovervollständigung (`AutoComplete.lua`) schaltet den
-    Alt-Modus beim Ein- und Ausblenden um. Das Feature setzt den Modus deshalb zusätzlich bei jedem
-    Fokus neu (`EventRegistry`-Callback `ChatFrame.OnEditBoxFocusGained`); der Selbsttest prüft
-    den Modus aller Chatfelder. Danach bewegte sich der Cursor (bestätigt), aber Hoch/Runter holte
-    keine gesendeten Nachrichten: Der eingebaute Verlauf des Clients reagiert in Forever nicht
-    (OneForAll vermerkt dasselbe, FlareUI baut ihn ebenfalls nach). Famulus führt deshalb eine
-    eigene Liste nach FlareUIs Muster: Zeile beim Enter (`OnKeyDown`-Hook) und bei
-    `ChatFrame.OnEditBoxPreSendText` merken, mit Ziel als Präfix (`/w Name …`, `/2 …`) statt
-    Attribute zu setzen; sichere Befehle (`IsSecureCmd`) nie, weil sie aus Addon-Code blockiert
-    werden; Blizzards Liste nach dem Senden leeren; nicht bei offener Namensliste
-    (`AutoCompleteBox`) oder Chat-Sperre. Nur im Speicher, 30 Zeilen; Zustand je Feld in lokalen
-    Tabellen, nichts auf Blizzards Frames. Im Spiel bestätigt: Cursor und Blättern funktionieren.
-  - `fastLoot` brachte in diesem Client nichts: Blizzards automatisches Plündern ist von sich aus
-    schnell. Ersetzt durch `autoLoot`. Zuerst stellte es beim Abschalten den vorherigen Wert
-    wieder her; das wirkte im Spiel wie ein Fehler (Option blieb an). Auf Wunsch des Auftraggebers
-    spiegelt der Schalter jetzt `autoLootDefault` wie bei OneForAll: an setzt „1“, aus setzt „0“,
-    und Änderungen in Blizzards Menü übernimmt der Schalter sofort, ohne zu schreiben. Daraus
-    wurde der allgemeine Baustein `mirror` (siehe „Gespiegelte Spieloptionen“ unten). Der Kategorie-Hauptschalter lässt die Spieloption unberührt. Die Idee,
-    Famuluss Fenster und Blizzards Spielmenü sich gegenseitig schließen zu lassen, wurde
-    verworfen: Blizzards Panels aus Addon-Code zu schließen birgt Taint-Risiko, und der Live-Abgleich
-    macht es unnötig. Im Spiel bestätigt: Spiegeln in beide Richtungen mit dem `mirror`-Baustein.
-  - Klick auf das Koordinatenfeld (`mapCoords.clickToChat`): Bei offener, leerer Chat-Eingabe mit
-    `/y` landete die Position als `/s`. Ursache: Der Klick nimmt der Eingabe den Fokus, Blizzards
-    `OnEditFocusLost` schließt eine leere Eingabe und setzt dabei den Chat-Typ zurück
-    (`ResetChatTypeToSticky`), bevor unser Klick ankommt. Das Signal
-    `ChatFrame.OnEditBoxFocusLost` feuert vor dem Zurücksetzen; dort liest das Feature das Ziel
-    (`ChatService.TargetPrefix`) und öffnet die Eingabe mit „/y …“ neu. Das Signal wird nur
-    abonniert, solange die Maus über dem Feld steht. Im Spiel bestätigt.
-  - Koordinatenfeld: Die Breite schwankte mit den Ziffern. Jetzt feste Spalten (Beschriftung,
-    Wert); der Wertplatz ist so breit wie „00.0, 00.0“ in der breitesten Ziffer der Schrift,
-    neu vermessen nur beim Aufbau und Sprachwechsel. Im Spiel bestätigt.
+- **Spielrunde 2026-11-16:** prüfte vor allem die inzwischen entfernten QoL-Features. Was davon
+  allgemein gilt: Blizzards Panels aus Addon-Code zu schließen birgt Taint-Risiko; der eingebaute
+  Verlauf der Chat-Eingabe (Hoch/Runter) reagiert in Forever nicht; das EventRegistry-Signal
+  `ChatFrame.OnEditBoxFocusLost` feuert, bevor Blizzard eine leere Eingabe schließt und den
+  Chat-Typ zurücksetzt.
 - **Aliase (2026-11-16, nur gegen den Mock geprüft, noch nicht im Spiel):** Kategorie `aliases` mit
   drei Features und der Alias-Liste, siehe „Aliase“ unten.
 - **Aliase im Spiel (2026-11-18):** Der Alias erscheint im normalen Chat und in Guildy (bestätigt).
@@ -112,9 +84,8 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   `tools/make_media.py`. Das Logo hat feste Farben und folgt der Farbwelt nicht. Auf dem
   Windows-Rechner ist kein eigenes Python installiert; `make_media.py` braucht nur die
   Standardbibliothek und lief dort mit einem vorhandenen Python 3.12. Im Spiel noch nicht gesehen.
-- **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster), das Verhalten der Automatiken (reparieren, verkaufen, Quests,
-  Beute, Einladungen, Duelle, Zerstören), im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values,
-  Taint).
+- **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster),
+  im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values, Taint).
 - **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
   629 KB bei 8 aktiven Features und 4 Spielereignissen.
   - Die drei Inter-Schriften laden nicht (`SetFont` liefert falsch); das Fenster nimmt die
@@ -163,8 +134,9 @@ unter `D:\Games\World of Warcraft\_forever_`, das Repo unter `E:\Develop\wow\fam
   sicheren Code (`assert(issecure())`), `seterrorhandler` ersetzen wir nicht.
 - Screenshots des Spiels liegen in `_forever_/Screenshots/` und sind die Grundlage für
   Layout-Arbeit.
-- Was der Selbsttest nicht abdeckt: das Verhalten der Automatiken (verkaufen, reparieren, Quests,
-  Einladungen). Das zeigt nur das Spielen selbst.
+- Was der Selbsttest nicht abdeckt: ob die Chronik die richtigen Ereignisse festhält und ob das
+  Teilen zwischen Spielern ankommt. Das zeigt nur das Spielen selbst (für das Teilen mit zwei
+  Accounts).
 
 ## WoW Forever: was man wissen muss
 
@@ -190,7 +162,7 @@ Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
 - **Addon-Beschränkungen wie in Midnight:**
   - „Secret Values“: Solche Werte dürfen nicht verglichen, auf wahr/falsch geprüft, als
     Tabellenschlüssel benutzt oder verrechnet werden. Weiterreichen und `string.format` sind
-    erlaubt. Prüfen mit `issecretvalue(v)`; im Addon über `ns.IsSecret` und `ns.Label`.
+    erlaubt. Prüfen mit `issecretvalue(v)`; im Addon über `ns.IsSecret`.
   - `COMBAT_LOG_EVENT_UNFILTERED` ist für Addons unbrauchbar.
   - `CopyToClipboard` ist geschützt. Chat-Nachrichten können im Kampf „secret“ sein.
 - Felder auf Blizzards StaticPopup-Dialoge zu schreiben verursacht Taint („Aktion blockiert“);
@@ -217,7 +189,7 @@ Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
 
 **Neugestaltung 2026-11-18** auf Wunsch des Auftraggebers: Mit den Aliasen kam die erste größere
 Funktion; das Fenster soll mit weiteren Hauptfunktionen übersichtlich bleiben. Vorgaben: Hauptfunktionen
-in der Seitenleiste mit eigenem Aufbau je Funktion, Quality of Life in Reitern, modern und
+in der Seitenleiste mit eigenem Aufbau je Funktion, modern und
 schlicht wie Polestar, helles und dunkles Design (das helle ist seit 2026-11-19 wieder entfernt,
 siehe „Farben“), runde Ecken, eigene Schrift. Er hat freie Hand
 gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noch nicht bestätigt.
@@ -228,11 +200,12 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Zeile mit der Beschreibung des Reiters und rechts seinen Aktionen (Zurücksetzen, Hauptschalter),
   dann Karten mit Zeilen. Keine Fußzeile.
 - **Bereiche (`ns.areas`, `Core/Features.lua`):** Jede Kategorie gehört zu genau einem Bereich (der
-  Test prüft das). `qol` zeigt seine sechs Kategorien als Reiter; `aliases` hat einen eigenen
-  Aufbau (`layouts.aliases` in `UI/Options.lua`): Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
-  „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Anzeige“ mit den Alias-Features. Die
-  Einstellungen haben die Reiter „Allgemein“ und „Darstellung“ (Farbwelt, Funken,
-  Fenstergröße). Ein Bereich ohne eigenen Aufbau bekommt je Kategorie einen Reiter.
+  Test prüft das). Jeder Bereich hat einen eigenen Aufbau (`layouts.<bereich>` in
+  `UI/Options.lua`). `aliases`: Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
+  „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Anzeige“ mit den Alias-Features.
+  `chronicle`: siehe „Chronik“. Die Einstellungen haben die Reiter „Allgemein“ (Sprache,
+  Rückmeldung im Chat, Minikartensymbol, Charakterprofil) und „Darstellung“ (Farbwelt, Funken,
+  Fenstergröße). Die erste Seite beim Öffnen ist die Aliase.
 - **Hauptschalter** einer Kategorie: rechts in der Zeile unter den Reitern, beschriftet nur mit
   „AN“/„AUS“; bei den Aliasen auf beiden Reitern. Eine abgeschaltete Kategorie ist als Reiter
   ausgegraut; sind alle Kategorien eines Bereichs aus, ist er in der Seitenleiste ausgegraut und
@@ -241,8 +214,8 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Schlüssel, dazu der Hauptschalter). Erster Klick fragt („Wirklich zurücksetzen?“, rot), zweiter
   innerhalb von vier Sekunden führt aus; auf Standardwerten ausgegraut; ohne Einstellungen (Liste
   der Aliase, „Über“) nicht vorhanden.
-- **Suche:** über alle Seiten und Reiter, Treffer gruppiert je Reiter in Karten („Quality of Life ·
-  Händler“); keine Reiter und kein Hauptschalter in der Ergebnisansicht.
+- **Suche:** über alle Seiten und Reiter, Treffer gruppiert je Reiter in Karten („Aliase ·
+  Anzeige“); keine Reiter und kein Hauptschalter in der Ergebnisansicht.
 - **Farben (überarbeitet 2026-11-18, Abend):** Der Auftraggeber fand den ersten Stand (neutrale
   Grautöne, Akzent nur als Fläche) zu beliebig. Vorbilder für Farbkonzept, Akzente und Effekte:
   Polestar Guide und Mastercraft, ohne sie zu kopieren. An einem HTML-Mockup hat er das Konzept
@@ -302,37 +275,6 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Reiterbeschreibung sagen, was der Spieler dort findet, keine technischen Hinweise; Optionen eines
   Features (`child`) stehen eingerückt unter ihm und sind bei abgeschaltetem
   Feature eingeklappt (schmal, ausgegraut, Wert sichtbar), die Suche zeigt sie vollständig.
-
-## Tagebuch
-
-Seit 2026-11-19, auf Wunsch des Auftraggebers als Alleinstellungsmerkmal: Schalter-Sammlungen
-(Leatrix Plus, ForeverPlus, OneForAll), Spielernotizen (Worth Remembering, Zecho, Dossier) und
-Gold-Buchhaltungen (GoldLedger, Sesh, Allemano Ledger) gibt es für Forever schon. Famulus soll sich
-als Gehilfe abheben, der Rechenschaft ablegt: Es führt Buch über das, was es selbst für den
-Spieler getan hat, und über das, was es bewusst gelassen hat. Weitere Ideen in dieser Richtung,
-noch nicht beschlossen: Erinnerungen nach Ort und Situation, selbst gebaute Wenn-dann-Regeln.
-Nur gegen den Mock geprüft, noch nicht im Spiel.
-
-- **Eine Meldestelle:** Jede Automatik meldet eine Aktion genau einmal über
-  `ns.JournalService.Report(art, werte)` (`Core/JournalService.lua`); daraus entstehen die
-  Chat-Zeile (nur für Arten mit `chat = true`) und der Eintrag. Neue Automatiken melden dort
-  und rufen `ns:Notify` nicht mehr selbst. Die Quest-Features nutzen `QuestService.Report`.
-- **Arten:** `repair`, `repairShort` (zu wenig Gold), `junk` (mit bis zu 12 Gegenständen),
-  `questAccepted`, `questTurnedIn`, `questSkipped` (Grund `repeatable`, `trivial`, `pvp`, `cost`,
-  `choice`), `invite`, `duel`, `loot`. Quests und Beute schreiben nur ins Tagebuch, nicht in den
-  Chat. `easyDelete` meldet nichts, weil dort der Spieler selbst klickt.
-- **Ausgelassenes** (`skipped`) steht grau im Verlauf, zählt in keiner Summe und wird innerhalb von
-  zehn Minuten nur einmal geschrieben. Bei gehaltener Pausentaste wird nichts geschrieben.
-- **Daten, keine Einstellung:** `FamulusDB.journal = { entries, days, total }`, accountweit,
-  außerhalb der Profile. Einträge enthalten Art und Werte, nie fertigen Text; der Satz entsteht
-  beim Anzeigen (`JournalService.Text`) und folgt so der Sprache. Höchstens 500 Einträge, Tagessummen
-  90 Tage, Gesamtsumme unbegrenzt. Geheime Werte (Namen im Kampf) werden nicht gespeichert.
-- **Fenster:** eigener Eintrag „Tagebuch“ in der Seitenleiste (kein Bereich aus `ns.areas`, also ohne
-  Zähler), Reiter „Verlauf“ (eine Karte je Tag, neueste zuerst, die letzten 80 Einträge) und
-  „Bilanz“ (Sitzung, sieben Tage, insgesamt). Die Suche lässt das Tagebuch aus.
-- **Abschalten und leeren:** „Tagebuch führen“ unter Einstellungen › Allgemein (`general.journal`,
-  Standard an); `/fam journal clear` leert es.
-- **Kein Zurückkaufen:** Der Verlauf zeigt, was verkauft wurde; zurückkaufen geht nur beim Händler.
 
 ## Chronik
 
@@ -614,7 +556,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
 - **Ähnliche Addons:** „BFF – Best Friends in Forever“ hat bereits einen Freundes-Feed mit
   Stufenaufstiegen und Toden über ein Flüster-Netz zwischen den Addons; „Guild Chronicle“ ein
   Gilden-Todesbuch in Pergament-Optik. Die Daten allein sind also kein Alleinstellungsmerkmal; die
-  Chance liegt in der Aufbereitung und in der Verbindung mit Aliasen und Tagebuch.
+  Chance liegt in der Aufbereitung und in der Verbindung mit den Aliasen.
 
 ## Aliase
 
@@ -681,11 +623,11 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
 
 - **Feature-Registry:** Alles Schaltbare ist ein Feature über `ns:NewFeature`, **eine Datei je
   Feature** unter `Modules/<Kategorie>/<Id>.lua` (beides großgeschrieben, z. B.
-  `Modules/Interface/ChatArrowKeys.lua`); der Test prüft das. Was der Selbsttest lesen muss
+  `Modules/Aliases/ChatAliases.lua`); der Test prüft das. Was der Selbsttest lesen muss
   (Listen, CVar-Namen), hängt am Feature-Objekt.
 - **Lebenszyklus über die Feature-Klasse** (`Core/Features.lua`), die Registry räumt beim
-  Abschalten auf: Events über `feature:RegisterEvent`, EventRegistry-Callbacks über
-  `feature:RegisterCallback`, wiederkehrende Timer über `feature:StartTicker`, verzögerte
+  Abschalten auf: Events über `feature:RegisterEvent`, wiederkehrende Timer über
+  `feature:StartTicker`, verzögerte
   Einzelaufrufe über `feature:After` (verfallen beim Abschalten). Hooks lassen sich nicht
   entfernen: `feature:HookFunction` (`hooksecurefunc`) und `feature:HookScript` setzen sie einmal
   und lassen sie nur bei eingeschaltetem Feature wirken; für andere Hook-APIs `feature:Once` plus
@@ -693,11 +635,11 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
 - **Services für geteilten Code:** Was mehrere Features brauchen, ist ein Service statt kopiertem
   Code. Ein Service heißt **immer** `<Name>Service`: Datei `<Name>Service.lua`, Table
   `ns.<Name>Service`, kein Feature darin (der Test prüft das). So ist an jedem Aufruf erkennbar,
-  ob etwas ein Service (`ns.PopupService.Hide`), ein Feature (`ns.features.autoRepair`) oder eine
-  einfache Hilfsfunktion (`ns.FormatMoney`, `ns.IsSecret` in `Core/Init.lua`) ist. Für alle
-  Kategorien liegt ein Service unter `Core/` (`PopupService`: StaticPopups finden, schließen,
-  Eingabefeld lesen; `ChatService`: Text in die Chat-Eingabe setzen, Ziel als Präfix lesen, Chat-Sperre prüfen), für eine Kategorie in deren Ordner (`Modules/Quests/QuestService.lua`:
-  Quest-Sicherheitsregeln und die NPC-Questliste). Ein Service hängt sich über
+  ob etwas ein Service (`ns.AliasService.Get`), ein Feature (`ns.features.chatAliases`) oder eine
+  einfache Hilfsfunktion (`ns.IsSecret` in `Core/Init.lua`) ist. Für alle
+  Kategorien liegt ein Service unter `Core/` (`ChatService`: Klartext prüfen, Chat-Sperre prüfen),
+  für eine Kategorie in deren Ordner (`Modules/Aliases/AliasService.lua`,
+  `Modules/Chronicle/ChronicleService.lua`). Ein Service hängt sich über
   das interne Signal `FEATURE_STATE` an den Zustand seiner Features, statt dass jedes Feature ihn
   in `OnEnable`/`OnDisable` selbst an- und abmelden muss. In der `.toc` steht ein Service vor den
   Features, die ihn nutzen.
@@ -705,22 +647,10 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   Standard an, Schalter rechts im Kopf der Seite). Ist er aus, läuft kein Feature der Kategorie, egal wie es
   selbst eingestellt ist: keine Events, keine Timer, Hooks bleiben stumm. Die Einzelauswahl bleibt
   gespeichert. Die Prüfung sitzt in `ns:SyncFeature`; ein Feature muss dafür nichts tun.
-- **Gespiegelte Spieloptionen:** Ist ein Schalter nur eine zweite Bedienung für eine Blizzard-Option,
-  wird er als Feature mit `mirror = { cvar = "<Name>" }` deklariert (optional `on`/`off`, Standard
-  „1“/„0“), ohne eigenen Code. `Core/GameOptions.lua` erledigt alles: Die Spieloption ist die
-  Wahrheit (Abgleich beim Login, über `CVarCallbackRegistry` sofort bei jeder Änderung und beim
-  Öffnen des Fensters, ohne zurückzuschreiben); der Schalter des Features setzt sie an und aus;
-  der Kategorie-Hauptschalter fasst sie nicht an. „Zurücksetzen“ überspringt den Schalter (er
-  zählt auch nicht als Abweichung), und ein Profilwechsel übernimmt zuerst den Wert aus dem Spiel,
-  statt den des Profils zu schreiben. Nicht für Fälle, in denen das Addon eine
-  Spieleinstellung nur vorübergehend ändert und den alten Wert zurückstellen muss (`cameraZoom`).
-- **`requires`:** Jede benötigte Client-API als Pfad angeben (`"C_Container.UseContainerItem"`).
+- **`requires`:** Jede benötigte Client-API als Pfad angeben (`"C_FriendList.GetNumFriends"`).
   Fehlt sie, bleibt das Feature aus und erscheint als „nicht verfügbar“.
-- **Standardwerte:** Was im Namen des Spielers handelt (Gold ausgeben, verkaufen, Quests oder
-  Einladungen annehmen, Rückfragen bestätigen), ist `default = false`. Nur Harmloses ist an.
-- **Pausentaste:** Jede Automatik fragt zuerst `ns:IsPaused()`.
-- **Sicherheitsregeln der Quest-Automatik:** nie eine Belohnung wählen, nie wiederholbare Quests,
-  nie Quests, die Gold kosten, nie Quests, die PvP aktivieren.
+- **Standardwerte:** Was im Namen des Spielers handelt, Nachrichten an andere Spieler schickt
+  oder auf Spielereignisse lauscht, ist `default = false`. Nur Harmloses ist an.
 - **Chat:** Rückmeldungen über `ns:Notify` (abschaltbar), höchstens eine Zeile je Aktion.
 - **Globale Namen:** nur `FamulusDB`, `FamulusCharDB`, `SLASH_FAMULUS1/2`,
   `Famulus_OnAddonCompartmentClick` sowie die benannten Frames `FamulusOptionsFrame` und
@@ -729,7 +659,7 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   Standardwerten ist kein Spielereignis registriert, kein `OnUpdate`, kein Timer.
 - **Texte:** Jeder Schlüssel in `Locales/enUS.lua` **und** `Locales/deDE.lua`, mit denselben
   Platzhaltern. Schema: `area_<bereich>`, `cat_<kategorie>`, `f_<feature>`, `o_<feature>_<option>`,
-  `g_<allgemein>`, `msg_<chat>`, `j_<tagebuch>`, `ui_<fenster>` (Reiter: `ui_tab_<id>`); Hilfetext mit Endung `_desc`. Texte erst zur Laufzeit über `ns.L`
+  `g_<allgemein>`, `msg_<chat>`, `c_<chronik>`, `ui_<fenster>` (Reiter: `ui_tab_<id>`); Hilfetext mit Endung `_desc`. Texte erst zur Laufzeit über `ns.L`
   lesen, nie beim Laden zwischenspeichern, sonst bricht der Sprachwechsel.
 - **Einstellungen:** Gespeichert wird nur, was vom Standard abweicht (`ns:SetOption`).
 - **Fenster:** Zeilen entstehen automatisch aus Features und deren `options`
@@ -743,11 +673,10 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
 | Funktion | Grund |
 |---|---|
 | URLs im Chat anklickbar machen | Eigene Link-Typen im Forever-Client unbestätigt, Chat kann „secret“ sein, `CopyToClipboard` ist geschützt |
-| Gossip mit nur einer Option überspringen | Risiko von Fehlauswahlen; erst mit Test im Spiel |
+| Quality-of-Life-Funktionen (Händler, Quests, Beute, Tooltips, Karte, Chat, Kamera) und das Tagebuch | Gibt es in vielen anderen Addons; Famulus konzentriert sich aufs gemeinsame Spielen (2026-11-23, siehe „Vorgaben“) |
 | Blizzard-Fenster verschieben, Minikarten-Symbole einsammeln | Bei den Vorbildern Hauptquelle für Taint und Addon-Konflikte |
 | Alles rund um das Kampflog | Für Addons nicht nutzbar |
 | Aliase auf Unitframes, Raidframes, Namensplaketten | Text auf Blizzards FontStrings zu überschreiben birgt Taint; Namen sind im Kampf oft secret. Siehe „Aliase“ |
-| Eigene Plunderliste, Post-Helfer, „Alles lernen“ beim Lehrer, Haltbarkeitswarnung | Sinnvolle Kandidaten, in 0.1.0 aus Umfangsgründen nicht enthalten |
 
 ## Arbeitsablauf
 
@@ -780,7 +709,7 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
 - Bei einer neuen Version: `## Version` in `Famulus/Famulus.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
-  dort fehlt. Er zählt außerdem die Features (`total == 24`); die Zahl bei einem neuen Feature
+  dort fehlt. Er zählt außerdem die Features (`total == 8`); die Zahl bei einem neuen Feature
   mit anpassen.
 - Repository: `github.com/89pleasure/famulus` (privat; bis 2026-11-19 `schnitzel`), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.

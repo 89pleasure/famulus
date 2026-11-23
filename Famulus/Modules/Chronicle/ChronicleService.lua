@@ -2,7 +2,7 @@
 -- companions, one entry per event worth remembering.
 --
 -- The features of the category record events here; the window reads them.
--- Like the journal this is account-wide data, not a setting: it lives in
+-- Like the alias list this is account-wide data, not a setting: it lives in
 -- FamulusDB.chronicle, outside the profiles. Entries hold a kind and its
 -- values, never finished text, so the chronicle follows a change of language.
 --
@@ -41,7 +41,7 @@ end
 
 -- A companion's name as the player knows them: the alias, if there is one.
 local function Companion(entry)
-    local name = entry.who or L.j_someone
+    local name = entry.who or L.c_someone
     local alias = ns.AliasService and ns.AliasService.Get(name)
     if alias then
         return alias, name

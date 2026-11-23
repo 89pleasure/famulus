@@ -5,9 +5,8 @@
 
 local mock = {
     chat = {}, -- lines printed to the chat frame
-    calls = {}, -- { "RepairAllItems", arg1, ... } for API calls worth asserting
+    calls = {}, -- { "C_FriendList.ShowFriends", arg1, ... } for API calls worth asserting
     frames = {}, -- every frame created
-    cvars = { autoLootDefault = "0", cameraDistanceMaxZoomFactor = "1.9" },
     state = {}, -- per-test game state
     undefinedGlobals = {},
     now = 0,
@@ -47,7 +46,7 @@ for name in
     SetVertexColor SetFont SetShadowOffset SetShadowColor SetTextColor
     SetJustifyH SetJustifyV SetWordWrap SetSpacing SetAutoFocus SetMaxLetters
     EnableMouseWheel SetScrollChild AddMessage AddLine
-    AddDoubleLine SetOwner SetAltArrowKeyMode TryDisplayMessage
+    AddDoubleLine SetOwner
     SetGradient SetClampRectInsets SetHorizTile SetVertTile
     SetLooping SetOffset SetDuration SetFromAlpha SetToAlpha SetOrder
     ]],
@@ -166,12 +165,6 @@ function Widget:GetFrameLevel()
 end
 function Widget:EnableMouse(enabled)
     self.mouseEnabled = enabled and true or false
-end
-function Widget:SetAltArrowKeyMode(altMode)
-    self.altArrowKeyMode = altMode
-end
-function Widget:GetAltArrowKeyMode()
-    return self.altArrowKeyMode
 end
 function Widget:HookScript(script, hook)
     local original = self.scripts[script]
@@ -433,11 +426,6 @@ QuestTitleFont = {
         return "Fonts\\MORPHEUS.TTF", 18, ""
     end,
 }
-NUM_BAG_SLOTS = 4
-NUM_CHAT_WINDOWS = 2
-DELETE_ITEM_CONFIRM_STRING = "DELETE"
-ERR_OUT_OF_RAGE = "Not enough rage"
-ERR_ABILITY_COOLDOWN = "Ability is not ready yet."
 SlashCmdList = {}
 UISpecialFrames = {}
 
@@ -446,58 +434,6 @@ Minimap = CreateFrame("Frame", "Minimap")
 GameTooltip = CreateFrame("GameTooltip", "GameTooltip")
 ItemRefTooltip = CreateFrame("GameTooltip", "ItemRefTooltip")
 EditModeManagerFrame = CreateFrame("Frame", "EditModeManagerFrame")
-UIErrorsFrame = CreateFrame("MessageFrame", "UIErrorsFrame")
-MerchantFrame = CreateFrame("Frame", "MerchantFrame")
-MerchantFrame.shown = false
-WorldMapFrame = CreateFrame("Frame", "WorldMapFrame")
-WorldMapFrame.shown = false
-WorldMapFrame.ScrollContainer = CreateFrame("ScrollFrame", nil, WorldMapFrame)
-ChatFrame1EditBox = CreateFrame("EditBox", "ChatFrame1EditBox")
-ChatFrame2EditBox = CreateFrame("EditBox", "ChatFrame2EditBox")
--- The game's chat template sets ignoreArrows: Alt is needed by default.
-ChatFrame1EditBox.altArrowKeyMode = true
-ChatFrame2EditBox.altArrowKeyMode = true
-SLASH_WHISPER1 = "/w"
-SLASH_SAY1 = "/s"
-SLASH_YELL1 = "/y"
-function IsSecureCmd(command)
-    return command == "/cast" or command == "/target"
-end
-AutoCompleteBox = CreateFrame("Frame", "AutoCompleteBox")
-AutoCompleteBox.shown = false
-
--- Blizzard's CVar registry: callbacks keyed by the CVar's name.
-CVarCallbackRegistry = { callbacks = {} }
-function CVarCallbackRegistry:RegisterCallback(event, fn, owner)
-    self.callbacks[event] = self.callbacks[event] or {}
-    self.callbacks[event][owner] = fn
-end
-function CVarCallbackRegistry:TriggerEvent(event, ...)
-    for owner, fn in pairs(self.callbacks[event] or {}) do
-        fn(owner, ...)
-    end
-end
--- The player changes a game option in the game's own settings.
-function mock.SetGameOption(name, value)
-    mock.cvars[name] = value
-    CVarCallbackRegistry:TriggerEvent(name, value)
-end
-
-EventRegistry = { callbacks = {} }
-function EventRegistry:RegisterCallback(event, fn, owner)
-    self.callbacks[event] = self.callbacks[event] or {}
-    self.callbacks[event][owner] = fn
-end
-function EventRegistry:UnregisterCallback(event, owner)
-    if self.callbacks[event] then
-        self.callbacks[event][owner] = nil
-    end
-end
-function EventRegistry:TriggerEvent(event, ...)
-    for owner, fn in pairs(self.callbacks[event] or {}) do
-        fn(owner, ...)
-    end
-end
 
 DEFAULT_CHAT_FRAME = {
     AddMessage = function(_, text)
@@ -531,84 +467,8 @@ GuildyAPI = {
     end,
 }
 
-C_CVar = {
-    GetCVar = function(name)
-        return mock.cvars[name]
-    end,
-    SetCVar = function(name, value)
-        record("SetCVar", name, value)
-        if name == "cameraDistanceMaxZoomFactor" and tonumber(value) > 2.6 then
-            return false -- this client caps the factor at 2.6
-        end
-        mock.cvars[name] = tostring(value)
-        return true
-    end,
-}
-function GetCVarBool(name)
-    return mock.cvars[name] == "1"
-end
-
-C_CurrencyInfo = {
-    GetCoinTextureString = function(copper)
-        return copper .. "c"
-    end,
-}
-
--- Modifier keys
-function IsShiftKeyDown()
-    return mock.state.shift or false
-end
-function IsControlKeyDown()
-    return false
-end
-function IsAltKeyDown()
-    return false
-end
-function IsModifiedClick()
-    return false
-end
-
--- Merchant
-function CanMerchantRepair()
-    return mock.state.canRepair or false
-end
-function GetRepairAllCost()
-    local cost = mock.state.repairCost or 0
-    return cost, cost > 0
-end
-function RepairAllItems(guild)
-    record("RepairAllItems", guild or false)
-    if guild and mock.state.guildRepairFails then
-        return
-    end
-    mock.state.repairCost = 0
-end
-function CanGuildBankRepair()
-    return mock.state.canGuildRepair or false
-end
-function GetMoney()
-    return mock.state.money or 0
-end
-
--- Bags
 Enum = {
-    ItemQuality = { Poor = 0, Common = 1 },
-    TooltipDataType = { Item = 0, Spell = 1, Unit = 2 },
-}
-C_Container = {
-    GetContainerNumSlots = function(bag)
-        local slots = mock.state.bags and mock.state.bags[bag]
-        return slots and #slots or 0
-    end,
-    GetContainerItemInfo = function(bag, slot)
-        local slots = mock.state.bags and mock.state.bags[bag]
-        local item = slots and slots[slot]
-        return item or nil
-    end,
-    UseContainerItem = function(bag, slot)
-        record("UseContainerItem", bag, slot)
-        mock.state.bags[bag][slot] = false
-    end,
+    TooltipDataType = { Unit = 2 },
 }
 C_Item = {
     -- mock.state.owned = { [itemID] = <count> }; mock.state.itemNames = { [itemID] = "<name>" }
@@ -622,107 +482,8 @@ C_Item = {
     GetItemNameByID = function(itemID)
         return mock.state.itemNames and mock.state.itemNames[itemID] or nil
     end,
-    GetItemInfo = function(link)
-        local price = mock.state.prices and mock.state.prices[link] or 0
-        return "name", link, 0, 1, 1, "type", "sub", 1, "", 1, price
-    end,
+    GetItemInfo = function() end,
 }
-
--- Quests
-C_GossipInfo = {
-    GetActiveQuests = function()
-        return mock.state.activeQuests or {}
-    end,
-    GetAvailableQuests = function()
-        return mock.state.availableQuests or {}
-    end,
-    SelectActiveQuest = function(id)
-        record("SelectActiveQuest", id)
-    end,
-    SelectAvailableQuest = function(id)
-        record("SelectAvailableQuest", id)
-    end,
-}
-C_QuestLog = {
-    IsRepeatableQuest = function(id)
-        return mock.state.repeatable and mock.state.repeatable[id] or false
-    end,
-    IsQuestTrivial = function(id)
-        return mock.state.trivial and mock.state.trivial[id] or false
-    end,
-}
-function GetQuestID()
-    return mock.state.questID or 0
-end
-function AcceptQuest()
-    record("AcceptQuest")
-end
-function ConfirmAcceptQuest()
-    record("ConfirmAcceptQuest")
-end
-function QuestGetAutoAccept()
-    return false
-end
-function AcknowledgeAutoAcceptQuest()
-    record("AcknowledgeAutoAcceptQuest")
-end
-function QuestFlagsPVP()
-    return mock.state.pvpQuest or false
-end
-function IsQuestCompletable()
-    return mock.state.completable or false
-end
-function CompleteQuest()
-    record("CompleteQuest")
-end
-function GetNumQuestChoices()
-    return mock.state.choices or 0
-end
-function GetQuestReward(choice)
-    record("GetQuestReward", choice)
-end
-function GetQuestMoneyToGet()
-    return mock.state.questCost or 0
-end
-function GetNumActiveQuests()
-    return 0
-end
-function GetNumAvailableQuests()
-    return 0
-end
-function GetActiveTitle() end
-function GetAvailableQuestInfo() end
-function SelectActiveQuest() end
-function SelectAvailableQuest() end
-
--- Loot
-function GetNumLootItems()
-    return mock.state.lootItems or 0
-end
-function LootSlot(slot)
-    record("LootSlot", slot)
-end
-function ConfirmLootSlot(slot)
-    record("ConfirmLootSlot", slot)
-end
-function IsInGroup()
-    return mock.state.inGroup or false
-end
-
--- Popups
-StaticPopupDialogs = {
-    LOOT_BIND = {},
-    PARTY_INVITE = {},
-    DUEL_REQUESTED = {},
-    QUEST_ACCEPT = {},
-    DELETE_GOOD_ITEM = {},
-}
-function StaticPopup_Hide(which)
-    record("StaticPopup_Hide", which)
-end
-function StaticPopup_FindVisible(which)
-    return mock.state.popups and mock.state.popups[which] or nil
-end
 
 -- Secret values. mock.SECRET stands for a value the client hides from addons
 -- and, like it, refuses indexing, arithmetic, ordering and concatenation. A
@@ -751,18 +512,8 @@ function issecretvalue(value)
     return rawequal(value, mock.SECRET)
 end
 
--- Social
-function AcceptGroup()
-    record("AcceptGroup")
-end
-function CancelDuel()
-    record("CancelDuel")
-end
 -- mock.state.friends = { { name = ..., level = ..., area = ..., guid = ..., connected = true }, ... }
 C_FriendList = {
-    IsFriend = function(guid)
-        return guid == "Player-1-FRIEND"
-    end,
     GetNumFriends = function()
         return #(mock.state.friends or {})
     end,
@@ -1006,18 +757,8 @@ ChatFrameUtil = {
             end
         end
     end,
-    InsertLink = function(text)
-        record("ChatFrameUtil.InsertLink", text)
-        return mock.state.chatOpen or false
-    end,
-    OpenChat = function(text)
-        record("ChatFrameUtil.OpenChat", text)
-    end,
 }
 
-function Screenshot()
-    record("Screenshot")
-end
 function GetCursorPosition()
     return 600, 500
 end
