@@ -201,28 +201,45 @@ schlicht wie Polestar, helles und dunkles Design (das helle ist seit 2026-11-19 
 siehe „Farben“), runde Ecken, eigene Schrift. Er hat freie Hand
 gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noch nicht bestätigt.
 
-- **Aufbau:** Seitenleiste (Logo, Suche, „Funktionen“ mit einem Eintrag je Bereich und Zähler
-  aktiv/gesamt; unten „Einstellungen“ und „Über“, darunter „x von y aktiv“) | rechts Titel und
-  Untertitel des Bereichs, oben rechts Schließen, darunter die Reiter, eine
-  Zeile mit der Beschreibung des Reiters und rechts seinen Aktionen (Zurücksetzen, Hauptschalter),
-  dann Karten mit Zeilen. Keine Fußzeile.
+- **Aufbau (seit 2026-11-23, Wunsch des Auftraggebers nach dem Vorbild von OneForAll, an einem
+  HTML-Mockup bestätigt):** Die Funktionen stehen oben, ihre Unterbereiche links.
+  - **Kopf** (76 hoch, über die ganze Breite, dunkler Grund wie die Seitenleiste): links Logo, Name
+    und Untertitel; daneben die Bereiche als Reiter mit Symbol und Zähler aktiv/gesamt („Aliase“,
+    „Chronik“); rechts außen „Einstellungen“ und „Über“, ganz rechts Schließen. Der gewählte
+    Reiter trägt den Strich mit Verlauf und Schein auf der Linie unter dem Kopf.
+  - **Seitenleiste:** Suche, darunter Name und Beschreibung des gewählten Bereichs mit dem
+    Hauptschalter rechts neben dem Namen, dann seine Unterbereiche als Liste (gewählter Eintrag:
+    auslaufender Verlauf, leuchtender Balken); unten „x von y aktiv“. Eine Seite mit nur einem
+    Unterbereich („Über“) listet sich selbst. Während der Suche zeigt die Seitenleiste weder Name
+    noch Liste noch Hauptschalter.
+  - **Inhalt:** Titel und Beschreibung des Unterbereichs, rechts daneben „Zurücksetzen“, dann
+    Karten mit Zeilen. Keine Fußzeile.
+  - Im Code heißen die Bereiche weiter „Seiten“ (`pages`, Knöpfe `navButtons`) und die
+    Unterbereiche „Reiter“ (`page.tabs`, `window.tabs`, Texte `ui_tab_<id>`); wo diese Datei
+    „Reiter“ eines Bereichs sagt, sind die Einträge der Seitenleiste gemeint. Die Reiterzeile im
+    Inhalt (`UI.Tabs`) mit gleitender Markierung und die Überschrift „Funktionen“ sind entfallen.
+  - Fenster 1180 × 730 wie das Einstellungsfenster von FlareUI (Wunsch des Auftraggebers,
+    2026-11-23; vorher 880 × 590).
+  - Vom Auftraggeber im Spiel gesehen und bestätigt (2026-11-23, „sieht super aus“), samt der
+    Entscheidungen des Assistenten: Hauptschalter in der Seitenleiste, „Über“ als eigener Reiter,
+    Kopf und Seitenleiste auf demselben Grund.
 - **Bereiche (`ns.areas`, `Core/Features.lua`):** Jede Kategorie gehört zu genau einem Bereich (der
   Test prüft das). Jeder Bereich hat einen eigenen Aufbau (`layouts.<bereich>` in
   `UI/Options.lua`). `aliases`: Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
-  „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Anzeige“ mit den Alias-Features.
+  „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Einstellungen“ (bis 2026-11-23 „Anzeige“) mit den Alias-Features.
   `chronicle`: siehe „Chronik“. `fellows`: siehe „Weggefährten“. Die Einstellungen haben die Reiter „Allgemein“ (Sprache,
   Rückmeldung im Chat, Minikartensymbol, Charakterprofil) und „Darstellung“ (Farbwelt, Funken,
   Fenstergröße). Die erste Seite beim Öffnen ist die Aliase.
-- **Hauptschalter** einer Kategorie: rechts in der Zeile unter den Reitern, beschriftet nur mit
-  „AN“/„AUS“; bei den Aliasen auf beiden Reitern. Eine abgeschaltete Kategorie ist als Reiter
-  ausgegraut; sind alle Kategorien eines Bereichs aus, ist er in der Seitenleiste ausgegraut und
-  trägt „AUS“.
+- **Hauptschalter** einer Kategorie: in der Seitenleiste rechts neben dem Namen des Bereichs,
+  beschriftet nur mit „AN“/„AUS“. Die Unterbereiche einer abgeschalteten Kategorie sind in der
+  Liste ausgegraut; sind alle Kategorien eines Bereichs aus, ist sein Reiter im Kopf ausgegraut
+  und trägt „AUS“.
 - **Zurücksetzen** wirkt auf den Reiter (Features ganzer Abschnitt, Addon-Optionen nur ihr
   Schlüssel, dazu der Hauptschalter). Erster Klick fragt („Wirklich zurücksetzen?“, rot), zweiter
   innerhalb von vier Sekunden führt aus; auf Standardwerten ausgegraut; ohne Einstellungen (Liste
   der Aliase, „Über“) nicht vorhanden.
 - **Suche:** über alle Seiten und Reiter, Treffer gruppiert je Reiter in Karten („Aliase ·
-  Anzeige“); keine Reiter und kein Hauptschalter in der Ergebnisansicht.
+  Einstellungen“); keine Reiter und kein Hauptschalter in der Ergebnisansicht.
 - **Farben (überarbeitet 2026-11-18, Abend):** Der Auftraggeber fand den ersten Stand (neutrale
   Grautöne, Akzent nur als Fläche) zu beliebig. Vorbilder für Farbkonzept, Akzente und Effekte:
   Polestar Guide und Mastercraft, ohne sie zu kopieren. An einem HTML-Mockup hat er das Konzept
@@ -293,7 +310,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
 - **Aufbau:** Bereich und Kategorie `chronicle`, Daten über `ns.ChronicleService`
   (`Modules/Chronicle/ChronicleService.lua`) in `FamulusDB.chronicle` (accountweit, außerhalb der
   Profile, höchstens 2000 Einträge, Art und Werte statt Text). Reiter „Alle“, „Meine Reise“,
-  „Gefährten“ und „Aufzeichnung“ (`layouts.chronicle`).
+  „Gefährten“ und „Einstellungen“ (bis 2026-11-23 „Aufzeichnung“) (`layouts.chronicle`).
 - **Bilderbuch (2026-11-19):** Der Auftraggeber fand den HTML-Entwurf „schon ganz cool“ und ließ
   ihn so umsetzen. Die drei Erzähl-Reiter zeigen keine Zeilen mehr, sondern ein Buch
   (`UI.Book`, `UI/Book.lua`; ein Reiter liefert es über `tab.book`, `Render` legt es unter die
@@ -574,7 +591,7 @@ Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
 - **Eigene Kategorie `aliases`** mit Hauptschalter, als eigener Bereich in der Seitenleiste (seit
   2026-11-18, siehe „Das Fenster“). Reiter „Namen“: Eingabezeile (Charaktername, Alias,
   „Speichern“) und je Alias eine Zeile (Klick lädt sie in die Eingabezeile, das Kreuz entfernt
-  sie); Reiter „Anzeige“: die Features. Die Suche findet Aliase und Charakternamen.
+  sie); Reiter „Einstellungen“: die Features. Die Suche findet Aliase und Charakternamen.
 - **Daten, keine Einstellung:** `FamulusDB.aliases = { [schlüssel] = { name, alias } }`, accountweit,
   außerhalb der Profile; „Zurücksetzen“ und Profilwechsel lassen die Liste in Ruhe. Zugriff nur
   über `ns.AliasService` (`Modules/Aliases/AliasService.lua`); Änderungen melden sich mit dem Signal
@@ -672,8 +689,8 @@ Idee aus einer Ideensammlung des Assistenten (2026-11-23), vom Auftraggeber ausg
 sich, mit wem der Spieler in einer Gruppe war. Begründung: Forever hat „Zuletzt zusammen gespielt“
 nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
 
-- **Entscheidungen des Auftraggebers (2026-11-23):** eigener Bereich in der Seitenleiste (nicht als
-  Reiter bei Aliasen oder Chronik). Erste Version: die Liste (wer, wann, wo, wie oft, wie lange)
+- **Entscheidungen des Auftraggebers (2026-11-23):** eigener Bereich (nicht als
+  Unterbereich von Aliasen oder Chronik; im neuen Fenster ein Reiter im Kopf). Erste Version: die Liste (wer, wann, wo, wie oft, wie lange)
   und Boss-Einträge der Chronik, die nennen, wer dabei war. **Nicht** gewählt: Notizen zu Personen,
   Hinweis im Tooltip, Knopf „Freund hinzufügen“. Nicht einbauen, ohne zu fragen.
 - **Aufbau:** Kategorie und Bereich `fellows`, ein Feature `rememberFellows`
@@ -706,12 +723,12 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
 - **Fenster:** Reiter „Zuletzt“ (wer gerade in der Gruppe ist zuerst, dann nach letztem Mal) und
   „Am häufigsten“ (nach gemeinsamer Zeit), je höchstens 60 Zeilen (`FELLOW_ROWS`) mit einer Zeile
   „N weitere“; die Suche durchsucht über `tab.search` alle, aber nur auf „Zuletzt“, damit niemand
-  doppelt erscheint. Dritter Reiter „Aufzeichnung“ mit dem Schalter. Eine Zeile ist eine
+  doppelt erscheint. Dritter Reiter „Einstellungen“ mit dem Schalter. Eine Zeile ist eine
   Personenzeile wie bei den Aliasen (`PERSON_ROWS` in `UI/Options.lua`: Avatar mit Anfangsbuchstabe,
   Kreuz rechts): Ein Klick öffnet die Alias-Eingabe mit dem Namen, das Kreuz vergisst die Person
   (eine Chat-Zeile sagt es). Unter einem Alias steht der Name in der zweiten Zeile, wie in der
   Chronik. Die Klasse kommt aus `LOCALIZED_CLASS_NAMES_MALE`, also in der Sprache des Clients.
-  Symbol in der Seitenleiste: zwei Figuren (`people.tga`).
+  Symbol im Kopf: zwei Figuren (`people.tga`).
 - **In der Chronik:** Fällt ein Boss in einer Gruppe, trägt der Eintrag `with` (die Namen, in einer
   Gruppe bis vier) oder `others` (nur die Zahl, im Schlachtzug, damit 39 Namen je Boss die Daten
   nicht aufblähen). Die Zeile darunter lautet „in Uldaman  ·  mit Mira und Tom“ (Alias, sonst
@@ -799,7 +816,7 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   in `OnEnable`/`OnDisable` selbst an- und abmelden muss. In der `.toc` steht ein Service vor den
   Features, die ihn nutzen.
 - **Kategorie-Hauptschalter:** Jede Kategorie hat einen Hauptschalter (Option `categories.<id>`,
-  Standard an, Schalter rechts im Kopf der Seite). Ist er aus, läuft kein Feature der Kategorie, egal wie es
+  Standard an, Schalter in der Seitenleiste neben dem Namen des Bereichs). Ist er aus, läuft kein Feature der Kategorie, egal wie es
   selbst eingestellt ist: keine Events, keine Timer, Hooks bleiben stumm. Die Einzelauswahl bleibt
   gespeichert. Die Prüfung sitzt in `ns:SyncFeature`; ein Feature muss dafür nichts tun.
 - **`requires`:** Jede benötigte Client-API als Pfad angeben (`"C_FriendList.GetNumFriends"`).

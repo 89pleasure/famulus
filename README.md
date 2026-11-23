@@ -27,18 +27,19 @@ mit denen du in einer Gruppe warst. Englisch und Deutsch, keine Bibliotheken, ke
 | Chronik | Ereignisse live als Karte am Bildschirm einblenden | **an** |
 | Weggefährten | Merken, mit wem du in einer Gruppe warst: wann, wo, wie oft, wie lange, gemeinsame Bosse (wahlweise ohne Schlachtzüge) | aus |
 
-**Das Fenster** (`/fam`): Links die Hauptfunktionen **Aliase**, **Chronik** und **Weggefährten**,
-unten die Seiten **Einstellungen** und **Über**. Die Chronik erzählt die Reise deiner Charaktere und
-deiner Gefährten als Bilderbuch und tauscht sie auf Wunsch mit Freunden und Gildenmitgliedern aus,
-die Famulus ebenfalls nutzen, auch über gemeinsame Gefährten, wenn jemand offline ist. Besiegt ihr
-einen Boss als Gruppe, nennt die Chronik, wer dabei war. Die Aliase haben ihre Namensliste und einen
-Reiter „Anzeige“. Die Weggefährten listen alle, mit denen du gespielt hast, nach dem letzten Mal
-oder nach der gemeinsamen Zeit; ein Klick vergibt einen Alias. Diese Liste bleibt auf deinem
-Rechner, nichts davon wird verschickt. Fünf Farbwelten, die Funken im Hintergrund und die
-Fenstergröße stehen unter Einstellungen › Darstellung. Die Suche links findet Einstellungen, Aliase
-und Weggefährten auf allen Seiten.
+**Das Fenster** (`/fam`): Oben die Hauptfunktionen **Aliase**, **Chronik** und **Weggefährten** als
+Reiter, rechts außen **Einstellungen** und **Über**; links die Unterbereiche der gewählten Funktion.
+Die Chronik erzählt die Reise deiner Charaktere und deiner Gefährten als Bilderbuch und tauscht sie
+auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus ebenfalls nutzen, auch über
+gemeinsame Gefährten, wenn jemand offline ist. Besiegt ihr einen Boss als Gruppe, nennt die Chronik,
+wer dabei war. Die Aliase haben ihre Namensliste und einen Unterbereich „Einstellungen“. Die
+Weggefährten listen alle, mit denen du gespielt hast, nach dem letzten Mal oder nach der gemeinsamen
+Zeit; ein Klick vergibt einen Alias. Diese Liste bleibt auf deinem Rechner, nichts davon wird
+verschickt. Fünf Farbwelten, die Funken im Hintergrund und die Fenstergröße stehen unter
+Einstellungen › Darstellung. Die Suche links findet Einstellungen, Aliase und Weggefährten auf allen
+Seiten.
 
-Jede Kategorie hat rechts unter den Reitern einen **Hauptschalter**. Ist er aus, läuft dort nichts
+Jede Kategorie hat links neben dem Namen der Funktion einen **Hauptschalter**. Ist er aus, läuft dort nichts
 und nichts lauscht auf das Spiel; die Auswahl der einzelnen Funktionen bleibt erhalten.
 
 **Aliase** sind eigene Namen für andere Spieler, die nur du siehst. Du trägst sie auf der Seite
@@ -68,7 +69,7 @@ Spieler schickt, ist anfangs aus.
 | ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 10 Features in drei Bereichen, eine klare Regel für Standardwerte, höchstens eine Chat-Zeile pro Aktion (abschaltbar) |
 | FlareUI ohne Deutsch; Polestar-Sprachen als 18 Zusatz-Addons | enUS und deDE eingebaut, per Test auf Vollständigkeit geprüft |
 | Fehler in einem Teil reißen andere mit | Fehler beim Einschalten schalten nur das betroffene Feature ab; fehlt eine Client-API, wird das Feature als „nicht verfügbar“ angezeigt |
-| Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen und weitergedacht: Hauptfunktionen in der Seitenleiste, Reiter, eigene Farbwelten, runde Ecken, eigene Schrift (Inter) |
+| Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen und weitergedacht: Hauptfunktionen als Reiter im Kopf (wie OneForAll), ihre Unterbereiche in der Seitenleiste, eigene Farbwelten, runde Ecken, eigene Schrift (Inter) |
 
 ## Aufbau
 
@@ -111,10 +112,10 @@ Einstellungsfenster entsteht von selbst.
 
 ### Eine Hauptfunktion hinzufügen
 
-Größere Funktionen bekommen einen eigenen Eintrag in der Seitenleiste: Kategorie in
+Größere Funktionen bekommen einen eigenen Reiter im Kopf des Fensters: Kategorie in
 `ns.categories` und einen Bereich in `ns.areas` (`Core/Features.lua`) eintragen, dazu
 `L.area_<id>` und `L.area_<id>_desc`. Der Aufbau der Seite ist eine Funktion in `layouts`
-(`UI/Options.lua`), die die Reiter liefert, wie bei Aliasen und Chronik. Das Symbol steht in
+(`UI/Options.lua`), die die Unterbereiche für die Seitenleiste liefert, wie bei Aliasen und Chronik. Das Symbol steht in
 `AREA_ICONS`.
 
 ### Eine Sprache hinzufügen

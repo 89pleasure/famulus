@@ -445,15 +445,16 @@ local function tabButton(text)
     end
 end
 
-check(window.title:GetText() == "Aliases" and window.subtitle:GetText() == ns.L.area_aliases_desc,
-    "the first page is the aliases, described in the header")
+check(window.title:GetText() == "Names" and window.subtitle:GetText() == ns.L.ui_tab_names_desc
+    and window.area.name:GetText() == "Aliases" and window.area.desc:GetText() == ns.L.area_aliases_desc,
+    "the first page is the aliases: named in the sidebar, the content headed by its first tab")
 check(navButton("Aliases") and navButton("Chronicle") and navButton("Settings") and navButton("About"),
-    "the sidebar lists the main features and the addon's own pages")
+    "the head lists the main features and the addon's own pages")
 check(not navButton("Quality of Life") and not navButton("Journal"), "and nothing else")
 check(navButton("Aliases").selected and navButton("Aliases").count:GetText() == "5/5",
     "the main feature is selected and counts its active features")
-mock.Click(tabButton("Display"))
-check(tabButton("Display").selected and window.section.desc:GetText() == ns.L.ui_tab_display_desc, "the line under the tabs describes the tab")
+mock.Click(tabButton("Settings"))
+check(tabButton("Settings").selected and window.subtitle:GetText() == ns.L.ui_tab_display_desc, "the content is headed by the tab and its description")
 local rows = visibleRows()
 check(#rows == 7, "the display tab shows the five features and their options (got " .. #rows .. ")")
 check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
@@ -489,7 +490,7 @@ check(optionRow.bullet:IsShown() and not rows[1].bullet:IsShown(), "options are 
 check(optionRow.sunkenLast.parts[1]:IsShown() and not optionRow.sunken:IsShown(), "an option that ends its card has the rounded ground")
 check(not aliasCards[1].mark:IsShown() and aliasCards[2].mark:IsShown(), "the card of a switched-off feature loses the mark")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
-check(navButton("Aliases").count:GetText() == "4/5", "the sidebar counts it")
+check(navButton("Aliases").count:GetText() == "4/5", "the head counts it")
 ns:SetOption("chatAliases", "style", "both")
 mock.Advance(0.3)
 check(optionRow.dropdown.text:GetText() == ns.L.o_chatAliases_style_both and isFolded(optionRow), "a chosen value shows while folded as well")
@@ -509,9 +510,9 @@ check(not ns:IsCategoryEnabled("aliases") and not ns.features.tooltipAliases.ena
 check(mock.CountSenderFilters() == 0, "nothing of a switched-off category reacts to the game")
 check(ns:GetOption("tooltipAliases", "enabled") == true and ns:GetOption("chatAliases", "enabled") == false, "the features' own settings are kept")
 check(not master.toggle.on and master.caption:GetText() == "OFF", "the switch reads OFF")
-check(window.section.desc:GetText() == ns.L.ui_tab_display_desc, "the description stays")
+check(window.subtitle:GetText() == ns.L.ui_tab_display_desc, "the description stays")
 check(rows[3].disabled and rows[3].toggle.on, "feature rows are greyed out but still show the choice")
-check(tabButton("Display").label:GetAlpha() < 1, "the tab of the category is greyed out")
+check(tabButton("Settings").label:GetAlpha() < 1, "the tab of the category is greyed out")
 check(FamulusDB.profile.categories.aliases == false, "the switch is saved")
 enable("chatAliases")
 check(not ns.features.chatAliases.enabled, "a feature cannot be started while its category is off")
@@ -520,7 +521,7 @@ check(ns.features.liveFeed.enabled, "other categories keep running")
 mock.Click(master)
 mock.Advance(0.3)
 check(ns.features.tooltipAliases.enabled and FamulusDB.profile.categories == nil, "switching the category on again resumes the features")
-check(tabButton("Display").label:GetAlpha() == 1, "and the tab is back to normal")
+check(tabButton("Settings").label:GetAlpha() == 1, "and the tab is back to normal")
 check(master.toggle.on and master.caption:GetText() == "ON", "as is the switch")
 
 mock.Click(rows[1])
@@ -543,13 +544,13 @@ window.scroll:SetVerticalScroll(0)
 
 -- Tabs.
 mock.Click(tabButton("Names"))
-check(tabButton("Names").selected and window.section.desc:GetText() == ns.L.ui_tab_names_desc, "a click on a tab opens it")
+check(tabButton("Names").selected and window.subtitle:GetText() == ns.L.ui_tab_names_desc, "a click on a tab opens it")
 mock.Advance(0.3)
 check(mock.CountOnUpdateFrames() == 0, "the sliding tab bar comes to rest")
-mock.Click(tabButton("Display"))
+mock.Click(tabButton("Settings"))
 mock.Click(navButton("Settings"))
 mock.Click(navButton("Aliases"))
-check(tabButton("Display").selected, "a page remembers its tab")
+check(tabButton("Settings").selected, "a page remembers its tab")
 
 -- Every page and tab renders, in both languages.
 for _, language in ipairs({ "enUS", "deDE" }) do
@@ -560,7 +561,7 @@ for _, language in ipairs({ "enUS", "deDE" }) do
         check(button ~= nil, "navigation entry for " .. page .. " in " .. language)
         if button then
             mock.Click(button)
-            check(window.title:GetText() == ns.L[page], "page title for " .. page)
+            check(window.area.name:GetText() == ns.L[page], "page title for " .. page)
             local tabs = {}
             for _, tab in ipairs(window.tabs.buttons) do
                 if tab:IsShown() and window.tabs:IsShown() then
@@ -578,7 +579,7 @@ for _, language in ipairs({ "enUS", "deDE" }) do
     end
 end
 check(window.title:GetText() == "Über", "language switch applies immediately, without reload")
-check(not window.master:IsShown() and not window.tabs:IsShown(), "the about page has neither tabs nor a master switch")
+check(not window.master:IsShown() and tabButton("Über") and tabButton("Über").selected, "the about page lists itself in the sidebar and has no master switch")
 for _, area in ipairs(ns.areas) do
     for _, category in ipairs(area.categories) do
         local owners = 0
@@ -604,14 +605,15 @@ end
 window.search.edit:SetText("kontextm")
 check(window.title:GetText() == "Suche" and #visibleRows() >= 1, "search finds the context menu feature in German")
 check(window.search.clear:IsShown(), "the search field offers a clear button while it has text")
-check(not window.master:IsShown() and not window.tabs:IsShown(), "search results have neither tabs nor a master switch")
+check(not window.master:IsShown() and not window.tabs:IsShown() and not window.area:IsShown() and not navButton("Über").selected,
+    "search results belong to no page: the sidebar shows neither name, tabs nor master switch")
 local firstCard
 for _, frame in ipairs(mock.frames) do
     if frame.title and frame.note and frame:IsVisible() then
         firstCard = firstCard or frame
     end
 end
-check(firstCard and firstCard.title:GetText() == "Aliase  ·  Anzeige", "hits are grouped by where they live")
+check(firstCard and firstCard.title:GetText() == "Aliase  ·  Einstellungen", "hits are grouped by where they live")
 window.search.edit:SetText("zzzz")
 check(#visibleRows() == 0, "search with no hit shows no rows")
 mock.Click(window.search.clear)
@@ -622,8 +624,8 @@ check(not window.search.clear:IsShown(), "and disappears again")
 ns:SetOption("general", "language", "enUS")
 mock.Advance(0.1)
 mock.Click(navButton("Aliases"))
-mock.Click(tabButton("Display"))
-check(tabButton("Display").selected, "back on the display tab")
+mock.Click(tabButton("Settings"))
+check(tabButton("Settings").selected, "back on the display tab")
 enable("chatAliases", false)
 enable("tooltipAliases", false)
 enable("liveFeed", false)
@@ -638,7 +640,7 @@ mock.Advance(4.1)
 check(window.resetButton.label:GetText() == "Reset", "the question goes away by itself")
 mock.Click(window.resetButton)
 mock.Click(tabButton("Names"))
-mock.Click(tabButton("Display"))
+mock.Click(tabButton("Settings"))
 check(window.resetButton.label:GetText() == "Reset", "and when the tab is left")
 mock.Click(window.resetButton)
 mock.Click(window.resetButton)
@@ -652,19 +654,19 @@ enable("liveFeed")
 -- Aliases page: the list first, where aliases show on the second tab.
 mock.Click(navButton("Aliases"))
 mock.Click(tabButton("Names"))
-check(window.title:GetText() == "Aliases" and tabButton("Names").selected and tabButton("Display"), "the aliases page has its own tabs")
+check(window.area.name:GetText() == "Aliases" and window.title:GetText() == "Names" and tabButton("Names").selected and tabButton("Settings"), "the aliases page has its own tabs")
 check(window.master:IsShown() and not window.resetButton:IsShown(), "the list tab has the master switch, but no reset: aliases are data")
 local aliasRows = visibleRows()
 check(#aliasRows == 2, "the list tab shows the input row and an empty hint (got " .. #aliasRows .. ")")
 local editor = aliasRows[1].editor
 check(editor ~= nil and editor:IsVisible() and aliasRows[2].item.kind == "info", "the input row comes before the hint")
 check(editor.name.placeholder:GetText() == "Character or BattleTag#1234" and editor.save.label:GetText() == "Save", "the input row is labelled")
-check(navButton("Aliases").count:GetText() == "5/5", "the sidebar counts the alias features")
-mock.Click(tabButton("Display"))
+check(navButton("Aliases").count:GetText() == "5/5", "the head counts the alias features")
+mock.Click(tabButton("Settings"))
 check(#visibleRows() == 7 and window.resetButton:IsShown(), "the display tab shows the five features with their options, and reset")
 mock.Click(window.master)
 mock.Advance(0.1)
-check(navButton("Aliases").count:GetText() == "OFF" and navButton("Aliases").label:GetAlpha() < 1, "a switched-off area reads OFF in the sidebar")
+check(navButton("Aliases").count:GetText() == "OFF" and navButton("Aliases").label:GetAlpha() < 1, "a switched-off area reads OFF in the head")
 mock.Click(window.master)
 mock.Advance(0.1)
 mock.Click(tabButton("Names"))
@@ -701,7 +703,7 @@ check(#visibleRows() == 1, "and a character name")
 mock.Click(navButton("Chronicle"))
 window.search.edit:SetText("proudm")
 mock.Click(visibleRows()[1])
-check(window.search.edit:GetText() == "" and window.title:GetText() == "Aliases" and tabButton("Names").selected and editor.alias.edit:GetText() == "Annie",
+check(window.search.edit:GetText() == "" and window.area.name:GetText() == "Aliases" and tabButton("Names").selected and editor.alias.edit:GetText() == "Annie",
     "clicking the hit opens it on the aliases page")
 local annieRow
 for _, row in ipairs(visibleRows()) do
@@ -739,13 +741,13 @@ check(ns.AliasService.Count() == 1 and FamulusDB.accountAliases == nil and ns:Co
 mock.state.bnFriends = nil
 editor:Load("", "")
 -- From the context menu: the window opens on the list with the name filled in.
-mock.Click(tabButton("Display"))
+mock.Click(tabButton("Settings"))
 mock.Click(navButton("Chronicle"))
 SlashCmdList.FAMULUS("")
 check(not window:IsShown(), "window closed for the menu test")
 mock.OpenMenu("MENU_UNIT_PLAYER", { name = "Varian", surname = "Wrynn" })[2].click()
 mock.Advance(0.3)
-check(window:IsShown() and window.title:GetText() == "Aliases" and tabButton("Names").selected, "\"Set alias\" in a context menu opens the alias list")
+check(window:IsShown() and window.area.name:GetText() == "Aliases" and tabButton("Names").selected, "\"Set alias\" in a context menu opens the alias list")
 check(editor.name.edit:GetText() == "Varian Wrynn" and editor.alias.edit:GetText() == "" and mock.focus == editor.alias.edit,
     "with the character filled in and the cursor in the alias field")
 mock.OpenMenu("MENU_UNIT_PLAYER", { name = "Thrall" })[2].click()
@@ -851,7 +853,7 @@ check(window.scale == 1 and (FamulusDB.profile.general or {}).windowScale == nil
 -- is open and the option is on.
 local function sparkGroups()
     local playing, total = 0, 0
-    for _, frame in ipairs({ window, navButton("Settings").parent }) do
+    for _, frame in ipairs({ window, window.sidebar }) do
         for _, region in ipairs(frame.regions or {}) do
             if region.group then
                 total = total + 1
@@ -1334,9 +1336,9 @@ end
 mock.Click(navButton("Chronicle"))
 mock.Click(tabButton("Everyone")) -- the page remembers the tab the window tests left it on
 mock.Advance(0.1)
-check(window.title:GetText() == "Chronicle" and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Recording"),
+check(window.area.name:GetText() == "Chronicle" and window.title:GetText() == "Everyone" and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Settings"),
     "the chronicle has its own page: everyone, my journey, companions, recording")
-check(navButton("Chronicle").count:GetText() == "1/4", "the sidebar counts its four switches; the feed is on")
+check(navButton("Chronicle").count:GetText() == "1/4", "the head counts its four switches; the feed is on")
 -- The entries are told as a picture book: chapters, and events on a line.
 local function bookFrames(field)
     local list = {}
@@ -1483,7 +1485,7 @@ do -- an item is shown with the game's icon of it, in its own colours
     check(#bookFrames("story") == 1 and bookFrames("story")[1].story.texture == ns.UI.gameIcons.level
         and bookFrames("story")[1].story.item == nil, "a frame used again shows the picture of its new event")
 end
-mock.Click(tabButton("Recording"))
+mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
 check(#visibleRows() == 15 and visibleRows()[1].toggle ~= nil and window.master:IsShown() and #bookFrames("story") == 0,
     "recording: the four switches, the feed's eleven options and the master switch; no book (got " .. #visibleRows() .. ")")
@@ -1583,9 +1585,9 @@ mock.Fire("GROUP_ROSTER_UPDATE")
 SlashCmdList.FAMULUS("")
 mock.Click(navButton("Fellow travellers"))
 mock.Advance(0.1)
-check(window.title:GetText() == "Fellow travellers" and tabButton("Recent") and tabButton("Most often") and tabButton("Recording"),
-    "fellow travellers have their own page: recent, most often, recording")
-check(navButton("Fellow travellers").count:GetText() == "1/1", "the sidebar counts its switch")
+check(window.area.name:GetText() == "Fellow travellers" and window.title:GetText() == "Recent" and tabButton("Recent") and tabButton("Most often") and tabButton("Settings"),
+    "fellow travellers have their own page: recent, most often, settings")
+check(navButton("Fellow travellers").count:GetText() == "1/1", "the head counts its switch")
 local fellowRows = visibleRows()
 check(#fellowRows == 2 and fellowRows[1].item.kind == "fellow" and fellowRows[1].label:GetText() == "Tom Hartwig"
     and fellowRows[1].initial:GetText() == "T" and fellowRows[1].remove:IsShown(),
@@ -1598,16 +1600,16 @@ mock.Click(tabButton("Most often"))
 mock.Advance(0.1)
 fellowRows = visibleRows()
 check(#fellowRows == 2 and fellowRows[1].label:GetText() == "Mira Sturmfeder", "most often: the longest time together first")
-mock.Click(tabButton("Recording"))
+mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
-check(#visibleRows() == 2 and visibleRows()[1].toggle and window.master:IsShown(), "recording: the switch, its raid option and the master switch")
+check(#visibleRows() == 2 and visibleRows()[1].toggle and window.master:IsShown(), "settings: the switch, its raid option and the master switch")
 
 -- A click gives someone an alias; the list then shows it.
 mock.Click(tabButton("Recent"))
 mock.Advance(0.1)
 mock.Click(visibleRows()[1])
 mock.Advance(0.1)
-check(window.title:GetText() == "Aliases" and editor.name.edit:GetText() == "Tom Hartwig", "a click opens the alias input with the name")
+check(window.area.name:GetText() == "Aliases" and tabButton("Names").selected and editor.name.edit:GetText() == "Tom Hartwig", "a click opens the alias input with the name")
 ns.AliasService.Set("Tom Hartwig", "Tommy")
 mock.Click(navButton("Fellow travellers"))
 mock.Advance(0.1)

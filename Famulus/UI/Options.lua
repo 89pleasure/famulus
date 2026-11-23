@@ -13,11 +13,13 @@ local _, ns = ...
 local L = ns.L
 local UI = ns.UI
 
-local WIDTH, HEIGHT = 960, 650
+local WIDTH, HEIGHT = 1180, 730
 local SIDEBAR, PAD, RADIUS = 224, 28, 12
 local CONTENT_W = WIDTH - SIDEBAR - PAD * 2
-local HEADER = 84
-local NAV_ROW, NAV_TOP = 34, 142
+-- HEAD: the band across the top with the logo and the pages as tabs.
+-- HEADER: title and description of what the content shows, below it.
+local HEAD, HEADER = 76, 84
+local NAV_ROW = 34
 local BLOCK_GAP, BLOCK_TITLE, CARD_GAP = 22, 24, 8
 
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
@@ -1334,17 +1336,20 @@ local function AreaCount(area)
     return active, total, anyOn
 end
 
-local function RefreshSidebar()
+-- The pages stand as tabs in the head: the main features from the left, the
+-- addon's own pages from the right.
+local function RefreshHead()
     local searching = searchText ~= ""
-    for id, button in pairs(navButtons) do
-        local page = pages[id]
+    local left, trailing = SIDEBAR + 12, {}
+    for _, id in ipairs(pageOrder) do
+        local button, page = navButtons[id], pages[id]
         local selected = not searching and id == currentPage
         button.selected = selected
-        button.fill:SetShown(selected)
         button.bar:SetShown(selected)
         button.label:SetText(page.title())
         UI.Ink(button.label, selected and "text" or "textDim")
         UI.Tint(button.icon, selected and "accent" or "textMuted")
+        local width = 12 + 16 + 8 + button.label:GetStringWidth() + 12
         if page.area then
             local active, total, anyOn = AreaCount(page.area)
             -- A switched-off area is greyed out here as well.
@@ -1353,31 +1358,60 @@ local function RefreshSidebar()
             -- The counter sits on a small plate; "off" stands alone.
             button.count:SetText(anyOn and (active .. "/" .. total) or L.ui_category_off)
             UI.Ink(button.count, anyOn and selected and "accent" or "textMuted")
-            button.pill:SetWidth(button.count:GetStringWidth() + 14)
+            local pill = button.count:GetStringWidth() + 14
+            button.pill:SetWidth(pill)
             button.plate:SetShown(anyOn)
             button.plate:SetColor(selected and "accentSoft" or "chip")
+            width = width + 8 + pill
         end
+        button:SetWidth(width)
+        button:ClearAllPoints()
+        if page.bottom then
+            trailing[#trailing + 1] = button
+        else
+            button:SetPoint("BOTTOMLEFT", window, "TOPLEFT", left, -HEAD + 8)
+            left = left + width + 4
+        end
+    end
+    local right = 52 -- room for the close button
+    for i = #trailing, 1, -1 do
+        trailing[i]:SetPoint("BOTTOMRIGHT", window, "TOPRIGHT", -right, -HEAD + 8)
+        right = right + trailing[i]:GetWidth() + 4
+    end
+    window.tagline:SetText(L.ui_tagline)
+end
+
+-- The sidebar belongs to the chosen page: its name, what it is for and its
+-- tabs as a list. While searching it shows none of that.
+local function RefreshSidebar()
+    local searching = searchText ~= ""
+    local page = pages[currentPage]
+    local area = window.area
+    area:SetShown(not searching)
+    window.tabs:SetShown(not searching)
+    if not searching then
+        area.name:SetText(page.title())
+        area.desc:SetText(page.desc())
+        local current = CurrentTab(page).id
+        local list = {}
+        for i, tab in ipairs(page.tabs) do
+            list[i] = {
+                id = tab.id,
+                -- A page with a single tab lists itself.
+                text = tab.label and tab.label() or page.title(),
+                dim = tab.category ~= nil and not ns:IsCategoryEnabled(tab.category),
+            }
+        end
+        window.tabs:ClearAllPoints()
+        window.tabs:SetPoint("TOPLEFT", area.desc, "BOTTOMLEFT", -12, -16)
+        window.tabs:SetTabs(list, current)
     end
     local active, total = ns:CountActiveFeatures()
     window.status:SetText(L.ui_active_count:format(active, total))
-    window.tagline:SetText(L.ui_tagline)
-    window.navHeading:SetText(L.ui_nav_features)
 end
 
-local function RefreshTabs(animate)
-    local page = pages[currentPage]
-    local list = {}
-    for i, tab in ipairs(page.tabs) do
-        list[i] = {
-            id = tab.id,
-            text = tab.label and tab.label() or "",
-            dim = tab.category ~= nil and not ns:IsCategoryEnabled(tab.category),
-        }
-    end
-    window.tabs:SetTabs(list, CurrentTab(page).id, animate)
-end
-
--- The master switch of the tab's category, right in the line below the tabs.
+-- The master switch of the tab's category, next to the page's name in the
+-- sidebar.
 local function RefreshMaster(animate)
     local master = window.master
     local tab = CurrentTab()
@@ -1457,53 +1491,13 @@ local function RefreshState(animate)
             CardRefresh(cards[i])
         end
     end
-    if searchText == "" then
-        RefreshTabs(animate)
-    end
     RefreshMaster(animate)
     UpdateResetButton()
+    RefreshHead()
     RefreshSidebar()
 end
 
--- Places the tab bar, the description line and the scroll area from top to
--- bottom; parts a page does not need take no room.
-local function LayoutHeader(showTabs, sectionText, showActions)
-    local y = HEADER
-    window.tabs:SetShown(showTabs)
-    if showTabs then
-        window.tabs:ClearAllPoints()
-        window.tabs:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -y)
-        y = y + 34 + 16
-    end
-
-    local section = window.section
-    local hasSection = sectionText ~= nil and sectionText ~= "" or showActions
-    section:SetShown(hasSection)
-    if hasSection then
-        local actionsWidth = 0
-        if window.master:IsShown() then
-            actionsWidth = actionsWidth + window.master:GetWidth() + 8
-        end
-        if window.resetButton:IsShown() then
-            -- Room for the longer "really reset?" as well.
-            actionsWidth = actionsWidth + math.max(170, window.resetButton:GetWidth()) + 8
-        end
-        section.desc:SetWidth(CONTENT_W - actionsWidth - 16)
-        section.desc:SetText(sectionText or "")
-        local height = math.max(28, section.desc:GetStringHeight())
-        section:SetHeight(height)
-        section:ClearAllPoints()
-        section:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -y)
-        y = y + height + 16
-    end
-
-    window.scroll:ClearAllPoints()
-    window.scroll:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -y)
-    window.scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -PAD, 18)
-end
-
--- animateTabs: let the tab bar slide (only when switching tabs).
-function Render(animateTabs)
+function Render()
     UI.CloseMenu()
     local searching = searchText ~= ""
     local page = pages[currentPage]
@@ -1522,26 +1516,17 @@ function Render(animateTabs)
         key = "search:" .. searchText
     else
         blocks = tab.blocks()
-        window.title:SetText(page.title())
-        window.subtitle:SetText(page.desc())
+        -- The content is headed by its tab; a page with a single tab by itself.
+        window.title:SetText(tab.label and tab.label() or page.title())
+        window.subtitle:SetText(tab.desc and tab.desc() or page.desc())
         key = page.id .. ":" .. tab.id
-        RefreshTabs(animateTabs == true)
     end
 
-    -- Actions of the tab: reset where it has settings, the master switch
-    -- where it belongs to a category.
+    -- Reset where the tab has settings, the master switch where it belongs
+    -- to a category.
     window.resetButton:SetShown(not searching and HasSettings(tab))
     UpdateResetButton()
     RefreshMaster(false)
-    local reset = window.resetButton
-    reset:ClearAllPoints()
-    if window.master:IsShown() then
-        reset:SetPoint("RIGHT", window.master, "LEFT", -12, 0)
-    else
-        reset:SetPoint("RIGHT", window.section, "RIGHT", -10, 0)
-    end
-    local showActions = not searching and (window.master:IsShown() or window.resetButton:IsShown())
-    LayoutHeader(not searching and #page.tabs > 1, not searching and tab.desc and tab.desc() or nil, showActions)
 
     local content = window.scroll.content
     local y, rowCount = 0, 0
@@ -1612,6 +1597,7 @@ function Render(animateTabs)
     end
 
     window.search.placeholder:SetText(L.ui_search)
+    RefreshHead()
     RefreshSidebar()
 end
 
@@ -1629,7 +1615,7 @@ end
 local function SelectTab(id)
     DisarmReset()
     selectedTabs[currentPage] = id
-    Render(true)
+    Render()
 end
 
 local function ResetTab()
@@ -1672,39 +1658,37 @@ end
 -- Window
 ---------------------------------------------------------------------------
 
+-- A page's tab in the head.
 local function CreateNavButton(parent, page)
     local button = CreateFrame("Button", nil, parent)
     button:SetHeight(NAV_ROW)
     button.navId = page.id
 
-    -- The chosen entry: the accent fading out to the right, and a glowing
-    -- bar at its left edge.
-    button.fill = UI.Round(button, "accentFade", 8)
-    button.fill:SetGradient("HORIZONTAL", "accentFade", "accentFadeEnd", SIDEBAR - 24, NAV_ROW)
-    button.fill:Hide()
     local hover = UI.Round(button, "hover", 8, { sublevel = 1 })
     hover:Hide()
 
+    -- The chosen page: a glowing stroke on the line below the head.
     button.bar = CreateFrame("Frame", nil, button)
-    button.bar:SetSize(3, NAV_ROW - 16)
-    button.bar:SetPoint("LEFT")
-    local stroke = button.bar:CreateTexture(nil, "ARTWORK")
+    button.bar:SetHeight(2)
+    button.bar:SetPoint("BOTTOMLEFT", 10, -8)
+    button.bar:SetPoint("BOTTOMRIGHT", -10, -8)
+    local stroke = button.bar:CreateTexture(nil, "OVERLAY")
     stroke:SetAllPoints(button.bar)
-    UI.Shade(stroke, "VERTICAL", "accent2", "accent")
-    UI.Shadow(button.bar, 6, 1, 0, "accentGlow")
+    UI.Shade(stroke, "HORIZONTAL", "accent", "accent2")
+    UI.Shadow(button.bar, 7, 1, 0, "accentGlow")
     button.bar:Hide()
 
     button.icon = UI.Icon(button, page.icon, 16, "textMuted")
     button.icon:SetPoint("LEFT", 12, 0)
 
     button.label = UI.Text(button, 13, "textDim", "medium")
-    button.label:SetPoint("LEFT", button.icon, "RIGHT", 10, 0)
+    button.label:SetPoint("LEFT", button.icon, "RIGHT", 8, 0)
     button.label:SetJustifyV("MIDDLE")
 
     if page.area then
         button.pill = CreateFrame("Frame", nil, button)
         button.pill:SetHeight(18)
-        button.pill:SetPoint("RIGHT", -8, 0)
+        button.pill:SetPoint("RIGHT", -12, 0)
         button.plate = UI.Round(button.pill, "chip", 9)
         button.count = UI.Text(button.pill, 11, "textMuted", "medium")
         button.count:SetPoint("CENTER")
@@ -1726,6 +1710,79 @@ local function CreateNavButton(parent, page)
     end)
     navButtons[page.id] = button
     return button
+end
+
+-- The tabs of the chosen page, as a list in the sidebar.
+local function CreateTabList(parent)
+    local tabs = CreateFrame("Frame", nil, parent)
+    tabs:SetSize(SIDEBAR - 24, 1)
+    tabs.buttons = {}
+
+    local function CreateEntry()
+        local button = CreateFrame("Button", nil, tabs)
+        button:SetSize(SIDEBAR - 24, NAV_ROW)
+
+        -- The chosen entry: the accent fading out to the right, and a
+        -- glowing bar at its left edge.
+        button.fill = UI.Round(button, "accentFade", 8)
+        button.fill:SetGradient("HORIZONTAL", "accentFade", "accentFadeEnd", SIDEBAR - 24, NAV_ROW)
+        button.fill:Hide()
+        local hover = UI.Round(button, "hover", 8, { sublevel = 1 })
+        hover:Hide()
+
+        button.bar = CreateFrame("Frame", nil, button)
+        button.bar:SetSize(3, NAV_ROW - 16)
+        button.bar:SetPoint("LEFT")
+        local stroke = button.bar:CreateTexture(nil, "ARTWORK")
+        stroke:SetAllPoints(button.bar)
+        UI.Shade(stroke, "VERTICAL", "accent2", "accent")
+        UI.Shadow(button.bar, 6, 1, 0, "accentGlow")
+        button.bar:Hide()
+
+        button.label = UI.Text(button, 13, "textDim", "medium")
+        button.label:SetPoint("LEFT", 14, 0)
+        button.label:SetJustifyV("MIDDLE")
+
+        button:SetScript("OnEnter", function(self)
+            if not self.selected then
+                hover:Fade(true)
+            end
+        end)
+        button:SetScript("OnLeave", function()
+            hover:Fade(false)
+        end)
+        button:SetScript("OnClick", function(self)
+            hover:Hide()
+            SelectTab(self.id)
+        end)
+        return button
+    end
+
+    -- list: array of { id = ..., text = "...", dim = bool }
+    function tabs:SetTabs(list, selected)
+        for i, entry in ipairs(list) do
+            local button = self.buttons[i]
+            if not button then
+                button = CreateEntry()
+                button:SetPoint("TOPLEFT", self, "TOPLEFT", 0, -(i - 1) * (NAV_ROW + 2))
+                self.buttons[i] = button
+            end
+            button.id = entry.id
+            button.selected = entry.id == selected
+            button.fill:SetShown(button.selected)
+            button.bar:SetShown(button.selected)
+            button.label:SetText(entry.text)
+            button.label:SetAlpha(entry.dim and 0.5 or 1)
+            UI.Ink(button.label, button.selected and "text" or "textDim")
+            button:Show()
+        end
+        for i = #list + 1, #self.buttons do
+            self.buttons[i]:Hide()
+        end
+        self:SetHeight(math.max(1, #list * (NAV_ROW + 2)))
+    end
+
+    return tabs
 end
 
 -- The sparks move only while the window is open and the player wants them.
@@ -1753,8 +1810,10 @@ local function BuildSidebar()
         sublevel = 2,
         square = { TOPRIGHT = true, BOTTOMRIGHT = true },
     })
+    -- Below the head a line parts the sidebar from the content; the head
+    -- itself runs on to the right on the same ground.
     local edge = UI.VLine(sidebar, "cardBorder")
-    edge:SetPoint("TOPRIGHT")
+    edge:SetPoint("TOPRIGHT", 0, -HEAD)
     edge:SetPoint("BOTTOMRIGHT")
 
     -- A soft glow in the accent colour behind the logo. It is one round
@@ -1798,11 +1857,11 @@ local function BuildSidebar()
     corner:SetPoint("TOPLEFT", sidebar, "TOPLEFT", pixel, -pixel)
     UI.Tint(corner, "accentHaze", SpotAlpha(RADIUS * 0.6, RADIUS * 0.6))
 
-    -- Logo: the flame, free on the sidebar. It is a picture with its own
-    -- colours and glow and looks the same in every scheme and theme.
+    -- Logo: the flame, free on the head's left end. It is a picture with
+    -- its own colours and glow and looks the same in every scheme.
     local logo = CreateFrame("Frame", nil, sidebar)
     logo:SetSize(40, 40)
-    logo:SetPoint("TOPLEFT", 15, -17)
+    logo:SetPoint("TOPLEFT", 15, -(HEAD - 40) / 2)
     local picture = logo:CreateTexture(nil, "ARTWORK")
     picture:SetTexture(UI.media.logo)
     picture:SetAllPoints(logo)
@@ -1814,6 +1873,11 @@ local function BuildSidebar()
     window.tagline = UI.Text(sidebar, 11, "textMuted")
     window.tagline:SetPoint("TOPLEFT", wordmark, "BOTTOMLEFT", 0, -3)
 
+    -- The head's line runs on below the logo.
+    local headLine = UI.Line(sidebar, "cardBorder")
+    headLine:SetPoint("TOPLEFT", pixel, -HEAD)
+    headLine:SetPoint("TOPRIGHT", 0, -HEAD)
+
     window.search = UI.SearchBox(sidebar, function(text)
         text = strtrim(text)
         if text ~= searchText then
@@ -1821,71 +1885,25 @@ local function BuildSidebar()
             Render()
         end
     end)
-    window.search:SetPoint("TOPLEFT", 16, -72)
-    window.search:SetPoint("TOPRIGHT", -16, -72)
+    window.search:SetPoint("TOPLEFT", 16, -HEAD - 16)
+    window.search:SetPoint("TOPRIGHT", -16, -HEAD - 16)
 
-    window.navHeading = UI.Text(sidebar, 11, "textMuted", "semibold")
-    window.navHeading:SetPoint("TOPLEFT", 28, -NAV_TOP + 22)
+    -- The chosen page: its name with the master switch of its category,
+    -- what it is for, and below that its tabs.
+    local area = CreateFrame("Frame", nil, sidebar)
+    area:SetPoint("TOPLEFT", 0, -HEAD - 68)
+    area:SetPoint("TOPRIGHT", 0, -HEAD - 68)
+    area:SetHeight(28)
+    area.name = UI.Text(area, 15, "text", "semibold")
+    area.name:SetPoint("LEFT", 24, 0)
+    area.name:SetJustifyV("MIDDLE")
+    area.desc = UI.Text(area, 11, "textMuted")
+    area.desc:SetPoint("TOPLEFT", area, "BOTTOMLEFT", 24, -4)
+    area.desc:SetWidth(SIDEBAR - 48)
+    area.desc:SetSpacing(2)
+    window.area = area
 
-    -- Main features from the top, the addon's own pages from the bottom.
-    local top, bottom = 0, {}
-    for _, id in ipairs(pageOrder) do
-        local page = pages[id]
-        local button = CreateNavButton(sidebar, page)
-        if page.bottom then
-            bottom[#bottom + 1] = button
-        else
-            button:SetPoint("TOPLEFT", 12, -NAV_TOP - top * (NAV_ROW + 2))
-            button:SetPoint("TOPRIGHT", -12, -NAV_TOP - top * (NAV_ROW + 2))
-            top = top + 1
-        end
-    end
-    for i, button in ipairs(bottom) do
-        local y = 52 + (#bottom - i) * (NAV_ROW + 2)
-        button:SetPoint("BOTTOMLEFT", 12, y)
-        button:SetPoint("BOTTOMRIGHT", -12, y)
-    end
-
-    local line = UI.Line(sidebar, "cardBorder")
-    line:SetPoint("BOTTOMLEFT", 20, 42)
-    line:SetPoint("BOTTOMRIGHT", -20, 42)
-
-    local dot = UI.Icon(sidebar, "circle", 6, "accent")
-    dot:SetPoint("BOTTOMLEFT", 24, 21)
-    UI.Halo(sidebar, dot, 18, "accentGlow")
-    window.status = UI.Text(sidebar, 11, "textMuted", "medium")
-    window.status:SetPoint("LEFT", dot, "RIGHT", 8, 0)
-    window.status:SetJustifyV("MIDDLE")
-end
-
-local function BuildHeader()
-    window.title = UI.Text(window, 20, "text", "semibold")
-    window.title:SetPoint("TOPLEFT", SIDEBAR + PAD, -24)
-
-    window.subtitle = UI.Text(window, 12, "textMuted")
-    window.subtitle:SetPoint("TOPLEFT", window.title, "BOTTOMLEFT", 0, -7)
-    window.subtitle:SetWidth(CONTENT_W - 50)
-
-    local close = UI.IconButton(window, "close", function()
-        window:Hide()
-    end, 28)
-    close:SetPoint("TOPRIGHT", -12, -12)
-    window.closeButton = close
-
-    window.tabs = UI.Tabs(window, SelectTab)
-    window.tabs:SetWidth(CONTENT_W)
-
-    -- Line under the tabs: what the tab is about, its actions on the right.
-    local section = CreateFrame("Frame", nil, window)
-    section:SetWidth(CONTENT_W)
-    section.desc = UI.Text(section, 12, "textMuted")
-    section.desc:SetPoint("LEFT")
-    section.desc:SetJustifyV("MIDDLE")
-    section.desc:SetSpacing(2)
-    window.section = section
-
-    -- Master switch of the category, in line with the switches of the rows.
-    local master = CreateFrame("Button", nil, section)
+    local master = CreateFrame("Button", nil, area)
     master:SetHeight(28)
     master:SetPoint("RIGHT", -18, 0)
     master.toggle = UI.Toggle(master)
@@ -1905,7 +1923,68 @@ local function BuildHeader()
     end)
     window.master = master
 
-    window.resetButton = UI.Button(section, ResetClicked, "ghost", "reset")
+    window.tabs = CreateTabList(sidebar)
+
+    local line = UI.Line(sidebar, "cardBorder")
+    line:SetPoint("BOTTOMLEFT", 20, 42)
+    line:SetPoint("BOTTOMRIGHT", -20, 42)
+
+    local dot = UI.Icon(sidebar, "circle", 6, "accent")
+    dot:SetPoint("BOTTOMLEFT", 24, 21)
+    UI.Halo(sidebar, dot, 18, "accentGlow")
+    window.status = UI.Text(sidebar, 11, "textMuted", "medium")
+    window.status:SetPoint("LEFT", dot, "RIGHT", 8, 0)
+    window.status:SetJustifyV("MIDDLE")
+    window.sidebar = sidebar
+end
+
+-- The head right of the logo: the pages as tabs on the sidebar's dark
+-- ground, and the close button. The ground is drawn on the window itself, so
+-- that the grain lies over it as over the content.
+local function BuildHead()
+    local pixel = UI.Pixel(window)
+    local corner = RADIUS - pixel
+    local function Ground(left, top, right, bottom)
+        local piece = window:CreateTexture(nil, "BACKGROUND", nil, 2)
+        piece:SetPoint("TOPLEFT", window, "TOPLEFT", left, -top)
+        piece:SetPoint("BOTTOMRIGHT", window, "TOPRIGHT", -right, -bottom)
+        UI.Paint(piece, "sidebar")
+    end
+    Ground(SIDEBAR, pixel, RADIUS, HEAD)
+    Ground(WIDTH - RADIUS, RADIUS, pixel, HEAD)
+    local round = window:CreateTexture(nil, "BACKGROUND", nil, 2)
+    round:SetTexture(UI.media.circle)
+    round:SetTexCoord(0.5, 1, 0, 0.5)
+    round:SetSize(corner, corner)
+    round:SetPoint("TOPRIGHT", window, "TOPRIGHT", -pixel, -pixel)
+    UI.Tint(round, "sidebar")
+
+    local line = UI.Line(window, "cardBorder")
+    line:SetPoint("TOPLEFT", SIDEBAR, -HEAD)
+    line:SetPoint("TOPRIGHT", -pixel, -HEAD)
+
+    for _, id in ipairs(pageOrder) do
+        CreateNavButton(window, pages[id])
+    end
+
+    local close = UI.IconButton(window, "close", function()
+        window:Hide()
+    end, 28)
+    close:SetPoint("TOPRIGHT", -12, -(HEAD - 28) / 2)
+    window.closeButton = close
+end
+
+-- Title and description of what the content shows, reset on the right.
+local function BuildHeader()
+    window.title = UI.Text(window, 20, "text", "semibold")
+    window.title:SetPoint("TOPLEFT", SIDEBAR + PAD, -HEAD - 22)
+
+    window.subtitle = UI.Text(window, 12, "textMuted")
+    window.subtitle:SetPoint("TOPLEFT", window.title, "BOTTOMLEFT", 0, -7)
+    window.subtitle:SetWidth(CONTENT_W - 220)
+
+    window.resetButton = UI.Button(window, ResetClicked, "ghost", "reset")
+    window.resetButton:SetPoint("TOPRIGHT", -PAD, -HEAD - 20)
 end
 
 local function Build()
@@ -1958,10 +2037,13 @@ local function Build()
     table.insert(UISpecialFrames, "FamulusOptionsFrame") -- Escape closes it
 
     BuildSidebar()
+    BuildHead()
     BuildHeader()
 
     window.scroll = UI.Scroll(window)
     window.scroll.content:SetWidth(CONTENT_W)
+    window.scroll:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -HEAD - HEADER)
+    window.scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -PAD, 18)
 
     window:SetScript("OnShow", function(self)
         PlayEmbers()
@@ -2024,7 +2106,7 @@ local function FlushRefresh()
         return -- OnShow renders from scratch anyway
     end
     if mode == "layout" then
-        Render(true)
+        Render()
     else
         RefreshState(true)
     end
