@@ -19,7 +19,13 @@
 --         selected = false, stats = { ... } or nil, empty = "No profile",
 --         onSelect = function(key) end },
 --       { kind = "note", title = "Profiles", text = "..." },
+--       { kind = "group", title = "Most frequent group", note = "4×",
+--         people = { { name = "Mira Stormfeather", class = "MAGE", progress = 0.7 } },
+--         names = "Mira and Borin", line = "12 h 20 min together", text = "..." },
 --   }
+--
+-- A number may stand alone in its row (stats: { wide = true }); a person
+-- without `online` shows no state, only the words on the right (`level`).
 --
 -- Frames are made as needed and used again; nothing runs per frame.
 
@@ -33,6 +39,7 @@ local TITLE_TOP = 12
 local BODY_TOP = 34 -- below a card's title
 local ROW = 50 -- a person
 local BAR = 32 -- a profession
+local CREST, CREST_GAP = 34, 6 -- the people of a group
 
 ---------------------------------------------------------------------------
 -- Parts of a card, made when first needed
@@ -55,8 +62,21 @@ local function CreateCard(rail)
     card.text:SetWidth(rail.width - PAD * 2)
     card.text:SetSpacing(2)
     card.hintLine = UI.Line(card, "cardBorder")
-    card.cells, card.rows, card.bars = {}, {}, {}
+    card.cells, card.rows, card.bars, card.crests = {}, {}, {}, {}
     return card
+end
+
+-- A group's names in the game's book font, and the line below them.
+local function GroupTexts(card)
+    if not card.names then
+        card.names = card:CreateFontString(nil, "OVERLAY")
+        UI.SetDisplayFont(card.names, 16)
+        UI.Ink(card.names, "accent2")
+        card.names:SetJustifyH("LEFT")
+        card.groupLine = UI.Text(card, 11, "textMuted")
+        card.groupLine:SetJustifyH("LEFT")
+    end
+    return card.names, card.groupLine
 end
 
 -- A number with its label below it, two to a row.
@@ -176,10 +196,14 @@ local function Reset(card)
     card.note:Hide()
     card.text:Hide()
     card.hintLine:Hide()
-    for _, list in ipairs({ card.cells, card.rows, card.bars }) do
+    for _, list in ipairs({ card.cells, card.rows, card.bars, card.crests }) do
         for _, part in ipairs(list) do
             part:Hide()
         end
+    end
+    if card.names then
+        card.names:Hide()
+        card.groupLine:Hide()
     end
 end
 
@@ -194,24 +218,33 @@ end
 -- Layouts, one per kind of card; each returns the card's height
 ---------------------------------------------------------------------------
 
--- Numbers two to a row from `top`; returns where they end.
+-- Numbers two to a row from `top`, a wide one alone; returns where they end.
 local function LayCells(card, stats, top, size, width)
     local column = (width - PAD * 2) / 2
+    local rows, row = {}, nil
+    for index, stat in ipairs(stats) do
+        if stat.wide or not row or row.wide or #row == 2 then
+            row = { wide = stat.wide }
+            rows[#rows + 1] = row
+        end
+        row[#row + 1] = index
+    end
     local y = top
-    for first = 1, #stats, 2 do
+    for _, each in ipairs(rows) do
         local height = 0
-        for index = first, math.min(first + 1, #stats) do
+        local cellWidth = (each.wide and column * 2 or column) - 8
+        for position, index in ipairs(each) do
             local stat, cell = stats[index], Cell(card, index)
             UI.SetFont(cell.value, size, "semibold")
             cell.value:SetText(stat.value or "")
             cell.plus:SetShown(stat.plus ~= nil)
             cell.plus:SetText(stat.plus or "")
-            cell.label:SetWidth(column - 8)
+            cell.label:SetWidth(cellWidth)
             cell.label:SetText(stat.label or "")
             local cellHeight = cell.value:GetStringHeight() + 3 + cell.label:GetStringHeight()
-            cell:SetSize(column - 8, cellHeight)
+            cell:SetSize(cellWidth, cellHeight)
             cell:ClearAllPoints()
-            cell:SetPoint("TOPLEFT", card, "TOPLEFT", PAD + (index - first) * column, -y)
+            cell:SetPoint("TOPLEFT", card, "TOPLEFT", PAD + (position - 1) * column, -y)
             cell:Show()
             height = math.max(height, cellHeight)
         end
@@ -236,10 +269,13 @@ local function SetRow(row, person, width, onSelect)
     row.line:SetText(person.line or "")
     row.level:SetShown(person.level ~= nil)
     row.level:SetText(person.level or "")
+    local state = person.online ~= nil
+    row.state:SetShown(state)
+    row.dot:SetShown(state)
     row.state:SetText(person.online and L.c_online or L.c_offline)
     UI.Tint(row.dot, person.online and "accent" or "track")
     -- The words on the right take what they need; name and line the rest.
-    local right = math.max(person.level and row.level:GetStringWidth() or 0, row.state:GetStringWidth() + 11)
+    local right = math.max(person.level and row.level:GetStringWidth() or 0, state and row.state:GetStringWidth() + 11 or 0)
     local textWidth = width - 54 - 14 - right - 10
     row.name:SetWidth(textWidth)
     row.line:SetWidth(textWidth)
@@ -315,6 +351,49 @@ function layouts.brief(card, spec, width)
     card.text:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -(ROW + 2))
     card.text:Show()
     return ROW + 2 + card.text:GetStringHeight() + 14
+end
+
+-- A group that keeps coming together: their crests side by side, their
+-- names in the book font, a line, and a sentence.
+function layouts.group(card, spec, width)
+    Title(card, spec)
+    local y = BODY_TOP
+    for index, person in ipairs(spec.people or {}) do
+        local crest = card.crests[index]
+        if not crest then
+            crest = UI.Crest(card, CREST)
+            card.crests[index] = crest
+        end
+        crest:SetPerson(person.name, person.class)
+        crest:SetProgress(person.progress)
+        crest:ClearAllPoints()
+        crest:SetPoint("TOPLEFT", card, "TOPLEFT", PAD + (index - 1) * (CREST + CREST_GAP), -y)
+        crest:Show()
+    end
+    if spec.people and #spec.people > 0 then
+        y = y + CREST + 10
+    end
+    local names, line = GroupTexts(card)
+    names:SetWidth(width - PAD * 2)
+    names:SetText(spec.names or "")
+    names:ClearAllPoints()
+    names:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -y)
+    names:Show()
+    y = y + names:GetStringHeight() + 3
+    line:SetWidth(width - PAD * 2)
+    line:SetText(spec.line or "")
+    line:ClearAllPoints()
+    line:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -y)
+    line:Show()
+    y = y + line:GetStringHeight()
+    if spec.text then
+        card.text:SetText(spec.text)
+        card.text:ClearAllPoints()
+        card.text:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -(y + 10))
+        card.text:Show()
+        y = y + 10 + card.text:GetStringHeight()
+    end
+    return y + 14
 end
 
 function layouts.note(card, spec)

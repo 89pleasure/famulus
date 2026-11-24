@@ -46,7 +46,12 @@ function rememberFellows:Scan()
             members[#members + 1] = member
         end
     end
-    Fellows.Sync(members, time(), Zone(), UnitLevel and UnitLevel("player"))
+    Fellows.Sync(members, time(), Zone(), UnitLevel and UnitLevel("player"), ns.GroupService.InRaid())
+end
+
+-- The group's run keeps where it went.
+function rememberFellows:ZONE_CHANGED_NEW_AREA()
+    Fellows.Move(Zone())
 end
 
 -- Only friends: someone who becomes a friend while in the group counts
@@ -73,6 +78,7 @@ function rememberFellows:OnEnable()
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "Scan")
     self:RegisterEvent("BOSS_KILL")
     self:RegisterEvent("PLAYER_LOGOUT")
+    self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
     self:ListenToFriends()
     self:Scan()
 end

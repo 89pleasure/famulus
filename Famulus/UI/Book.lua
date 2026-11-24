@@ -26,6 +26,13 @@
 --                                       -- (an item's icon), shown in its own colours
 --           big = true,                 -- a milestone: larger, accent border and mark
 --           chip = { initial = "A", text = "Companion", class = "MAGE" or nil } or nil,
+--           -- The fellow travellers' timeline adds:
+--           noPicture = true,           -- the text takes the card's whole width
+--           crest = { name = "Mira Stormfeather", class = "MAGE", progress = 0.4 },
+--                                       -- a person's crest instead of the picture
+--           people = { { name = "Mira", class = "MAGE", note = "until 22:40" or nil } },
+--                                       -- below the text, a plate per person
+--           foot = "Again with Mira and Borin", -- the strip below, in the accent
 --       } },
 --   } }
 --
@@ -49,6 +56,7 @@ local MAX_TIMES = 10 -- plates for times; more are counted on the last one
 local ROUTE_GAP, ROUTE_H, ROUTE_PAD = 8, 22, 9 -- the route below a heading
 local ROUTE_ARROW = 10 -- the arrow between two zones of the route
 local ROUTE_STEP = 6 -- between a plate and an arrow
+local PERSON_H, PERSON_ICON = 22, 16 -- a person's plate
 
 -- Per kind: the picture's icon (none: the number), its colours, and the
 -- icon on the line.
@@ -348,6 +356,13 @@ local function CreateEvent(book)
     event.chipText = UI.Text(foot, 11, "textMuted")
     event.chipText:SetPoint("LEFT", event.chipDot, "RIGHT", 6, 0)
     event.chipText:SetWordWrap(false)
+    -- Or the strip says something about the event itself, in the accent.
+    event.footIcon = UI.Icon(foot, "people", 13, "accent")
+    event.footIcon:SetPoint("LEFT", foot, "LEFT", 12, 0)
+    event.footText = UI.Text(foot, 11, "accent2", "medium")
+    event.footText:SetPoint("LEFT", event.footIcon, "RIGHT", 7, 0)
+    event.footText:SetWordWrap(false)
+    event.people = {} -- the plates of the people in it
     return event
 end
 
@@ -395,6 +410,59 @@ local function LayTimes(event, times, width)
     return #list > 0 and y + CHIP_H or 0
 end
 
+-- The people of an event as plates (class icon, else the initial, the name
+-- and a note), row after row within `width`, placed like the times above.
+local function LayPeople(event, people, width)
+    local list = people or {}
+    local x, y = 0, 0
+    for index, each in ipairs(list) do
+        local plate = event.people[index]
+        if not plate then
+            plate = CreateFrame("Frame", nil, event.card)
+            plate:SetHeight(PERSON_H)
+            UI.Card(plate, "field", "cardBorder", PERSON_H / 2)
+            plate.disc = UI.Icon(plate, "circle", PERSON_ICON, "chip")
+            plate.disc:SetPoint("LEFT", 3, 0)
+            plate.initial = UI.Text(plate, 9, "textDim", "semibold")
+            plate.initial:SetPoint("CENTER", plate.disc, "CENTER")
+            plate.initial:SetJustifyH("CENTER")
+            plate.initial:SetJustifyV("MIDDLE")
+            plate.class = UI.ClassIcon(plate, PERSON_ICON)
+            plate.class:SetPoint("CENTER", plate.disc, "CENTER")
+            plate.name = UI.Text(plate, 11, "textDim", "medium")
+            plate.name:SetPoint("LEFT", plate.disc, "RIGHT", 5, 0)
+            plate.name:SetWordWrap(false)
+            plate.note = UI.Text(plate, 11, "textMuted")
+            plate.note:SetPoint("LEFT", plate.name, "RIGHT", 5, 0)
+            plate.note:SetWordWrap(false)
+            event.people[index] = plate
+        end
+        local classShown = UI.SetClass(plate.class, each.class)
+        plate.disc:SetShown(not classShown)
+        plate.initial:SetShown(not classShown)
+        plate.initial:SetText(UI.Initial(each.name))
+        plate.note:SetShown(each.note ~= nil)
+        plate.note:SetText(each.note or "")
+        local noteWidth = each.note and 5 + plate.note:GetStringWidth() or 0
+        local room = width - 3 - PERSON_ICON - 5 - noteWidth - 9
+        plate.name:SetText(each.name or "")
+        plate.name:SetWidth(math.max(1, math.min(plate.name:GetStringWidth() + 1, room)))
+        local plateWidth = math.floor(3 + PERSON_ICON + 5 + plate.name:GetWidth() + noteWidth + 9 + 0.5)
+        plate:SetWidth(plateWidth)
+        if x > 0 and x + plateWidth > width then
+            x, y = 0, y + PERSON_H + CHIP_GAP
+        end
+        plate.x, plate.y = x, y
+        plate:Show()
+        x = x + plateWidth + CHIP_GAP
+    end
+    for index = #list + 1, #event.people do
+        event.people[index]:Hide()
+    end
+    event.peopleCount = #list
+    return #list > 0 and y + PERSON_H or 0
+end
+
 -- onLeft: the card stands left of the line. Sets event.cardHeight.
 local function EventSet(event, story, onLeft, width)
     event.story = story
@@ -402,12 +470,25 @@ local function EventSet(event, story, onLeft, width)
     local look = PICTURES[story.kind] or PICTURES.zone
     local big = story.big and true or false
     local pad = big and 15 or 12
-    local size = PICTURE
+    local size = story.noPicture and 0 or PICTURE
     local column = (width - AXIS) / 2
-    local textWidth = column - pad * 2 - size - 12
+    local beside = size > 0 and size + 12 or 0 -- the text's distance from the picture's left edge
+    local textWidth = column - pad * 2 - beside
 
-    -- Picture: an icon, or a number (a level, a skill).
-    event.picture:SetSize(size, size)
+    -- Picture: an icon, or a number (a level, a skill); or a person's crest.
+    local crest = story.crest
+    event.picture:SetShown(size > 0 and crest == nil)
+    if crest and not event.crest then
+        event.crest = UI.Crest(event.card, PICTURE)
+    end
+    if event.crest then
+        event.crest:SetShown(crest ~= nil and size > 0)
+        if crest then
+            event.crest:SetPerson(crest.name, crest.class)
+            event.crest:SetProgress(crest.progress)
+        end
+    end
+    event.picture:SetSize(PICTURE, PICTURE)
     event.picture:EnableMouse(story.item ~= nil or story.spell ~= nil)
     event.pictureShape.border:SetColor(look.border)
     event.pictureShape.fill:SetColor(look.fill)
@@ -466,11 +547,17 @@ local function EventSet(event, story, onLeft, width)
     if platesHeight > 0 then
         textHeight = platesTop + platesHeight
     end
+    local peopleTop = textHeight + 8
+    local peopleHeight = LayPeople(event, story.people, textWidth)
+    if peopleHeight > 0 then
+        textHeight = peopleTop + peopleHeight
+    end
     -- Whose event it is stands in a sunken strip below, like an option
-    -- under its feature.
+    -- under its feature; or, in the accent, what the event itself adds.
     local chip = story.chip
+    local footText = not chip and story.foot or nil
     local classShown = UI.SetClass(event.chipClass, chip and chip.class)
-    event.foot:SetShown(chip ~= nil)
+    event.foot:SetShown(chip ~= nil or footText ~= nil)
     event.chipDot:SetShown(chip ~= nil and not classShown)
     event.chipInitial:SetShown(chip ~= nil and not classShown)
     event.chipText:SetShown(chip ~= nil)
@@ -479,9 +566,15 @@ local function EventSet(event, story, onLeft, width)
         event.chipText:SetWidth(column - 12 - 18 - 6 - 12)
         event.chipText:SetText(chip.text or "")
     end
+    event.footIcon:SetShown(footText ~= nil)
+    event.footText:SetShown(footText ~= nil)
+    if footText then
+        event.footText:SetWidth(column - 12 - 13 - 7 - 12)
+        event.footText:SetText(footText)
+    end
 
     local bodyHeight = math.floor(math.max(size, textHeight) + pad * 2 + 0.5)
-    local cardHeight = bodyHeight + (chip and FOOT or 0)
+    local cardHeight = bodyHeight + ((chip or footText) and FOOT or 0)
     local card = event.card
     card:SetSize(column, cardHeight)
     card:ClearAllPoints()
@@ -494,7 +587,11 @@ local function EventSet(event, story, onLeft, width)
 
     event.picture:ClearAllPoints()
     event.picture:SetPoint("TOPLEFT", card, "TOPLEFT", pad, -math.floor((bodyHeight - size) / 2 + 0.5))
-    local left = pad + size + 12
+    if event.crest then
+        event.crest:ClearAllPoints()
+        event.crest:SetPoint("TOPLEFT", card, "TOPLEFT", pad, -math.floor((bodyHeight - size) / 2 + 0.5))
+    end
+    local left = pad + beside
     local top = math.floor((bodyHeight - textHeight) / 2 + 0.5)
     event.title:ClearAllPoints()
     event.title:SetPoint("TOPLEFT", card, "TOPLEFT", left, -top)
@@ -507,6 +604,11 @@ local function EventSet(event, story, onLeft, width)
         local plate = event.plates[index]
         plate:ClearAllPoints()
         plate:SetPoint("TOPLEFT", card, "TOPLEFT", left + plate.x, -(top + platesTop + plate.y))
+    end
+    for index = 1, event.peopleCount do
+        local plate = event.people[index]
+        plate:ClearAllPoints()
+        plate:SetPoint("TOPLEFT", card, "TOPLEFT", left + plate.x, -(top + peopleTop + plate.y))
     end
 
     -- The dot at the height of the card's middle.

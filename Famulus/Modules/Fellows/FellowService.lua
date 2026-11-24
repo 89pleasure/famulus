@@ -23,6 +23,19 @@
 -- day; a raid only counts them in `b`, so that forty people do not each
 -- keep every boss of the evening.
 --
+-- Beside the people, the groups themselves, for the timeline: who was
+-- together with whom, when and where. One run lasts while anyone counts in
+-- the group; it goes on after a short break with one of the same people
+-- (a /reload, a disconnect), as a new "time together" would not begin.
+--
+--   FamulusDB.fellowRuns = { {             -- oldest first, MAX_DAYS at most
+--       f = <start>, l = <end>,
+--       z = { "<zone>", ... },             -- where, in the order of time
+--       b = <bosses>,
+--       who = { ["<guid>"] = { f = <joined>, l = <left> } }, -- in a party
+--       raid = true, n = <most people at once>, -- a raid keeps only the number
+--   }, ... }
+--
 -- `tag` lets the list know a Battle.net friend again while they are offline
 -- (the client names their character only while they are online), so that
 -- tidying up does not take them for a stranger. It is kept when someone
@@ -43,6 +56,8 @@ local MAX_PEOPLE = 500 -- beyond this, whoever was seen longest ago is forgotten
 local MEET_GAP = 30 * 60 -- apart for this long, the next group is a new time together
 local MAX_DAYS = 30 -- days kept per person in the day log
 local MAX_KILLS = 12 -- bosses named per person and day
+local MAX_RUNS = 400 -- groups kept, whatever their age
+local MAX_ZONES = 6 -- zones a group keeps; the oldest give way
 
 -- Bond tiers: the time together (seconds) at which tier 1..4 starts.
 FellowService.TIERS = { 0, 3600, 36000, 144000 }
@@ -50,6 +65,8 @@ FellowService.TIERS = { 0, 3600, 36000, 144000 }
 -- guid -> time up to which the stretch in the group is counted. Kept in
 -- memory only: logging out (and /reload) ends every stretch first.
 local together = {}
+-- The group being written down, while anyone counts in it.
+local openRun
 
 local function Store(create)
     local global = ns.global
@@ -148,14 +165,100 @@ local function Tally(person, guid, now, zone)
     person.zone = zone or person.zone
 end
 
+local function RunStore(create)
+    local global = ns.global
+    if not global then
+        return nil
+    end
+    local runs = global.fellowRuns
+    if type(runs) ~= "table" then
+        if not create then
+            return nil
+        end
+        runs = {}
+        global.fellowRuns = runs
+    end
+    return runs
+end
+
+local function AddZone(run, zone)
+    if IsPlainText(zone) and run.z[#run.z] ~= zone then
+        run.z[#run.z + 1] = zone
+        if #run.z > MAX_ZONES then
+            table.remove(run.z, 1)
+        end
+    end
+end
+
+-- Groups older than the day log go, and beyond MAX_RUNS the oldest.
+local function PruneRuns(runs, now)
+    while #runs > 0 and runs[1] ~= openRun and (#runs > MAX_RUNS or (runs[1].l or 0) < now - MAX_DAYS * 86400) do
+        table.remove(runs, 1)
+    end
+end
+
+-- The group the members belong to: the one being written, else the last
+-- one if it ended a moment ago with one of them in it, else a new one.
+local function RunFor(members, now, raid)
+    if openRun then
+        return openRun
+    end
+    local runs = RunStore(true)
+    local last = runs[#runs]
+    if last and not last.demo and now - (last.l or 0) < MEET_GAP then
+        local shared = last.raid and raid or false
+        for _, member in ipairs(members) do
+            shared = shared or (last.who ~= nil and last.who[member.guid] ~= nil)
+        end
+        if shared then
+            openRun = last
+            return last
+        end
+    end
+    PruneRuns(runs, now)
+    openRun = { f = now, l = now, z = {}, b = 0 }
+    runs[#runs + 1] = openRun
+    return openRun
+end
+
+-- Takes people out of the groups (forgotten, tidied away); a group left
+-- with nobody in it goes too. gone: guid -> true.
+local function LeaveRuns(gone)
+    local runs = RunStore()
+    if not runs then
+        return
+    end
+    for index = #runs, 1, -1 do
+        local run = runs[index]
+        if run.who then
+            for guid in pairs(gone) do
+                run.who[guid] = nil
+            end
+            if next(run.who) == nil and not run.raid and run ~= openRun then
+                table.remove(runs, index)
+            end
+        end
+    end
+end
+
 -- Brings the list in line with the group: members: GroupService.Members();
 -- now: time(); zone: where the player is. Who joined starts a stretch,
 -- who is still there has it counted, who left ends it. level: the
--- player's level, kept for the people met now.
-function FellowService.Sync(members, now, zone, level)
+-- player's level, kept for the people met now. raid: in a raid group,
+-- whose run keeps only the number of people.
+function FellowService.Sync(members, now, zone, level, raid)
     local fellows = Store(#members > 0 or next(together) ~= nil)
     if not fellows then
         return
+    end
+    local run = #members > 0 and RunFor(members, now, raid) or openRun
+    if run then
+        run.l = now
+        AddZone(run, zone)
+        if raid then
+            run.raid = true
+            run.n = math.max(run.n or 0, #members)
+        end
     end
     local changed, present = false, {}
     for _, member in ipairs(members) do
@@ -183,6 +286,14 @@ function FellowService.Sync(members, now, zone, level)
         person.level = member.level or person.level
         person.class = member.class or person.class
         person.tag = member.tag or person.tag
+        -- In the group's run: since when, until now. A raid adds nobody.
+        local seen = run.who and run.who[guid]
+        if seen then
+            seen.l = now
+        elseif not run.raid then
+            run.who = run.who or {}
+            run.who[guid] = { f = now, l = now }
+        end
     end
     for guid in pairs(together) do
         if not present[guid] then
@@ -190,13 +301,33 @@ function FellowService.Sync(members, now, zone, level)
             if person then
                 Tally(person, guid, now, zone)
             end
+            local seen = run and run.who and run.who[guid]
+            if seen then
+                seen.l = now
+            end
             together[guid] = nil
             changed = true
         end
     end
+    if #members == 0 then
+        openRun = nil
+    end
     if changed then
         ns:Fire("FELLOWS_CHANGED")
     end
+end
+
+-- The player went to another zone: the group's run notes it.
+function FellowService.Move(zone)
+    if openRun then
+        AddZone(openRun, zone)
+    end
+end
+
+-- The groups of the last days, oldest first, and the one going on now (or
+-- nil). The tables are shared; callers must not change them.
+function FellowService.Runs()
+    return RunStore() or {}, openRun
 end
 
 -- Ends every stretch in the group (logging out, switching off).
@@ -215,6 +346,9 @@ function FellowService.Boss(name, zone, raid)
     local now = time()
     local named = not raid and IsPlainText(name)
     zone = IsPlainText(zone) and zone or nil
+    if openRun then
+        openRun.b = (openRun.b or 0) + 1
+    end
     for guid in pairs(together) do
         local person = fellows[guid]
         if person then
@@ -241,6 +375,7 @@ function FellowService.Forget(guid)
     end
     fellows[guid] = nil
     together[guid] = nil
+    LeaveRuns({ [guid] = true })
     ns:Fire("FELLOWS_CHANGED")
     return person.name
 end
@@ -291,14 +426,16 @@ end
 -- Removes the outsiders; returns how many went. only: a set of GUIDs (the
 -- ones the player was shown); whoever is not in it stays.
 function FellowService.RemoveOutsiders(check, only)
-    local fellows, removed = Store(), 0
+    local fellows, removed, gone = Store(), 0, {}
     for _, each in ipairs(FellowService.Outsiders(check)) do
         if not only or only[each.guid] then
             fellows[each.guid] = nil
+            gone[each.guid] = true
             removed = removed + 1
         end
     end
     if removed > 0 then
+        LeaveRuns(gone)
         ns:Fire("FELLOWS_CHANGED")
     end
     return removed
@@ -383,11 +520,12 @@ function FellowService.Milestones(guid, person, now)
     return reached
 end
 
--- Sample people, to look at the list without grouping for days:
--- /fam fellows demo writes them, /fam fellows demo clear removes them.
--- They carry `demo` and a GUID no real player has. Returns how many were
--- written or removed. They speak the addon's language, not the client's;
--- Mira, Borin and Lysa are the companions of ChronicleService.Demo.
+-- Sample people and their evenings, to look at the list and the timeline
+-- without grouping for days: /fam fellows demo writes them, /fam fellows
+-- demo clear removes them. They carry `demo` and a GUID no real player has.
+-- Returns how many people were written or removed. They speak the addon's
+-- language, not the client's; Mira, Borin and Lysa are the companions of
+-- ChronicleService.Demo.
 local DEMO_ZONES = {
     enUS = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris", "Westfall", "The Deadmines" },
     deDE = { "Ödland", "Uldaman", "Schlingendorntal", "Tanaris", "Westfall", "Die Todesminen" },
@@ -402,6 +540,30 @@ local DEMO_PEOPLE = {
     deDE = { "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau", "Kael Dornhain", "Tomas Grauwind", "Ena Silberquell" },
 }
 
+local DEMO_CLASSES = { { "MAGE", 40 }, { "WARRIOR", 38 }, { "PRIEST", 39 }, { "HUNTER", 34 }, { "ROGUE", 41 }, { "DRUID", 37 } }
+-- Their evenings, from which their days are told: the day (0 the latest
+-- evening, -1 the one before ...), from and to ("HH:MM"; past midnight it
+-- ends the next day), the zones (DEMO_ZONES) and who was there
+-- (DEMO_PEOPLE), the whole time or as long as `part` says. Bosses fall in
+-- the first zone, with names in the two dungeons.
+local DEMO_RUNS = {
+    { -21, "19:00", "23:00", { 5 }, { 1 } },
+    { -20, "18:00", "22:00", { 5 }, { 1, 2 } },
+    { -17, "19:30", "23:30", { 1 }, { 1 } },
+    { -14, "20:00", "00:30", { 3 }, { 1, 2 } },
+    { -12, "19:00", "21:00", { 5 }, { 6 } },
+    { -8, "20:00", "23:00", { 5 }, { 1, 6 }, part = { [6] = { "20:00", "21:30" } } },
+    { -5, "18:40", "22:30", { 6 }, { 1, 2 }, bosses = 2 },
+    { -2, "14:20", "14:45", { 1 }, { 5 }, bosses = 1 },
+    { -2, "15:00", "17:10", { 4 }, { 1, 2 } },
+    { -1, "20:10", "22:55", { 3 }, { 1, 2, 4 }, part = { [4] = { "20:10", "21:25" } } },
+    { 0, "19:05", "23:10", { 2, 4 }, { 1, 2, 3 }, part = { [2] = { "19:05", "22:40" }, [3] = { "19:05", "22:40" } }, bosses = 3 },
+}
+
+local function DemoGuid(index)
+    return ("Player-0-FAMDEMO%02d"):format(index)
+end
+
 function FellowService.ClearDemo()
     local fellows = Store()
     local removed = 0
@@ -413,6 +575,14 @@ function FellowService.ClearDemo()
             end
         end
     end
+    local runs = RunStore()
+    if runs then
+        for index = #runs, 1, -1 do
+            if runs[index].demo then
+                table.remove(runs, index)
+            end
+        end
+    end
     if removed > 0 then
         ns:Fire("FELLOWS_CHANGED")
     end
@@ -420,65 +590,128 @@ function FellowService.ClearDemo()
 end
 
 function FellowService.Demo()
-    local fellows = Store(true)
-    if not fellows then
+    local fellows, runs = Store(true), RunStore(true)
+    if not fellows or not runs then
         return 0
     end
     FellowService.ClearDemo()
     local locale = ns:GetLocaleCode()
-    local zone = DEMO_ZONES[locale] or DEMO_ZONES.enUS
+    local zones = DEMO_ZONES[locale] or DEMO_ZONES.enUS
     local bossesIn = DEMO_BOSSES[locale] or DEMO_BOSSES.enUS
-    local person = DEMO_PEOPLE[locale] or DEMO_PEOPLE.enUS
-    local hour, day = 3600, 86400
-    -- name, class, level, { first: seconds ago, zone }, { last: seconds ago, zone }, times, seconds, bosses
-    local samples = {
-        { person[1], "MAGE", 40, { 9 * day, zone[5] }, { 1 * hour, zone[4] }, 14, 31 * hour + 20 * 60, 9 },
-        { person[2], "WARRIOR", 38, { 6 * day, zone[6] }, { 1 * day + 5 * hour, zone[2] }, 6, 11 * hour + 5 * 60, 7 },
-        { person[3], "PRIEST", 39, { 1 * day + 6 * hour, zone[2] }, { 1 * day + 5 * hour, zone[2] }, 1, 2 * hour + 40 * 60, 3 },
-        { person[4], "HUNTER", 34, { 4 * day, zone[3] }, { 3 * day, zone[3] }, 2, 1 * hour + 15 * 60, 0 },
-        { person[5], "ROGUE", 41, { 2 * day, zone[1] }, { 2 * day, zone[1] }, 1, 25 * 60, 1 },
-        { person[6], "DRUID", 37, { 12 * day, zone[5] }, { 8 * day, zone[6] }, 3, 4 * hour + 50 * 60, 5 },
-    }
+    local names = DEMO_PEOPLE[locale] or DEMO_PEOPLE.enUS
+    -- The latest evening is today's once it is over, else yesterday's.
     local now = time()
-    for index, sample in ipairs(samples) do
-        local first, last = math.floor(now - sample[4][1]), math.floor(now - sample[5][1])
-        -- One day per time together (at most six), spread from the first to the
-        -- last meeting; four fifths of the time is logged, the rest came before.
-        local count = math.min(sample[6], 6)
-        local share = math.floor(sample[7] * 0.8 / count)
-        local days = {}
-        local turn = {} -- per dungeon, the boss that falls next: each visit goes on where the last one stopped
-        for day = 1, count do
-            local at = count == 1 and last or math.floor(first + (last - first) * (day - 1) / (count - 1))
-            if day < count then
-                at = at - (day * 7919) % 18000 -- not every day at the same hour
-            end
-            local zoneOf = day == 1 and sample[4][2] or day == count and sample[5][2] or zone[(index + day) % #zone + 1]
-            local bosses = math.floor(sample[8] / count) + (day == count and sample[8] % count or 0)
-            local names = bossesIn[zoneOf == zone[2] and 2 or zoneOf == zone[6] and 6 or 0]
-            local kills
-            if names and bosses > 0 then
-                kills = {}
-                for kill = 1, math.min(bosses, #names) do
-                    turn[names] = (turn[names] or 0) % #names + 1
-                    kills[kill] = { t = at - share + math.floor(share * kill / (bosses + 1)), n = names[turn[names]], z = zoneOf }
-                end
-            end
-            days[FellowService.DayKey(at)] = { s = share, z = zoneOf, f = at - share, l = at, b = bosses, k = kills }
+    local clock = date("*t", now)
+    local midnight = now - ((clock.hour * 60 + clock.min) * 60 + clock.sec)
+    if now < midnight + (23 * 60 + 20) * 60 then
+        midnight = midnight - 86400
+    end
+    local function At(day, hm, after)
+        local hour, minute = string.match(hm, "^(%d+):(%d+)$")
+        local at = midnight + day * 86400 + (tonumber(hour) * 60 + tonumber(minute)) * 60
+        if after and at < after then
+            at = at + 86400
         end
-        fellows[("Player-0-FAMDEMO%02d"):format(index)] = {
-            name = sample[1], class = sample[2], level = sample[3],
-            first = first, firstZone = sample[4][2], firstLevel = 28 + index,
-            last = last, zone = sample[5][2],
-            times = sample[6], seconds = sample[7], bosses = sample[8],
-            days = days, demo = true,
-        }
+        return at
+    end
+    local people = {}
+    for index, name in ipairs(names) do
+        people[index] = { name = name, class = DEMO_CLASSES[index][1], level = DEMO_CLASSES[index][2],
+            firstLevel = 28 + index, times = 0, seconds = 0, bosses = 0, days = {}, demo = true }
+    end
+    for _, sample in ipairs(DEMO_RUNS) do
+        local from = At(sample[1], sample[2])
+        local to = At(sample[1], sample[3], from)
+        local run = { f = from, l = to, z = {}, b = sample.bosses or 0, who = {}, demo = true }
+        for _, zone in ipairs(sample[4]) do
+            run.z[#run.z + 1] = zones[zone]
+        end
+        local dungeon = sample[4][1]
+        local kills = {}
+        for kill = 1, run.b do
+            local named = bossesIn[dungeon] and bossesIn[dungeon][kill]
+            if named then
+                kills[#kills + 1] = { t = from + math.floor((to - from) * 0.7 * kill / (run.b + 1)), n = named, z = zones[dungeon] }
+            end
+        end
+        for _, index in ipairs(sample[5]) do
+            local part = sample.part and sample.part[index]
+            local joined = part and At(sample[1], part[1]) or from
+            local left = part and At(sample[1], part[2], joined) or to
+            run.who[DemoGuid(index)] = { f = joined, l = left }
+            -- The days as the counting would have written them.
+            local person = people[index]
+            local zone = left < to and run.z[1] or run.z[#run.z]
+            person.first = person.first or joined
+            person.firstZone = person.firstZone or run.z[1]
+            person.last, person.zone = left, zone
+            person.times = person.times + 1
+            person.seconds = person.seconds + (left - joined)
+            person.bosses = person.bosses + run.b
+            local key = FellowService.DayKey(left)
+            local day = person.days[key] or { s = 0, b = 0 }
+            person.days[key] = day
+            day.s = day.s + (left - joined)
+            day.f = math.min(day.f or joined, joined)
+            day.l = math.max(day.l or left, left)
+            day.z = zone
+            day.b = day.b + run.b
+            for _, kill in ipairs(kills) do
+                day.k = day.k or {}
+                day.k[#day.k + 1] = { t = kill.t, n = kill.n, z = kill.z }
+            end
+        end
+        runs[#runs + 1] = run
+    end
+    table.sort(runs, function(a, b)
+        return a.f < b.f
+    end)
+    for index, person in ipairs(people) do
+        fellows[DemoGuid(index)] = person
     end
     ns:Fire("FELLOWS_CHANGED")
-    return #samples
+    return #people
+end
+
+-- A group from a hand-edited file: true if it can be told, after dropping
+-- what is broken in it.
+local function RunIsGood(run)
+    if type(run) ~= "table" or type(run.f) ~= "number" or type(run.l) ~= "number" or run.l < run.f
+        or (run.b ~= nil and type(run.b) ~= "number") or (run.n ~= nil and type(run.n) ~= "number")
+        or (run.who ~= nil and type(run.who) ~= "table") or (run.z ~= nil and type(run.z) ~= "table") then
+        return false
+    end
+    run.b = run.b or 0
+    run.raid = run.raid == true or nil
+    local zones = {}
+    for _, zone in ipairs(run.z or {}) do
+        if IsPlainText(zone) then
+            zones[#zones + 1] = zone
+        end
+    end
+    run.z = zones
+    for guid, seen in pairs(run.who or {}) do
+        if type(guid) ~= "string" or type(seen) ~= "table" or type(seen.f) ~= "number" or type(seen.l) ~= "number" then
+            run.who[guid] = nil
+        end
+    end
+    return true
 end
 
 ns:On("DATABASE_READY", function()
+    local runs = RunStore()
+    if runs then
+        for index = #runs, 1, -1 do
+            if not RunIsGood(runs[index]) then
+                table.remove(runs, index)
+            end
+        end
+        table.sort(runs, function(a, b)
+            return a.f < b.f
+        end)
+    elseif ns.global and ns.global.fellowRuns ~= nil then
+        ns.global.fellowRuns = nil
+    end
     local fellows = Store()
     if not fellows then
         return

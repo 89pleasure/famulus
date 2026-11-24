@@ -1319,6 +1319,527 @@ FELLOW_ACTIONS = {
     end,
 }
 
+---------------------------------------------------------------------------
+-- The timeline: every group you were in, the newest first, as a book. A
+-- card per group (where, when, who, and how often the same people came
+-- together again), the people you met and the bond tiers you reached. It
+-- tells only who was together with whom; what happened is the chronicle's.
+-- The rail beside it sums up the week.
+---------------------------------------------------------------------------
+
+local TIMELINE_ROWS = 50 -- events in the book; older groups stay in the saved data
+local RUN_SHORT = 60 -- a group shorter than this, without a boss, is not told
+local RUN_NOTE = 5 * 60 -- joined this much later or left this much earlier: the plate says when
+local REGULAR_PEOPLE = 5 -- of a group, the first ones are looked at for coming together again
+local TIMELINE_PEOPLE = 5 -- rows of the rail's list
+
+local TIMELINE_EMPTY_ITEM = {
+    kind = "info",
+    label = function()
+        return L.ui_run_empty
+    end,
+    desc = function()
+        return L.ui_run_empty_desc
+    end,
+}
+
+-- A person as the timeline names them: the alias, else the first name.
+local function ShortName(person)
+    return ns.AliasService.Get(person.name) or string.match(person.name, "^[^%s%-]+") or person.name
+end
+
+-- "Mira", "Mira and Borin", "Mira, Borin and Lysa"
+local function JoinNames(names)
+    if #names < 2 then
+        return names[1] or ""
+    end
+    return L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names])
+end
+
+-- From when to when someone was with a group; until now while it lasts.
+local function Presence(run, guid, seen, open, now)
+    if run == open and ns.FellowService.IsTogether(guid) then
+        return seen.f, now
+    end
+    return seen.f, seen.l
+end
+
+-- The people of a group who are still on the list, the earliest first.
+local function RunPeople(run, byGuid)
+    local list = {}
+    for guid, seen in pairs(run.who or {}) do
+        if byGuid[guid] then
+            list[#list + 1] = { guid = guid, seen = seen, person = byGuid[guid] }
+        end
+    end
+    table.sort(list, function(a, b)
+        if a.seen.f ~= b.seen.f then
+            return a.seen.f < b.seen.f
+        elseif a.seen.l ~= b.seen.l then
+            return a.seen.l > b.seen.l
+        end
+        return (a.person.name .. a.guid) < (b.person.name .. b.guid)
+    end)
+    return list
+end
+
+-- The people of a set in the same order wherever they are named: the most
+-- time together first.
+local function ByTimeTogether(guids, data)
+    local Fellows = ns.FellowService
+    local seconds, list = {}, {}
+    for index, guid in ipairs(guids) do
+        list[index] = guid
+        seconds[guid] = Fellows.Seconds(guid, data.byGuid[guid], data.now)
+    end
+    table.sort(list, function(a, b)
+        if seconds[a] ~= seconds[b] then
+            return seconds[a] > seconds[b]
+        end
+        return a < b
+    end)
+    return list
+end
+
+-- Every set of two or more of the people (of the first few), each with a
+-- key that is the same whatever the order: { guids = {...}, key = "..." }.
+local function Sets(people)
+    local sets = {}
+    local count = math.min(#people, REGULAR_PEOPLE)
+    for mask = 1, 2 ^ count - 1 do
+        local guids = {}
+        for index = 1, count do
+            if math.floor(mask / 2 ^ (index - 1)) % 2 == 1 then
+                guids[#guids + 1] = people[index].guid
+            end
+        end
+        if #guids >= 2 then
+            local sorted = {}
+            for index, guid in ipairs(guids) do
+                sorted[index] = guid
+            end
+            table.sort(sorted)
+            sets[#sets + 1] = { guids = guids, key = table.concat(sorted, "|") }
+        end
+    end
+    return sets
+end
+
+-- Which set comes first: more often, then more people, then more time, then by key.
+local function BetterSet(a, b)
+    if not b then
+        return true
+    elseif a.count ~= b.count then
+        return a.count > b.count
+    elseif #a.guids ~= #b.guids then
+        return #a.guids > #b.guids
+    elseif (a.seconds or 0) ~= (b.seconds or 0) then
+        return (a.seconds or 0) > (b.seconds or 0)
+    end
+    return a.key < b.key
+end
+
+-- What the book and the rail are made from: the groups, the people on the
+-- list, and per group its people and the set of them that came together
+-- most often so far. nil without any group.
+local function TimelineData()
+    local Fellows = ns.FellowService
+    local runs, open = Fellows.Runs()
+    if #runs == 0 then
+        return nil
+    end
+    local now = time()
+    local byGuid = {}
+    for _, each in ipairs(Fellows.List()) do
+        byGuid[each.guid] = each.person
+    end
+    local counts, told, metIn = {}, {}, {}
+    for _, run in ipairs(runs) do
+        local people = RunPeople(run, byGuid)
+        local again
+        if not run.raid then
+            for _, set in ipairs(Sets(people)) do
+                counts[set.key] = (counts[set.key] or 0) + 1
+                set.count = counts[set.key]
+                if set.count >= 2 and BetterSet(set, again) then
+                    again = set
+                end
+            end
+        end
+        local finish = run == open and now or run.l
+        -- A party with nobody left on the list (forgotten, tidied away) has nothing to tell.
+        local known = run.raid or #people > 0
+        if known and (finish - run.f >= RUN_SHORT or (tonumber(run.b) or 0) > 0) then
+            told[#told + 1] = { run = run, finish = finish, people = people, again = again }
+            -- Who was met in this group: their first time together is in it.
+            for _, member in ipairs(people) do
+                local first = tonumber(member.person.first)
+                if first and first >= run.f - 60 and first <= finish + 60 then
+                    metIn[member.guid] = run
+                end
+            end
+        end
+    end
+    return { runs = runs, open = open, now = now, byGuid = byGuid, told = told, metIn = metIn }
+end
+
+-- When each person reached a new bond tier, as far as the groups tell: the
+-- walk starts from the time before the first of them.
+local function TierMoments(data)
+    local Fellows = ns.FellowService
+    local spans, order = {}, {}
+    for _, run in ipairs(data.runs) do
+        for guid, seen in pairs(run.who or {}) do
+            if data.byGuid[guid] then
+                local from, to = Presence(run, guid, seen, data.open, data.now)
+                if not spans[guid] then
+                    spans[guid] = {}
+                    order[#order + 1] = guid
+                end
+                table.insert(spans[guid], { f = from, l = to })
+            end
+        end
+    end
+    table.sort(order)
+    local moments = {}
+    for _, guid in ipairs(order) do
+        local list = spans[guid]
+        local logged = 0
+        for _, span in ipairs(list) do
+            logged = logged + math.max(0, span.l - span.f)
+        end
+        local running = math.max(0, Fellows.Seconds(guid, data.byGuid[guid], data.now) - logged)
+        local tier = Fellows.Tier(running)
+        for _, span in ipairs(list) do
+            local length = math.max(0, span.l - span.f)
+            local nextAt = Fellows.TIERS[tier + 1]
+            while nextAt and running + length >= nextAt do
+                moments[#moments + 1] = { guid = guid, tier = tier + 1, t = span.f + (nextAt - running) }
+                tier = tier + 1
+                nextAt = Fellows.TIERS[tier + 1]
+            end
+            running = running + length
+        end
+    end
+    return moments
+end
+
+-- A person's crest as the book shows it: where they stand on the way to the next tier.
+local function CrestOf(guid, person, now)
+    local Fellows = ns.FellowService
+    local _, progress = Fellows.Tier(Fellows.Seconds(guid, person, now))
+    return { name = person.name, class = person.class, progress = progress }
+end
+
+local function RunEvent(each, data)
+    local run, finish = each.run, each.finish
+    -- Each zone once, in the order it was first reached.
+    local zones, seen = {}, {}
+    for _, zone in ipairs(run.z or {}) do
+        if not seen[zone] then
+            seen[zone] = true
+            zones[#zones + 1] = zone
+        end
+    end
+    local where = #zones > 0 and JoinNames(zones) or nil
+    local title
+    if run.raid then
+        title = where and L.ui_run_raid:format(where) or L.ui_run_raid_nowhere
+    else
+        title = where and L.ui_run_title:format(where) or L.ui_fellow_together
+    end
+    local parts = {
+        run == data.open and L.ui_run_since:format(date("%H:%M", run.f)) or Span(run.f, finish),
+        Duration(finish - run.f) or L.ui_fellow_minutes:format(0),
+    }
+    if run.raid and run.n then
+        parts[#parts + 1] = L.ui_run_people:format(run.n)
+    end
+    local bosses = tonumber(run.b) or 0
+    if bosses == 1 then
+        parts[#parts + 1] = L.ui_fellow_boss
+    elseif bosses > 1 then
+        parts[#parts + 1] = L.ui_fellow_bosses:format(bosses)
+    end
+    -- A raid keeps only the number of people; a party says who, and who
+    -- came later or left earlier.
+    local plates
+    if not run.raid then
+        plates = {}
+        for _, member in ipairs(each.people) do
+            local from, to = Presence(run, member.guid, member.seen, data.open, data.now)
+            local note
+            if to < finish - RUN_NOTE then
+                note = L.ui_run_until:format(date("%H:%M", to))
+            elseif from > run.f + RUN_NOTE then
+                note = L.ui_run_from:format(date("%H:%M", from))
+            end
+            plates[#plates + 1] = { name = ShortName(member.person), class = member.person.class, note = note }
+        end
+    end
+    local foot
+    if each.again then
+        local names = {}
+        for index, guid in ipairs(ByTimeTogether(each.again.guids, data)) do
+            names[index] = ShortName(data.byGuid[guid])
+        end
+        foot = L.ui_run_again:format(JoinNames(names), each.again.count)
+    end
+    return {
+        kind = "fellow",
+        noPicture = true,
+        title = title,
+        detail = table.concat(parts, "  ·  "),
+        people = plates,
+        foot = foot,
+        t = finish,
+        from = run.f,
+        rank = 1,
+    }
+end
+
+local function MeetEvent(guid, person, data)
+    local first = tonumber(person.first)
+    local zone = type(person.firstZone) == "string" and person.firstZone or nil
+    local level = tonumber(person.firstLevel)
+    local detail = zone and level and L.ui_run_met_where_level:format(zone, level)
+        or zone and L.c_in:format(zone) or level and L.ui_fellow_met_detail:format(level) or nil
+    return {
+        kind = "bond",
+        title = L.ui_run_met:format(ShortName(person)),
+        detail = detail,
+        when = date("%H:%M", first),
+        crest = CrestOf(guid, person, data.now),
+        onClick = function()
+            ShowStoryOf(guid)
+        end,
+        t = first,
+        from = first,
+        rank = 3,
+    }
+end
+
+local function TierEvent(moment, data)
+    local person = data.byGuid[moment.guid]
+    return {
+        kind = "bond",
+        big = moment.tier >= 3, -- like the badge: from Trusted on in the accent
+        title = L.ui_run_tier:format(ShortName(person), string.lower(L["ui_bond_" .. moment.tier])),
+        detail = L.ui_run_tier_detail:format(math.floor(ns.FellowService.TIERS[moment.tier] / 3600)),
+        when = date("%H:%M", moment.t),
+        crest = CrestOf(moment.guid, person, data.now),
+        onClick = function()
+            ShowStoryOf(moment.guid)
+        end,
+        t = moment.t,
+        from = moment.t,
+        rank = 2,
+    }
+end
+
+-- One chapter per session of play, as in the chronicle: a pause of
+-- SESSION_GAP between the end of an event and the start of the chapter
+-- begins the next. Returns nil if there is nothing to tell.
+local function TimelineBook()
+    local data = TimelineData()
+    if not data then
+        return nil
+    end
+    local events = {}
+    for _, each in ipairs(data.told) do
+        events[#events + 1] = RunEvent(each, data)
+    end
+    -- What the groups can tell: the people met in one of them, and the tiers reached.
+    local since = data.runs[1].f
+    for guid, person in pairs(data.byGuid) do
+        if data.metIn[guid] then
+            events[#events + 1] = MeetEvent(guid, person, data)
+        end
+    end
+    for _, moment in ipairs(TierMoments(data)) do
+        if moment.t >= since then
+            events[#events + 1] = TierEvent(moment, data)
+        end
+    end
+    if #events == 0 then
+        return nil
+    end
+    table.sort(events, function(a, b)
+        if a.t ~= b.t then
+            return a.t > b.t
+        elseif a.rank ~= b.rank then
+            return a.rank < b.rank
+        end
+        return a.title < b.title
+    end)
+    local chapters, chapter, more = {}, nil, false
+    for index, event in ipairs(events) do
+        if index > TIMELINE_ROWS then
+            more = true
+            break
+        end
+        if not chapter or chapter.start - event.t >= SESSION_GAP then
+            chapter = { events = {}, start = event.from, finish = event.t, seconds = 0 }
+            chapters[#chapters + 1] = chapter
+        end
+        chapter.events[#chapter.events + 1] = event
+        chapter.start = math.min(chapter.start, event.from)
+        if event.kind == "fellow" then
+            chapter.seconds = chapter.seconds + (event.t - event.from)
+        end
+    end
+    for _, each in ipairs(chapters) do
+        local title, day = SessionTitle(each.start, data.now)
+        local first, last = date("%H:%M", each.start), date("%H:%M", each.finish)
+        each.title = title
+        each.small = day or (first == last and first or L.c_ch_span:format(first, last))
+        each.sub = each.seconds > 0 and L.ui_fellow_day_time:format(Duration(each.seconds) or L.ui_fellow_minutes:format(0)) or nil
+        each.start, each.finish, each.seconds = nil, nil, nil
+    end
+    return chapters, more and L.ui_run_more or nil
+end
+
+-- The week beside the book: the time in groups and what came of it, the
+-- group that came together most often, and with whom you spent the most time.
+local function TimelineRail()
+    local data = TimelineData()
+    if not data then
+        return nil
+    end
+    local Fellows = ns.FellowService
+    local since = data.now - WEEK
+    local total, count, perPerson, sets, best = 0, 0, {}, {}, nil
+    for _, each in ipairs(data.told) do
+        local run, finish = each.run, each.finish
+        if finish >= since then
+            local length = finish - math.max(run.f, since)
+            total, count = total + length, count + 1
+            for _, member in ipairs(each.people) do
+                local from, to = Presence(run, member.guid, member.seen, data.open, data.now)
+                perPerson[member.guid] = (perPerson[member.guid] or 0) + math.max(0, to - math.max(from, since))
+            end
+            if not run.raid then
+                for _, set in ipairs(Sets(each.people)) do
+                    local entry = sets[set.key]
+                    if not entry then
+                        entry = { guids = set.guids, key = set.key, count = 0, seconds = 0 }
+                        sets[set.key] = entry
+                    end
+                    entry.count, entry.seconds = entry.count + 1, entry.seconds + length
+                end
+            end
+        end
+    end
+    for _, entry in pairs(sets) do
+        if entry.count >= 2 and BetterSet(entry, best) then
+            best = entry
+        end
+    end
+    local people = {}
+    for guid in pairs(perPerson) do
+        people[#people + 1] = guid
+    end
+    table.sort(people, function(a, b)
+        if perPerson[a] ~= perPerson[b] then
+            return perPerson[a] > perPerson[b]
+        end
+        return a < b
+    end)
+    local met, tiers = 0, 0
+    for guid in pairs(data.metIn) do
+        local first = tonumber(data.byGuid[guid].first)
+        if first and first >= since then
+            met = met + 1
+        end
+    end
+    for _, moment in ipairs(TierMoments(data)) do
+        if moment.t >= since then
+            tiers = tiers + 1
+        end
+    end
+    local cards = {
+        {
+            kind = "stats",
+            title = L.c_week,
+            stats = {
+                { value = Duration(total) or L.ui_fellow_minutes:format(0), label = L.ui_run_week_time, wide = true },
+                { value = tostring(count), label = L.ui_run_week_runs },
+                { value = tostring(#people), label = L.ui_run_week_people },
+                { value = tostring(met), label = L.ui_run_week_met },
+                { value = tostring(tiers), label = L.ui_run_week_tiers },
+            },
+        },
+    }
+    if best then
+        local crests, names = {}, {}
+        for index, guid in ipairs(ByTimeTogether(best.guids, data)) do
+            local person = data.byGuid[guid]
+            crests[index] = CrestOf(guid, person, data.now)
+            names[index] = ShortName(person)
+        end
+        cards[#cards + 1] = {
+            kind = "group",
+            title = L.ui_run_regular,
+            note = L.ui_run_regular_count:format(best.count),
+            people = crests,
+            names = JoinNames(names),
+            line = L.ui_fellow_day_time:format(Duration(best.seconds) or L.ui_fellow_minutes:format(0)),
+            text = L.ui_run_regular_desc,
+        }
+    end
+    if #people > 0 then
+        local rows = {}
+        for index = 1, math.min(TIMELINE_PEOPLE, #people) do
+            local guid = people[index]
+            local person = data.byGuid[guid]
+            local tier = Fellows.Tier(Fellows.Seconds(guid, person, data.now))
+            rows[index] = {
+                key = guid,
+                initial = UI.Initial(person.name),
+                class = person.class,
+                name = ns.AliasService.Get(person.name) or person.name,
+                line = L["ui_bond_" .. tier],
+                level = Duration(perPerson[guid]) or L.ui_fellow_minutes:format(0),
+            }
+        end
+        cards[#cards + 1] = {
+            kind = "people",
+            title = L.ui_run_most,
+            note = L.ui_run_most_note,
+            people = rows,
+            onSelect = ShowStoryOf,
+        }
+    end
+    return cards
+end
+
+local function FellowTimelineTab()
+    return {
+        id = "timeline",
+        category = "fellows",
+        label = function()
+            return L.ui_tab_timeline
+        end,
+        desc = function()
+            return L.ui_tab_timeline_desc
+        end,
+        settings = {},
+        -- The groups are told as a book; a card only says that it is empty.
+        blocks = function()
+            if TimelineBook() then
+                return {}
+            end
+            return { { items = { TIMELINE_EMPTY_ITEM } } }
+        end,
+        book = TimelineBook,
+        rail = TimelineRail,
+        -- The search finds the people on the overview, not here again.
+        search = function()
+            return {}
+        end,
+    }
+end
+
 -- The overview's model: the three with the most time together, everyone
 -- else sorted by the chosen order, and the person on the card.
 local function FellowModel()
@@ -1529,6 +2050,7 @@ function layouts.fellows()
     end
     return {
         FellowOverviewTab(),
+        FellowTimelineTab(),
         record,
     }
 end
