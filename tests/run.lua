@@ -1307,6 +1307,11 @@ mock.sent = {}
 mock.Fire("PLAYER_LEVEL_UP", 14)
 mock.Advance(1)
 check(#mock.sent == 1 and mock.sent[1].text:find("^1~E~%d+~level~level=14;zone=Westfall$") ~= nil, "an own milestone is sent to linked friends: " .. tostring(mock.sent[1] and mock.sent[1].text))
+mock.Advance(3)
+check(#mock.sent == 1, "the statistics wait until the game has counted the event")
+mock.Advance(2)
+check(#mock.sent == 2 and mock.sent[2].text == "1~S~13~107=3456;60=12;932=7;98=210~WARRIOR",
+    "a moment later the own statistics follow it: " .. tostring(mock.sent[2] and mock.sent[2].text))
 mock.sent = {}
 mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Jaina Proudmoore")
 mock.Advance(2)
@@ -1317,9 +1322,17 @@ setState({ friends = { jaina }, zone = "Westfall", level = 13, lockdown = true }
 mock.Fire("PLAYER_DEAD")
 mock.Advance(2)
 check(#mock.sent == 0, "during a boss fight nothing is sent")
-setState({ friends = { jaina }, zone = "Westfall", level = 13 })
+-- The game has counted the death by the time the statistics follow.
+setState({ friends = { jaina }, zone = "Westfall", level = 13, statistics = { [60] = "13", [107] = "3,456", [98] = "210", [932] = "7" } })
 mock.Advance(1)
 check(#mock.sent == 1 and mock.sent[1].text:find("~death~", 1, true) ~= nil, "it goes out afterwards")
+mock.sent = {}
+mock.state.zone = "Redridge Mountains"
+mock.Fire("ZONE_CHANGED_NEW_AREA")
+mock.Advance(5)
+check(#mock.sent == 2 and mock.sent[1].text:find("~zone~", 1, true) ~= nil and mock.sent[2].text == "1~S~13~107=3456;60=13;932=7;98=210~WARRIOR",
+    "the statistics follow the death with the new count, once for events in a row: " .. tostring(mock.sent[2] and mock.sent[2].text))
+mock.state.zone = "Westfall"
 mock.sent = {}
 jaina.connected = false
 mock.Fire("FRIENDLIST_UPDATE")
