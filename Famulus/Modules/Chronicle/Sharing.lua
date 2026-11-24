@@ -19,7 +19,7 @@
 --   1~R~<who>~<time>~<kind>~k=v;k=v   one entry of <who>, passed on
 -- A hello is answered with the entries the other side lacks, the statistics
 -- and the offers. Whoever answered is "linked" for the session and gets the
--- live entries.
+-- live entries, and a moment after them the statistics once more.
 --
 -- Passing on: news of someone who is offline comes from a linked companion
 -- who has it. It is asked for and taken only about people the player shares
@@ -56,6 +56,9 @@ local CATCH_UP = 20 -- entries sent to someone who was away
 local MAX_OFFERS = 20 -- people whose news is offered on a hello
 local LINK_AGE = 30 * 86400 -- how long a direct answer vouches for someone
 local MAX_TEXT = 60 -- bytes of a name or place in a message
+-- Seconds from an own event to the statistics that follow it: the game counts
+-- a death a moment later, and events in a row share one message.
+local STATS_DELAY = 5
 
 -- What may travel, per kind: field -> "n" (number) or "s" (text).
 local FIELDS = {
@@ -83,6 +86,7 @@ local asked = {} -- key of someone offline -> key of the companion asked about t
 local queue, queueHead = {}, 1
 local registered = false
 local greetedGuild = false
+local statsPending = false -- the statistics will go out to the linked shortly
 
 -- A name without the realm the client may add, and one spelling for it
 -- however the client writes it.
@@ -259,7 +263,28 @@ local function SendOffers(key)
     end
 end
 
--- A fresh entry of the player's own goes to every linked companion.
+-- The statistics to every linked companion, STATS_DELAY after the first of
+-- the events that called for them. Without this, a companion's view of them
+-- stayed as it was at the last hello: a death did not count until one of
+-- the two logged in again.
+local function SendStatisticsSoon()
+    if statsPending then
+        return
+    end
+    statsPending = true
+    sharing:After(STATS_DELAY, function()
+        statsPending = false
+        if next(linked) then
+            local text = EncodeStatistics()
+            for key in pairs(linked) do
+                Send(key, text)
+            end
+        end
+    end)
+end
+
+-- A fresh entry of the player's own goes to every linked companion, and the
+-- statistics after it.
 local function OnChronicleChanged(entry)
     if not sharing.enabled or not entry or entry.demo or entry.who or entry.c ~= Chronicle.Character() then
         return
@@ -267,6 +292,9 @@ local function OnChronicleChanged(entry)
     local text = EncodeEntry(entry)
     for key in pairs(linked) do
         Send(key, text)
+    end
+    if next(linked) then
+        SendStatisticsSoon()
     end
 end
 
@@ -505,7 +533,7 @@ end
 
 function sharing:OnDisable()
     friends, guild, guildOnline, online, linked, asked = {}, {}, {}, {}, {}, {}
-    greetedGuild = false
+    greetedGuild, statsPending = false, false -- a pending After lapses with the feature
     queue, queueHead = {}, 1
 end
 

@@ -190,6 +190,11 @@ unter `D:\Games\World of Warcraft\_forever_`, das Repo unter `E:\Develop\wow\fam
   Windows-Rechner war die Anzeige aus (kein `scriptErrors` in `WTF/Config.wtf`), und der Fehler vom
   2026-11-24 stand in keiner Datei unter `Logs/`. Sieht das Fenster halb aufgebaut aus, zuerst
   danach fragen; Meldung mit Stack und Zeile kommt dann als Fenster im Spiel.
+- **BugGrabber und BugSack** sind auf dem Windows-Rechner installiert (Stand 2026-11-24, dazu
+  `scriptErrors 1` in `WTF/Account/<Konto>/config-cache.wtf`). Sie fangen Lua-Fehler ab, bevor
+  das Spiel sie als Fenster zeigt; im Spiel meldet sich dann nur BugSack. Gespeichert sind die
+  Fehler nach `/reload` in `SavedVariables/!BugGrabber.lua` (`BugGrabberDB.errors`, mit Stack).
+  Dort zuerst nachsehen, bevor man einen Fehler ausschließt.
 - Screenshots des Spiels liegen in `_forever_/Screenshots/` und sind die Grundlage für
   Layout-Arbeit.
 - Was der Selbsttest nicht abdeckt: ob die Chronik die richtigen Ereignisse festhält und ob das
@@ -373,6 +378,15 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   war alles da. Vermutung (unbestätigt): Der Text wurde gesetzt, bevor die Schrift fertig geladen
   war, und weil er sich nicht ändert, zeichnet der Client ihn nicht neu. Tritt es wieder auf,
   festhalten, wie lange nach dem Login das Fenster zum ersten Mal offen war.
+  **Ebenfalls 2026-11-24, ungeklärt:** Nach einem Tod (23:44) zeigte die Chronik ihn im Buch, die
+  Karte „Diese Woche“ daneben zählte ihn nicht (5 statt 6); das Fenster war beim Tod zu und wurde
+  danach geöffnet. Buch und Randspalte entstehen im selben `Render` aus denselben Einträgen.
+  Beim nächsten Tod stimmte die Zahl wieder (7), BugGrabber hatte keinen Fehler, und der Mock
+  zählt auch mit den gespeicherten Daten des Auftraggebers richtig. Ein Test im Spiel (Beispiele
+  bei offenem Fenster einspielen) gab bei `/run local c=FamulusOptionsFrame.rail.cards[1]
+  print(c.spec.stats[2].value, c.cells[2].value:GetText())` „11 11“: berechnet und gesetzt (ob
+  das Fenster dabei auch 11 zeigte, hat der Auftraggeber nicht eigens gesagt). Tritt es wieder auf, diese Zeile sofort eingeben: Zeigt sie die neue Zahl, das
+  Fenster aber die alte, zeichnet der Client den Text nicht neu (wie oben).
 - Unverändert aus 2026-11-16: feste Fensterhöhe, längere Seiten scrollen; die Seite für
   Addon-eigene Einstellungen heißt „Einstellungen“ (intern `general`); Untertitel und
   Reiterbeschreibung sagen, was der Spieler dort findet, keine technischen Hinweise; Optionen eines
@@ -651,6 +665,18 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   - Ein Gruß geht an jeden Freund, der online kommt. Wer antwortet, gilt für die Sitzung als
     verbunden und bekommt die eigenen Meilensteine live. Auf einen Gruß folgen bis zu 20 verpasste
     Einträge und die Statistiken.
+  - **Statistiken nach eigenen Ereignissen (seit 2026-11-25):** Fünf Sekunden nach einem eigenen
+    Eintrag, der live rausgeht, gehen auch die Statistiken an alle Verbundenen (`STATS_DELAY`,
+    `SendStatisticsSoon` in `Sharing.lua`), einmal für mehrere Ereignisse in diesen fünf
+    Sekunden. Anlass (im Spiel bemerkt, 2026-11-24): Ein Freund sah in der Bilanz weiter
+    „6 Tode“, obwohl die neuen Tode live bei ihm ankamen. Vorher gingen die Statistiken nur als
+    Antwort auf einen Gruß raus, und ein `/reload` des Absenders löst beim Freund keinen Gruß aus
+    (er ist dort weiter verbunden); die Bilanz stand also auf dem Stand des letzten Logins
+    einer der beiden. Die Verzögerung ist eine Entscheidung des Assistenten: Der Client zählt
+    einen Tod vermutlich erst einen Moment nach `PLAYER_DEAD` in die Statistik. Besiegte
+    Kreaturen und Quests erzeugen keinen Eintrag; ihre Zahlen werden nur mit einem anderen
+    Ereignis oder einem Gruß frisch. Die Gegenseite braucht keine neue Version. Nur gegen den
+    Mock geprüft.
   - Geteilte Statistiken (IDs des Spiels): 60 Tode, 107 besiegte Kreaturen, 98 Quests, 932 betretene
     Dungeons. Sie stehen als „Bilanz“ je Person in der Randspalte des Reiters „Freunde“
     (`FamulusDB.chronicle.profiles`; im Code heißen sie weiter `profile`).
