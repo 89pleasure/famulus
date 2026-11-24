@@ -8,14 +8,14 @@
 --       { kind = "stats", title = "This week", note = "Kip",
 --         stats = { { value = "19", plus = "+4", label = "Level" }, ... } },
 --       { kind = "people", title = "Companions", note = "3", hint = "Click a name ...",
---         people = { { key = "<who>", initial = "J", name = "Jule",
+--         people = { { key = "<who>", initial = "J", class = "MAGE", name = "Jule",
 --                      line = "Reached level 22  ·  19:58", level = "Level 22",
 --                      online = true, selected = false } },
 --         onSelect = function(key) end },
 --       { kind = "bars", title = "Professions",
 --         bars = { { label = "Tailoring", value = 92, max = 150 } } },
---       { kind = "brief", key = "<who>", initial = "J", name = "Jule",
---         line = "Lyra Moonshadow", level = "Level 21", online = true,
+--       { kind = "brief", key = "<who>", initial = "J", class = "MAGE", name = "Jule",
+--         level = "Level 21", online = true,
 --         selected = false, stats = { ... } or nil, empty = "No profile",
 --         onSelect = function(key) end },
 --       { kind = "note", title = "Profiles", text = "..." },
@@ -108,6 +108,9 @@ local function Row(card, index)
     row.initial:SetPoint("CENTER", row.avatar, "CENTER")
     row.initial:SetJustifyH("CENTER")
     row.initial:SetJustifyV("MIDDLE")
+    -- Where the class is known, its icon instead of the initial.
+    row.class = UI.ClassIcon(row, 30)
+    row.class:SetPoint("CENTER", row.avatar, "CENTER")
     row.name = UI.Text(row, 13, "text", "medium")
     row.name:SetPoint("TOPLEFT", 54, -9)
     row.name:SetWordWrap(false)
@@ -224,6 +227,9 @@ local function SetRow(row, person, width, onSelect)
     row.bar:SetShown(row.selected)
     row.hover:Hide()
     row:EnableMouse(onSelect ~= nil)
+    local classShown = UI.SetClass(row.class, person.class)
+    row.avatar:SetShown(not classShown)
+    row.initial:SetShown(not classShown)
     row.initial:SetText(person.initial or "?")
     row.name:SetText(person.name or "")
     row.line:SetShown(person.line ~= nil)

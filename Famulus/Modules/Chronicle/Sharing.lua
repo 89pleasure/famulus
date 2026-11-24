@@ -11,7 +11,9 @@
 --   1~P                   to the guild: "I am here"; answered with a hello
 --   1~H~<time>            hello: "I have your news up to <time>"
 --   1~E~<time>~<kind>~k=v;k=v   one chronicle entry of the sender
---   1~S~<level>~id=n;id=n       the sender's level and statistics
+--   1~S~<level>~id=n;id=n~<class>   the sender's level, statistics and
+--                         class ("MAGE"); older versions leave the class out
+--                         and ignore it
 --   1~O~<who>~<time>      offer: "I have news of <who> up to <time>"
 --   1~W~<who>~<time>      want: "send me what you have of <who> after <time>"
 --   1~R~<who>~<time>~<kind>~k=v;k=v   one entry of <who>, passed on
@@ -188,7 +190,12 @@ local function EncodeStatistics()
     end
     table.sort(parts)
     local level = UnitLevel and tonumber(UnitLevel("player")) or 0
-    return table.concat({ VERSION, "S", string.format("%d", level), table.concat(parts, ";") }, "~")
+    -- The class, for the picture beside the name on the other side.
+    local _, classFile = UnitClass("player")
+    if ns.IsSecret(classFile) or type(classFile) ~= "string" or not string.match(classFile, "^%u+$") then
+        classFile = ""
+    end
+    return table.concat({ VERSION, "S", string.format("%d", level), table.concat(parts, ";"), classFile }, "~")
 end
 
 ---------------------------------------------------------------------------
@@ -306,11 +313,12 @@ function handlers.E(key, when, kind, fields)
     Take(kind, when, fields, online[key])
 end
 
-function handlers.S(key, level, fields)
+function handlers.S(key, level, fields, classFile)
     local stats = {}
     for id, value in string.gmatch(fields or "", "(%d+)=(%d+)") do
         stats[tonumber(id)] = tonumber(value)
     end
+    Chronicle.Class(online[key], classFile) -- checked there; nil from older versions
     Chronicle.Profile(online[key], { level = tonumber(level) or 0, stats = stats })
 end
 

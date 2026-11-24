@@ -16,6 +16,7 @@ local defaults = {
         windowScale = 100,
         accent = "lemon",
         embers = true,
+        chronicleNames = true, -- the chronicle shows "Alias (Character Name)"
     },
 }
 ns.defaults = defaults

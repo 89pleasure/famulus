@@ -12,6 +12,7 @@
 --       -- party) or `others` (how many in a raid); neither is shared
 --       friends = { ["<guid>"] = <last known level>, ... },
 --       links = { ["<name key>"] = { name = ..., t = <time> }, ... },
+--       classes = { ["<name>"] = "<class file>", ... },  -- of the people in the entries
 --   }
 --   FamulusCharDB.zones = { ["<zone name>"] = true, ... }   -- seen by this character
 --   FamulusCharDB.skills = { [<skill line>] = <last known rank>, ... }
@@ -35,6 +36,7 @@ local CLOCK_SLACK = 300 -- seconds a companion's clock may run ahead of ours
 local MAX_AGE = 90 * 86400 -- older news is filed under "now"
 
 local character -- "First Last" of the character that is playing
+local characterClass -- its class as the game names it in code ("MAGE")
 
 -- A zone for a sentence, or nil.
 local function Place(entry)
@@ -73,6 +75,17 @@ local function Companion(entry)
         return alias, name
     end
     return name, nil
+end
+
+-- A companion's name as the chronicle shows it: the alias with the
+-- character's name in brackets behind it ("Anna (Jaina Proudmoore)"),
+-- unless the player switched that off; without an alias, the name.
+local function Label(entry)
+    local name, realName = Companion(entry)
+    if realName and ns:GetOption("general", "chronicleNames") then
+        return name .. " (" .. realName .. ")"
+    end
+    return name
 end
 
 -- Abilities whose learning is an event, recognised by their spell. To add
@@ -134,7 +147,7 @@ local kinds = {
     level = {
         title = function(e)
             if e.who then
-                return L.c_their_level:format((Companion(e)), tonumber(e.level) or 0)
+                return L.c_their_level:format(Label(e), tonumber(e.level) or 0)
             end
             return L.c_level:format(tonumber(e.level) or 0)
         end,
@@ -145,7 +158,7 @@ local kinds = {
     death = {
         title = function(e)
             if e.who then
-                return Place(e) and L.c_their_death:format((Companion(e)), Place(e)) or L.c_their_death_nowhere:format((Companion(e)))
+                return Place(e) and L.c_their_death:format(Label(e), Place(e)) or L.c_their_death_nowhere:format(Label(e))
             end
             return Place(e) and L.c_death:format(Place(e)) or L.c_death_nowhere
         end,
@@ -156,7 +169,7 @@ local kinds = {
     boss = {
         title = function(e)
             if e.who then
-                return L.c_their_boss:format((Companion(e)), e.name or L.c_a_foe)
+                return L.c_their_boss:format(Label(e), e.name or L.c_a_foe)
             end
             return L.c_boss:format(e.name or L.c_a_foe)
         end,
@@ -171,7 +184,7 @@ local kinds = {
     achievement = {
         title = function(e)
             if e.who then
-                return L.c_their_achievement:format((Companion(e)), e.name or L.c_a_challenge)
+                return L.c_their_achievement:format(Label(e), e.name or L.c_a_challenge)
             end
             return L.c_achievement:format(e.name or L.c_a_challenge)
         end,
@@ -179,7 +192,7 @@ local kinds = {
     zone = {
         title = function(e)
             if e.who then
-                return L.c_their_zone:format((Companion(e)), Place(e) or "?")
+                return L.c_their_zone:format(Label(e), Place(e) or "?")
             end
             return L.c_zone:format(Place(e) or "?")
         end,
@@ -194,9 +207,9 @@ local kinds = {
             local known = type(e.ability) == "string" and ChronicleService.Ability(e.ability)
             if e.who then
                 if known then
-                    return L["c_their_ability_" .. e.ability]:format((Companion(e)))
+                    return L["c_their_ability_" .. e.ability]:format(Label(e))
                 end
-                return L.c_their_profession:format((Companion(e)), e.name or L.c_an_ability)
+                return L.c_their_profession:format(Label(e), e.name or L.c_an_ability)
             end
             if known then
                 return L["c_ability_" .. e.ability]
@@ -210,7 +223,7 @@ local kinds = {
     item = {
         title = function(e)
             if e.who then
-                return L.c_their_item:format((Companion(e)), ItemName(e))
+                return L.c_their_item:format(Label(e), ItemName(e))
             end
             return L.c_item:format(ItemName(e))
         end,
@@ -221,7 +234,7 @@ local kinds = {
     profession = {
         title = function(e)
             if e.who then
-                return L.c_their_profession:format((Companion(e)), e.name or L.c_a_craft)
+                return L.c_their_profession:format(Label(e), e.name or L.c_a_craft)
             end
             return L.c_profession:format(e.name or L.c_a_craft)
         end,
@@ -229,7 +242,7 @@ local kinds = {
     skill = {
         title = function(e)
             if e.who then
-                return L.c_their_skill:format((Companion(e)), e.name or L.c_a_craft, tonumber(e.rank) or 0)
+                return L.c_their_skill:format(Label(e), e.name or L.c_a_craft, tonumber(e.rank) or 0)
             end
             return L.c_skill:format(e.name or L.c_a_craft, tonumber(e.rank) or 0)
         end,
@@ -286,6 +299,10 @@ function ChronicleService.Add(kind, entry)
     entry.t = when
     if not entry.who then
         entry.c = character
+        -- The class of the character beside its events in the book.
+        if character and characterClass then
+            ChronicleService.Class(character, characterClass)
+        end
     end
 
     -- Entries stay sorted by time; one that arrives late finds its place.
@@ -482,16 +499,11 @@ function ChronicleService.Text(entry, anonymous)
         told = setmetatable({ who = false }, { __index = entry })
     end
     local detail = spec.detail and spec.detail(entry) or nil
-    -- Under an alias, the character's name stands in the detail line.
-    if entry.who then
-        local _, realName = Companion(entry)
-        if realName then
-            detail = detail and (realName .. "  ·  " .. detail) or realName
-        end
-        if entry.via then
-            local via = L.c_via:format(entry.via)
-            detail = detail and (detail .. "  ·  " .. via) or via
-        end
+    -- Under an alias, the character's name stands in brackets wherever the
+    -- companion is named (Label), not in the detail line.
+    if entry.who and entry.via then
+        local via = L.c_via:format(entry.via)
+        detail = detail and (detail .. "  ·  " .. via) or via
     end
     return spec.title(told), detail
 end
@@ -501,7 +513,7 @@ end
 -- all of one kind and one person. Headline and detail like Text.
 function ChronicleService.TextRun(run, anonymous)
     local newest, count = run[1], #run
-    local name = newest.who and not anonymous and (Companion(newest)) or nil
+    local name = newest.who and not anonymous and Label(newest) or nil
     local zone, low, high = Place(newest), nil, nil
     for _, entry in ipairs(run) do
         local level = tonumber(entry.level)
@@ -527,17 +539,88 @@ function ChronicleService.TextRun(run, anonymous)
         title = name and L.c_their_levels:format(name, low, high) or L.c_levels:format(low, high)
         detail = zone and L.c_in:format(zone) or nil
     end
-    if newest.who then
-        local _, realName = Companion(newest)
-        if realName then
-            detail = detail and (realName .. "  ·  " .. detail) or realName
-        end
-    end
     return title, detail
 end
 
 -- A companion as the player knows them: alias first, then the name.
 ChronicleService.Companion = Companion
+-- And as the chronicle shows them: the alias with the name in brackets.
+ChronicleService.Label = Label
+
+-- The game's name of a class in code ("MAGE"), or nil for anything else.
+local function ClassFile(value)
+    if ns.IsSecret(value) or type(value) ~= "string" or #value > 20 or not string.match(value, "^%u+$") then
+        return nil
+    end
+    return value
+end
+
+-- The class of a companion or of one of the player's characters, by the
+-- name their entries carry: as the game names it in code ("MAGE"), or nil
+-- while it is not known. Pass a class to remember it. Companions tell it
+-- along with their stats (Sharing.lua), the friends list along with a
+-- friend's level-up (Companions.lua).
+function ChronicleService.Class(who, classFile)
+    classFile = ClassFile(classFile)
+    local chronicle = Store(classFile ~= nil)
+    if not chronicle or not IsPlainText(who) then
+        return nil
+    end
+    if type(chronicle.classes) ~= "table" then
+        if not classFile then
+            return nil
+        end
+        chronicle.classes = {}
+    end
+    if classFile then
+        chronicle.classes[who] = classFile
+    end
+    return ClassFile(chronicle.classes[who])
+end
+
+-- The class for its name in the client's language ("Mage", "Magierin"), as
+-- the friends list gives it, or nil.
+function ChronicleService.ClassFromName(name)
+    if not IsPlainText(name) then
+        return nil
+    end
+    for _, names in ipairs({ LOCALIZED_CLASS_NAMES_MALE or {}, LOCALIZED_CLASS_NAMES_FEMALE or {} }) do
+        for classFile, each in pairs(names) do
+            if each == name then
+                return ClassFile(classFile)
+            end
+        end
+    end
+    return nil
+end
+
+-- Remembers the class of the character that is playing, for its entries.
+local function RememberOwnClass()
+    if character and characterClass then
+        ChronicleService.Class(character, characterClass)
+    end
+end
+
+-- Classes are kept only for the people the chronicle still tells of.
+local function PruneClasses(chronicle)
+    if type(chronicle.classes) ~= "table" then
+        return
+    end
+    local known = {}
+    for _, entry in ipairs(chronicle.entries) do
+        known[entry.who or entry.c or false] = true
+    end
+    if type(chronicle.profiles) == "table" then
+        for who in pairs(chronicle.profiles) do
+            known[who] = true
+        end
+    end
+    for who, classFile in pairs(chronicle.classes) do
+        if not known[who] or not ClassFile(classFile) then
+            chronicle.classes[who] = nil
+        end
+    end
+end
 
 -- True for the player's own characters, false for a companion's event.
 function ChronicleService.IsOwn(entry)
@@ -735,6 +818,7 @@ function ChronicleService.ClearDemo()
                 end
             end
         end
+        PruneClasses(chronicle)
     end
     if removed > 0 then
         ns:Fire("CHRONICLE_CHANGED")
@@ -810,6 +894,14 @@ function ChronicleService.Demo()
             chronicle.profiles[who] = profile
         end
     end
+    -- Their classes, as the fellow travellers' samples have them; a class
+    -- known of a real person of the same name stays.
+    for who, classFile in pairs({ [mira] = "MAGE", [borin] = "WARRIOR", [lysa] = "PRIEST" }) do
+        if not ChronicleService.Class(who) then
+            ChronicleService.Class(who, classFile)
+        end
+    end
+    RememberOwnClass()
     ns:Fire("CHRONICLE_CHANGED")
     return #samples
 end
@@ -838,11 +930,18 @@ ns:On("DATABASE_READY", function()
         table.remove(kept, 1)
     end
     chronicle.entries = kept
+    PruneClasses(chronicle)
 end)
 
 ns:On("LOGIN", function()
     local name, surname = UnitName("player")
     if IsPlainText(name) then
         character = IsPlainText(surname) and (name .. " " .. surname) or name
+    end
+    local _, classFile = UnitClass("player")
+    characterClass = ClassFile(classFile)
+    -- Only where the chronicle has begun: logging in writes nothing new.
+    if Store() then
+        RememberOwnClass()
     end
 end)

@@ -115,6 +115,10 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   nebeneinander, Bosse mit Namen als eigene Karten, keine Einträge aus der Chronik in „Eure
   Geschichte“. Offen im Spiel: ob `BOSS_KILL` in einer echten Gruppe den Bossnamen so liefert, wie
   die Karten ihn zeigen.
+- **Klassensymbol und Charaktername in der Chronik (2026-11-24, nur gegen den Mock geprüft, noch
+  nicht im Spiel):** siehe „Klasse und Name“ unter „Chronik“. Offen im Spiel: ob die Klassensymbole
+  im Streifen (18 px) und in der Randspalte (30 px) sauber aussehen, ob `className` der
+  Freundesliste in Forever zu `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE` passt.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster),
   im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values, Taint).
 - **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
@@ -417,7 +421,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Der eigene Stufenaufstieg ist der Meilenstein: größere Karte, Akzentrand, Akzentmarke links
     (der Schein ist seit dem Angleichen an die Options-Karten entfallen).
   - Ereignisse von Gefährten und von eigenen anderen Charakteren tragen eine Marke mit
-    Anfangsbuchstabe.
+    Anfangsbuchstabe; seit 2026-11-24 das Klassensymbol, sobald die Klasse bekannt ist (siehe
+    „Klasse und Name“ unten).
   - Überschriften und Stufenzahl stehen in der Buchschrift des Spiels, gelesen aus dem
     Font-Objekt `QuestTitleFont` (`UI.SetDisplayFont`), damit jede Sprache ihre Datei bekommt;
     fehlt das Objekt, nimmt das Fenster Inter. `QuestTitleFont` gibt es im Forever-Client
@@ -429,6 +434,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
      („Schlafsack erhalten“ statt „Mira erhält: Schlafsack“); der Name (oder Alias) steht mit dem
      Anfangsbuchstaben im vertieften Streifen unten. `ChronicleService.Text(entry, true)` liefert
      die Überschrift ohne Namen; die Einblendung hat keinen Streifen und nimmt `story.fullTitle`.
+     Seit 2026-11-24 mit Klassensymbol und „Alias (Charaktername)“, siehe „Klasse und Name“.
   2. **Symbole füllen den Rahmen:** Der Rahmen hat nur noch leicht runde Ecken (5 px), das Symbol
      liegt zwei Pixel vom Rand und ist stärker beschnitten (10 % je Seite), damit der schwarze
      Eigenrand der Spielsymbole verschwindet.
@@ -575,7 +581,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     fragen; der Antwortende prüft das nicht. Für Stufen, Tode und Bosse vertretbar. Streicht jemand
     den Spieler von der Freundesliste, gilt er bis zu 30 Tage weiter als verbunden.
   - Nachrichten, Felder mit `~` getrennt: `1~H~<zeit>` (Gruß: „deine Neuigkeiten habe ich bis
-    <zeit>“), `1~E~<zeit>~<art>~k=v;k=v` (ein Eintrag), `1~S~<stufe>~id=n;id=n` (Statistiken).
+    <zeit>“), `1~E~<zeit>~<art>~k=v;k=v` (ein Eintrag), `1~S~<stufe>~id=n;id=n~<klasse>`
+    (Statistiken und seit 2026-11-24 die Klasse, etwa `MAGE`; ältere Versionen schicken sie nicht
+    und übergehen das Feld beim Empfang).
   - Ein Gruß geht an jeden Freund, der online kommt. Wer antwortet, gilt für die Sitzung als
     verbunden und bekommt die eigenen Meilensteine live. Auf einen Gruß folgen bis zu 20 verpasste
     Einträge und die Statistiken.
@@ -667,6 +675,37 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Einstellungsdialog im Bearbeitungsmodus, Position je Blizzard-Layout; die Bibliothek ruft
     dafür Methoden des Managers auf und vermerkt dabei selbst Taint. Ob der Haken im
     Forever-Client ohne Meldung bleibt, ist im Spiel ungeprüft.
+- **Klasse und Name (Wunsch des Auftraggebers, 2026-11-24; nur gegen den Mock geprüft):** Neben
+  dem Namen eines Freundes stand ein Kreis mit dem Anfangsbuchstaben; jetzt steht dort das
+  Klassensymbol des Spiels (`UI-Classes-Circles`, `UI.ClassIcon`/`UI.SetClass` in
+  `UI/Widgets.lua`, die auch das Wappen der Weggefährten nutzt): im Streifen unter einer Karte des
+  Buchs und in der Randspalte (Liste „Freunde“, Bilanz-Karten). Ist die Klasse unbekannt, bleibt
+  der Buchstabe. Hinter einem Alias steht der Charaktername in Klammern, „Papa (Borin Eisenbart)“
+  (`ChronicleService.Label`), überall, wo die Chronik die Person nennt: Streifen, Randspalte,
+  Filterzeile „Nur Ereignisse von …“ und die Sätze der Live-Einblendung. Ohne Alias steht nur der
+  Name.
+  - **Option** „Charaktername hinter dem Alias“ (`general.chronicleNames`, Standard an) als eigene
+    Karte „Anzeige“ unter Chronik › Einstellungen, unter den Features. Aus: nur der Alias. Dass die
+    Option die Klammern meint und nicht das Klassensymbol, ist die Auslegung des Assistenten
+    („… eine Option, um das zu deaktivieren“); das Klassensymbol hat keinen Schalter.
+  - **Der Charaktername steht nicht mehr in der Zeile unter der Überschrift** („Jaina Proudmoore ·
+    in Duskwood“ war der frühere Platz unter einem Alias). Entscheidung des Assistenten: Mit der
+    Option an stünde er sonst doppelt da, und wer die Option ausschaltet, will ihn nicht sehen.
+    Ebenso entfällt er als zweite Zeile der Bilanz-Karten.
+  - **Woher die Klasse kommt** (`FamulusDB.chronicle.classes = { [name] = "MAGE" }`, über
+    `ChronicleService.Class`): Freunde mit Famulus schicken ihre Klasse mit der Bilanz (`1~S~…`,
+    siehe „sharing“); „Freunde begleiten“ merkt sie aus der Freundesliste, wenn es einen Aufstieg
+    festhält (`className` in der Sprache des Clients, zurückübersetzt über
+    `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE`, `ChronicleService.ClassFromName`); die eigenen
+    Charaktere tragen ihre Klasse mit jedem eigenen Eintrag und beim Login ein (nur, wenn es die
+    Chronik schon gibt). Die Beispieldaten haben Klassen wie bei den Weggefährten (Mira Magierin,
+    Borin Krieger, Lysa Priesterin). Gespeichert wird nur für Personen mit Eintrag oder Bilanz; der
+    Rest fällt beim Laden heraus. Die Daten der Weggefährten werden bewusst nicht gelesen (siehe
+    „Chronik und Weggefährten“: jeder Bereich steht für sich).
+  - **Lücken:** Ein Freund mit älterem Famulus und ohne Aufstieg seit dem Update zeigt weiter den
+    Buchstaben; ebenso jemand, über den nur weitergereichte Einträge vorliegen. Die Freundesliste
+    beim Öffnen des Fensters auszuwerten, wäre eine weitere Quelle; nicht gebaut.
+  - Die Website zeigt im Buch der Chronik noch Anfangsbuchstaben.
 - **Die drei aufzeichnenden Features sind standardmäßig aus**, weil der Test festschreibt, dass mit Standardwerten
   kein Spielereignis registriert ist. Ob die Chronik von Haus aus mitschreiben soll, ist eine
   offene Entscheidung des Auftraggebers.
@@ -1259,12 +1298,17 @@ Entscheidung des Assistenten. Hochgeladen ist noch nichts.
   --screenshot="<abs. Pfad>\logo.png" "file:///<abs. Pfad>/logo.svg"`.
   Eine Entscheidung des Assistenten, vom Auftraggeber noch nicht gesehen.
 - **Projekt angelegt** (vom Auftraggeber, 2026-11-24): CurseForge-Projekt-ID 1828785, steht als
-  `## X-Curse-Project-ID` in der `.toc`.
+  `## X-Curse-Project-ID` in der `.toc`. Probelauf auf GitHub am 2026-11-24 grün: Spielversion
+  1.60.1 (Forever) erkannt, 60 Dateien (Addon plus `LICENSE`), Zip `Famulus-<version>-forever.zip`
+  (der Packager hängt „-forever“ an, auch an die Bezeichnung auf CurseForge).
+- **Erste Datei als Alpha (Entscheidung des Auftraggebers, 2026-11-24):** Tag `v0.1.0-alpha.1`,
+  „damit sie nicht als Release rausgeht, wir sind ja noch nicht so weit“. Verworfen ist damit die
+  Empfehlung des Assistenten (`v0.1.0` als Release, damit Famulus in der App erscheint). Folge:
+  Solange es keine Release-Datei gibt, steht Famulus nur auf der Website von CurseForge, nicht in
+  der App. Der Abschnitt in `CHANGELOG.md` heißt deshalb `## 0.1.0-alpha.1`.
+- **Token:** Das Repository-Secret `CF_API_KEY` hat der Auftraggeber selbst hinterlegt
+  (2026-11-24); der Token ging nicht durch den Assistenten.
 - **Offen:**
-  - API-Token als Repository-Secret `CF_API_KEY`; setzt der Auftraggeber selbst, der Token geht
-    nicht durch den Assistenten.
-  - Dateityp der ersten Datei. Empfehlung des Assistenten: `v0.1.0` als Release mit „Alpha“ in
-    Beschreibung und Changelog, damit Famulus in der App erscheint.
   - Projektseite: Summary vom Auftraggeber gewählt („Your companion for playing together: Famulus
     helps you stay close to the friends and fellow adventurers who make your journey so
     special.“); die Beschreibung liegt als Entwurf des Assistenten in

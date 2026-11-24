@@ -937,6 +937,26 @@ end
 
 local CLASS_ICONS = "Interface\\TargetingFrame\\UI-Classes-Circles"
 
+-- The game's round class icon, hidden until a class is set (UI.SetClass).
+function UI.ClassIcon(parent, size, layer)
+    local icon = parent:CreateTexture(nil, layer or "ARTWORK")
+    icon:SetTexture(CLASS_ICONS)
+    icon:SetSize(size, size)
+    icon:Hide()
+    return icon
+end
+
+-- Shows a class ("MAGE") on such an icon. False, and the icon hidden, for a
+-- class the client has no icon for or none at all: then the initial stands.
+function UI.SetClass(icon, classFile)
+    local coords = type(classFile) == "string" and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile] or nil
+    icon:SetShown(coords ~= nil)
+    if coords then
+        icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+    end
+    return coords ~= nil
+end
+
 -- A person's crest: the game's class icon (else the initial) on a disc,
 -- inside a ring that shows the way to the next bond tier. The ring is a
 -- paused Cooldown swipe: drawn once, nothing runs per frame. Without
@@ -948,9 +968,7 @@ function UI.Crest(parent, size)
 
     local disc = UI.Icon(crest, "circle", inner, "chip", "BACKGROUND")
     disc:SetPoint("CENTER")
-    crest.icon = crest:CreateTexture(nil, "ARTWORK")
-    crest.icon:SetTexture(CLASS_ICONS)
-    crest.icon:SetSize(inner, inner)
+    crest.icon = UI.ClassIcon(crest, inner)
     crest.icon:SetPoint("CENTER")
     crest.initial = UI.Text(crest, math.floor(size * 0.36), "textDim", "semibold")
     crest.initial:SetPoint("CENTER")
@@ -977,12 +995,9 @@ function UI.Crest(parent, size)
     crest.swipe = swipe
 
     function crest:SetPerson(name, classFile)
-        local coords = classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
-        self.icon:SetShown(coords ~= nil)
-        self.initial:SetShown(coords == nil)
-        if coords then
-            self.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-        else
+        local known = UI.SetClass(self.icon, classFile)
+        self.initial:SetShown(not known)
+        if not known then
             self.initial:SetText(UI.Initial(name))
         end
     end

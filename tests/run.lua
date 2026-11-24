@@ -1208,8 +1208,11 @@ do -- sample entries for looking at the book
         lysa = lysa + (entry.who == "Lysa Morgentau" and 1 or 0)
     end
     check(lysa >= 3, "and a third companion tells some of the story")
+    check(Chronicle.Class("Mira Sturmfeder") == "MAGE" and Chronicle.Class("Borin Eisenbart") == "WARRIOR"
+        and Chronicle.Class("Lysa Morgentau") == "PRIEST", "the sample companions come with their classes")
     SlashCmdList.FAMULUS("chronicle demo clear")
     check(#Chronicle.Entries() == count, "/fam chronicle demo clear removes them and nothing else")
+    check(Chronicle.Class("Mira Sturmfeder") == nil, "and their classes")
     check(#Chronicle.ProfileNames() == 1 and Chronicle.Profile("Real Friend"), "and only the sample profiles")
     FamulusDB.chronicle.profiles = nil
 end
@@ -1218,7 +1221,7 @@ mock.Fire("PLAYER_LEVEL_UP", 14)
 check(#Chronicle.Entries() == 5 and ns:CountRegisteredEvents() == eventsBeforeChronicle, "switched off, it hears nothing")
 
 -- Companions: level-ups seen on the friends list.
-local friend = { name = "Jaina Proudmoore", level = 19, area = "Duskwood", guid = "Player-1-FRIEND", connected = true }
+local friend = { name = "Jaina Proudmoore", level = 19, area = "Duskwood", guid = "Player-1-FRIEND", connected = true, className = "Mage" }
 setState({ friends = { friend } })
 enable("companions")
 mock.Fire("FRIENDLIST_UPDATE")
@@ -1229,13 +1232,21 @@ mock.Fire("FRIENDLIST_UPDATE")
 local friendEntry = Chronicle.Entries()[6]
 check(#Chronicle.Entries() == 6 and friendEntry.who == "Jaina Proudmoore" and not Chronicle.IsOwn(friendEntry)
     and Chronicle.Text(friendEntry) == "Jaina Proudmoore reaches level 20", "their level-up is written once")
+check(Chronicle.Class("Jaina Proudmoore") == "MAGE" and Chronicle.ClassFromName("Warrior") == "WARRIOR"
+    and Chronicle.ClassFromName("Nobody") == nil, "the friends list tells their class along with it, in the client's language")
 friend.connected, friend.level = false, 0
 mock.Fire("FRIENDLIST_UPDATE")
 check(#Chronicle.Entries() == 6 and Chronicle.FriendLevel("Player-1-FRIEND") == 20, "a friend going offline changes nothing")
 ns.AliasService.Set("Jaina Proudmoore", "Anna")
-check(Chronicle.Text(friendEntry) == "Anna reaches level 20" and select(2, Chronicle.Text(friendEntry)) == "Jaina Proudmoore  ·  in Duskwood",
-    "a companion appears under the alias, the character name beside it")
+check(Chronicle.Text(friendEntry) == "Anna (Jaina Proudmoore) reaches level 20" and select(2, Chronicle.Text(friendEntry)) == "in Duskwood"
+    and Chronicle.Label(friendEntry) == "Anna (Jaina Proudmoore)",
+    "a companion appears under the alias, the character name in brackets behind it")
+ns:SetOption("general", "chronicleNames", false)
+check(Chronicle.Text(friendEntry) == "Anna reaches level 20" and select(2, Chronicle.Text(friendEntry)) == "in Duskwood"
+    and Chronicle.Label(friendEntry) == "Anna", "switched off, the alias stands alone")
+ns:SetOption("general", "chronicleNames", true)
 ns.AliasService.Set("Jaina Proudmoore", nil)
+check(Chronicle.Label(friendEntry) == "Jaina Proudmoore", "without an alias, the name alone")
 enable("companions", false)
 local chronicleBeforeSharing = {}
 for i, entry in ipairs(Chronicle.Entries()) do
@@ -1276,9 +1287,14 @@ mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. sharedNow .. "~death~level=20;z
 check(#Chronicle.Entries() == 1, "the same news twice is written once")
 mock.Advance(1)
 check(#mock.sent == 1 and mock.sent[1].text == "1~H~" .. sharedNow, "a first contact is greeted back, with how far their news reaches")
-mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~S~20~60=12;107=3456;bad=1", "WHISPER", "Jaina Proudmoore")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~S~20~60=12;107=3456;bad=1~PRIEST", "WHISPER", "Jaina Proudmoore")
 local profile = Chronicle.Profile("Jaina Proudmoore")
 check(profile and profile.level == 20 and profile.stats[60] == 12 and profile.stats[107] == 3456, "their statistics become a profile")
+check(Chronicle.Class("Jaina Proudmoore") == "PRIEST", "and their class is remembered")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~S~20~60=12~Mage|cff", "WHISPER", "Jaina Proudmoore")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~S~20~60=12", "WHISPER", "Jaina Proudmoore")
+check(Chronicle.Class("Jaina Proudmoore") == "PRIEST" and Chronicle.Profile("Jaina Proudmoore").level == 20,
+    "a class that is none, or none at all from an older version, changes nothing")
 
 -- Own milestones go out to linked friends; a greeting is answered.
 mock.sent = {}
@@ -1288,7 +1304,7 @@ check(#mock.sent == 1 and mock.sent[1].text:find("^1~E~%d+~level~level=14;zone=W
 mock.sent = {}
 mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Jaina Proudmoore")
 mock.Advance(2)
-check(#mock.sent == 2 and mock.sent[1].text:find("~level~", 1, true) and mock.sent[2].text == "1~S~13~107=3456;60=12;932=7;98=210",
+check(#mock.sent == 2 and mock.sent[1].text:find("~level~", 1, true) and mock.sent[2].text == "1~S~13~107=3456;60=12;932=7;98=210~WARRIOR",
     "a greeting is answered with what they missed and the own statistics: " .. tostring(mock.sent[2] and mock.sent[2].text))
 mock.sent = {}
 setState({ friends = { jaina }, zone = "Westfall", level = 13, lockdown = true })
@@ -1457,6 +1473,35 @@ do -- a click on a companion narrows the book to them, a second one widens it ag
     mock.Click(tabButton("My journey"))
     mock.Click(tabButton("Everyone"))
     check(#bookFrames("story") == 6, "another tab forgets the choice")
+end
+do -- the class beside a companion's name, and the character name behind an alias
+    local first = bookFrames("story")[1]
+    check(first.chipInitial:IsShown() and first.chipDot:IsShown() and not first.chipClass:IsShown()
+        and people.rows[1].initial:IsShown() and not people.rows[1].class:IsShown(),
+        "while the class is not known, the initial stands beside the name")
+    Chronicle.Class("Jaina Proudmoore", "MAGE")
+    ns.AliasService.Set("Jaina Proudmoore", "Anna")
+    mock.Advance(0.1)
+    first = bookFrames("story")[1]
+    local row = railCard("people").rows[1]
+    check(first.story.chip.class == "MAGE" and first.chipClass:IsShown() and not first.chipInitial:IsShown()
+        and not first.chipDot:IsShown() and row.class:IsShown() and not row.initial:IsShown() and not row.avatar:IsShown(),
+        "a known class shows its icon instead, in the book and in the rail")
+    check(first.chipText:GetText() == "Anna (Jaina Proudmoore)" and row.name:GetText() == "Anna (Jaina Proudmoore)"
+        and (first.story.detail == nil or not first.story.detail:find("Proudmoore", 1, true)),
+        "under an alias, the character name stands in brackets behind it")
+    mock.Click(row)
+    check(window.bookFilter.text:GetText() == "Only events of Anna (Jaina Proudmoore)", "above the narrowed book as well")
+    mock.Click(window.bookFilter.clear)
+    ns:SetOption("general", "chronicleNames", false)
+    mock.Advance(0.1)
+    first = bookFrames("story")[1]
+    check(first.chipText:GetText() == "Anna" and railCard("people").rows[1].name:GetText() == "Anna",
+        "switched off, the alias stands alone")
+    ns:SetOption("general", "chronicleNames", true)
+    ns.AliasService.Set("Jaina Proudmoore", nil)
+    FamulusDB.chronicle.classes = nil
+    mock.Advance(0.1)
 end
 do -- what repeats right away shares a card
     local now = time()
@@ -1627,9 +1672,11 @@ do -- an item is shown with the game's icon of it, in its own colours
 end
 mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
-check(#visibleRows() == 15 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
+check(#visibleRows() == 16 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
     and not window.railScroll:IsShown() and visibleRows()[1].width == 900,
-    "recording: the four switches and the feed's eleven options; no book, no rail (got " .. #visibleRows() .. ")")
+    "recording: the four switches, the feed's eleven options and how people are named; no book, no rail (got " .. #visibleRows() .. ")")
+check(visibleRows()[16].item.key == "chronicleNames" and visibleRows()[16].toggle ~= nil and visibleRows()[16].item.get() == true,
+    "the character name behind an alias is a switch of its own, on from the start")
 Chronicle.Clear()
 mock.Advance(0.1)
 mock.Click(tabButton("Everyone"))

@@ -26,6 +26,8 @@ function companions:FRIENDLIST_UPDATE()
         if not ns.IsSecret(info.connected) and info.connected and not ns.IsSecret(info.level) and (tonumber(info.level) or 0) > 0 then
             local known = Chronicle.FriendLevel(info.guid)
             if known and info.level > known then
+                -- The class for the picture beside their name; the list names it in the client's language.
+                Chronicle.Class(info.name, Chronicle.ClassFromName(info.className))
                 Chronicle.Add("friendLevel", { who = info.name, level = info.level, zone = info.area })
             end
             if known ~= info.level then
