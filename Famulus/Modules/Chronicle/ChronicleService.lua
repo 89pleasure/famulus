@@ -792,6 +792,9 @@ end
 -- /fam chronicle demo writes them, /fam chronicle demo clear removes them.
 -- They carry `demo` and never leave this client (see OwnSince and
 -- Modules/Chronicle/Sharing.lua). Returns how many were written or removed.
+-- They speak the addon's language, not the client's, so a German client set
+-- to English shows English samples; the companions are the same people as in
+-- the fellow travellers' samples (FellowService.Demo), in either language.
 local DEMO_ZONES = {
     enUS = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
     deDE = { "Ödland", "Uldaman", "Schlingendorntal", "Tanaris" },
@@ -799,6 +802,10 @@ local DEMO_ZONES = {
 local DEMO_NAMES = {
     enUS = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag" },
     deDE = { tailoring = "Schneiderei", mining = "Bergbau", boss = "Archaedas", challenge = "Erkunder des Ödlands", bag = "Schlafsack" },
+}
+local DEMO_PEOPLE = {
+    enUS = { "Mira Stormfeather", "Borin Ironbeard", "Lysa Morningdew" },
+    deDE = { "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau" },
 }
 
 function ChronicleService.ClearDemo()
@@ -832,9 +839,9 @@ function ChronicleService.Demo()
         return 0
     end
     ChronicleService.ClearDemo()
-    local locale = GetLocale and GetLocale() or "enUS"
+    local locale = ns:GetLocaleCode()
     local zone, name = DEMO_ZONES[locale] or DEMO_ZONES.enUS, DEMO_NAMES[locale] or DEMO_NAMES.enUS
-    local mira, borin, lysa = "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau"
+    local mira, borin, lysa = unpack(DEMO_PEOPLE[locale] or DEMO_PEOPLE.enUS)
     local hour, day = 3600, 86400
     -- { seconds before now, kind, values }
     local samples = {

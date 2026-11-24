@@ -386,7 +386,8 @@ end
 -- Sample people, to look at the list without grouping for days:
 -- /fam fellows demo writes them, /fam fellows demo clear removes them.
 -- They carry `demo` and a GUID no real player has. Returns how many were
--- written or removed.
+-- written or removed. They speak the addon's language, not the client's;
+-- Mira, Borin and Lysa are the companions of ChronicleService.Demo.
 local DEMO_ZONES = {
     enUS = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris", "Westfall", "The Deadmines" },
     deDE = { "Ödland", "Uldaman", "Schlingendorntal", "Tanaris", "Westfall", "Die Todesminen" },
@@ -395,6 +396,10 @@ local DEMO_ZONES = {
 local DEMO_BOSSES = {
     enUS = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin VanCleef" } },
     deDE = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin van Cleef" } },
+}
+local DEMO_PEOPLE = {
+    enUS = { "Mira Stormfeather", "Borin Ironbeard", "Lysa Morningdew", "Kael Thornwood", "Tomas Greywind", "Ena Silverbrook" },
+    deDE = { "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau", "Kael Dornhain", "Tomas Grauwind", "Ena Silberquell" },
 }
 
 function FellowService.ClearDemo()
@@ -420,17 +425,19 @@ function FellowService.Demo()
         return 0
     end
     FellowService.ClearDemo()
-    local zone = DEMO_ZONES[GetLocale and GetLocale()] or DEMO_ZONES.enUS
-    local bossesIn = DEMO_BOSSES[GetLocale and GetLocale()] or DEMO_BOSSES.enUS
+    local locale = ns:GetLocaleCode()
+    local zone = DEMO_ZONES[locale] or DEMO_ZONES.enUS
+    local bossesIn = DEMO_BOSSES[locale] or DEMO_BOSSES.enUS
+    local person = DEMO_PEOPLE[locale] or DEMO_PEOPLE.enUS
     local hour, day = 3600, 86400
     -- name, class, level, { first: seconds ago, zone }, { last: seconds ago, zone }, times, seconds, bosses
     local samples = {
-        { "Mira Sturmfeder", "MAGE", 40, { 9 * day, zone[5] }, { 1 * hour, zone[4] }, 14, 31 * hour + 20 * 60, 9 },
-        { "Borin Eisenbart", "WARRIOR", 38, { 6 * day, zone[6] }, { 1 * day + 5 * hour, zone[2] }, 6, 11 * hour + 5 * 60, 7 },
-        { "Lysa Morgentau", "PRIEST", 39, { 1 * day + 6 * hour, zone[2] }, { 1 * day + 5 * hour, zone[2] }, 1, 2 * hour + 40 * 60, 3 },
-        { "Kael Dornhain", "HUNTER", 34, { 4 * day, zone[3] }, { 3 * day, zone[3] }, 2, 1 * hour + 15 * 60, 0 },
-        { "Tomas Grauwind", "ROGUE", 41, { 2 * day, zone[1] }, { 2 * day, zone[1] }, 1, 25 * 60, 1 },
-        { "Ena Silberquell", "DRUID", 37, { 12 * day, zone[5] }, { 8 * day, zone[6] }, 3, 4 * hour + 50 * 60, 5 },
+        { person[1], "MAGE", 40, { 9 * day, zone[5] }, { 1 * hour, zone[4] }, 14, 31 * hour + 20 * 60, 9 },
+        { person[2], "WARRIOR", 38, { 6 * day, zone[6] }, { 1 * day + 5 * hour, zone[2] }, 6, 11 * hour + 5 * 60, 7 },
+        { person[3], "PRIEST", 39, { 1 * day + 6 * hour, zone[2] }, { 1 * day + 5 * hour, zone[2] }, 1, 2 * hour + 40 * 60, 3 },
+        { person[4], "HUNTER", 34, { 4 * day, zone[3] }, { 3 * day, zone[3] }, 2, 1 * hour + 15 * 60, 0 },
+        { person[5], "ROGUE", 41, { 2 * day, zone[1] }, { 2 * day, zone[1] }, 1, 25 * 60, 1 },
+        { person[6], "DRUID", 37, { 12 * day, zone[5] }, { 8 * day, zone[6] }, 3, 4 * hour + 50 * 60, 5 },
     }
     local now = time()
     for index, sample in ipairs(samples) do

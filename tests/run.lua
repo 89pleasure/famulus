@@ -1206,19 +1206,19 @@ do -- sample entries for looking at the book
     end)(), "sample entries are not passed on to companions")
     Chronicle.Profile("Real Friend", { level = 12, stats = { [60] = 1 } })
     local profiles = Chronicle.ProfileNames()
-    local mira = Chronicle.Profile("Mira Sturmfeder")
+    local mira = Chronicle.Profile("Mira Stormfeather")
     check(#profiles >= 4 and mira and mira.demo and mira.level == 40 and mira.stats[60] ~= nil,
         "the companions have sample profiles with their numbers")
     local lysa = 0
     for _, entry in ipairs(Chronicle.Entries()) do
-        lysa = lysa + (entry.who == "Lysa Morgentau" and 1 or 0)
+        lysa = lysa + (entry.who == "Lysa Morningdew" and 1 or 0)
     end
     check(lysa >= 3, "and a third companion tells some of the story")
-    check(Chronicle.Class("Mira Sturmfeder") == "MAGE" and Chronicle.Class("Borin Eisenbart") == "WARRIOR"
-        and Chronicle.Class("Lysa Morgentau") == "PRIEST", "the sample companions come with their classes")
+    check(Chronicle.Class("Mira Stormfeather") == "MAGE" and Chronicle.Class("Borin Ironbeard") == "WARRIOR"
+        and Chronicle.Class("Lysa Morningdew") == "PRIEST", "the sample companions come with their classes")
     SlashCmdList.FAMULUS("chronicle demo clear")
     check(#Chronicle.Entries() == count, "/fam chronicle demo clear removes them and nothing else")
-    check(Chronicle.Class("Mira Sturmfeder") == nil, "and their classes")
+    check(Chronicle.Class("Mira Stormfeather") == nil, "and their classes")
     check(#Chronicle.ProfileNames() == 1 and Chronicle.Profile("Real Friend"), "and only the sample profiles")
     FamulusDB.chronicle.profiles = nil
 end
@@ -2441,6 +2441,32 @@ end
 check(demoKills > 1 and not demoRepeat, "and bosses with names, from the dungeons they were in, each visit going on from the last")
 SlashCmdList.FAMULUS("fellows demo clear")
 check(Fellows.Count() == realFellows and FamulusDB.fellows["Player-1-TOM"] ~= nil, "/fam fellows demo clear removes only them")
+
+-- The samples speak the addon's language, not the client's (a German client
+-- set to English gets English samples, for screenshots of the English window),
+-- and both sets name the same people.
+mock.state.locale = "deDE"
+for _, case in ipairs({ { "enUS", "Mira Stormfeather", "Badlands" }, { "deDE", "Mira Sturmfeder", "Ödland" } }) do
+    ns:SetOption("general", "language", case[1])
+    SlashCmdList.FAMULUS("chronicle demo")
+    SlashCmdList.FAMULUS("fellows demo")
+    local zoneSeen, sameFolk = false, true
+    for _, entry in ipairs(Chronicle.Entries()) do
+        zoneSeen = zoneSeen or (entry.demo and entry.zone == case[3])
+        if entry.demo and entry.who then
+            sameFolk = sameFolk and Fellows.Find(entry.who) ~= nil
+        end
+    end
+    check(ns:GetLocaleCode() == case[1] and Chronicle.Profile(case[2]) ~= nil and zoneSeen and sameFolk
+        and FamulusDB.fellows["Player-0-FAMDEMO01"].name == case[2],
+        "sample data in " .. case[1] .. " on a German client, the chronicle's companions among the fellow travellers")
+    SlashCmdList.FAMULUS("chronicle demo clear")
+    SlashCmdList.FAMULUS("fellows demo clear")
+end
+FamulusDB.chronicle.profiles = nil
+mock.state.locale = nil
+ns:SetOption("general", "language", "auto")
+check(ns:GetLocaleCode() == "enUS", "back to the client's language")
 mock.Click(navButton("Aliases"))
 SlashCmdList.FAMULUS("")
 FamulusDB.fellows = nil
