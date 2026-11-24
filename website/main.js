@@ -323,6 +323,44 @@
     }
   }
 
+  // Reset works on the settings section only, like in the addon: the
+  // features there and the master switch. The first click asks; a second
+  // one within four seconds resets.
+  const DEFAULTS = { master: true, chat: true, tooltip: true, menu: true, style: 'alias' };
+  const resetButton = $('#alias-reset');
+  let asking = 0;
+  const atDefaults = () => Object.entries(DEFAULTS).every(([key, value]) => state[key] === value);
+
+  function stopAsking() {
+    clearTimeout(asking);
+    asking = 0;
+  }
+
+  function renderReset() {
+    const idle = atDefaults();
+    if (idle) stopAsking();
+    resetButton.hidden = state.tab !== 'display';
+    resetButton.disabled = idle;
+    resetButton.classList.toggle('is-asking', asking !== 0);
+    resetButton.textContent = t(asking ? 'w_reset_confirm' : 'w_reset');
+  }
+
+  resetButton.addEventListener('click', () => {
+    if (atDefaults()) return;
+    if (!asking) {
+      asking = setTimeout(() => {
+        asking = 0;
+        renderReset();
+      }, 4000);
+      renderReset();
+      return;
+    }
+    stopAsking();
+    Object.assign(state, DEFAULTS);
+    $('#alias-style').value = state.style;
+    refresh(true);
+  });
+
   function renderWindow() {
     for (const button of $$('[data-switch]', demo)) {
       const on = state[button.dataset.switch];
@@ -336,13 +374,16 @@
     demo.classList.toggle('is-off', !state.master);
     for (const tab of $$('[data-tab]', demo)) tab.setAttribute('aria-selected', String(tab.dataset.tab === state.tab));
     for (const pane of $$('[data-pane]', demo)) pane.hidden = pane.dataset.pane !== state.tab;
+    $('#alias-tabtitle').textContent = t(`w_tab_${state.tab}`);
     $('#alias-tabdesc').textContent = t(`w_tabdesc_${state.tab}`);
+    renderReset();
 
-    // The counters in the sidebar: three features to switch here, two more
-    // that the demo leaves on, and the live feed of the chronicle.
+    // The counters: three alias features to switch here and two more the
+    // demo leaves on; in all, the five of the aliases, four of the chronicle
+    // (the live feed is on) and one of the fellow travellers.
     const running = state.master ? ['chat', 'tooltip', 'menu'].filter(key => state[key]).length + 2 : 0;
     $('#alias-count').textContent = state.master ? `${running}/5` : t('off');
-    $('#active-count').textContent = t('w_active', running + 1, 9);
+    $('#active-count').textContent = t('w_active', running + 1, 10);
   }
 
   function refresh(mark) {
@@ -362,11 +403,13 @@
   for (const tab of $$('[data-tab]', demo)) {
     tab.addEventListener('click', () => {
       state.tab = tab.dataset.tab;
+      stopAsking();
       renderWindow();
     });
   }
   $('#alias-style').addEventListener('change', event => {
     state.style = event.target.value;
+    renderReset();
     renderChat(true);
   });
 
@@ -413,6 +456,8 @@
     boss: { icon: 'swords', tone: 'boss' },
   };
 
+  // Newest first. Yesterday holds three deaths in a row and two levels of a
+  // companion, so the book shows how it bundles them.
   const CHAPTERS = [
     {
       day: 'c_today', title: 'Tanaris', levels: [39, 40],
@@ -429,13 +474,29 @@
       day: 'c_yesterday', title: 'Uldaman', levels: [39, 39],
       events: [
         { time: '23:15', kind: 'ability', who: MIRA, level: 40 },
+        { time: '22:58', kind: 'level', who: BORIN, number: 31, zone: 'Feralas' },
+        { time: '22:31', kind: 'level', who: BORIN, number: 30, zone: 'Feralas' },
         { time: '22:20', kind: 'skill', number: 75, zone: 'Uldaman' },
-        { time: '21:40', kind: 'death', who: BORIN, zone: 'Feralas', level: 31 },
+        { time: '21:52', kind: 'death', zone: 'Uldaman', level: 39 },
+        { time: '21:47', kind: 'death', zone: 'Uldaman', level: 39 },
+        { time: '21:44', kind: 'death', zone: 'Uldaman', level: 39 },
+        { time: '21:40', kind: 'death', who: BORIN, zone: 'Feralas', level: 29 },
         { time: '21:05', kind: 'level', number: 39, zone: 'Uldaman', big: true },
         { time: '20:30', kind: 'boss', zone: 'Uldaman' },
         { time: '19:10', kind: 'achievement', zone: 'Desolace' },
       ],
     },
+  ];
+
+  // What the companions shared: online or not, and their profile (deaths,
+  // creatures defeated, quests, dungeons; the game's statistics).
+  const COMPANIONS = {
+    [MIRA]: { online: true, profile: [212, 4810, 388, 41] },
+    [BORIN]: { online: false, profile: [340, 3102, 251, 27] },
+  };
+  const CRAFTS = [
+    { name: 'n_tailoring', value: 92, max: 150 },
+    { name: 'n_cooking', value: 38, max: 75 },
   ];
 
   // The headline and the line below it. `named`: say whose event it is (the
@@ -468,46 +529,93 @@
     }
   }
 
-  function picture(event) {
+  // `count`: how many events a bundled card stands for, in the corner of a
+  // picture that has no number of its own.
+  function picture(event, count) {
     const look = PICTURES[event.kind];
     const frame = make('span', `pic pic--${look.tone}`);
     frame.append(look.icon ? icon(look.icon, 28) : make('b', '', event.number));
+    if (count > 1 && look.icon) frame.append(make('i', 'pic__count', count));
     return frame;
   }
 
+  // Events that follow each other share a card: deaths in the same zone, and
+  // levels of the same companion. Your own levels stay single; they are the
+  // milestones. As SameRun in Famulus/UI/Options.lua.
+  const sameRun = (a, b) => a.kind === b.kind && a.who === b.who
+    && ((a.kind === 'death' && a.zone === b.zone) || (a.kind === 'level' && a.who != null));
+
+  function runsOf(events) {
+    const runs = [];
+    for (const event of events) {
+      const run = runs[runs.length - 1];
+      if (run && sameRun(run[0], event)) run.push(event);
+      else runs.push([event]);
+    }
+    return runs;
+  }
+
+  // Headline and line below for a bundle (newest first).
+  function tellRun(run) {
+    const newest = run[0];
+    const levels = run.map(event => (event.kind === 'level' ? event.number : event.level)).filter(Boolean);
+    const low = Math.min(...levels);
+    const high = Math.max(...levels);
+    if (newest.kind === 'death') {
+      return { title: t('c_deaths', run.length, newest.zone), detail: low === high ? t('c_at_level', low) : t('c_at_levels', low, high) };
+    }
+    const oneZone = run.every(event => event.zone === newest.zone);
+    return { title: t('c_levels', low, high), detail: oneZone ? t('c_in', newest.zone) : null };
+  }
+
   let bookTab = 'all';
+  let bookWho = null; // a companion picked in the rail: the book shows only them
+
+  const wanted = event => (bookTab === 'all' || (bookTab === 'mine') === !event.who)
+    && (!bookWho || event.who === bookWho);
 
   function renderBook() {
     const book = $('#book');
     book.textContent = '';
     for (const chapter of CHAPTERS) {
-      const events = chapter.events.filter(event => bookTab === 'all' || (bookTab === 'mine') === !event.who);
+      const events = chapter.events.filter(wanted);
       if (!events.length) continue;
 
+      // The head in one line: the day, the zone in the book's type, levels
+      // and the number of events; a line on each side running out.
       const head = make('header', 'chapter__head reveal');
-      const mark = make('div', 'chapter__mark');
-      mark.append(make('i'), icon('sparkle', 11), make('i'));
       const [from, to] = chapter.levels;
       const levels = from === to ? t('c_ch_level', from) : t('c_ch_levels', from, to);
       const count = events.length === 1 ? t('c_ch_event') : t('c_ch_events', events.length);
-      head.append(
-        make('p', 'chapter__day', t(chapter.day)),
-        make('h3', '', chapter.title),
-        mark,
-        make('p', 'chapter__sub', `${levels}  ·  ${count}`),
-      );
+      const before = make('div', 'chapter__side');
+      before.append(make('i'), make('p', 'chapter__day', t(chapter.day)));
+      const after = make('div', 'chapter__side');
+      after.append(make('p', 'chapter__sub', `${levels}  ·  ${count}`), make('i'));
+      head.append(before, make('h3', '', chapter.title), after);
 
       const trail = make('div', 'chapter__events');
-      for (const event of events) {
+      for (const run of runsOf(events)) {
+        const event = run[0];
+        const many = run.length > 1;
         const look = PICTURES[event.kind];
-        const told = tell(event, false);
+        const told = many ? tellRun(run) : tell(event, false);
         const story = make('article', `story story--${look.tone} reveal${event.big ? ' is-big' : ''}`);
         const dot = make('span', 'story__dot');
         dot.append(icon(look.mark || look.icon, 12));
         const text = make('div', 'story__text');
-        text.append(make('h4', '', told.title), make('p', '', [told.detail, event.time].filter(Boolean).join('  ·  ')));
+        text.append(make('h4', '', told.title));
+        const line = many ? told.detail : [told.detail, event.time].filter(Boolean).join('  ·  ');
+        if (line) text.append(make('p', '', line));
+        if (many) {
+          // Every time of the bundle, the oldest first.
+          const times = make('div', 'story__times');
+          for (const each of [...run].reverse()) times.append(make('span', '', each.time));
+          text.append(times);
+        }
+        // A companion's levels show the highest one in the picture.
+        const shown = many && event.kind === 'level' ? { ...event, number: Math.max(...run.map(each => each.number)) } : event;
         const body = make('div', 'story__body');
-        body.append(picture(event), text);
+        body.append(picture(shown, run.length), text);
         const card = make('div', 'story__card');
         card.append(body);
         if (event.who) {
@@ -525,9 +633,157 @@
       section.append(head, trail);
       book.append(section);
     }
+    renderFilter();
+    renderRail();
     spaceDots();
     watch(book);
   }
+
+  // -------------------------------------------------------------------------
+  // The rail beside the book, as Famulus/UI/Rail.lua: Everyone shows the week
+  // and the companions, My journey the week and the professions, Companions
+  // one profile per companion.
+  // -------------------------------------------------------------------------
+
+  const ownEvents = () => CHAPTERS.flatMap(chapter => chapter.events).filter(event => !event.who);
+  const number = value => value.toLocaleString(lang === 'de' ? 'de-DE' : 'en-US');
+
+  // Everyone with an event in the book, the one heard from last first.
+  function companions() {
+    const list = [];
+    for (const chapter of CHAPTERS) {
+      for (const event of chapter.events) {
+        if (event.who && !list.some(item => item.who === event.who)) list.push({ who: event.who, event, day: chapter.day });
+      }
+    }
+    return list;
+  }
+
+  function railCard(title, note) {
+    const card = make('section', 'rcard');
+    const head = make('header', 'rcard__head');
+    head.append(make('h4', '', title));
+    if (note != null) head.append(make('span', '', note));
+    card.append(head);
+    return card;
+  }
+
+  function statGrid(stats) {
+    const grid = make('div', 'rcard__stats');
+    for (const [label, value, plus] of stats) {
+      const cell = make('div', 'rstat');
+      const figure = make('p');
+      figure.append(make('b', '', value));
+      if (plus) figure.append(make('em', '', plus));
+      cell.append(figure, make('span', '', label));
+      grid.append(cell);
+    }
+    return grid;
+  }
+
+  let focusWho = null; // keep the focus on a person's row when the rail is drawn again
+
+  function personButton(who, line) {
+    const name = nameOf(who);
+    const online = COMPANIONS[who].online;
+    const button = make('button', 'person');
+    button.type = 'button';
+    button.dataset.who = who;
+    button.setAttribute('aria-pressed', String(bookWho === who));
+    const text = make('span', 'person__text');
+    text.append(make('strong', '', name));
+    if (line) text.append(make('span', '', line));
+    const end = make('span', 'person__end');
+    end.append(
+      make('span', '', t('c_p_level', PEOPLE[who].level)),
+      make('span', `person__state${online ? ' is-online' : ''}`, t(online ? 'c_online' : 'c_offline')),
+    );
+    button.append(make('span', 'avatar', initial(name)), text, end);
+    button.addEventListener('click', () => {
+      bookWho = bookWho === who ? null : who;
+      focusWho = who;
+      renderBook();
+    });
+    return button;
+  }
+
+  function weekCard() {
+    const own = ownEvents();
+    const counted = (...kinds) => String(own.filter(event => kinds.includes(event.kind)).length);
+    const levels = own.filter(event => event.kind === 'level').map(event => event.number);
+    const card = railCard(t('c_week'));
+    card.append(statGrid([
+      [t('c_week_level'), String(Math.max(...levels)), `+${levels.length}`],
+      [t('c_week_deaths'), counted('death')],
+      [t('c_week_zones'), counted('zone')],
+      [t('c_week_crafts'), counted('skill', 'profession')],
+    ]));
+    return card;
+  }
+
+  function companionsCard() {
+    const list = companions();
+    const card = railCard(t('c_companions'), String(list.length));
+    for (const { who, event, day } of list) {
+      const when = day === 'c_today' ? event.time : t(day);
+      card.append(personButton(who, `${tell(event, false).title}  ·  ${when}`));
+    }
+    card.append(make('p', 'rcard__hint', t('c_rail_filter')));
+    return card;
+  }
+
+  function craftsCard() {
+    const card = railCard(t('c_crafts'));
+    for (const craft of CRAFTS) {
+      const bar = make('div', 'rbar');
+      const label = make('p');
+      label.append(make('span', '', t(craft.name)), make('span', '', `${craft.value} / ${craft.max}`));
+      const track = make('span', 'rbar__track');
+      const fill = make('i');
+      fill.style.width = `${(craft.value / craft.max) * 100}%`;
+      track.append(fill);
+      bar.append(label, track);
+      card.append(bar);
+    }
+    return card;
+  }
+
+  function briefCard(who) {
+    const card = make('section', `rcard rcard--brief${bookWho === who ? ' is-picked' : ''}`);
+    card.append(personButton(who, aliasOf(who) ? who : null));
+    const [deaths, creatures, quests, dungeons] = COMPANIONS[who].profile;
+    card.append(statGrid([
+      [t('c_stat_60'), number(deaths)],
+      [t('c_stat_107'), number(creatures)],
+      [t('c_stat_98'), number(quests)],
+      [t('c_stat_932'), number(dungeons)],
+    ]));
+    return card;
+  }
+
+  function renderRail() {
+    const rail = $('#rail');
+    rail.textContent = '';
+    if (bookTab === 'all') rail.append(weekCard(), companionsCard());
+    else if (bookTab === 'mine') rail.append(weekCard(), craftsCard());
+    else for (const { who } of companions()) rail.append(briefCard(who));
+    if (focusWho) {
+      const row = $$('.person', rail).find(button => button.dataset.who === focusWho);
+      if (row) row.focus({ preventScroll: true });
+      focusWho = null;
+    }
+  }
+
+  // Above the book while a companion is picked.
+  function renderFilter() {
+    $('#book-filter').hidden = !bookWho;
+    if (bookWho) $('#book-filter-text').textContent = t('c_only_who', nameOf(bookWho));
+  }
+
+  $('#book-filter-clear').addEventListener('click', () => {
+    bookWho = null;
+    renderBook();
+  });
 
   // Each column runs on by itself, so two events can start at almost the
   // same height. Their dots on the line keep a distance, as in the addon.
@@ -550,6 +806,7 @@
   for (const tab of $$('#book-tabs button')) {
     tab.addEventListener('click', () => {
       bookTab = tab.dataset.book;
+      bookWho = null; // another tab forgets the pick, as in the addon
       for (const other of $$('#book-tabs button')) other.setAttribute('aria-selected', String(other === tab));
       renderBook();
     });

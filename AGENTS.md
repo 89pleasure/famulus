@@ -792,7 +792,8 @@ nicht bestätigt.
   Farbwelt, Demos), `assets/` (Logo als SVG aus den Umrissen von `tools/make_media.py`; Inter aus
   `Famulus/Media/Fonts` kopiert, samt Lizenz). Die Seite fragt keinen fremden Server an (keine
   Webfonts, kein Tracking). Vorschau: `python3 -m http.server 4173 --directory website`
-  (als `website` in `.claude/launch.json`).
+  (als `website` in `.claude/launch.json`). Auf dem Windows-Rechner gibt es kein `python3`; dort
+  lief die Vorschau über einen kleinen Node-Server, der nicht im Repo liegt.
 - **Optik folgt dem Addon:** die Helligkeitsleiter und die fünf Farbwelten aus `UI/Theme.lua` als
   CSS-Variablen (`--h`, `--s`, `--accent`, `--accent2`), Akzent und Glühen nur für „aktiv / hier“,
   Körnung, Funken. Die Farbwelt lässt sich auf der Seite umschalten und färbt alles mit, auch die
@@ -805,28 +806,48 @@ nicht bestätigt.
   sichtbar ist), Elemente mit `data-parallax` driften beim Scrollen. Die Funken sind
   CSS-Animationen. `prefers-reduced-motion` schaltet alle Bewegung ab.
 - **Aufbau:** Kopf (Landschaft, rechts laufen Einblendungen mit) → 01 Aliase (das Fenster
-  nachgebaut und bedienbar, daneben Chat und Tooltip „im Spiel“) → 02 Chronik (das Bilderbuch mit
+  nachgebaut und bedienbar, darunter Chat und Tooltip „im Spiel“) → 02 Chronik (das Bilderbuch mit
   den Reitern Alle, Meine Reise, Gefährten) → 03 Live-Einblendung (auslösbar, Platz verschiebbar)
   → 04 Unter der Haube (Zahlen, Grundsätze, Farbwelten) → 05 Installation → Fuß mit Hinweis auf
   Blizzards Marke. Die Demos zeigen erfundene Personen und die Beispiele aus
   `/fam chronicle demo`, mit den eigenen Zeichnungen statt Spielsymbolen. Ein Alias aus der
   ersten Demo erscheint auch im Bilderbuch und in den Einblendungen.
+- **An den neuen Fensteraufbau angepasst (2026-11-24, Wunsch des Auftraggebers; die Umsetzung im
+  Einzelnen hat der Assistent entschieden, vom Auftraggeber noch nicht gesehen):**
+  - **Fenster:** wie im Addon Kopf mit Logo, den drei Bereichen als Reiter mit Zähler (Aliase,
+    Chronik, Weggefährten; nur Aliase bedienbar), „Einstellungen“ und „Über“ rechts; Seitenleiste
+    mit Suche, Name und Beschreibung der Aliase, Hauptschalter, den Unterbereichen „Namen“ und
+    „Einstellungen“ und „x von 10 aktiv“; im Inhalt Titel des Unterbereichs und „Zurücksetzen“ mit
+    Nachfrage (nur auf „Einstellungen“). Weil der Kopf Breite braucht, steht das Fenster über die
+    ganze Seitenbreite und die Spielansicht (Chat links, Tooltip rechts) als Band darunter, nicht
+    mehr daneben. Schmaler: unter 1080 px nur Symbole für „Einstellungen“ und „Über“, unter 860 px
+    eine Spalte (Seitenleiste als Streifen unter dem Kopf), unter 560 px nur der gewählte Bereich
+    mit Namen.
+  - **Chronik:** Kapitelkopf in einer Zeile, Wiederholungen gebündelt (die Beispieldaten von
+    gestern haben dafür drei Tode in Uldaman und zwei Stufen von Borin), daneben die Randspalte wie
+    im Addon (Alle: Woche und Gefährten; Meine Reise: Woche und Berufe; Gefährten: Steckbriefe). Ein
+    Klick auf einen Gefährten filtert das Buch. Unter 980 px steht die Randspalte zwischen den
+    Reitern und dem Buch.
 - **Sprachen:** Englisch steht im HTML (`data-i18n="schlüssel"`), Deutsch in `i18n.js`; was
   Skripte zusammensetzen, steht dort in beiden Sprachen. Die Sprache folgt dem Browser, ist
   umschaltbar und lässt sich mit `?lang=de` erzwingen. Fehlt einer Sprache ein Schlüssel, warnt
   die Konsole.
 - **Bewusst noch nicht enthalten:** ein Download (die Veröffentlichung ist offen; der Knopf sagt
-  „Download folgt“), Guildy (erst wenn der PR dort angenommen ist), die Kategorie `fellows` (noch
-  in Arbeit), Screenshots aus dem Spiel, Impressum und Datenschutzerklärung (vor dem
+  „Download folgt“), Guildy (erst wenn der PR dort angenommen ist), ein eigener Abschnitt für die
+  Weggefährten (sie stehen bisher nur als Reiter im nachgebauten Fenster), Screenshots aus dem Spiel, Impressum und Datenschutzerklärung (vor dem
   Veröffentlichen nötig), Hosting und Domain (offen), ein Vorschaubild für geteilte Links,
   WOFF2-Schriften (geladen werden die TTF aus dem Addon, je ~100 KB).
 - **Geprüft** im eingebauten Browser der App (Chromium): bei 1440 und 375 px Breite alle
   Abschnitte, bei 1024 und 680 px stichprobenartig; Deutsch und Englisch; die Farbwelten Zitrone,
   Minze, Rose und Flieder; die drei Demos bedient; keine Meldungen in der Konsole. Nicht geprüft:
-  Safari, Firefox, echte Mobilgeräte, die Einstellung für weniger Bewegung.
+  Safari, Firefox, echte Mobilgeräte, die Einstellung für weniger Bewegung. Nach der Anpassung an
+  den neuen Fensteraufbau (2026-11-24) erneut bei 1440, 1024, 768 und 375 px: Fenster und Chronik
+  bedient (Unterbereich, Schalter, Zurücksetzen, Hauptschalter aus, Reiter der Chronik, Filter),
+  Deutsch und Englisch, keine Meldungen in der Konsole; Farbwelten diesmal nicht.
 - **Bei Änderungen am Addon mitziehen:** Versionsnummer (`fact_version`, `in_rel_d`), die Zähler
-  im nachgebauten Fenster (`renderWindow` in `main.js`: 5 Alias-Features, 9 insgesamt), neue
-  Hauptfunktionen als eigener Abschnitt.
+  im nachgebauten Fenster (`renderWindow` in `main.js`: 5 Alias-Features, 10 insgesamt; im HTML
+  Chronik 1/4 und Weggefährten 0/1), neue Hauptfunktionen als Reiter im Kopf und als eigener
+  Abschnitt.
 
 ## Regeln für neuen Code
 
