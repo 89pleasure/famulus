@@ -14,8 +14,8 @@ Folgendes konzentrieren und beschränken:
 1. **Modernes, übersichtliches Layout.** Polestar gefällt ihm bisher am besten.
 2. **Gemeinsames Spielen im Mittelpunkt (Entscheidung des Auftraggebers, 2026-11-23).** Famulus
    soll das Spielen unter Freunden und in der Community verbessern, erleichtern oder erweitern.
-   Die Funktionen sind die **Aliase** und die **Chronik**. Keine Unitframes, Aktionsleisten,
-   Guides, Schadensanzeigen oder Ähnliches.
+   Die Funktionen sind die **Aliase**, die **Chronik** und die **Weggefährten** (seit 2026-11-23).
+   Keine Unitframes, Aktionsleisten, Guides, Schadensanzeigen oder Ähnliches.
    - **Quality of Life entfernt (2026-11-23):** „Das machen unzählige andere Addons schon.“
      Entfernt sind die 16 QoL-Features (Händler, Quests, Beute, Soziales, Tooltips, Interface),
      das Tagebuch (es führte nur Buch über diese Automatiken), die Pausentaste, der Baustein
@@ -84,6 +84,8 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   `tools/make_media.py`. Das Logo hat feste Farben und folgt der Farbwelt nicht. Auf dem
   Windows-Rechner ist kein eigenes Python installiert; `make_media.py` braucht nur die
   Standardbibliothek und lief dort mit einem vorhandenen Python 3.12. Im Spiel noch nicht gesehen.
+- **Weggefährten (2026-11-23, nur gegen den Mock geprüft, noch nicht im Spiel):** eigener Bereich,
+  siehe „Weggefährten“ unten.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster),
   im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values, Taint).
 - **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
@@ -171,6 +173,11 @@ Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
   Reagenzientasche.
 - Schon in der Standard-UI enthalten, also nicht nachbauen: automatisches Plündern,
   Taschen sortieren, Edit Mode, Abklingzeit-Zahlen, Schadensanzeige, sofortiger Questtext.
+  Laut UI-Quellcode außerdem (2026-11-23, im Spiel ungeprüft): ein Kalender mit Einladungen (der
+  Uhr-Knopf an der Minikarte, `Blizzard_Minimap/Camelot/GameTimeFrame.lua`) und eine Gruppensuche
+  im Vanilla-Stil (`Blizzard_GroupFinder_VanillaStyle`, `AllowLoadGameType: classic, camelot`).
+  Forever heißt im UI-Quellcode `camelot`. „Zuletzt zusammen gespielt“ (`Blizzard_RecentAllies`)
+  lädt nur in Retail (`mainline`), fehlt in Forever also.
 
 ## Was aus den Vorbildern gelernt wurde
 
@@ -203,7 +210,7 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Test prüft das). Jeder Bereich hat einen eigenen Aufbau (`layouts.<bereich>` in
   `UI/Options.lua`). `aliases`: Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
   „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Anzeige“ mit den Alias-Features.
-  `chronicle`: siehe „Chronik“. Die Einstellungen haben die Reiter „Allgemein“ (Sprache,
+  `chronicle`: siehe „Chronik“. `fellows`: siehe „Weggefährten“. Die Einstellungen haben die Reiter „Allgemein“ (Sprache,
   Rückmeldung im Chat, Minikartensymbol, Charakterprofil) und „Darstellung“ (Farbwelt, Funken,
   Fenstergröße). Die erste Seite beim Öffnen ist die Aliase.
 - **Hauptschalter** einer Kategorie: rechts in der Zeile unter den Reitern, beschriftet nur mit
@@ -659,6 +666,63 @@ Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
   (CustomNames überschreibt dort `SetText` auf Blizzards FontStrings, Taint-Risiko, Namen im Kampf
   secret), Gildenliste, Import/Export, Slash-Befehl zum Eintragen.
 
+## Weggefährten
+
+Idee aus einer Ideensammlung des Assistenten (2026-11-23), vom Auftraggeber ausgewählt: Famulus merkt
+sich, mit wem der Spieler in einer Gruppe war. Begründung: Forever hat „Zuletzt zusammen gespielt“
+nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
+
+- **Entscheidungen des Auftraggebers (2026-11-23):** eigener Bereich in der Seitenleiste (nicht als
+  Reiter bei Aliasen oder Chronik). Erste Version: die Liste (wer, wann, wo, wie oft, wie lange)
+  und Boss-Einträge der Chronik, die nennen, wer dabei war. **Nicht** gewählt: Notizen zu Personen,
+  Hinweis im Tooltip, Knopf „Freund hinzufügen“. Nicht einbauen, ohne zu fragen.
+- **Aufbau:** Kategorie und Bereich `fellows`, ein Feature `rememberFellows`
+  (`Modules/Fellows/RememberFellows.lua`, Standard aus, weil es auf Spielereignisse lauscht), Daten
+  über `ns.FellowService` (`Modules/Fellows/FellowService.lua`). Wer gerade in der Gruppe ist, liefert
+  `ns.GroupService` (`Core/GroupService.lua`), den auch die Chronik nutzt.
+- **Daten:** `FamulusDB.fellows = { [guid] = { name, level, class, first, firstZone, last, zone,
+  times, seconds, bosses } }`, accountweit, außerhalb der Profile, nach GUID (ein Name kann sich
+  ändern). Nichts davon wird verschickt. Höchstens 500 Personen; darüber fällt heraus, wer am
+  längsten nicht mehr dabei war (nie jemand aus der aktuellen Gruppe).
+- **Zählen (Entscheidungen des Assistenten):**
+  - Ereignisse: `GROUP_ROSTER_UPDATE` und `PLAYER_ENTERING_WORLD` gleichen die Liste mit der Gruppe
+    ab, `BOSS_KILL` zählt einen Boss für alle Anwesenden, `PLAYER_LOGOUT` beendet alle Zeiten
+    (die gespeicherten Daten werden danach geschrieben, auch bei `/reload`). Kein Timer: Die Zeit
+    wird bei jedem Abgleich und beim Ausloggen aufaddiert; nur der Teil seit dem letzten Abgleich
+    geht bei einem Absturz verloren.
+  - Ein neues „Mal zusammen“ beginnt erst nach 30 Minuten Pause (`MEET_GAP`); ein Verbindungsabbruch
+    oder `/reload` zählt nicht doppelt.
+  - Nicht gezählt: Mitglieder, die offline sind (`UnitIsConnected`), Namen, die der Client noch nicht
+    kennt (`UNKNOWNOBJECT`), Schlachtfelder und Arenen (`IsInInstance` liefert `pvp`/`arena`).
+    Schlachtzüge zählen mit; Option `raids` (Standard an) schaltet sie ab.
+  - „Wo“ ist das Gebiet des Spielers (`GetRealZoneText`), nicht das des Mitglieds.
+- **Secret Values (recherchiert 2026-11-23 in der API-Doku des Branches `forever`):** `UnitName`,
+  `UnitGUID` und `UnitClass` sind nur geheim, wenn die Einheit nicht spielergesteuert oder nicht in
+  der Gruppe ist (`SecretWhenUnitIdentityRestricted`); für Gruppenmitglieder also auch im Kampf
+  lesbar. `UnitLevel` ist nie geheim. Geprüft wird trotzdem jeder Wert. Den eigenen Charakter im
+  Schlachtzug erkennt der Dienst an der GUID, nicht an `UnitIsUnit` (dessen Vergleich ist auf
+  gesperrten Karten geheim). `C_FriendList.AddFriend` trägt `HasRestrictions = true`; ob ein Addon
+  es aufrufen darf, ist ungeprüft.
+- **Fenster:** Reiter „Zuletzt“ (wer gerade in der Gruppe ist zuerst, dann nach letztem Mal) und
+  „Am häufigsten“ (nach gemeinsamer Zeit), je höchstens 60 Zeilen (`FELLOW_ROWS`) mit einer Zeile
+  „N weitere“; die Suche durchsucht über `tab.search` alle, aber nur auf „Zuletzt“, damit niemand
+  doppelt erscheint. Dritter Reiter „Aufzeichnung“ mit dem Schalter. Eine Zeile ist eine
+  Personenzeile wie bei den Aliasen (`PERSON_ROWS` in `UI/Options.lua`: Avatar mit Anfangsbuchstabe,
+  Kreuz rechts): Ein Klick öffnet die Alias-Eingabe mit dem Namen, das Kreuz vergisst die Person
+  (eine Chat-Zeile sagt es). Unter einem Alias steht der Name in der zweiten Zeile, wie in der
+  Chronik. Die Klasse kommt aus `LOCALIZED_CLASS_NAMES_MALE`, also in der Sprache des Clients.
+  Symbol in der Seitenleiste: zwei Figuren (`people.tga`).
+- **In der Chronik:** Fällt ein Boss in einer Gruppe, trägt der Eintrag `with` (die Namen, in einer
+  Gruppe bis vier) oder `others` (nur die Zahl, im Schlachtzug, damit 39 Namen je Boss die Daten
+  nicht aufblähen). Die Zeile darunter lautet „in Uldaman  ·  mit Mira und Tom“ (Alias, sonst
+  Vorname) bzw. „mit 12 anderen“. Das gilt, sobald „Meine Reise festhalten“ läuft, unabhängig vom
+  Schalter der Weggefährten. Beide Felder fehlen in `FIELDS` von `Sharing.lua` und werden also nicht
+  geteilt. Der Beispiel-Boss in `/fam chronicle demo` hat zwei Gefährten.
+- **Im Spiel ungeprüft:** alles. Besonders: ob `UnitName` für `party1`… Vor- und Nachname liefert
+  wie für `player`, ob `GROUP_ROSTER_UPDATE` nach dem Login von selbst kommt (sonst fängt
+  `PLAYER_ENTERING_WORLD` es auf), ob `IsInInstance` in Forever `pvp` meldet und ob `BOSS_KILL` in
+  Forever-Dungeons feuert. `/fam test` prüft die benutzten Funktionen (Gruppe `api`).
+
 ## Regeln für neuen Code
 
 Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
@@ -753,7 +817,7 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
 - Bei einer neuen Version: `## Version` in `Famulus/Famulus.toc`, den Zip-Namen und die
   Versionsangaben in `README.md` anpassen.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
-  dort fehlt. Er zählt außerdem die Features (`total == 9`); die Zahl bei einem neuen Feature
+  dort fehlt. Er zählt außerdem die Features (`total == 10`); die Zahl bei einem neuen Feature
   mit anpassen.
 - Repository: `github.com/89pleasure/famulus` (privat; bis 2026-11-19 `schnitzel`), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.

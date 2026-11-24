@@ -1,8 +1,8 @@
 # Famulus
 
 Addon für das gemeinsame Spielen unter Freunden in **World of Warcraft: Forever** (Interface 16001):
-Aliase für andere Spieler und eine Chronik eurer gemeinsamen Reise. Englisch und Deutsch, keine
-Bibliotheken, keine Abhängigkeiten.
+Aliase für andere Spieler, eine Chronik eurer gemeinsamen Reise und deine Weggefährten, also alle,
+mit denen du in einer Gruppe warst. Englisch und Deutsch, keine Bibliotheken, keine Abhängigkeiten.
 
 ## Installation
 
@@ -25,14 +25,18 @@ Bibliotheken, keine Abhängigkeiten.
 | Chronik | Stufenaufstiege der Freundesliste festhalten | aus |
 | Chronik | Mit Freunden und Gilde teilen (Addon-Nachrichten zwischen Famulus-Nutzern) | aus |
 | Chronik | Ereignisse live als Karte am Bildschirm einblenden | **an** |
+| Weggefährten | Merken, mit wem du in einer Gruppe warst: wann, wo, wie oft, wie lange, gemeinsame Bosse (wahlweise ohne Schlachtzüge) | aus |
 
-**Das Fenster** (`/fam`): Links die Hauptfunktionen **Aliase** und **Chronik**, unten die Seiten
-**Einstellungen** und **Über**. Die Chronik erzählt die Reise deiner Charaktere und deiner Gefährten
-als Bilderbuch und tauscht sie auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus
-ebenfalls nutzen, auch über gemeinsame Gefährten, wenn jemand offline ist. Die Aliase haben ihre
-Namensliste und einen Reiter „Anzeige“. Fünf Farbwelten, die Funken im Hintergrund und die
-Fenstergröße stehen unter Einstellungen › Darstellung. Die Suche links findet Einstellungen und
-Aliase auf allen Seiten.
+**Das Fenster** (`/fam`): Links die Hauptfunktionen **Aliase**, **Chronik** und **Weggefährten**,
+unten die Seiten **Einstellungen** und **Über**. Die Chronik erzählt die Reise deiner Charaktere und
+deiner Gefährten als Bilderbuch und tauscht sie auf Wunsch mit Freunden und Gildenmitgliedern aus,
+die Famulus ebenfalls nutzen, auch über gemeinsame Gefährten, wenn jemand offline ist. Besiegt ihr
+einen Boss als Gruppe, nennt die Chronik, wer dabei war. Die Aliase haben ihre Namensliste und einen
+Reiter „Anzeige“. Die Weggefährten listen alle, mit denen du gespielt hast, nach dem letzten Mal
+oder nach der gemeinsamen Zeit; ein Klick vergibt einen Alias. Diese Liste bleibt auf deinem
+Rechner, nichts davon wird verschickt. Fünf Farbwelten, die Funken im Hintergrund und die
+Fenstergröße stehen unter Einstellungen › Darstellung. Die Suche links findet Einstellungen, Aliase
+und Weggefährten auf allen Seiten.
 
 Jede Kategorie hat rechts unter den Reitern einen **Hauptschalter**. Ist er aus, läuft dort nichts
 und nichts lauscht auf das Spiel; die Auswahl der einzelnen Funktionen bleibt erhalten.
@@ -61,7 +65,7 @@ Spieler schickt, ist anfangs aus.
 | Hooks bleiben nach dem Abschalten aktiv | Hooks werden erst beim ersten Einschalten gesetzt und prüfen danach den Zustand; nie genutzte Features hooken nichts |
 | Mehrere MB Daten und UI-Code bei jedem Login (Polestar-Issues: 70–250 MB RAM) | ~200 KB gesamt; das Einstellungsfenster wird erst beim ersten Öffnen gebaut |
 | Taint durch Überschreiben fremder Funktionen und Schreiben in Blizzard-Tabellen | Nur `hooksecurefunc`, keine ersetzten Globals, keine Felder auf Blizzard-Frames |
-| ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 8 Features in zwei Bereichen, eine klare Regel für Standardwerte, höchstens eine Chat-Zeile pro Aktion (abschaltbar) |
+| ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung pro Aktion | 10 Features in drei Bereichen, eine klare Regel für Standardwerte, höchstens eine Chat-Zeile pro Aktion (abschaltbar) |
 | FlareUI ohne Deutsch; Polestar-Sprachen als 18 Zusatz-Addons | enUS und deDE eingebaut, per Test auf Vollständigkeit geprüft |
 | Fehler in einem Teil reißen andere mit | Fehler beim Einschalten schalten nur das betroffene Feature ab; fehlt eine Client-API, wird das Feature als „nicht verfügbar“ angezeigt |
 | Polestars Layout (Seitenleiste, Suche, Zeilen mit Pillenschaltern) | Als Vorbild übernommen und weitergedacht: Hauptfunktionen in der Seitenleiste, Reiter, eigene Farbwelten, runde Ecken, eigene Schrift (Inter) |
@@ -76,6 +80,7 @@ Famulus/
   Core/Database.lua    Einstellungen (nur Abweichungen vom Standard werden gespeichert)
   Core/Features.lua    Feature-Registry und Feature-Klasse, Slash-Befehle
   Core/ChatService.lua   Service für Klartext-Prüfung und Chat-Sperre
+  Core/GroupService.lua  Service: wer gerade in deiner Gruppe ist
   Core/SelfTest.lua    Selbsttest gegen den echten Client (/fam test, /fam dev)
   Locales/             enUS.lua (Referenz), deDE.lua
   Modules/<Kategorie>/ eine Datei je Feature, z. B. Aliases/ChatAliases.lua;

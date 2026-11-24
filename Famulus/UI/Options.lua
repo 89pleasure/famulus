@@ -22,7 +22,12 @@ local BLOCK_GAP, BLOCK_TITLE, CARD_GAP = 22, 24, 8
 
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
 local WINDOW_SCALES = { 80, 90, 100, 110, 120, 130, 140 }
-local AREA_ICONS = { aliases = "tag", chronicle = "flag" }
+local AREA_ICONS = { aliases = "tag", chronicle = "flag", fellows = "people" }
+
+-- Rows that stand for a person: an avatar with an initial in front, a
+-- button to remove them behind. A click calls item.open, the button
+-- item.remove.
+local PERSON_ROWS = { alias = true, fellow = true }
 
 local window
 local pages, pageOrder = {}, {}
@@ -191,6 +196,12 @@ local function AliasItems()
         items[#items + 1] = {
             kind = "alias",
             entry = entry,
+            open = function()
+                ns:EditAlias(entry.name)
+            end,
+            remove = function()
+                ns.AliasService.Set(entry.name, nil)
+            end,
             label = function()
                 return entry.alias
             end,
@@ -725,6 +736,214 @@ function layouts.chronicle()
     }
 end
 
+---------------------------------------------------------------------------
+-- Fellow travellers: the players the player was in a group with. Two tabs
+-- list them, by the last time together and by the time spent together; a
+-- third holds the switches. A click on someone gives them an alias.
+---------------------------------------------------------------------------
+
+local FELLOW_ROWS = 60 -- people per tab; the search finds all of them
+
+local FELLOW_EMPTY_ITEM = {
+    kind = "info",
+    label = function()
+        return L.ui_fellow_empty
+    end,
+    desc = function()
+        return L.ui_fellow_empty_desc
+    end,
+}
+
+-- "today", "yesterday" or "on <date>", to stand in a sentence.
+local function When(timestamp, now)
+    local key = DayKey(timestamp)
+    if key == DayKey(now) then
+        return L.ui_fellow_today
+    elseif key == DayKey(now - 86400) then
+        return L.ui_fellow_yesterday
+    end
+    return L.ui_fellow_on:format(DayTitle(key))
+end
+
+-- "2 h 10 min", "25 min", or nil below a minute.
+local function Duration(seconds)
+    local minutes = math.floor(seconds / 60)
+    if minutes < 1 then
+        return nil
+    elseif minutes < 60 then
+        return L.ui_fellow_minutes:format(minutes)
+    end
+    return L.ui_fellow_hours:format(math.floor(minutes / 60), minutes % 60)
+end
+
+-- The class in the client's language, from the game's file name ("MAGE").
+local function ClassName(file)
+    local names = LOCALIZED_CLASS_NAMES_MALE
+    local name = type(file) == "string" and type(names) == "table" and names[file]
+    return type(name) == "string" and name or nil
+end
+
+-- Who they are, when and where you were together, and how much.
+local function FellowDesc(guid, person)
+    local Fellows = ns.FellowService
+    local now = time()
+    local parts = {}
+    if ns.AliasService.Get(person.name) then
+        parts[#parts + 1] = person.name
+    end
+    local level, class = tonumber(person.level), ClassName(person.class)
+    if level and class then
+        parts[#parts + 1] = L.ui_fellow_level_class:format(level, class)
+    elseif level then
+        parts[#parts + 1] = L.c_p_level:format(level)
+    end
+    if Fellows.IsTogether(guid) then
+        parts[#parts + 1] = L.ui_fellow_now
+    elseif type(person.zone) == "string" then
+        parts[#parts + 1] = L.ui_fellow_last:format(When(person.last, now), person.zone)
+    else
+        parts[#parts + 1] = L.ui_fellow_last_nowhere:format(When(person.last, now))
+    end
+    parts[#parts + 1] = L.ui_fellow_times:format(tonumber(person.times) or 1)
+    parts[#parts + 1] = Duration(Fellows.Seconds(guid, person, now))
+    local bosses = tonumber(person.bosses) or 0
+    if bosses == 1 then
+        parts[#parts + 1] = L.ui_fellow_boss
+    elseif bosses > 1 then
+        parts[#parts + 1] = L.ui_fellow_bosses:format(bosses)
+    end
+    -- Where it began, unless that was the same day.
+    local first = tonumber(person.first)
+    if first and DayKey(first) ~= DayKey(person.last) then
+        if type(person.firstZone) == "string" then
+            parts[#parts + 1] = L.ui_fellow_first:format(When(first, now), person.firstZone)
+        else
+            parts[#parts + 1] = L.ui_fellow_first_nowhere:format(When(first, now))
+        end
+    end
+    return table.concat(parts, "  ·  ")
+end
+
+local function FellowItem(guid, person)
+    return {
+        kind = "fellow",
+        open = function()
+            ns:EditAlias(person.name)
+        end,
+        remove = function()
+            local name = ns.FellowService.Forget(guid)
+            if name then
+                ns:Notify(L.msg_fellow_forgotten:format(name))
+            end
+        end,
+        label = function()
+            return ns.AliasService.Get(person.name) or person.name
+        end,
+        desc = function()
+            return FellowDesc(guid, person)
+        end,
+    }
+end
+
+-- Sort orders: the ones in the group now first, then the last time together;
+-- or the time spent together. Ties go by name and GUID, so the order is stable.
+local function Tiebreak(a, b)
+    return (a.person.name .. a.guid) < (b.person.name .. b.guid)
+end
+
+local function ByLast(a, b)
+    local Fellows = ns.FellowService
+    local togetherA, togetherB = Fellows.IsTogether(a.guid), Fellows.IsTogether(b.guid)
+    if togetherA ~= togetherB then
+        return togetherA
+    elseif a.person.last ~= b.person.last then
+        return a.person.last > b.person.last
+    end
+    return Tiebreak(a, b)
+end
+
+local function ByTime(a, b, now)
+    local Fellows = ns.FellowService
+    local secondsA, secondsB = Fellows.Seconds(a.guid, a.person, now), Fellows.Seconds(b.guid, b.person, now)
+    if secondsA ~= secondsB then
+        return secondsA > secondsB
+    elseif a.person.times ~= b.person.times then
+        return a.person.times > b.person.times
+    end
+    return Tiebreak(a, b)
+end
+
+-- A tab listing everyone in an order. searchable: the search looks through
+-- this tab; the other one lists the same people and is left out.
+local function FellowTab(id, order, searchable)
+    local function Items(limit)
+        local list, now = ns.FellowService.List(), time()
+        table.sort(list, function(a, b)
+            return order(a, b, now)
+        end)
+        local items = {}
+        for index, each in ipairs(list) do
+            if limit and index > limit then
+                break
+            end
+            items[#items + 1] = FellowItem(each.guid, each.person)
+        end
+        return items, #list
+    end
+    return {
+        id = id,
+        category = "fellows",
+        label = function()
+            return L["ui_tab_" .. id]
+        end,
+        desc = function()
+            return L["ui_tab_" .. id .. "_desc"]
+        end,
+        settings = {},
+        blocks = function()
+            local items, total = Items(FELLOW_ROWS)
+            if total == 0 then
+                return { { items = { FELLOW_EMPTY_ITEM } } }
+            end
+            if total > #items then
+                local more = total - #items
+                items[#items + 1] = {
+                    kind = "info",
+                    label = function()
+                        return L.ui_fellow_more:format(more)
+                    end,
+                    desc = function()
+                        return L.ui_fellow_more_desc
+                    end,
+                }
+            end
+            return { { title = L.ui_fellow_list, note = tostring(total), items = items } }
+        end,
+        search = function()
+            if not searchable then
+                return {}
+            end
+            return { { items = (Items()) } }
+        end,
+    }
+end
+
+function layouts.fellows()
+    local record = CategoryTab("fellows")
+    record.id = "record"
+    record.label = function()
+        return L.ui_tab_record
+    end
+    record.desc = function()
+        return L.ui_fellows_record_desc
+    end
+    return {
+        FellowTab("recent", ByLast, true),
+        FellowTab("frequent", ByTime, false),
+        record,
+    }
+end
+
 local function BuildPages()
     for _, area in ipairs(ns.areas) do
         AddPage({
@@ -817,7 +1036,8 @@ local function SearchBlocks(query)
             end
             local context = string.lower(where)
             local hits = {}
-            for _, block in ipairs(tab.blocks()) do
+            -- A tab that shows only part of a long list searches all of it.
+            for _, block in ipairs(tab.search and tab.search() or tab.blocks()) do
                 for _, item in ipairs(block.items) do
                     if item.kind ~= "info" and item.kind ~= "aliasEdit" then
                         local haystack = string.lower(item.label() .. " " .. item.desc()) .. " " .. context
@@ -885,9 +1105,9 @@ local function EnsureControls(row, kind)
         row.swatches:SetPoint("RIGHT", -14, 0)
     elseif kind == "aliasEdit" and not row.editor then
         row.editor = CreateAliasEditor(row)
-    elseif kind == "alias" and not row.remove then
+    elseif PERSON_ROWS[kind] and not row.remove then
         row.remove = UI.IconButton(row, "close", function()
-            ns.AliasService.Set(row.item.entry.name, nil)
+            row.item.remove()
         end)
         row.remove:SetPoint("RIGHT", -14, 0)
         row.avatar = row:CreateTexture(nil, "ARTWORK")
@@ -905,7 +1125,6 @@ local function EnsureControls(row, kind)
         select = row.dropdown,
         swatch = row.swatches,
         aliasEdit = row.editor,
-        alias = row.remove,
     }
     for controlKind, control in pairs(controls) do
         if control then
@@ -913,8 +1132,10 @@ local function EnsureControls(row, kind)
         end
     end
     if row.avatar then
-        row.avatar:SetShown(kind == "alias")
-        row.initial:SetShown(kind == "alias")
+        local person = PERSON_ROWS[kind] == true
+        row.remove:SetShown(person)
+        row.avatar:SetShown(person)
+        row.initial:SetShown(person)
     end
 end
 
@@ -925,7 +1146,7 @@ local function ControlWidth(row, kind)
         return row.dropdown:GetWidth()
     elseif kind == "swatch" then
         return row.swatches:GetWidth()
-    elseif kind == "alias" then
+    elseif PERSON_ROWS[kind] then
         return 26
     end
     return 0
@@ -944,7 +1165,7 @@ local function RowSetItem(row, item, index, flat, last)
     end
 
     local child = item.child and not flat
-    local indent = (child and 44) or (kind == "alias" and 58) or 18
+    local indent = (child and 44) or (PERSON_ROWS[kind] and 58) or 18
     local compact = not flat and item.compact ~= nil and item.compact()
     local padding = compact and 10 or 15
     local controlWidth = ControlWidth(row, kind)
@@ -962,7 +1183,7 @@ local function RowSetItem(row, item, index, flat, last)
     row.divider:ClearAllPoints()
     row.divider:SetPoint("TOPLEFT", edge, 0)
     row.divider:SetPoint("TOPRIGHT", -edge, 0)
-    if kind == "alias" then
+    if PERSON_ROWS[kind] then
         row.initial:SetText(Initial(item.label()))
     end
 
@@ -998,8 +1219,8 @@ local function RowClicked(row)
     if row.disabled or kind == "info" or kind == "swatch" then
         return
     end
-    if kind == "alias" then
-        ns:EditAlias(item.entry.name)
+    if PERSON_ROWS[kind] then
+        item.open()
     elseif kind == "toggle" then
         item.set(not item.get())
     elseif kind == "select" then
@@ -1849,6 +2070,9 @@ ns:On("CHRONICLE_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("ALIASES_CHANGED", function()
+    RequestRefresh("layout")
+end)
+ns:On("FELLOWS_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("PROFILE_CHANGED", function()

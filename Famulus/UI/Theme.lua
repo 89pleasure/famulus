@@ -40,6 +40,7 @@ UI.media = {
     sparkle = MEDIA .. "sparkle.tga",
     tag = MEDIA .. "tag.tga",
     flag = MEDIA .. "flag.tga",
+    people = MEDIA .. "people.tga",
     skull = MEDIA .. "skull.tga",
     swords = MEDIA .. "swords.tga",
     peaks = MEDIA .. "peaks.tga",

@@ -8,6 +8,8 @@
 --
 --   FamulusDB.chronicle = {
 --       entries = { { t = <time>, k = "<kind>", c = "<own character>", ... }, ... },
+--       -- an own boss defeated in a group also has `with` (names in a
+--       -- party) or `others` (how many in a raid); neither is shared
 --       friends = { ["<guid>"] = <last known level>, ... },
 --       links = { ["<name key>"] = { name = ..., t = <time> }, ... },
 --   }
@@ -37,6 +39,30 @@ local character -- "First Last" of the character that is playing
 -- A zone for a sentence, or nil.
 local function Place(entry)
     return type(entry.zone) == "string" and entry.zone or nil
+end
+
+-- Who was there, for a boss defeated in a group: "with Mira and Tom" (alias,
+-- else first name), or "with 12 others" in a raid. Nil without a group.
+local function Party(entry)
+    if type(entry.with) == "table" then
+        local names = {}
+        for _, name in ipairs(entry.with) do
+            if type(name) == "string" and name ~= "" then
+                local alias = ns.AliasService and ns.AliasService.Get(name)
+                names[#names + 1] = alias or string.match(name, "^(%S+)") or name
+            end
+        end
+        if #names == 1 then
+            return L.c_with:format(names[1])
+        elseif #names > 1 then
+            return L.c_with:format(L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names]))
+        end
+    end
+    local others = tonumber(entry.others)
+    if others and others > 0 then
+        return L.c_with_others:format(others)
+    end
+    return nil
 end
 
 -- A companion's name as the player knows them: the alias, if there is one.
@@ -135,7 +161,11 @@ local kinds = {
             return L.c_boss:format(e.name or L.c_a_foe)
         end,
         detail = function(e)
-            return Place(e) and L.c_in:format(Place(e)) or nil
+            local place, party = Place(e) and L.c_in:format(Place(e)), Party(e)
+            if place and party then
+                return place .. "  ·  " .. party
+            end
+            return place or party
         end,
     },
     achievement = {
@@ -615,7 +645,7 @@ function ChronicleService.Demo()
         { 2 * day + 2 * hour, "level", { level = 40, zone = zone[3], who = mira } },
         { 2 * day + 1 * hour, "achievement", { id = 1, name = name.challenge } },
         { day + 6 * hour, "skill", { skill = 186, name = name.mining, rank = 225 } },
-        { day + 5 * hour, "boss", { id = 1, name = name.boss, zone = zone[2] } },
+        { day + 5 * hour, "boss", { id = 1, name = name.boss, zone = zone[2], with = { mira, borin } } },
         { day + 4.5 * hour, "level", { level = 39, zone = zone[2] } },
         { day + 4 * hour, "death", { zone = zone[3], level = 31, who = borin } },
         { day + 3 * hour, "skill", { skill = 197, name = name.tailoring, rank = 75 } },

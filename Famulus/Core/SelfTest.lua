@@ -40,6 +40,13 @@ local EXPECT_PRESENT = {
     "securecallfunction",
     "hooksecurefunc",
     "EventRegistry.RegisterCallback",
+    -- What Core/GroupService.lua and the fellow travellers' page lean on.
+    "IsInRaid",
+    "IsInInstance",
+    "UnitIsConnected",
+    "UnitClass",
+    "UNKNOWNOBJECT",
+    "LOCALIZED_CLASS_NAMES_MALE",
 }
 
 local EXPECT_ABSENT = {

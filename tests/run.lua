@@ -176,7 +176,7 @@ check(type(FamulusDB) == "table" and type(FamulusDB.profile) == "table", "databa
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
-check(total == 9, "9 features registered (got " .. total .. ")")
+check(total == 10, "10 features registered (got " .. total .. ")")
 check(active == 6, "6 features on by default (got " .. active .. ")")
 for _, feature in ipairs(ns.featureList) do
     local harmless = feature.id == "liveFeed" or feature.category == "aliases"
@@ -884,7 +884,7 @@ check(not window:IsShown(), "/fam closes the window again")
 check(sparkGroups() == 0, "a closed window animates nothing")
 mock.reset()
 SlashCmdList.FAMULUS("status")
-check(lastChat():find("6 of 9", 1, true) ~= nil, "/fam status reports: " .. lastChat())
+check(lastChat():find("6 of 10", 1, true) ~= nil, "/fam status reports: " .. lastChat())
 
 ---------------------------------------------------------------------------
 section("Chronicle")
@@ -933,6 +933,41 @@ mock.Fire("ACHIEVEMENT_EARNED", 501, false)
 mock.Fire("ACHIEVEMENT_EARNED", 501, true)
 check(#Chronicle.Entries() == 5 and Chronicle.Text(Chronicle.Entries()[4]) == "Edwin VanCleef defeated"
     and Chronicle.Text(Chronicle.Entries()[5]) == "Challenge completed: Challenge 501", "bosses and challenges follow; one already earned does not")
+do -- who was there when a boss fell
+    local count, realTime = #Chronicle.Entries(), time
+    local _, alone = Chronicle.Text(Chronicle.Entries()[4])
+    check(alone == "in Westfall" and Chronicle.Entries()[4].with == nil, "a boss defeated alone names nobody")
+    mock.state.group = { members = {
+        { name = "Mira", surname = "Sturmfeder", guid = "Player-1-MIRA", level = 20, class = "MAGE" },
+        { name = "Tom", surname = "Hartwig", guid = "Player-1-TOM", level = 21, class = "PRIEST" },
+    } }
+    -- Two entries of a kind in one second are one event; these lie apart.
+    time = function()
+        return realTime() + 10
+    end
+    mock.Fire("BOSS_KILL", 78, "Mr. Smite")
+    local boss = Chronicle.Entries()[count + 1]
+    local _, detail = Chronicle.Text(boss)
+    check(boss and type(boss.with) == "table" and boss.with[1] == "Mira Sturmfeder" and detail == "in Westfall  ·  with Mira and Tom",
+        "a boss defeated in a party names who was there: " .. tostring(detail))
+    ns.AliasService.Set("Tom Hartwig", "Tommy")
+    _, detail = Chronicle.Text(boss)
+    check(detail == "in Westfall  ·  with Mira and Tommy", "under their alias: " .. tostring(detail))
+    ns.AliasService.Set("Tom Hartwig", nil)
+    mock.state.group.raid = true
+    time = function()
+        return realTime() + 20
+    end
+    mock.Fire("BOSS_KILL", 79, "Ragnaros")
+    boss = Chronicle.Entries()[count + 2]
+    _, detail = Chronicle.Text(boss)
+    check(boss and boss.with == nil and boss.others == 2 and detail == "in Westfall  ·  with 2 others",
+        "in a raid only how many: " .. tostring(detail))
+    time = realTime
+    mock.state.group = nil
+    table.remove(Chronicle.Entries(), count + 2)
+    table.remove(Chronicle.Entries(), count + 1)
+end
 do -- professions
     local count = #Chronicle.Entries()
     mock.state.professions = { { name = "Mining", rank = 140, id = 186 } }
@@ -1460,6 +1495,169 @@ check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nothing recor
     "an empty chronicle says how to begin")
 mock.Click(navButton("Aliases"))
 SlashCmdList.FAMULUS("")
+
+---------------------------------------------------------------------------
+section("Fellow travellers")
+---------------------------------------------------------------------------
+
+local Fellows = ns.FellowService
+local fellows = ns.features.rememberFellows
+local stateBeforeFellows, eventsBeforeFellows, realTime = mock.state, ns:CountRegisteredEvents(), time
+local timersBeforeFellows = mock.ActiveTimers()
+local clock = 1800000000
+time = function()
+    return clock
+end
+local mira = { name = "Mira", surname = "Sturmfeder", guid = "Player-1-MIRA", level = 20, class = "MAGE" }
+local tom = { name = "Tom", surname = "Hartwig", guid = "Player-1-TOM", level = 21, class = "PRIEST" }
+
+check(not fellows.enabled and FamulusDB.fellows == nil, "nobody is remembered until the feature is switched on")
+setState({ zone = "Westfall" })
+enable("rememberFellows")
+check(fellows.enabled and fellows.events.GROUP_ROSTER_UPDATE and fellows.events.BOSS_KILL and fellows.events.PLAYER_LOGOUT,
+    "switched on, it listens to the group")
+check(FamulusDB.fellows == nil, "outside a group nothing is written")
+
+-- A party forms in a dungeon.
+mock.state.group = { members = { mira, tom } }
+mock.state.zone, mock.state.instanceType = "The Deadmines", "party"
+mock.Fire("GROUP_ROSTER_UPDATE")
+local miraData = FamulusDB.fellows and FamulusDB.fellows["Player-1-MIRA"]
+check(Fellows.Count() == 2 and miraData and miraData.name == "Mira Sturmfeder" and miraData.level == 20
+    and miraData.class == "MAGE" and miraData.times == 1 and miraData.firstZone == "The Deadmines"
+    and Fellows.IsTogether("Player-1-MIRA"), "a party member is remembered: name, level, class, where you met")
+check(FamulusDB.fellows["Player-1-SELF"] == nil, "the player is not their own fellow")
+check(mock.ActiveTimers() == timersBeforeFellows, "counting the time together needs no timer")
+
+-- An hour later a boss falls, then Tom leaves.
+clock = clock + 3600
+mock.Fire("BOSS_KILL", 1, "Edwin VanCleef")
+local tomData = FamulusDB.fellows["Player-1-TOM"]
+check(miraData.bosses == 1 and tomData.bosses == 1, "a boss counts for everyone in the group")
+mock.state.group = { members = { mira } }
+mock.Fire("GROUP_ROSTER_UPDATE")
+check(not Fellows.IsTogether("Player-1-TOM") and tomData.seconds == 3600 and tomData.zone == "The Deadmines",
+    "whoever leaves has their time together counted")
+
+-- A /reload: logging out ends the stretch, the group goes on.
+clock = clock + 600
+mock.Fire("PLAYER_LOGOUT")
+check(miraData.seconds == 4200 and not Fellows.IsTogether("Player-1-MIRA"), "logging out counts the time so far")
+clock = clock + 60
+mock.Fire("PLAYER_ENTERING_WORLD")
+check(Fellows.IsTogether("Player-1-MIRA") and miraData.times == 1, "the same group right after a reload is no new time together")
+
+-- Offline members, unknown names and battlegrounds do not count.
+mira.offline = true
+mock.Fire("GROUP_ROSTER_UPDATE")
+check(not Fellows.IsTogether("Player-1-MIRA"), "a member who went offline is not counted")
+mira.offline = nil
+mock.state.group.members[2] = { name = "Unknown", guid = "Player-1-UNKNOWN" }
+mock.Fire("GROUP_ROSTER_UPDATE")
+check(FamulusDB.fellows["Player-1-UNKNOWN"] == nil and Fellows.IsTogether("Player-1-MIRA"),
+    "a member whose name the client does not know yet is skipped")
+mock.state.group.members[2] = nil
+mock.state.instanceType = "pvp"
+mock.Fire("PLAYER_ENTERING_WORLD")
+check(not Fellows.IsTogether("Player-1-MIRA"), "battlegrounds do not count")
+mock.state.instanceType = nil
+
+-- Hours later they meet again.
+clock = clock + 3 * 3600
+mock.state.zone = "Westfall"
+mock.Fire("GROUP_ROSTER_UPDATE")
+check(miraData.times == 2 and Fellows.IsTogether("Player-1-MIRA"), "after a while apart, the next group is a new time together")
+
+-- Raids count unless switched off.
+mock.state.group = { raid = true, members = { mira, tom } }
+mock.Fire("GROUP_ROSTER_UPDATE")
+check(Fellows.IsTogether("Player-1-TOM") and tomData.times == 2, "raid members count by default")
+ns:SetOption("rememberFellows", "raids", false)
+check(not Fellows.IsTogether("Player-1-TOM") and not Fellows.IsTogether("Player-1-MIRA"),
+    "without raids, being in a raid ends the stretch at once")
+ns:SetOption("rememberFellows", "raids", true)
+mock.state.group = { members = { tom } }
+mock.Fire("GROUP_ROSTER_UPDATE")
+
+-- The page.
+SlashCmdList.FAMULUS("")
+mock.Click(navButton("Fellow travellers"))
+mock.Advance(0.1)
+check(window.title:GetText() == "Fellow travellers" and tabButton("Recent") and tabButton("Most often") and tabButton("Recording"),
+    "fellow travellers have their own page: recent, most often, recording")
+check(navButton("Fellow travellers").count:GetText() == "1/1", "the sidebar counts its switch")
+local fellowRows = visibleRows()
+check(#fellowRows == 2 and fellowRows[1].item.kind == "fellow" and fellowRows[1].label:GetText() == "Tom Hartwig"
+    and fellowRows[1].initial:GetText() == "T" and fellowRows[1].remove:IsShown(),
+    "whoever is in the group now comes first, with an avatar")
+check(fellowRows[1].desc:GetText() == "Level 21 Priest  ·  in your group now  ·  2× together  ·  1 h 0 min  ·  1 boss",
+    "the line says who and how much: " .. fellowRows[1].desc:GetText())
+check(fellowRows[2].desc:GetText() == "Level 20 Mage  ·  last together today in Westfall  ·  2× together  ·  1 h 10 min  ·  1 boss",
+    "and when and where you were last together: " .. fellowRows[2].desc:GetText())
+mock.Click(tabButton("Most often"))
+mock.Advance(0.1)
+fellowRows = visibleRows()
+check(#fellowRows == 2 and fellowRows[1].label:GetText() == "Mira Sturmfeder", "most often: the longest time together first")
+mock.Click(tabButton("Recording"))
+mock.Advance(0.1)
+check(#visibleRows() == 2 and visibleRows()[1].toggle and window.master:IsShown(), "recording: the switch, its raid option and the master switch")
+
+-- A click gives someone an alias; the list then shows it.
+mock.Click(tabButton("Recent"))
+mock.Advance(0.1)
+mock.Click(visibleRows()[1])
+mock.Advance(0.1)
+check(window.title:GetText() == "Aliases" and editor.name.edit:GetText() == "Tom Hartwig", "a click opens the alias input with the name")
+ns.AliasService.Set("Tom Hartwig", "Tommy")
+mock.Click(navButton("Fellow travellers"))
+mock.Advance(0.1)
+check(visibleRows()[1].label:GetText() == "Tommy" and visibleRows()[1].desc:GetText():find("^Tom Hartwig  ·  ") ~= nil,
+    "under an alias, the name moves into the line below")
+ns.AliasService.Set("Tom Hartwig", nil)
+
+-- A long list: sixty rows per tab; the search finds everyone, once.
+for i = 1, 70 do
+    FamulusDB.fellows["Player-1-P" .. i] = { name = "Person " .. i, first = clock - i * 600, last = clock - i * 600, times = 1, seconds = 0, bosses = 0 }
+end
+ns:Fire("FELLOWS_CHANGED")
+mock.Advance(0.1)
+fellowRows = visibleRows()
+check(#fellowRows == 61 and fellowRows[61].item.kind == "info" and fellowRows[61].label:GetText() == "12 more",
+    "a long list shows sixty and says how many more (got " .. #fellowRows .. ")")
+window.search.edit:SetText("person 70")
+check(#visibleRows() == 1 and visibleRows()[1].item.kind == "fellow", "the search finds someone beyond the sixty, once")
+window.search.edit:SetText("")
+for i = 1, 70 do
+    FamulusDB.fellows["Player-1-P" .. i] = nil
+end
+
+-- Forgetting someone.
+mock.reset()
+ns:Fire("FELLOWS_CHANGED")
+mock.Advance(0.1)
+mock.Click(visibleRows()[2].remove)
+mock.Advance(0.1)
+check(Fellows.Count() == 1 and FamulusDB.fellows["Player-1-MIRA"] == nil and lastChat():find("Mira Sturmfeder removed", 1, true),
+    "the cross forgets someone and says so")
+
+-- The list has a limit; whoever was seen longest ago goes first.
+for i = 1, 499 do
+    FamulusDB.fellows["Player-1-Q" .. i] = { name = "Q " .. i, first = clock - i, last = clock - i, times = 1, seconds = 0, bosses = 0 }
+end
+mock.state.group = { members = { tom, mira } }
+mock.Fire("GROUP_ROSTER_UPDATE")
+check(Fellows.Count() == 500 and FamulusDB.fellows["Player-1-Q499"] == nil and FamulusDB.fellows["Player-1-MIRA"] ~= nil,
+    "at 500 people the one seen longest ago makes room")
+
+enable("rememberFellows", false)
+check(ns:CountRegisteredEvents() == eventsBeforeFellows and not Fellows.IsTogether("Player-1-TOM"),
+    "switched off, it neither listens nor counts")
+check(FamulusDB.fellows["Player-1-TOM"].seconds == 3600, "and what it counted stays")
+mock.Click(navButton("Aliases"))
+SlashCmdList.FAMULUS("")
+FamulusDB.fellows = nil
+time = realTime
+setState(stateBeforeFellows)
 
 ---------------------------------------------------------------------------
 section("Self-test")

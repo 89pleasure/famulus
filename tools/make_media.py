@@ -142,6 +142,13 @@ FLAG = [
 ]
 write_tga("flag.tga", 32, stroke(FLAG, PEN))
 
+# Two people side by side, the second a step behind: fellow travellers.
+PEOPLE = [
+    arc(11, 28, 8.6, 180, 360),
+    arc(23, 24.5, 6.8, 250, 360),
+]
+write_tga("people.tga", 32, stroke(PEOPLE, PEN, [(11, 12.5, 4.4), (23, 10.5, 3.4)]))
+
 
 # Pictures of the chronicle: drawn in a 32 px box like the icons, but written
 # at twice the size, because they are shown larger.

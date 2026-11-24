@@ -605,7 +605,13 @@ end
 function GetRealZoneText()
     return mock.state.zone or "Elwynn Forest"
 end
-function UnitLevel()
+function UnitLevel(unit)
+    local group = mock.state.group
+    for index, member in ipairs(group and group.members or {}) do
+        if unit == (group.raid and "raid" .. (index + 1) or "party" .. index) then
+            return member.level or 1
+        end
+    end
     return mock.state.level or 12
 end
 function GetAchievementInfo(id)
@@ -722,8 +728,63 @@ function UnitOnTaxi()
     return mock.state.onTaxi == true
 end
 
+-- Groups: mock.state.group = { raid = false, members = { { name = "Mira", surname = "Sturmfeder",
+-- guid = "Player-1-MIRA", level = 30, class = "MAGE", offline = false }, ... } }. In a party
+-- they are party1, party2, ...; in a raid raid1 is the player and the members follow.
+-- mock.state.instanceType: "party", "raid", "pvp", "arena" or nil (outdoors).
+local function GroupMember(unit)
+    local group = mock.state.group
+    if type(unit) ~= "string" or not group then
+        return nil
+    end
+    local index = tonumber(unit:match("^party(%d+)$"))
+    if index and not group.raid then
+        return group.members[index]
+    end
+    index = tonumber(unit:match("^raid(%d+)$"))
+    if index and group.raid then
+        return index == 1 and { player = true } or group.members[index - 1]
+    end
+    return nil
+end
+function GetNumGroupMembers()
+    local group = mock.state.group
+    return group and (#group.members + 1) or 0
+end
+function IsInRaid()
+    return mock.state.group ~= nil and mock.state.group.raid == true
+end
+function IsInInstance()
+    local kind = mock.state.instanceType
+    return kind ~= nil, kind or "none"
+end
+function UnitGUID(unit)
+    local member = GroupMember(unit)
+    if unit == "player" or (member and member.player) then
+        return "Player-1-SELF"
+    end
+    return member and member.guid or nil
+end
+function UnitClass(unit)
+    local member = GroupMember(unit)
+    local file = member and member.class or "WARRIOR"
+    return file:sub(1, 1) .. file:sub(2):lower(), file, 1
+end
+function UnitIsConnected(unit)
+    local member = GroupMember(unit)
+    return not (member and member.offline)
+end
+UNKNOWNOBJECT = "Unknown"
+LOCALIZED_CLASS_NAMES_MALE = { MAGE = "Mage", PRIEST = "Priest", WARRIOR = "Warrior", ROGUE = "Rogue" }
+
 -- Units: mock.state.units = { target = { name = "Jaina", surname = "Proudmoore", isPlayer = true } }
 function UnitName(unit)
+    local member = GroupMember(unit)
+    if member and member.player then
+        unit = "player"
+    elseif member then
+        return member.name, member.surname
+    end
     local info = mock.state.units and mock.state.units[unit]
     if info then
         return info.name, info.surname

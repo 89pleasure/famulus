@@ -180,8 +180,20 @@ function journey:PLAYER_DEAD()
     Chronicle.Add("death", { zone = Zone(), level = UnitLevel("player") })
 end
 
+-- Who was there goes with it: the names in a party, in a raid only how many.
+-- Neither is shared with companions (Modules/Chronicle/Sharing.lua).
 function journey:BOSS_KILL(_, encounterID, name)
-    Chronicle.Add("boss", { id = encounterID, name = name, zone = Zone() })
+    local entry = { id = encounterID, name = name, zone = Zone() }
+    local members = ns.GroupService.Members(true)
+    if #members > 0 and ns.GroupService.InRaid() then
+        entry.others = #members
+    elseif #members > 0 then
+        entry.with = {}
+        for index, member in ipairs(members) do
+            entry.with[index] = member.name
+        end
+    end
+    Chronicle.Add("boss", entry)
 end
 
 -- The Forever client shows achievements as "Legacy challenges".
