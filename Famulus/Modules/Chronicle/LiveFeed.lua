@@ -1,6 +1,7 @@
--- Shows what the chronicle has just written down as a card on screen
--- (UI/Feed.lua): the player's own events and those of companions, each kind
--- of event with its own switch.
+-- Shows what companions have just experienced as a card on screen
+-- (UI/Feed.lua), each kind of event with its own switch. The player's own
+-- events appear only if asked for (option "own", off from the start): the
+-- feed is about the others.
 --
 -- It listens to the chronicle, not to the game: no event, no timer of its
 -- own. The cards can be moved in the game's Edit Mode or with /fam feed.
@@ -14,7 +15,7 @@ local OFF_BY_DEFAULT = { zone = true }
 
 local options = {
     { key = "duration", type = "select", default = "normal", values = { "short", "normal", "long" } },
-    { key = "companions", type = "toggle", default = true },
+    { key = "own", type = "toggle", default = false },
 }
 for _, kind in ipairs(KINDS) do
     options[#options + 1] = { key = kind, type = "toggle", default = not OFF_BY_DEFAULT[kind] }
@@ -45,10 +46,11 @@ local function OnChronicleChanged(entry)
     if feed:Get(kind) ~= true then
         return
     end
-    if entry.who and not feed:Get("companions") then
+    if not entry.who and not feed:Get("own") then
         return
     end
-    -- The player's own level-up is announced by the game itself.
+    -- The player's own level-up is announced by the game itself, even with
+    -- the player's own events switched on.
     if kind == "level" and not entry.who then
         return
     end

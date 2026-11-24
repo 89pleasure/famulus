@@ -24,7 +24,7 @@ mit denen du in einer Gruppe warst. Englisch und Deutsch, keine Bibliotheken, ke
 | Chronik | Eigene Reise aufzeichnen (Stufen, Tode, Bosse, Herausforderungen, Gebiete, Berufe, Fähigkeiten, Gegenstände) | aus |
 | Chronik | Stufenaufstiege der Freundesliste festhalten | aus |
 | Chronik | Mit Freunden und Gilde teilen (Addon-Nachrichten zwischen Famulus-Nutzern) | aus |
-| Chronik | Ereignisse live als Karte am Bildschirm einblenden | **an** |
+| Chronik | Ereignisse von Gefährten live als Karte am Bildschirm einblenden, auf Wunsch auch eigene | **an** |
 | Weggefährten | Merken, mit wem du in einer Gruppe warst: wann, wo, wie oft, wie lange, gemeinsame Bosse (wahlweise ohne Schlachtzüge) | aus |
 
 **Das Fenster** (`/fam`): Links die Suche, darunter die Hauptfunktionen **Aliase**, **Chronik** und

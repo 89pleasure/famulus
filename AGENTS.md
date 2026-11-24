@@ -587,13 +587,23 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   wurden, ist nicht festgehalten.
   - Das Feature hört auf das interne Signal `CHRONICLE_CHANGED`, nicht auf das Spiel: kein
     Spielereignis, kein eigener Timer. Deshalb ist es **standardmäßig an** (es handelt nicht im
-    Namen des Spielers und zeigt ohne Aufzeichnung nichts). Gezeigt wird nur, was höchstens 120
-    Sekunden alt ist: eigene Ereignisse und frische von Gefährten, nichts Nachgereichtes und keine
-    Beispieleinträge.
+    Namen des Spielers und zeigt ohne Teilen nichts). Gezeigt wird nur, was höchstens 120
+    Sekunden alt ist: frische Ereignisse von Gefährten (auf Wunsch auch eigene, siehe unten),
+    nichts Nachgereichtes und keine Beispieleinträge.
+  - **Gefährten, eigene nur auf Wunsch (Wunsch des Auftraggebers, 2026-11-24):** Die Einblendung
+    zeigt von Haus aus nur, was Gefährten erleben. Die Option `own` („Auch eigene Ereignisse“,
+    Standard aus) blendet die eigenen dazu ein. Der frühere Schalter `companions` (Ereignisse von
+    Gefährten, Standard an) ist dafür entfallen, Entscheidung des Assistenten: Die Gefährten sind
+    jetzt der Kern des Features, sie abzuschalten hieße das Feature abzuschalten, und mit beiden
+    Schaltern aus wäre das Feature an, zeigte aber nichts. Wer einen der beiden Fälle will (nur
+    eigene), kann es nicht mehr; falls das fehlt, nachfragen. Mit Standardwerten erscheint erst
+    etwas, wenn „Mit Freunden teilen“ (`sharing`) oder „Gefährten begleiten“ (`companions`) läuft.
+    Ein gespeicherter Wert des alten Schalters bleibt ungenutzt im Profil, bis „Zurücksetzen“ ihn
+    entfernt. Nur gegen den Mock geprüft.
   - Schalter je Ereignisart (`level`, `death`, `boss`, `achievement`, `ability`, `item`,
     `profession`, `skill`, `zone`); nur `zone` ist von Haus aus aus (Vorgabe des Auftraggebers:
-    Gebiete eher nicht, Stufenaufstiege schon). Dazu `companions` (Ereignisse von Gefährten) und
-    `duration` (4, 7 oder 12 Sekunden). Eine Art ohne Schalter (neuere Version beim Gefährten)
+    Gebiete eher nicht, Stufenaufstiege schon). Dazu `own` (auch eigene Ereignisse, Standard aus)
+    und `duration` (4, 7 oder 12 Sekunden). Eine Art ohne Schalter (neuere Version beim Gefährten)
     bleibt unsichtbar. Eine neue Art braucht einen Eintrag in `KINDS` und ihre zwei Texte.
   - Die Karte nutzt die Bilder des Buchs (`UI.BookPictures`, `UI.ChronicleStory`): Symbol, Zahl
     oder Gegenstandssymbol. Höchstens drei Karten untereinander, die neueste oben; sie fangen die
@@ -626,7 +636,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     hat der Assistent so ausgelegt; vom Auftraggeber im Spiel noch nicht gesehen.
   - **Der eigene Stufenaufstieg wird nicht eingeblendet** (Entscheidung des Auftraggebers,
     2026-11-19): Das Spiel zeigt ihn selbst groß an. Er steht weiter in der Chronik; der Schalter
-    „Stufenaufstiege“ gilt nur für Gefährten.
+    „Stufenaufstiege“ gilt nur für Gefährten. Das bleibt so, auch wenn `own` an ist.
   - **Offen (2026-11-19):** Beim Aufstieg auf Stufe 20 hat der Auftraggeber keine Karte gesehen
     („glaube ich“). Der Eintrag stand korrekt in den gespeicherten Daten, die Einblendung war an,
     Dauer 4 Sekunden, Platz rechts der Mitte. Ob die Karte nicht kam oder übersehen wurde, ist

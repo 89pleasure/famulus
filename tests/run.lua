@@ -1109,26 +1109,30 @@ do -- the live feed: what was just written down appears on screen for a while
         end
     end
     Feed.Clear()
-    check(ns.features.liveFeed.enabled and ns:GetOption("liveFeed", "zone") == false and ns:GetOption("liveFeed", "level") == true,
-        "the feed is on from the start; arrivals in a zone are not shown")
+    check(ns.features.liveFeed.enabled and ns:GetOption("liveFeed", "zone") == false and ns:GetOption("liveFeed", "level") == true
+        and ns:GetOption("liveFeed", "own") == false,
+        "the feed is on from the start; arrivals in a zone and the player's own events are not shown")
     -- (Two events of a kind within a second count as one; hence the times.)
+    Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 18, probe = true })
+    check(#Feed.Shown() == 0, "from the start the feed is about companions: the player's own events stay off screen")
+    ns:SetOption("liveFeed", "own", true)
     Chronicle.Add("level", { level = 14, t = time() - 19, probe = true })
     check(#Feed.Shown() == 0, "the player's own level-up is not shown: the game announces it itself")
     Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 20, probe = true })
     local card = Feed.Shown()[1]
     check(#Feed.Shown() == 1 and card:IsShown() and card.title:GetText() == "Learned to ride"
         and card.photo:IsShown() and not card.icon:IsShown() and not card.number:IsShown(),
-        "an event of the player's own appears as a card with an icon of the game")
+        "asked for, an event of the player's own appears as a card with an icon of the game")
     check(card.crest:GetHeight() < card:GetHeight() and card.crest:GetWidth() < card:GetWidth()
         and card:GetWidth() >= 230 and card.mark:IsShown() and card.grain ~= nil,
         "the picture is a crest inside its band; a milestone carries the mark of an active card")
     Chronicle.Add("zone", { zone = "Nowhere", t = time() - 21, probe = true })
     Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 3600, probe = true })
     check(#Feed.Shown() == 1, "a kind that is switched off and old news stay off screen")
-    ns:SetOption("liveFeed", "companions", false)
-    Chronicle.Add("boss", { name = "Hogger", who = "Jaina Proudmoore", t = time() - 22, probe = true })
-    check(#Feed.Shown() == 1, "without companions, only the player's own events appear")
-    ns:SetOption("liveFeed", "companions", true)
+    ns:SetOption("liveFeed", "own", false)
+    Chronicle.Add("boss", { name = "Hogger", t = time() - 22, probe = true })
+    check(#Feed.Shown() == 1, "switched off again, the player's own events stay off screen")
+    ns:SetOption("liveFeed", "own", true)
     Chronicle.Add("item", { item = 211527, name = "Cozy Sleeping Bag", who = "Jaina Proudmoore", probe = true })
     check(#Feed.Shown() == 2 and Feed.Shown()[1].title:GetText() == "Jaina Proudmoore receives: Cozy Sleeping Bag"
         and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
@@ -1138,6 +1142,7 @@ do -- the live feed: what was just written down appears on screen for a while
         Chronicle.Add("skill", { skill = skill, name = "Craft " .. skill, rank = 75, probe = true })
     end
     check(#Feed.Shown() == 3 and Feed.Shown()[3].title:GetText() == "Craft 1 raised to 75", "at most three cards; the oldest makes room")
+    ns:SetOption("liveFeed", "own", false)
     mock.Advance(6.5)
     check(#Feed.Shown() == 3, "a card stays for its time")
     mock.Advance(2)
