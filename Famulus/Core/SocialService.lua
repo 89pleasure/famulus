@@ -24,13 +24,20 @@
 --       One look at who is online on the friends list and in the guild.
 --       find(name) is their GUID (true if no list gives one) while they are
 --       online, else nil.
+--   SocialService.Classes() -> find
+--       One look at the classes the lists tell: of every guild member,
+--       online or not, and of friends who are online. find(name) is the
+--       class as the game names it in code ("MAGE"), or nil.
+--   SocialService.ClassFromName(name) -> "MAGE" or nil
+--       A class from its name in the client's language ("Magierin"), as
+--       the friends list gives it.
 --   SocialService.EachFriend(visit)
 --       visit(info) for every entry of the friends list: the client's
 --       FriendInfo, whose fields still need checking.
 --   SocialService.EachGuildMember(visit)
---       visit(name, online, mobile, guid) for every member of the guild
---       roster; nobody outside a guild. A secret or missing name or GUID
---       comes as nil, online and mobile as true or false.
+--       visit(name, online, mobile, guid, class) for every member of the
+--       guild roster; nobody outside a guild. A secret or missing name, GUID
+--       or class comes as nil, online and mobile as true or false.
 --   SocialService.EachBattleNetFriend(visit, index)
 --       visit(battleTag, games) for every Battle.net friend, or only the one
 --       at index. games: the client's game accounts they are online with
@@ -73,6 +80,28 @@ local function Yes(value)
     return value and true or false
 end
 
+-- The game's name of a class in code ("MAGE"), or nil for anything else.
+local function ClassFile(value)
+    if ns.IsSecret(value) or type(value) ~= "string" or #value > 20 or not string.match(value, "^%u+$") then
+        return nil
+    end
+    return value
+end
+
+function SocialService.ClassFromName(name)
+    if not IsPlainText(name) then
+        return nil
+    end
+    for _, names in ipairs({ LOCALIZED_CLASS_NAMES_MALE or {}, LOCALIZED_CLASS_NAMES_FEMALE or {} }) do
+        for classFile, each in pairs(names) do
+            if each == name then
+                return ClassFile(classFile)
+            end
+        end
+    end
+    return nil
+end
+
 -- The first value of fn(...) as a number, or 0.
 local function Number(fn, ...)
     if not fn then
@@ -110,8 +139,8 @@ function SocialService.EachGuildMember(visit)
         return
     end
     for i = 1, Number(GetNumGuildMembers) do
-        local name, _, _, _, _, _, _, _, online, _, _, _, _, mobile, _, _, guid = GetGuildRosterInfo(i)
-        visit(IsPlainText(name) and name or nil, Yes(online), Yes(mobile), IsPlainText(guid) and guid or nil)
+        local name, _, _, _, _, _, _, _, online, _, class, _, _, mobile, _, _, guid = GetGuildRosterInfo(i)
+        visit(IsPlainText(name) and name or nil, Yes(online), Yes(mobile), IsPlainText(guid) and guid or nil, ClassFile(class))
     end
 end
 
@@ -296,6 +325,25 @@ function SocialService.Circle()
     end, waiting == nil, waiting
 end
 
+-- What a map of name keys holds for a name, or nil. A list may write
+-- "First-Last-Realm", which keeps its realm.
+local function Find(map, name)
+    if not IsPlainText(name) then
+        return nil
+    end
+    local key = Key(name)
+    if map[key] then
+        return map[key]
+    end
+    local prefix = key .. "-"
+    for each, value in pairs(map) do
+        if string.sub(each, 1, #prefix) == prefix then
+            return value
+        end
+    end
+    return nil
+end
+
 function SocialService.Online()
     local online = {} -- key -> GUID, or true if no list gives one
     local function Note(name, guid)
@@ -316,20 +364,24 @@ function SocialService.Online()
         end
     end)
     return function(name)
-        if not IsPlainText(name) then
-            return nil
+        return Find(online, name)
+    end
+end
+
+function SocialService.Classes()
+    local classes = {} -- key -> class
+    SocialService.EachFriend(function(info)
+        if Yes(info.connected) and IsPlainText(info.name) then
+            classes[Key(info.name)] = SocialService.ClassFromName(info.className)
         end
-        local key = Key(name)
-        if online[key] then
-            return online[key]
+    end)
+    -- The roster tells members who are offline as well, and in code form.
+    SocialService.EachGuildMember(function(name, _, _, _, class)
+        if name and class then
+            classes[Key(name)] = class
         end
-        -- A list may write "First-Last-Realm", which keeps its realm.
-        local prefix = key .. "-"
-        for each, value in pairs(online) do
-            if string.sub(each, 1, #prefix) == prefix then
-                return value
-            end
-        end
-        return nil
+    end)
+    return function(name)
+        return Find(classes, name)
     end
 end

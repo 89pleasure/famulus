@@ -559,7 +559,9 @@ end
 -- name their entries carry: as the game names it in code ("MAGE"), or nil
 -- while it is not known. Pass a class to remember it. Companions tell it
 -- along with their stats (Sharing.lua), the friends list along with a
--- friend's level-up (Companions.lua).
+-- friend's level-up (Companions.lua), and the window takes it from the
+-- guild roster and the friends list when it shows the chronicle
+-- (LearnClasses).
 function ChronicleService.Class(who, classFile)
     classFile = ClassFile(classFile)
     local chronicle = Store(classFile ~= nil)
@@ -576,22 +578,6 @@ function ChronicleService.Class(who, classFile)
         chronicle.classes[who] = classFile
     end
     return ClassFile(chronicle.classes[who])
-end
-
--- The class for its name in the client's language ("Mage", "Magierin"), as
--- the friends list gives it, or nil.
-function ChronicleService.ClassFromName(name)
-    if not IsPlainText(name) then
-        return nil
-    end
-    for _, names in ipairs({ LOCALIZED_CLASS_NAMES_MALE or {}, LOCALIZED_CLASS_NAMES_FEMALE or {} }) do
-        for classFile, each in pairs(names) do
-            if each == name then
-                return ClassFile(classFile)
-            end
-        end
-    end
-    return nil
 end
 
 -- Remembers the class of the character that is playing, for its entries.
@@ -749,6 +735,20 @@ function ChronicleService.OnlineCheck()
     local find = ns.SocialService.Online()
     return function(name)
         return find(name) ~= nil
+    end
+end
+
+-- Remembers the classes the friends list and the guild roster tell
+-- (SocialService.Classes) of the people the chronicle tells of, so that
+-- they stay when those people are gone from the lists. The window does
+-- this when it shows the chronicle: nothing runs in the background for it.
+function ChronicleService.LearnClasses()
+    local find = ns.SocialService.Classes()
+    for _, companion in ipairs(ChronicleService.Companions()) do
+        local classFile = find(companion.who)
+        if classFile and classFile ~= ChronicleService.Class(companion.who) then
+            ChronicleService.Class(companion.who, classFile)
+        end
     end
 end
 

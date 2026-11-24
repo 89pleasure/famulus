@@ -879,7 +879,10 @@ end
 
 function layouts.chronicle()
     local Chronicle = ns.ChronicleService
-    local function Tab(id, wanted, rail)
+    -- people: a tab with friends. Each time it is shown, the friends list and
+    -- the guild roster tell the classes of the people in the book, before
+    -- the book and the rail are laid out (blocks come first).
+    local function Tab(id, wanted, rail, people)
         return {
             id = id,
             category = "chronicle",
@@ -892,6 +895,9 @@ function layouts.chronicle()
             settings = {},
             -- The events are told as a book; cards only say that it is empty.
             blocks = function()
+                if people then
+                    Chronicle.LearnClasses()
+                end
                 if ChronicleBook(wanted) then
                     return {}
                 end
@@ -934,7 +940,7 @@ function layouts.chronicle()
                 cards[2] = ChronicleCompanions(companions, Chronicle.OnlineCheck())
             end
             return cards
-        end),
+        end, true),
         Tab("mine", Chronicle.IsOwn, function()
             return { ChronicleWeek(), ChronicleCrafts() }
         end),
@@ -942,7 +948,7 @@ function layouts.chronicle()
             return not Chronicle.IsOwn(entry)
         end, function()
             return ChronicleBriefs(Chronicle.Companions(), Chronicle.OnlineCheck())
-        end),
+        end, true),
         record,
     }
 end

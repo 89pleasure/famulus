@@ -1238,8 +1238,8 @@ mock.Fire("FRIENDLIST_UPDATE")
 local friendEntry = Chronicle.Entries()[6]
 check(#Chronicle.Entries() == 6 and friendEntry.who == "Jaina Proudmoore" and not Chronicle.IsOwn(friendEntry)
     and Chronicle.Text(friendEntry) == "Jaina Proudmoore reaches level 20", "their level-up is written once")
-check(Chronicle.Class("Jaina Proudmoore") == "MAGE" and Chronicle.ClassFromName("Warrior") == "WARRIOR"
-    and Chronicle.ClassFromName("Nobody") == nil, "the friends list tells their class along with it, in the client's language")
+check(Chronicle.Class("Jaina Proudmoore") == "MAGE" and ns.SocialService.ClassFromName("Warrior") == "WARRIOR"
+    and ns.SocialService.ClassFromName("Nobody") == nil, "the friends list tells their class along with it, in the client's language")
 friend.connected, friend.level = false, 0
 mock.Fire("FRIENDLIST_UPDATE")
 check(#Chronicle.Entries() == 6 and Chronicle.FriendLevel("Player-1-FRIEND") == 20, "a friend going offline changes nothing")
@@ -1508,6 +1508,31 @@ do -- the class beside a companion's name, and the character name behind an alia
     ns.AliasService.Set("Jaina Proudmoore", nil)
     FamulusDB.chronicle.classes = nil
     mock.Advance(0.1)
+end
+do -- the guild roster and the friends list tell classes; shown, the chronicle remembers them
+    local guildBefore, friendsBefore = mock.state.guild, mock.state.friends
+    mock.state.guild = { { name = "Jaina Proudmoore-Forever", class = "PRIEST" }, { name = "Thrall Hellscream-Forever", class = "SHAMAN" } }
+    mock.Click(tabButton("My journey"))
+    check(Chronicle.Class("Jaina Proudmoore") == nil, "a tab without friends does not look at the lists")
+    mock.Click(tabButton("Everyone"))
+    local first = bookFrames("story")[1]
+    check(Chronicle.Class("Jaina Proudmoore") == "PRIEST" and first.story.chip.class == "PRIEST" and first.chipClass:IsShown()
+        and railCard("people").rows[1].class:IsShown() and not railCard("people").spec.people[1].online,
+        "the guild roster tells the class of a member who is offline, shown at once in book and rail")
+    check(Chronicle.Class("Thrall Hellscream") == nil, "only of people the chronicle tells of")
+    mock.state.guild = nil
+    mock.state.friends = { { name = "Jaina Proudmoore", guid = "Player-1-JAINA", connected = true, level = 20, className = "Mage" } }
+    mock.Click(tabButton("Friends"))
+    check(Chronicle.Class("Jaina Proudmoore") == "MAGE" and railCard("brief").spec.online,
+        "the friends list tells it of a friend who is online")
+    mock.state.friends = {}
+    mock.Click(tabButton("Everyone"))
+    check(Chronicle.Class("Jaina Proudmoore") == "MAGE" and bookFrames("story")[1].chipClass:IsShown(),
+        "gone from the lists, the class stays")
+    mock.state.guild, mock.state.friends = guildBefore, friendsBefore
+    FamulusDB.chronicle.classes = nil
+    mock.Click(tabButton("My journey"))
+    mock.Click(tabButton("Everyone"))
 end
 do -- what repeats right away shares a card
     local now = time()
