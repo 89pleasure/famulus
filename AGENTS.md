@@ -1266,10 +1266,20 @@ nicht bestätigt.
   Skripte zusammensetzen, steht dort in beiden Sprachen. Die Sprache folgt dem Browser, ist
   umschaltbar und lässt sich mit `?lang=de` erzwingen. Fehlt einer Sprache ein Schlüssel, warnt
   die Konsole.
+- **Hosting (2026-11-24):** Wunsch des Auftraggebers: direkt aus GitHub, ohne eigenen Server und
+  ohne Handarbeit, mit eigener Domain. Weil das Repo öffentlich ist, GitHub Pages (kostenlos):
+  `.github/workflows/website.yml` veröffentlicht den Ordner `website/` unverändert, sobald ein
+  Push auf `main` darin etwas ändert; von Hand über Actions › Website › Run workflow. Einmal je
+  Repository: Settings › Pages › Source „GitHub Actions“. Die Domain besorgt der Auftraggeber;
+  eingetragen wird sie unter Settings › Pages › Custom domain (eine `CNAME`-Datei braucht es mit
+  dem Workflow nicht), beim DNS-Anbieter A- und AAAA-Records auf GitHub für die Domain ohne
+  `www`, ein CNAME auf `89pleasure.github.io` für `www`. Ohne Domain liegt die Seite unter
+  `89pleasure.github.io/famulus/`; das geht, weil alle Pfade relativ sind. GitHub sieht die
+  IP-Adressen der Besucher, das gehört in die Datenschutzerklärung. Auf GitHub noch nie gelaufen.
 - **Bewusst noch nicht enthalten:** ein Download (die Veröffentlichung ist offen; der Knopf sagt
   „Download folgt“), Guildy (erst wenn der PR dort angenommen ist), Screenshots aus dem Spiel, Impressum und Datenschutzerklärung (vor dem
-  Veröffentlichen nötig), Hosting und Domain (offen), ein Vorschaubild für geteilte Links,
-  WOFF2-Schriften (geladen werden die TTF aus dem Addon, je ~100 KB).
+  Veröffentlichen nötig), die Domain (besorgt der Auftraggeber), ein Vorschaubild für geteilte
+  Links, WOFF2-Schriften (geladen werden die TTF aus dem Addon, je ~100 KB).
 - **Geprüft** im eingebauten Browser der App (Chromium): bei 1440 und 375 px Breite alle
   Abschnitte, bei 1024 und 680 px stichprobenartig; Deutsch und Englisch; die Farbwelten Zitrone,
   Minze, Rose und Flieder; die drei Demos bedient; keine Meldungen in der Konsole. Nicht geprüft:
@@ -1303,7 +1313,8 @@ Entscheidung des Assistenten. Erste Datei: `v0.1.0-alpha.1` als Alpha, hochgelad
   Ordner, benannt wie die `.toc`) und lässt den Rest des Repos draußen. Lokal mit dem Packager
   geprüft (`release.sh -d -z`): ein Ordner `Famulus` mit den Dateien des Addons, Version ersetzt.
 - **Ausgelöst wird nur durch einen Tag** `v…`, den der Auftraggeber selbst setzt. Pushes und Pull
-  Requests laden nie hoch; dort laufen nur die Tests (`.github/workflows/tests.yml`).
+  Requests laden nie hoch; dort laufen nur die Tests (`.github/workflows/tests.yml`) und, wenn
+  sich auf `main` etwas in `website/` ändert, die Veröffentlichung der Website (siehe „Website“).
 - **Der Tag bestimmt den Dateityp.** `tools/release_check.sh` lässt nur drei Formen zu: `v1.2.3`
   (Release), `v1.2.3-beta.1` (Beta), `v1.2.3-alpha.1` (Alpha). Grund (Vorgabe des Auftraggebers:
   nichts mit „alpha“ oder „beta“ darf als normaler Release erscheinen): Der Packager lädt jeden Tag
@@ -1478,7 +1489,7 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
   dort fehlt. Er zählt außerdem die Features (`total == 10`); die Zahl bei einem neuen Feature
   mit anpassen.
-- Repository: `github.com/89pleasure/famulus` (privat; bis 2026-11-19 `schnitzel`), Branch `main`. Commits als
+- Repository: `github.com/89pleasure/famulus` (öffentlich, Stand 2026-11-24; bis 2026-11-19 `schnitzel`), Branch `main`. Commits als
   `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.
 - Der Auftraggeber tritt allein auf: keine `Co-Authored-By: Claude …`-Zeile in Commits und kein
   „Generated with Claude Code“ o. Ä. in PRs, Issues oder Kommentaren, auch nicht bei Beiträgen zu

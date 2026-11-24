@@ -1,0 +1,48 @@
+# Publishes the website (the folder website/, served as it is, no build step) on GitHub Pages
+# whenever a push to main changes it. Commits that only touch the addon do not trigger it.
+#
+# Once per repository: Settings > Pages > Build and deployment > Source "GitHub Actions".
+# The custom domain is set there too (Settings > Pages > Custom domain); with this workflow no
+# CNAME file is needed. Run by hand (Actions > Website > Run workflow) to publish without a change.
+name: Website
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "website/**"
+      - ".github/workflows/website.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push waits instead of cancelling one in progress.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Check that Pages is set up
+        uses: actions/configure-pages@v6
+
+      - name: Pack the website
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: website
+
+      - name: Publish on GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
