@@ -72,7 +72,7 @@
     <div class="hero__inner wrap">
       <div class="hero__copy">
         <p class="eyebrow reveal" style="--i:0"><span class="eyebrow__mark"></span><span data-i18n="hero_eyebrow">An addon for World of Warcraft: Forever</span></p>
-        <h1 class="reveal" style="--i:1" data-i18n="hero_title">For everyone you <em>play with.</em></h1>
+        <h1 class="reveal" style="--i:1" data-i18n="hero_title">For everyone <br>you <em>play with.</em></h1>
         <p class="lead reveal" style="--i:2" data-i18n="hero_lead">Famulus records your shared journey as a picture book, remembers who you travelled with and gives your friends the names you know them by.</p>
         <div class="hero__cta reveal" style="--i:3">
           <a class="btn btn--primary" href="#chronicle"><span data-i18n="hero_cta">See what it does</span><svg class="icon" width="18" height="18"><use href="#i-arrow"/></svg></a>
@@ -85,17 +85,26 @@
           <li data-i18n="fact_libs">No libraries</li>
         </ul>
       </div>
-      <div class="hero__feed layer" data-depth="1.25" aria-hidden="true">
-        <div class="toasts" id="hero-toasts"></div>
-      </div>
     </div>
-
-    <a class="hero__scroll" href="#chronicle" aria-label="Scroll down" data-i18n-attr="aria-label:scroll_down">
-      <svg class="icon" width="20" height="20"><use href="#i-chevron"/></svg>
-    </a>
   </header>
 
   <main>
+    <!-- The addon itself, below the camp: a screenshot of its window
+         (tools/make_shot.js), in English for both languages; the live feed's
+         cards over its corner. -->
+    <figure class="shot reveal" style="--i:5">
+      <div class="shot__frame">
+        <img class="shot__window" src="assets/shots/window-1180.webp"
+          srcset="assets/shots/window-1180.webp 1180w, assets/shots/window-1770.webp 1770w"
+          sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730" fetchpriority="high"
+          alt="The Famulus window in World of Warcraft: Forever. The chronicle, the fellow travellers and the aliases stand in its sidebar; the chronicle tells the last evenings as a picture book."
+          data-i18n-attr="alt:shot_alt">
+      </div>
+      <div class="shot__feed" aria-hidden="true">
+        <div class="toasts" id="hero-toasts"></div>
+      </div>
+    </figure>
+
     <!-- 01 Chronicle -------------------------------------------------------->
     <section class="section" id="chronicle">
       <div class="glow glow--right" data-parallax="-0.14" aria-hidden="true"></div>

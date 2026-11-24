@@ -131,7 +131,7 @@ window.FAMULUS_I18N = {
     meta_title: 'Famulus – ein Addon fürs gemeinsame Spielen in WoW Forever',
     meta_desc: 'Famulus ist ein Addon für World of Warcraft: Forever. Es hält eure gemeinsame Reise als Bilderbuch fest, merkt sich, mit wem du unterwegs warst, und gibt deinen Freunden die Namen, unter denen du sie kennst.',
     skip: 'Zum Inhalt springen',
-    scroll_down: 'Nach unten',
+    shot_alt: 'Das Famulus-Fenster (englische Fassung) in World of Warcraft: Forever. In der Seitenleiste stehen Chronik, Weggefährten und Aliase; die Chronik erzählt die letzten Abende als Bilderbuch.',
 
     nav_aliases: 'Aliase',
     nav_chronicle: 'Chronik',
@@ -141,7 +141,7 @@ window.FAMULUS_I18N = {
     nav_lang: 'Sprache',
 
     hero_eyebrow: 'Addon für World of Warcraft: Forever',
-    hero_title: 'Für alle, mit denen du <em>spielst.</em>',
+    hero_title: 'Für alle, mit denen <br>du <em>spielst.</em>',
     hero_lead: 'Famulus hält eure gemeinsame Reise als Bilderbuch fest, merkt sich, mit wem du unterwegs warst, und gibt deinen Freunden die Namen, unter denen du sie kennst.',
     hero_cta: 'Funktionen ansehen',
     hero_cta2: 'Installation',

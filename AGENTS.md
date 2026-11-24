@@ -607,6 +607,16 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   entfernt sie wieder (`ChronicleService.Demo`, `ClearDemo`). Sie tragen `demo = true` und
   verlassen den Client nie: Weder der Live-Versand noch das Nachreichen noch das Weiterreichen
   schickt sie. Gedacht zum Ansehen des Buchs und für Screenshots.
+  **Sprache (2026-11-24, Wunsch des Auftraggebers, für englische Screenshots):** Gebiete, Namen
+  und Personen der Beispiele folgen der Sprache von Famulus (`ns:GetLocaleCode()` in
+  `Core/Locale.lua`), nicht mehr der des Clients (`GetLocale()`). Die Personen heißen auf Englisch
+  Mira Stormfeather, Borin Ironbeard und Lysa Morningdew (Deutsch: Sturmfeder, Eisenbart,
+  Morgentau), in beiden Diensten gleich, damit die Verweise zwischen Chronik und Weggefährten
+  greifen. Nach einem Sprachwechsel die Beispiele neu schreiben; die alten bleiben in ihrer
+  Sprache. Was der Client selbst benennt, bleibt in seiner Sprache: Gegenstände
+  (`C_Item.GetItemNameByID`, „Schlafsack“) und Klassen (`LOCALIZED_CLASS_NAMES_MALE`, „Magier“).
+  Für ein ganz englisches Bild muss also der Client auf Englisch stehen. Der Test prüft beide
+  Sprachen auf einem deutschen Client. Nur gegen den Mock geprüft.
 - **`companions`:** vergleicht bei `FRIENDLIST_UPDATE` die Stufen der Freundesliste mit dem zuletzt
   gemerkten Stand (nach GUID). Zeigt Gefährten unter ihrem Alias.
 - **`sharing` (Entscheidung des Auftraggebers, 2026-11-19):** Anvisieren und Nähe taugen nicht; die
@@ -1142,7 +1152,9 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   (`FellowService.Demo`, `ClearDemo`). Sie tragen `demo = true` und GUIDs `Player-0-FAMDEMO..`;
   seit 2026-11-24 auch Tage und `firstLevel`, sodass Mira und Borin einen Aufstieg erzählen, und
   an Tagen in Uldaman oder den Todesminen Bosse mit Namen (je Person reihum, damit derselbe Boss
-  nicht an jedem Tag fällt).
+  nicht an jedem Tag fällt). Sprache wie bei den Beispielen der Chronik (seit 2026-11-24 die von
+  Famulus); die drei anderen heißen auf Englisch Kael Thornwood, Tomas Greywind und Ena
+  Silverbrook.
 - **Im Spiel ungeprüft:** alles. Besonders: ob `UnitName` für `party1`… Vor- und Nachname liefert
   wie für `player`, ob `GROUP_ROSTER_UPDATE` nach dem Login von selbst kommt (sonst fängt
   `PLAYER_ENTERING_WORLD` es auf), ob `IsInInstance` in Forever `pvp` meldet und ob `BOSS_KILL` in
@@ -1183,12 +1195,14 @@ nicht bestätigt.
   folgen Scrollen und Mauszeiger (gezeichnet wird nur bei Änderung und nur, solange der Kopf
   sichtbar ist), Elemente mit `data-parallax` driften beim Scrollen. Die Funken sind
   CSS-Animationen. `prefers-reduced-motion` schaltet alle Bewegung ab.
-- **Aufbau (seit 2026-11-24, Aliase zuletzt, siehe „Vorgaben“):** Kopf (Landschaft, rechts laufen
-  Einblendungen mit) → 01 Chronik (das Bilderbuch mit den Reitern Alle, Meine Reise, Gefährten) →
+- **Aufbau (seit 2026-11-24, Aliase zuletzt, siehe „Vorgaben“):** Kopf (Landschaft) → das Fenster
+  des Addons als Screenshot, darüber Einblendungen (siehe „Fenster im Kopf“) → 01 Chronik (das
+  Bilderbuch mit den Reitern Alle, Meine Reise, Gefährten) →
   02 Weggefährten → 03 Live-Einblendung (auslösbar, Platz verschiebbar) → 04 Aliase (das Fenster
   nachgebaut und bedienbar, darunter Chat und Tooltip „im Spiel“) → 05 Installation → Fuß mit
   Hinweis auf Blizzards Marke. Getönter Grund (`section--tinted`) und Schein wechseln weiter von
-  Abschnitt zu Abschnitt. Sprunglink, „Was es kann“ und der Pfeil im Kopf führen zur Chronik.
+  Abschnitt zu Abschnitt. Sprunglink und „Was es kann“ führen zur Chronik (der Pfeil im Kopf ist
+  seit dem Fenster im Kopf entfallen).
   Vorher: 01 Aliase, 02 Chronik, 03 Weggefährten, 04 Live-Einblendung. Die Demos zeigen erfundene
   Personen und die Beispiele aus `/fam chronicle demo`, mit den eigenen Zeichnungen statt
   Spielsymbolen. Ein Alias aus der Demo der Aliase erscheint auch im Bilderbuch, in den
@@ -1275,11 +1289,71 @@ nicht bestätigt.
   - **Schmale Bildschirme** (eine Spalte, bis 980 px): Die Zeichnung wird kleiner, steht unter
     dem Text (eigener Platz, `padding-bottom` am Kopf) und wird so verschoben, dass das Lager
     mittig ist (`FamulusScene.pan`). Sonst lag es rechts außerhalb und der Mond hinter den Knöpfen.
-  - Die Einblendungen rechts stehen höher (`margin-top: -26vh`), über dem Mond. Bei 1280 × 720
-    ragt die zweite noch etwas in die Baumkrone.
+  - Die Einblendungen standen rechts über dem Mond; seit dem Fenster im Kopf (siehe unten)
+    liegen sie über dessen unterer rechter Ecke.
   - Geprüft im eingebauten Browser und mit Chrome ohne Fenster bei 375, 768, 1280, 1440 und
     1920 px Breite, Deutsch und Englisch; keine Meldungen in der Konsole. Nicht geprüft: Safari,
     Firefox, echte Mobilgeräte.
+- **Fenster im Kopf (2026-11-24, Wunsch des Auftraggebers nach dem Vorbild von polestar.guide):**
+  Unter dem Lagerfeuer steht ein Screenshot des Addon-Fensters (`figure.shot`, erstes Element in
+  `<main>`). Er ragt von unten in den Kopf (unter 980 px nur 40 px, weil dort das Lager unter dem
+  Text steht), blendet nach unten aus (Maske) und hat per CSS runde Ecken (12 von 1180 × 730).
+  - **Höher gezogen (2026-11-24, Wunsch des Auftraggebers):** Der Text des Kopfes steht oben,
+    72 px unter der Navigation (`padding-top: 140px`), statt mittig (vorher etwa 65 px bei
+    1440 × 900; 36 px waren dem Auftraggeber zu wenig). Das Fenster ragt so weit in den Kopf, wie
+    `--lift` sagt (`clamp(150px, 22svh, 240px)`); der Text hält darunter `--lift` plus 40 px
+    frei, damit das Fenster ihn nie verdeckt. Den Hintergrund wollte der Auftraggeber nicht
+    angefasst haben. Gemessen bei 1440 × 900: Das Fenster beginnt in beiden Sprachen bei 702
+    statt 756 px, bei 1920 × 1080 bei 842 statt 912 px. Zum Feuer bleiben 60 bis 95 px.
+  - **Der Titel hat in jeder Sprache zwei Zeilen** (Vorgabe des Auftraggebers, 2026-11-24). Der
+    Umbruch steht im Text (`<br>` in `hero_title`: „For everyone / you play with.“, „Für alle,
+    mit denen / du spielst.“; vor dem `<br>` steht ein Leerzeichen, sonst lesen Screenreader
+    „denendu“), und die Schrift schrumpft, bis die längere Zeile in die
+    Textspalte passt: `font-size: min(<wie bisher>, var(--title-fit))`, mit `--title-fit` je
+    Sprache in Containereinheiten (`cqi`, die Textspalte ist der Container): Englisch 15.5cqi
+    (greift nie, die Zeilen passen ohnehin), Deutsch 11.9cqi („Für alle, mit denen“ ist 8,2 em
+    breit). Ein neuer Titel oder eine neue Sprache braucht ihren eigenen Wert, etwa 97 geteilt
+    durch die Breite der längeren Zeile in em. Vorher brach der deutsche Titel bei 1440 px auf
+    drei Zeilen und streckte den Kopf auf 941 px. Geprüft von 320 bis 1920 px Breite in beiden
+    Sprachen: zwei Zeilen, nichts läuft über. Deutsch ist dadurch kleiner (76 statt 90 px bei
+    1440 × 900, 40 statt 43 px auf dem Telefon).
+  - **Screenshot statt Nachbau** (Empfehlung des Assistenten, vom Auftraggeber gewählt): Es ist
+    das echte Addon, und ein Bild ist schnell getauscht, solange sich das Fenster noch ändert;
+    Polestar zeigt dort ebenfalls Screenshots. Folge: Im Bild sind Spielsymbole und die
+    Buchschrift des Spiels zu sehen; bis dahin zeigte die Seite keine Grafiken von Blizzard.
+  - **Ein englisches Bild für beide Sprachen** (Entscheidung des Auftraggebers, 2026-11-24:
+    „Englisch reicht“), in zwei Breiten: `assets/shots/window-<1180|1770>.webp`. Nur der
+    Alternativtext wechselt mit der Sprache (`shot_alt` in `i18n.js`, deutsch mit dem Zusatz
+    „englische Fassung“).
+  - **Herstellen:** `node tools/make_shot.js <screenshot> <x> <y> <breite> <höhe>
+    website/assets/shots/window` schneidet das Fenster ab seiner äußeren Haarlinie aus
+    und schreibt WebP in voller Breite und 1180; Chrome ohne Fenster dekodiert, skaliert und
+    kodiert, sonst braucht es nur Node. Die Kanten findet man an der Haarlinie (Helligkeit etwa
+    48 gegen 10 bis 20 daneben; auf dem Windows-Rechner per PowerShell mit `System.Drawing`
+    gemessen). Aufnahme in 4K, dann ist das Fenster etwa 1770 px breit.
+  - **Für die Aufnahme:** Client und Famulus auf Englisch (sonst bleiben Gegenstands- und
+    Klassennamen deutsch, siehe „Beispieleinträge“), dann `/fam chronicle demo` und
+    `/fam fellows demo`.
+  - **Stand:** Das Bild ist Chronicle › Everyone, aus dem Screenshot
+    `WoWScrnShot_112426_221759.jpg` (Client auf Englisch, Beispieldaten; Fensterkanten bei x 1022,
+    y 476, 1770 × 1095). Im Bild zu sehen: der Vorname des eigenen Charakters („Kip“, Karte „This
+    week“) und „Level 19“ im Kapitelkopf neben dem Beispiel „Reached level 40“, weil die
+    Beispiele sich mit den echten Einträgen eines Charakters auf Stufe 19 mischen. Vom
+    Auftraggeber mitgeschickt und noch nicht verwendet: Fellow travellers › Overview
+    (`…_221819.jpg`) und die Geschichte von Borin (`…_221836.jpg`).
+  - Die Einblendungen des Kopfes liegen über dem unteren Ende der rechten Spalte des Fensters,
+    unter dessen Freundesliste, wo das Fenster ausblendet (`.shot__feed`, `top: 70%`), wie
+    Polestars zweites Fenster. Bei 50 % verdeckten sie die Freundesliste. Sie stehen dort
+    rechtsbündig an der Fensterkante und ragen 44 px darüber hinaus (unter 1400 px innen, unter
+    760 px ausgeblendet); linksbündig wie im Spiel lagen sie bei 1024 px über dem Buch.
+    Entscheidung des Assistenten. Der Schein des ersten Abschnitts darf nach oben in den
+    auslaufenden Fuß des Fensters reichen (`.shot + .section`), sonst stand dort eine harte
+    Kante.
+  - Geprüft im eingebauten Browser bei 1440, 1024 und 375 px, Deutsch und Englisch; kein
+    seitliches Scrollen. Aufbau im Einzelnen: Entscheidungen des Assistenten, vom Auftraggeber
+    noch nicht gesehen.
+  - Offen: Die Demos der Website nennen auch auf Englisch „Mira Sturmfeder“ und „Borin
+    Eisenbart“; die englischen Beispiele im Addon heißen seit 2026-11-24 anders (siehe oben).
 - **Sprachen:** Englisch steht im HTML (`data-i18n="schlüssel"`), Deutsch in `i18n.js`; was
   Skripte zusammensetzen, steht dort in beiden Sprachen. Die Sprache folgt dem Browser, ist
   umschaltbar und lässt sich mit `?lang=de` erzwingen. Fehlt einer Sprache ein Schlüssel, warnt
@@ -1295,7 +1369,8 @@ nicht bestätigt.
   `89pleasure.github.io/famulus/`; das geht, weil alle Pfade relativ sind. GitHub sieht die
   IP-Adressen der Besucher, das gehört in die Datenschutzerklärung. Auf GitHub noch nie gelaufen.
 - **Bewusst noch nicht enthalten:** ein Download (die Veröffentlichung ist offen; der Knopf sagt
-  „Download folgt“), Guildy (erst wenn der PR dort angenommen ist), Screenshots aus dem Spiel, Impressum und Datenschutzerklärung (vor dem
+  „Download folgt“), Guildy (erst wenn der PR dort angenommen ist), weitere Screenshots aus dem
+  Spiel (bisher nur das Fenster im Kopf), Impressum und Datenschutzerklärung (vor dem
   Veröffentlichen nötig), die Domain (besorgt der Auftraggeber), ein Vorschaubild für geteilte
   Links, WOFF2-Schriften (geladen werden die TTF aus dem Addon, je ~100 KB).
 - **Geprüft** im eingebauten Browser der App (Chromium): bei 1440 und 375 px Breite alle
@@ -1311,7 +1386,8 @@ nicht bestätigt.
   1440, 1024, 768 und 375 px in beiden Sprachen: Kacheln, Liste, Reihenfolge, Geschichte öffnen
   und schließen (Fokus kehrt zurück), „Alias festlegen“, „In der Chronik“; keine Meldungen in der
   Konsole, kein seitliches Scrollen.
-- **Bei Änderungen am Addon mitziehen:** Versionsnummer (`fact_version`, `in_rel_d`), die Zähler
+- **Bei Änderungen am Addon mitziehen:** der Screenshot im Kopf, sobald sich das Fenster sichtbar
+  ändert; Versionsnummer (`fact_version`, `in_rel_d`), die Zähler
   im nachgebauten Fenster (`renderWindow` in `main.js`: 5 Alias-Features, 10 insgesamt; im HTML
   Chronik 1/4 und Weggefährten 0/1), neue Hauptfunktionen als Reiter im Kopf und als eigener
   Abschnitt mit Eintrag in der Navigation; die Stufen der Verbundenheit (`TIERS` in `main.js`)
@@ -1490,6 +1566,10 @@ python3 tools/make_media.py
 
 ```bash
 python3 tools/make_fonts.py <Inter-Release>/extras/ttf   # braucht fontTools
+```
+
+```bash
+node tools/make_shot.js <screenshot.jpg> <x> <y> <breite> <höhe> website/assets/shots/window   # Fenster für die Website
 ```
 
 ```bash
