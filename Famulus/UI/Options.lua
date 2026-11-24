@@ -2030,13 +2030,16 @@ local function BuildSidebar()
 
     -- A soft glow in the accent colour behind the logo. It is one round
     -- spot, much larger than the corner it sits in; two pieces show the part
-    -- inside the sidebar and leave out the window's rounded corner.
+    -- inside the sidebar and leave out the window's rounded corner. In the
+    -- head, which runs on across the window, a third piece on the window's
+    -- own ground lets it fade out instead of ending at the sidebar's edge.
     local SPOT = { left = -116, top = -136, width = 400, height = 360 }
-    local function Haze(left, top, right, bottom)
-        local piece = sidebar:CreateTexture(nil, "BACKGROUND", nil, 3)
+    local function Haze(left, top, right, bottom, parent)
+        parent = parent or sidebar
+        local piece = parent:CreateTexture(nil, "BACKGROUND", nil, 3)
         piece:SetTexture(UI.media.shadow)
-        piece:SetPoint("TOPLEFT", sidebar, "TOPLEFT", left, -top)
-        piece:SetPoint("BOTTOMRIGHT", sidebar, "TOPLEFT", right, -bottom)
+        piece:SetPoint("TOPLEFT", parent, "TOPLEFT", left, -top)
+        piece:SetPoint("BOTTOMRIGHT", parent, "TOPLEFT", right, -bottom)
         piece:SetTexCoord(
             (left - SPOT.left) / SPOT.width,
             (right - SPOT.left) / SPOT.width,
@@ -2048,6 +2051,7 @@ local function BuildSidebar()
     local hazeBottom = SPOT.top + SPOT.height
     Haze(RADIUS, pixel, SIDEBAR - pixel, hazeBottom)
     Haze(pixel, RADIUS, RADIUS, hazeBottom)
+    Haze(SIDEBAR - pixel, pixel, SPOT.left + SPOT.width, HEAD, window)
 
     -- Grain across the top and a few sparks that rise behind the entries.
     UI.Grain(sidebar, 4, 4, pixel, HEIGHT - GRAIN_BAND, SIDEBAR, HEIGHT, true)
@@ -2162,7 +2166,7 @@ local function BuildHead()
         piece:SetPoint("BOTTOMRIGHT", window, "TOPRIGHT", -right, -bottom)
         UI.Paint(piece, "sidebar")
     end
-    Ground(SIDEBAR, pixel, RADIUS, HEAD)
+    Ground(SIDEBAR - pixel, pixel, RADIUS, HEAD) -- from where the sidebar's ground ends
     Ground(WIDTH - RADIUS, RADIUS, pixel, HEAD)
     local round = window:CreateTexture(nil, "BACKGROUND", nil, 2)
     round:SetTexture(UI.media.circle)
