@@ -691,9 +691,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   Filterzeile „Nur Ereignisse von …“ und die Sätze der Live-Einblendung. Ohne Alias steht nur der
   Name.
   - **Option** „Charaktername hinter dem Alias“ (`general.chronicleNames`, Standard an) als eigene
-    Karte „Anzeige“ unter Chronik › Einstellungen, unter den Features. Aus: nur der Alias. Dass die
-    Option die Klammern meint und nicht das Klassensymbol, ist die Auslegung des Assistenten
-    („… eine Option, um das zu deaktivieren“); das Klassensymbol hat keinen Schalter.
+    Karte „Anzeige“ unter Chronik › Einstellungen, unter den Features. Aus: nur der Alias. Die
+    Option gilt nur für die Klammern; das Klassensymbol hat keinen Schalter (vom Auftraggeber
+    bestätigt, 2026-11-24).
   - **Der Charaktername steht nicht mehr in der Zeile unter der Überschrift** („Jaina Proudmoore ·
     in Duskwood“ war der frühere Platz unter einem Alias). Entscheidung des Assistenten: Mit der
     Option an stünde er sonst doppelt da, und wer die Option ausschaltet, will ihn nicht sehen.
@@ -702,15 +702,29 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     `ChronicleService.Class`): Freunde mit Famulus schicken ihre Klasse mit der Bilanz (`1~S~…`,
     siehe „sharing“); „Freunde begleiten“ merkt sie aus der Freundesliste, wenn es einen Aufstieg
     festhält (`className` in der Sprache des Clients, zurückübersetzt über
-    `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE`, `ChronicleService.ClassFromName`); die eigenen
+    `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE`, `SocialService.ClassFromName`); die eigenen
     Charaktere tragen ihre Klasse mit jedem eigenen Eintrag und beim Login ein (nur, wenn es die
     Chronik schon gibt). Die Beispieldaten haben Klassen wie bei den Weggefährten (Mira Magierin,
     Borin Krieger, Lysa Priesterin). Gespeichert wird nur für Personen mit Eintrag oder Bilanz; der
     Rest fällt beim Laden heraus. Die Daten der Weggefährten werden bewusst nicht gelesen (siehe
     „Chronik und Weggefährten“: jeder Bereich steht für sich).
-  - **Lücken:** Ein Freund mit älterem Famulus und ohne Aufstieg seit dem Update zeigt weiter den
-    Buchstaben; ebenso jemand, über den nur weitergereichte Einträge vorliegen. Die Freundesliste
-    beim Öffnen des Fensters auszuwerten, wäre eine weitere Quelle; nicht gebaut.
+  - **Gildenliste und Freundesliste als Quelle (Wunsch des Auftraggebers, 2026-11-24, eigener PR;
+    nur gegen den Mock geprüft):** Zeigt das Fenster „Alle“ oder „Freunde“ der Chronik, sieht es
+    einmal in Freundesliste und Gildenliste (`SocialService.Classes`, gebaut wie
+    `SocialService.Online`) und merkt sich die Klassen der Personen der Chronik
+    (`ChronicleService.LearnClasses`). Die Gildenliste nennt die Klasse jedes Mitglieds, auch
+    offline, schon in der Form `MAGE` (elfter Wert von `GetGuildRosterInfo`, von
+    `SocialService.EachGuildMember` als fünfter Wert weitergegeben); die Freundesliste nur für
+    Freunde, die online sind. Online/offline der Randspalte kommt weiter aus
+    `ChronicleService.OnlineCheck`; das sind zwei Blicke in die Listen je Aufbau, bewusst nicht
+    zusammengelegt, damit `SocialService` bei je einer Frage je Funktion bleibt. Das geschieht im
+    Aufbau des Reiters vor Buch und Randspalte, die
+    Klasse ist also sofort zu sehen. Kein Spielereignis, kein Timer: Ohne offenes Fenster läuft
+    dafür nichts. Gemerkt wird nur für Personen mit Eintrag oder Bilanz, „Meine Reise“ sieht nicht
+    nach. Ungeprüft im Spiel: ob der Client die Gildenliste nach dem Login von selbst lädt (sonst
+    erst, wenn „Mit Freunden teilen“ sie anfordert oder das Gildenfenster offen war).
+  - **Lücken:** Ein Freund mit älterem Famulus, nicht in der Gilde, der weder seit dem Update
+    aufgestiegen ist noch bei offenem Fenster online war, zeigt weiter den Buchstaben.
   - Die Website zeigt im Buch der Chronik noch Anfangsbuchstaben.
 - **Die drei aufzeichnenden Features sind standardmäßig aus**, weil der Test festschreibt, dass mit Standardwerten
   kein Spielereignis registriert ist. Ob die Chronik von Haus aus mitschreiben soll, ist eine
@@ -1349,7 +1363,8 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   einfache Hilfsfunktion (`ns.IsSecret` in `Core/Init.lua`) ist. Für alle
   Kategorien liegt ein Service unter `Core/` (`ChatService`: Klartext prüfen, Chat-Sperre prüfen;
   `GroupService`: wer in der Gruppe ist; `SocialService`: wer Freund, Battle.net-Freund oder in der
-  Gilde ist, wer davon online ist, und Namen aus Listen in einer Schreibweise. Wer Freundesliste,
+  Gilde ist, wer davon online ist, welche Klasse die Listen nennen, und Namen aus Listen in einer
+  Schreibweise. Wer Freundesliste,
   Gildenliste oder Battle.net-Freunde liest, tut es über `SocialService.EachFriend`,
   `EachGuildMember` und `EachBattleNetFriend` (seit dem Review vom 2026-11-24 auch Chronik,
   Teilen und Account-Aliase); nur der Selbsttest liest den Client absichtlich direkt. Einen Namen

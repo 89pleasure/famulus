@@ -674,7 +674,7 @@ end
 function GetGuildRosterInfo(index)
     local member = (mock.state.guild or {})[index]
     if member then
-        return member.name, "Member", 1, 20, "Mage", "Elwynn Forest", "", "", member.online or false, 0, "MAGE", 0, 0, member.mobile or false, false, 0, member.guid
+        return member.name, "Member", 1, 20, "Mage", "Elwynn Forest", "", "", member.online or false, 0, member.class or "MAGE", 0, 0, member.mobile or false, false, 0, member.guid
     end
 end
 C_GuildInfo = {
