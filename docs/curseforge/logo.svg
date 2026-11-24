@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="-4 -4 136 136">
+  <!--
+    Project logo for CurseForge: the flame of Famulus/Media/logo.tga (same outlines and colours as
+    tools/make_media.py and website/assets/logo.svg) on the dark ground of logo-round.tga, as a full
+    square because CurseForge crops and rounds the avatar itself. Rendered to logo.png with headless
+    Chrome; the command is in AGENTS.md under "Veröffentlichung auf CurseForge".
+  -->
+  <defs>
+    <radialGradient id="ground" gradientUnits="userSpaceOnUse" cx="64" cy="78" r="100">
+      <stop offset="0" stop-color="#24403f"/>
+      <stop offset=".62" stop-color="#142022"/>
+      <stop offset="1" stop-color="#0f1719"/>
+    </radialGradient>
+    <radialGradient id="glow" gradientUnits="userSpaceOnUse" cx="64" cy="72" r="70">
+      <stop offset="0" stop-color="#f2d640" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#f2d640" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fire" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="114">
+      <stop offset="0" stop-color="#fff3a6"/>
+      <stop offset=".45" stop-color="#f2d640"/>
+      <stop offset="1" stop-color="#cf9a12"/>
+    </linearGradient>
+  </defs>
+  <rect x="-4" y="-4" width="136" height="136" fill="url(#ground)"/>
+  <circle cx="64" cy="72" r="70" fill="url(#glow)"/>
+  <path fill="url(#fire)" d="M66 10C72 30 98 44 98 76 98 98 83 114 64 114 45 114 30 99 30 78 30 62 40 54 44 40 48 50 54 54 58 50 64 42 60 24 66 10Z"/>
+  <path fill="url(#fire)" d="M33 40C36 49 32 56 29 63 25 56 27 47 33 40Z"/>
+  <path fill="#fff0a0" d="M66 44C70 58 84 66 84 84 84 98 75 108 64 108 53 108 44 99 44 86 44 76 51 72 54 62 57 68 61 69 63 66 66 60 64 52 66 44Z"/>
+  <path fill="#fffce8" d="M64 76C68 84 74 88 74 96 74 103 69 108 64 108 59 108 54 103 54 97 54 90 60 86 64 76Z"/>
+  <circle cx="96" cy="30" r="3.2" fill="#f2d640"/>
+  <circle cx="106" cy="50" r="2.2" fill="#f2d640"/>
+  <circle cx="26" cy="26" r="2.4" fill="#f2d640"/>
+</svg>

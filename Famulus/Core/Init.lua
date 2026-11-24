@@ -7,7 +7,9 @@ local ADDON_NAME, ns = ...
 ns.name = ADDON_NAME
 
 local GetMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-ns.version = (GetMetadata and GetMetadata(ADDON_NAME, "Version")) or "dev"
+-- A release build carries its tag ("v0.2.0-beta.1"); the window shows it without the "v".
+local version = GetMetadata and GetMetadata(ADDON_NAME, "Version")
+ns.version = version and (version:gsub("^v", "")) or "dev"
 
 -- Calls a function so that an error in one handler is reported through the
 -- normal error handler but does not stop the remaining handlers.

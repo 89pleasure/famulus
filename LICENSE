@@ -1,0 +1,38 @@
+Famulus
+Copyright (c) 2026 89pleasure (github.com/89pleasure). All rights reserved.
+
+The contents of this addon, excluding third-party resources, are copyrighted to its author with all
+rights reserved. Third-party resources keep their own licenses: the Inter fonts in
+Famulus/Media/Fonts are licensed under the SIL Open Font License 1.1 (see the LICENSE.txt next to
+them).
+
+The author grants you the following rights:
+
+1. You may view the source code and use the addon in World of Warcraft.
+
+2. You may modify the addon for your own private use. You may not distribute a modified version
+   unless the author has given you explicit written permission.
+
+3. You may fork the repository on GitHub for the sole purpose of proposing changes to this project
+   through pull requests.
+
+Without the author's explicit written permission, you may not:
+
+- redistribute the addon, in its original or a modified form, or upload it to CurseForge, Wago,
+  WoWInterface or any other site;
+- publish a fork or derivative work as a separate project;
+- use substantial parts of its code, graphics or texts in other projects;
+- use the name "Famulus" or its logo for another addon or project.
+
+Contributions: by submitting a contribution to this project, for example a pull request, you grant
+the author a perpetual, worldwide, irrevocable, royalty-free license to use, modify and distribute
+your contribution as part of this project under any terms the author chooses, and you confirm that
+you have the right to grant this license.
+
+All rights not expressly granted in this license are reserved by the copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

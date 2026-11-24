@@ -1,0 +1,90 @@
+# Packages Famulus and uploads it to CurseForge when a version tag is pushed. Pushes to branches
+# and pull requests never upload anything.
+#
+# The tag decides the file type on CurseForge (checked by tools/release_check.sh before anything is
+# built; any other tag stops the run):
+#   v1.2.3          Release, offered to every player
+#   v1.2.3-beta.1   Beta, only for players who chose Beta for Famulus in the CurseForge app
+#   v1.2.3-alpha.1  Alpha, likewise
+# CHANGELOG.md needs a section "## 1.2.3" (the tag without the v); it becomes the file's changelog.
+# The packager writes the tag into the .toc (## Version) and maps Interface 16001 to WoW Forever.
+#
+# Run by hand (Actions > Release > Run workflow), it builds the zip without uploading and keeps it
+# with the run for a week, to look at what would be released.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Check the tag, the changelog and the project ID
+        if: github.event_name == 'push'
+        run: bash tools/release_check.sh "$GITHUB_REF_NAME"
+
+      - name: Check the CurseForge token
+        if: github.event_name == 'push'
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+        run: |
+          if [ -z "$CF_API_KEY" ]; then
+            echo "::error::The repository secret CF_API_KEY is missing."
+            exit 1
+          fi
+
+  tests:
+    needs: check
+    uses: ./.github/workflows/tests.yml
+
+  release:
+    needs: [check, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Without this file the packager would fall back to a changelog built from the commits.
+      - name: Write the release notes
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            bash tools/release_check.sh "$GITHUB_REF_NAME" .release-notes.md
+          else
+            echo "Dry run, not released." > .release-notes.md
+          fi
+
+      - name: Package and upload to CurseForge
+        if: github.event_name == 'push'
+        uses: BigWigsMods/packager@v2
+        with:
+          pandoc: false
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+
+      - name: Package without uploading
+        if: github.event_name == 'workflow_dispatch'
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -d
+          pandoc: false
+
+      - name: Keep the zip
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Famulus-dry-run
+          path: .release/*.zip
+          include-hidden-files: true
+          retention-days: 7

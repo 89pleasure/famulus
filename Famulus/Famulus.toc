@@ -2,8 +2,13 @@
 ## Title: Famulus
 ## Notes: Play together: aliases for your friends, a chronicle of your shared journey and your fellow travellers.
 ## Notes-deDE: Gemeinsam spielen: Aliase für deine Freunde, eine Chronik eurer gemeinsamen Reise und deine Weggefährten.
-## Author: Lenni
-## Version: 0.1.0
+## Author: 89pleasure
+#@debug@
+## Version: dev
+#@end-debug@
+#@non-debug@
+# ## Version: @project-version@
+#@end-non-debug@
 ## Category: Social
 ## IconTexture: Interface\AddOns\Famulus\Media\logo.tga
 ## SavedVariables: FamulusDB

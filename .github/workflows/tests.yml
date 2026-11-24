@@ -1,0 +1,26 @@
+# Runs the tests against the mock client on every push to a branch and every pull request.
+# The release workflow calls it too, so nothing is packaged while a test fails.
+name: Tests
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install LuaJIT
+        run: sudo apt-get update -q && sudo apt-get install -yq luajit
+
+      - name: Run the tests
+        run: luajit tests/run.lua

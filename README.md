@@ -96,7 +96,11 @@ Famulus/
   Media/Fonts/         Inter in drei Schnitten, auf Latein/Griechisch/Kyrillisch gekürzt
                        (aus tools/make_fonts.py, Lizenz: SIL OFL 1.1, LICENSE.txt daneben)
 tests/                 nachgestellte WoW-API + Testlauf
-tools/                 Texturen und Schriften erzeugen, Selbsttest-Bericht lesen
+tools/                 Texturen und Schriften erzeugen, Selbsttest-Bericht lesen, Release-Tag prüfen
+.github/workflows/     Tests bei jedem Push, Upload auf CurseForge bei einem Tag
+.pkgmeta               was der Packager ins Zip packt
+CHANGELOG.md           ein Abschnitt je Version, wird der Changelog auf CurseForge
+LICENSE                alle Rechte vorbehalten (kommt mit ins Zip)
 ```
 
 ### Ein Feature hinzufügen
@@ -140,6 +144,20 @@ python3 -m http.server 4173 --directory website
 
 Danach `http://localhost:4173` öffnen.
 
+## Veröffentlichen
+
+Ein Tag baut das Addon auf GitHub und lädt es auf CurseForge hoch: `v1.2.3` als Release,
+`v1.2.3-beta.1` als Beta, `v1.2.3-alpha.1` als Alpha. Andere Tags brechen vor dem Bauen ab.
+Pushes und Pull Requests führen nur die Tests aus. Vorher braucht `CHANGELOG.md` einen Abschnitt
+`## 1.2.3`:
+
+```bash
+bash tools/release_check.sh v1.2.3
+git tag v1.2.3 && git push origin v1.2.3
+```
+
+Einzelheiten in `AGENTS.md` unter „Veröffentlichung auf CurseForge“.
+
 ## Tests
 
 ```bash
@@ -161,3 +179,11 @@ luajit tools/read_selftest.lua
 
 `/fam dev` schaltet den Entwicklermodus um: Der Selbsttest läuft dann nach jedem Login von selbst,
 und blockierte Aktionen des Addons werden mitgeschrieben.
+
+## Lizenz
+
+Alle Rechte vorbehalten, siehe `LICENSE`. Erlaubt sind: den Code ansehen, das Addon für den
+eigenen Gebrauch ändern und das Repository auf GitHub forken, um Änderungen als Pull Request
+vorzuschlagen. Weitergeben, auf andere Seiten hochladen, als eigenes Projekt veröffentlichen oder
+den Namen „Famulus“ verwenden nur mit schriftlicher Erlaubnis. Die Schrift Inter steht unter der
+SIL Open Font License 1.1.

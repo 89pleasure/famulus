@@ -1,0 +1,23 @@
+# Tells the packager (BigWigsMods/packager, run by .github/workflows/release.yml) how to build the
+# zip. The addon lives in the subfolder Famulus/; move-folders lifts it to the top, because
+# CurseForge wants exactly one folder in the zip, named like the .toc. The rest of the repo stays out.
+package-as: Famulus
+
+move-folders:
+  Famulus/Famulus: Famulus
+
+# Written by tools/release_check.sh from this version's section of CHANGELOG.md.
+manual-changelog:
+  filename: .release-notes.md
+  markup-type: markdown
+
+ignore:
+  - AGENTS.md
+  - CLAUDE.md
+  - README.md
+  - CHANGELOG.md
+  - dist
+  - docs
+  - tests
+  - tools
+  - website
