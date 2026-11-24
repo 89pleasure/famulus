@@ -507,7 +507,7 @@ local CHRONICLE_EMPTY_ITEM = {
 local CHRONICLE_EMPTY_WHO_ITEM = {
     kind = "info",
     label = function()
-        return L.c_empty_who:format((ns.ChronicleService.Companion({ who = chronicleWho })))
+        return L.c_empty_who:format(ns.ChronicleService.Label({ who = chronicleWho }))
     end,
     desc = function()
         return L.c_empty_who_desc
@@ -596,10 +596,9 @@ local function ChronicleEvent(entry)
         or kind == "item" and Chronicle.Item(entry.item) or nil
     local chip
     if not own then
-        local name = Chronicle.Companion(entry)
-        chip = { initial = Initial(name), text = name }
+        chip = { initial = Initial((Chronicle.Companion(entry))), text = Chronicle.Label(entry), class = Chronicle.Class(entry.who) }
     elseif other then
-        chip = { initial = Initial(other), text = other }
+        chip = { initial = Initial(other), text = other, class = Chronicle.Class(other) }
     end
     return {
         kind = kind,
@@ -803,12 +802,14 @@ end
 
 -- A companion as the rail shows them; line: what stands below the name.
 local function Person(companion, online, line)
-    local name, realName = ns.ChronicleService.Companion({ who = companion.who })
+    local Chronicle = ns.ChronicleService
+    local person = { who = companion.who }
     return {
         key = companion.who,
-        initial = Initial(name),
-        name = name,
-        line = line or realName,
+        initial = Initial((Chronicle.Companion(person))),
+        class = Chronicle.Class(companion.who),
+        name = Chronicle.Label(person),
+        line = line,
         level = companion.level and L.c_p_level:format(companion.level) or nil,
         online = online(companion.who),
         selected = chronicleWho == companion.who,
@@ -908,6 +909,19 @@ function layouts.chronicle()
     end
     record.desc = function()
         return L.ui_tab_record_desc
+    end
+    -- How the chronicle names people records nothing: a card of its own
+    -- below the features.
+    local names = GeneralItem("chronicleNames", "toggle")
+    record.settings[#record.settings + 1] = names
+    local featureBlocks = record.blocks()
+    record.blocks = function()
+        local blocks = {}
+        for index, block in ipairs(featureBlocks) do
+            blocks[index] = block
+        end
+        blocks[#blocks + 1] = { title = L.c_display, items = { names } }
+        return blocks
     end
     return {
         Tab("everyone", function()
@@ -1952,7 +1966,7 @@ function Render()
             bar.toStory:SetPoint("LEFT", bar.clear, "RIGHT", 4, 0)
             window.bookFilter = bar
         end
-        bar.text:SetText(L.c_only_who:format((ns.ChronicleService.Companion({ who = chronicleWho }))))
+        bar.text:SetText(L.c_only_who:format(ns.ChronicleService.Label({ who = chronicleWho })))
         bar.clear:SetLabel(L.c_show_all)
         bar.guid = ns:IsCategoryEnabled("fellows") and ns.FellowService.Find(chronicleWho) or nil
         bar.toStory:SetLabel(L.ui_fellow_story)
@@ -2598,9 +2612,11 @@ ns:On("OPTION_CHANGED", function(section, key)
         PlayEmbers()
     end
     -- Switching a feature folds or unfolds its options, which moves rows;
-    -- a main feature's switch swaps its page for a notice.
+    -- a main feature's switch swaps its page for a notice; the chronicle
+    -- names people anew.
     local feature = ns.features[section]
-    if (key == "enabled" and feature and #feature.options > 0) or section == "categories" then
+    if (key == "enabled" and feature and #feature.options > 0) or section == "categories"
+        or (section == "general" and key == "chronicleNames") then
         RequestRefresh("layout")
     else
         RequestRefresh("state")

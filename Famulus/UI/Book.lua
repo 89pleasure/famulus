@@ -23,7 +23,7 @@
 --           texture = 134400,           -- optional: a texture of the game's instead
 --                                       -- (an item's icon), shown in its own colours
 --           big = true,                 -- a milestone: larger, accent border and mark
---           chip = { initial = "A", text = "Companion" } or nil,
+--           chip = { initial = "A", text = "Companion", class = "MAGE" or nil } or nil,
 --       } },
 --   } }
 --
@@ -254,6 +254,9 @@ local function CreateEvent(book)
     event.chipInitial = UI.Text(foot, 10, "accent", "semibold")
     event.chipInitial:SetPoint("CENTER", event.chipDot, "CENTER")
     event.chipInitial:SetJustifyH("CENTER")
+    -- Where the class is known, its icon instead of the initial.
+    event.chipClass = UI.ClassIcon(foot, 18)
+    event.chipClass:SetPoint("CENTER", event.chipDot, "CENTER")
     event.chipText = UI.Text(foot, 11, "textMuted")
     event.chipText:SetPoint("LEFT", event.chipDot, "RIGHT", 6, 0)
     event.chipText:SetWordWrap(false)
@@ -378,9 +381,10 @@ local function EventSet(event, story, onLeft, width)
     -- Whose event it is stands in a sunken strip below, like an option
     -- under its feature.
     local chip = story.chip
+    local classShown = UI.SetClass(event.chipClass, chip and chip.class)
     event.foot:SetShown(chip ~= nil)
-    event.chipDot:SetShown(chip ~= nil)
-    event.chipInitial:SetShown(chip ~= nil)
+    event.chipDot:SetShown(chip ~= nil and not classShown)
+    event.chipInitial:SetShown(chip ~= nil and not classShown)
     event.chipText:SetShown(chip ~= nil)
     if chip then
         event.chipInitial:SetText(chip.initial or "")
