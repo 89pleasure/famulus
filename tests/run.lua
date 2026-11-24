@@ -454,11 +454,17 @@ local function pageTab(text)
     end
 end
 
-check(tabButton("Names") and tabButton("Names").selected
-    and window.area.name:GetText() == "Aliases" and window.area.desc:GetText() == ns.L.area_aliases_desc,
-    "the first page is the aliases: named in the sidebar, the content headed by its first tab")
-check(navButton("Aliases") and navButton("Chronicle") and navButton("Settings") and navButton("About"),
+check(ns.areas[1].id == "chronicle" and ns.areas[2].id == "fellows" and ns.areas[3].id == "aliases"
+    and ns.categories[1] == "chronicle" and ns.categories[3] == "aliases",
+    "the main features in order: chronicle, fellow travellers, aliases last")
+check(tabButton("Everyone") and tabButton("Everyone").selected
+    and window.area.name:GetText() == "Chronicle" and window.area.desc:GetText() == ns.L.area_chronicle_desc,
+    "the first page is the chronicle: named in the sidebar, the content headed by its first tab")
+check(navButton("Chronicle") and navButton("Fellow travellers") and navButton("Aliases") and navButton("Settings") and navButton("About"),
     "the head lists the main features and the addon's own pages")
+mock.Click(navButton("Aliases"))
+check(tabButton("Names") and tabButton("Names").selected and window.area.name:GetText() == "Aliases"
+    and window.area.desc:GetText() == ns.L.area_aliases_desc, "the aliases page opens on its first tab")
 check(not navButton("Quality of Life") and not navButton("Journal"), "and nothing else")
 check(window.search:GetParent() == window.sidebar and window.search:IsShown(), "the search sits at the top of the sidebar")
 check(navButton("Aliases"):GetParent() == window.sidebar and navButton("Settings"):GetParent() == window.sidebar
@@ -678,9 +684,9 @@ check(#visibleRows() == 7 and window.resetButton:IsShown(), "the display tab sho
 mock.Click(navButton("Settings"))
 mock.Click(tabButton("General"))
 local switches = visibleRows()
-check(switches[1].item.section == "categories" and switches[1].item.key == "aliases" and switches[3].item.key == "fellows"
-    and switches[1].toggle.on, "settings › general starts with the three main features")
-mock.Click(switches[1])
+check(switches[1].item.section == "categories" and switches[1].item.key == "chronicle" and switches[2].item.key == "fellows"
+    and switches[3].item.key == "aliases" and switches[3].toggle.on, "settings › general starts with the three main features, in the sidebar's order")
+mock.Click(switches[3])
 mock.Advance(0.1)
 check(not ns:IsCategoryEnabled("aliases") and navButton("Aliases").pill:IsShown() and navButton("Aliases").count:GetText() == "OFF"
     and navButton("Aliases").label:GetAlpha() < 1,

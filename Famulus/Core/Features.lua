@@ -36,15 +36,16 @@
 local _, ns = ...
 local L = ns.L
 
-ns.categories = { "aliases", "chronicle", "fellows" }
+ns.categories = { "chronicle", "fellows", "aliases" }
 
 -- Main features ("areas") each get an entry in the window's sidebar and a
 -- page layout of their own (UI/Options.lua). Every category belongs to
--- exactly one area.
+-- exactly one area. The order is the sidebar's; the window opens on the
+-- first. The aliases come last: they serve the other two.
 ns.areas = {
-    { id = "aliases", categories = { "aliases" } },
     { id = "chronicle", categories = { "chronicle" } },
     { id = "fellows", categories = { "fellows" } },
+    { id = "aliases", categories = { "aliases" } },
 }
 
 -- Master switches are ordinary options (section "categories"), so they are

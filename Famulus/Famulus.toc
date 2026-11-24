@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Famulus
-## Notes: Play together: aliases for your friends, a chronicle of your shared journey and your fellow travellers.
-## Notes-deDE: Gemeinsam spielen: Aliase für deine Freunde, eine Chronik eurer gemeinsamen Reise und deine Weggefährten.
+## Notes: Play together: a chronicle of your shared journey, your fellow travellers and aliases for your friends.
+## Notes-deDE: Gemeinsam spielen: eine Chronik eurer gemeinsamen Reise, deine Weggefährten und Aliase für deine Freunde.
 ## Author: 89pleasure
 #@debug@
 ## Version: dev

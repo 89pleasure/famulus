@@ -11,17 +11,6 @@ to be great company. Famulus helps you stay close to them. Made for World of War
 > **Alpha:** Famulus is young and still growing. Expect rough edges, and please tell me in the
 > comments what you run into and what you would like to see.
 
-## Aliases: know who's who
-
-Give other players names of your own that only you see.
-
-- In chat, with the real name in brackets if you like: "Alias (Name)"
-- As a line in the player tooltip
-- Set straight from the right-click menu of a player or a Battle.net friend
-- One alias for a Battle.net friend covers all of their characters
-
-Whispers, invites and links keep using the real name.
-
 ## Chronicle: your journey as a picture book
 
 Famulus records what happens on your adventures and tells it as a picture book, one chapter per
@@ -42,6 +31,17 @@ which bosses you beat together. The more time you spend together, the stronger y
 If you like, it keeps only friends and guild members, and tidying up removes everyone else in one go.
 All of this stays on your computer and is never sent anywhere.
 
+## Aliases: know who's who
+
+Give other players names of your own that only you see.
+
+- In chat, with the real name in brackets if you like: "Alias (Name)"
+- As a line in the player tooltip
+- Set straight from the right-click menu of a player or a Battle.net friend
+- One alias for a Battle.net friend covers all of their characters
+
+Whispers, invites and links keep using the real name.
+
 ## Getting started
 
 Type **/fam** (or /famulus), click the minimap button or use the addon menu at the minimap. Choose a
@@ -60,7 +60,7 @@ themes, English and German.
 ## Privacy
 
 The chronicle only talks to people on your friends list or in your guild who use Famulus
-themselves, and only once you switch sharing on. Your aliases and fellow travellers never leave
+themselves, and only once you switch sharing on. Your fellow travellers and aliases never leave
 your computer.
 
 ---
