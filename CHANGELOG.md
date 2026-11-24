@@ -5,11 +5,26 @@ That section becomes the changelog of the file on CurseForge.
 
 ## 0.1.0-alpha.2
 
+### Chronicle
+- A chapter is now a session of play instead of a day: a pause of two hours begins the next one.
+  It is named after the part of the day it began in ("This evening", "Last night"), older ones
+  after the weekday ("Sunday night"), and shows from when to when.
+- Below a chapter's heading, your route through the zones in the order you visited them.
+- Friends show their class icon instead of their initial once their class is known, from their
+  stats, your friends list or your guild roster.
+- Behind an alias the character name stands in brackets, "Dad (Borin Ironbeard)". A new switch
+  under Chronicle > Settings shows the alias alone.
+
 ### Fellow travellers
 - Optionally only friends (Battle.net friends too) and guild members, like the chronicle.
 - Tidy up removes everyone from the list who is neither on your friends list nor in your guild.
   It names them first, asks before it removes, and waits while your friends list or guild roster
   is still loading or Battle.net is not connected.
+
+### Window
+- The aliases come last, after the chronicle and the fellow travellers; the window now opens on
+  the chronicle.
+- `/fam chronicle demo` and `/fam fellows demo` write their sample data in the addon's language.
 
 ## 0.1.0-alpha.1
 
