@@ -25,7 +25,7 @@ mit denen du in einer Gruppe warst. Englisch und Deutsch, keine Bibliotheken, ke
 | Chronik | Stufenaufstiege der Freundesliste festhalten | aus |
 | Chronik | Mit Freunden und Gilde teilen (Addon-Nachrichten zwischen Famulus-Nutzern) | aus |
 | Chronik | Ereignisse von Freunden live als Karte am Bildschirm einblenden, auf Wunsch auch eigene | **an** |
-| Weggefährten | Merken, mit wem du in einer Gruppe warst: wann, wo, wie oft, wie lange, gemeinsame Bosse (wahlweise ohne Schlachtzüge) | aus |
+| Weggefährten | Merken, mit wem du in einer Gruppe warst: wann, wo, wie oft, wie lange, gemeinsame Bosse (wahlweise ohne Schlachtzüge oder nur Freunde und Gilde) | aus |
 
 **Das Fenster** (`/fam`): Links die Suche, darunter die Hauptfunktionen **Aliase**, **Chronik** und
 **Weggefährten**, unten **Einstellungen** und **Über**; die Unterbereiche der gewählten Funktion
@@ -41,7 +41,9 @@ Weggefährten zeigen deine drei engsten Gefährten als Kacheln und alle weiteren
 dem letzten Mal oder nach der gemeinsamen Zeit), jeweils mit ihrer **Verbundenheit**: Begegnung,
 Bekannt (ab 1 Std.), Vertraut (ab 10 Std.), Unzertrennlich (ab 40 Std.). Ein Klick zeigt die Person
 und „Eure Geschichte“: eure gemeinsamen Tage und Bosse als Bilderbuch. Kennt auch die Chronik die
-Person, führt ein Knopf zu ihren Ereignissen dort, und von dort zurück. Diese Daten bleiben auf
+Person, führt ein Knopf zu ihren Ereignissen dort, und von dort zurück. Unter Einstellungen lassen
+sich die Weggefährten auf Freunde (auch Battle.net) und Gilde beschränken, und „Aufräumen“ entfernt
+alle, die weder auf der Freundesliste noch in der Gilde sind. Diese Daten bleiben auf
 deinem Rechner, nichts davon wird verschickt. Fünf Farbwelten, die Funken im Hintergrund und die Fenstergröße stehen unter
 Einstellungen › Darstellung. Die Suche oben findet Einstellungen, Aliase und Weggefährten auf allen
 Seiten.

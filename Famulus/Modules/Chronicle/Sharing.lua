@@ -82,19 +82,9 @@ local queue, queueHead = {}, 1
 local registered = false
 local greetedGuild = false
 
--- A name without the realm the client may add: "First Last-Realm" becomes
--- "First Last" (the spellings as Guildy reads them).
-local function Plain(name)
-    if string.find(name, " ", 1, true) then
-        name = string.match(name, "^[^%-]*")
-    end
-    return (string.gsub(string.gsub(name, "^%s+", ""), "%s+$", ""))
-end
-
--- One spelling for a name however the client writes it.
-local function Key(name)
-    return (string.lower((string.gsub(Plain(name), "[%s%-]+", "-"))))
-end
+-- A name without the realm the client may add, and one spelling for it
+-- however the client writes it.
+local Plain, Key = ns.SocialService.Plain, ns.SocialService.Key
 
 -- The name of someone whose news may be passed on to the player, or nil:
 -- a guild member, or someone whose addon answered directly not long ago.

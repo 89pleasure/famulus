@@ -2,6 +2,9 @@
 -- met, how often and how long you played together, and how many bosses
 -- you defeated together. Works without the others' cooperation: the client
 -- tells who is in the group. Nothing is sent to anyone.
+--
+-- With the option friendsOnly it remembers only friends (Battle.net friends
+-- too) and guild members: the people the chronicle hears from, and more.
 
 local _, ns = ...
 local Fellows = ns.FellowService
@@ -13,6 +16,7 @@ local rememberFellows = ns:NewFeature({
     requires = { "GetNumGroupMembers", "UnitGUID", "UnitName" },
     options = {
         { key = "raids", type = "toggle", default = true },
+        { key = "friendsOnly", type = "toggle", default = false },
     },
 })
 
@@ -25,7 +29,31 @@ local function Zone()
 end
 
 function rememberFellows:Scan()
-    Fellows.Sync(ns.GroupService.Members(self:Get("raids")), time(), Zone(), UnitLevel and UnitLevel("player"))
+    local friendsOnly = self:Get("friendsOnly")
+    local members = {}
+    for _, member in ipairs(ns.GroupService.Members(self:Get("raids"))) do
+        -- A Battle.net friend's BattleTag is kept either way: tidying up
+        -- needs it to know them again while they are offline.
+        local known, tag = ns.SocialService.Unit(member.unit, member.guid)
+        member.tag = tag
+        if known or not friendsOnly then
+            members[#members + 1] = member
+        end
+    end
+    Fellows.Sync(members, time(), Zone(), UnitLevel and UnitLevel("player"))
+end
+
+-- Only friends: someone who becomes a friend while in the group counts
+-- from then on, not only from the next change of the group; the same when
+-- the player joins or leaves a guild.
+function rememberFellows:ListenToFriends()
+    if self:Get("friendsOnly") then
+        self:RegisterEvent("FRIENDLIST_UPDATE", "Scan")
+        self:RegisterEvent("PLAYER_GUILD_UPDATE", "Scan")
+    else
+        self:UnregisterEvent("FRIENDLIST_UPDATE")
+        self:UnregisterEvent("PLAYER_GUILD_UPDATE")
+    end
 end
 
 function rememberFellows:OnEnable()
@@ -34,6 +62,7 @@ function rememberFellows:OnEnable()
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "Scan")
     self:RegisterEvent("BOSS_KILL")
     self:RegisterEvent("PLAYER_LOGOUT")
+    self:ListenToFriends()
     self:Scan()
 end
 
@@ -42,7 +71,10 @@ function rememberFellows:OnDisable()
 end
 
 function rememberFellows:OnOptionChanged(key)
-    if key == "raids" then
+    if key == "friendsOnly" then
+        self:ListenToFriends()
+    end
+    if key == "raids" or key == "friendsOnly" then
         self:Scan()
     end
 end

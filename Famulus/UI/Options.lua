@@ -47,9 +47,10 @@ local chronicleWho -- the companion the chronicle's book is narrowed to, or nil
 local fellowSort = "last" -- order of the fellow travellers' list: "last" or "time"
 local fellowStory -- the fellow traveller whose story is open, or nil
 local resetArmed, resetToken = false, 0
+local tidyArmed, tidyToken = false, 0 -- the fellow travellers' tidying up asks first, too
 local aliasEditor -- input row of the aliases page, once it has been shown
 local embers = {} -- the sparks in the background, one set per ground
-local Render, PlayEmbers, SelectPage -- forward declarations
+local Render, PlayEmbers, SelectPage, RefreshState -- forward declarations
 
 -- Grain lies in a band across the top of the window, sidebar and content
 -- alike, and fades out below the tabs.
@@ -1350,6 +1351,83 @@ local function FellowOverviewTab()
     }
 end
 
+-- Tidying up: whoever on the list is neither a friend nor in the guild,
+-- or no longer, goes in one go. The row names them; like reset, the button
+-- asks first.
+local TIDY_NAMES = 5 -- names the row lists; the others it counts
+
+local function TidyClicked()
+    if not tidyArmed then
+        tidyArmed = true
+        tidyToken = tidyToken + 1
+        local token = tidyToken
+        C_Timer.After(4, function()
+            if token == tidyToken and tidyArmed then
+                tidyArmed = false
+                RefreshState(false)
+            end
+        end)
+        RefreshState(false)
+        return
+    end
+    tidyArmed = false
+    -- A fresh look: the list on screen may be a while old.
+    local check, ready = ns.SocialService.Circle()
+    local removed = ready and ns.FellowService.RemoveOutsiders(check) or 0
+    if removed > 0 then
+        ns:Notify(L.msg_fellow_tidied:format(removed))
+    end
+    RefreshState(false)
+end
+
+local function TidyItem()
+    local check, ready = ns.SocialService.Circle()
+    local outsiders = ready and ns.FellowService.Outsiders(check) or {}
+    return {
+        kind = "action",
+        label = function()
+            return L.ui_fellow_tidy
+        end,
+        desc = function()
+            if not ready then
+                return L.ui_fellow_tidy_wait
+            elseif #outsiders == 0 then
+                return L.ui_fellow_tidy_none
+            end
+            local names = {}
+            for index = 1, math.min(#outsiders, TIDY_NAMES) do
+                local person = outsiders[index].person
+                names[index] = ns.AliasService.Get(person.name) or person.name
+            end
+            local list = table.concat(names, ", ")
+            if #outsiders > TIDY_NAMES then
+                list = L.ui_fellow_tidy_more:format(list, #outsiders - TIDY_NAMES)
+            end
+            if #outsiders == 1 then
+                return L.ui_fellow_tidy_one:format(list)
+            end
+            return L.ui_fellow_tidy_some:format(#outsiders, list)
+        end,
+        -- The search looks for the deed, not for the names it lists.
+        find = function()
+            return L.ui_fellow_tidy .. " " .. L.ui_fellow_tidy_title .. " " .. L.ui_fellow_tidy_button
+        end,
+        button = function()
+            return L.ui_fellow_tidy_button
+        end,
+        confirm = function()
+            return L.ui_fellow_tidy_confirm
+        end,
+        armed = function()
+            return tidyArmed
+        end,
+        usable = function()
+            return ready and #outsiders > 0
+        end,
+        click = TidyClicked,
+    }
+end
+
 function layouts.fellows()
     local record = CategoryTab("fellows")
     record.id = "record"
@@ -1358,6 +1436,17 @@ function layouts.fellows()
     end
     record.desc = function()
         return L.ui_fellows_record_desc
+    end
+    -- Below the switches, a card to tidy the list up. It works on what is
+    -- stored, so it stays while remembering is switched off.
+    local switches = record.blocks
+    record.blocks = function()
+        local blocks = {}
+        for index, block in ipairs(switches()) do
+            blocks[index] = block
+        end
+        blocks[#blocks + 1] = { title = L.ui_fellow_tidy_title, items = { TidyItem() } }
+        return blocks
     end
     return {
         FellowOverviewTab(),
@@ -1459,7 +1548,9 @@ local function SearchBlocks(query)
                 for _, block in ipairs(tab.search and tab.search() or tab.blocks()) do
                     for _, item in ipairs(block.items) do
                         if item.kind ~= "info" and item.kind ~= "aliasEdit" then
-                            local haystack = string.lower(item.label() .. " " .. item.desc()) .. " " .. context
+                            -- An item whose help text changes (a list of names) says what to search in.
+                            local text = item.find and item.find() or (item.label() .. " " .. item.desc())
+                            local haystack = string.lower(text) .. " " .. context
                             if string.find(haystack, query, 1, true) then
                                 hits[#hits + 1] = item
                             end
@@ -1508,6 +1599,11 @@ local function RowRefresh(row, animate)
         row.swatches:SetValues(item.values(), item.get())
     elseif kind == "info" then
         row.desc:SetText(item.desc())
+    elseif kind == "action" then
+        local armed = item.armed()
+        row.action:SetLabel(armed and item.confirm() or item.button())
+        row.action:SetTone(armed and "danger" or nil)
+        row.action:SetDisabled(not item.usable())
     end
 end
 
@@ -1525,6 +1621,11 @@ local function EnsureControls(row, kind)
         row.swatches:SetPoint("RIGHT", -14, 0)
     elseif kind == "aliasEdit" and not row.editor then
         row.editor = CreateAliasEditor(row)
+    elseif kind == "action" and not row.action then
+        row.action = UI.Button(row, function()
+            row.item.click()
+        end)
+        row.action:SetPoint("RIGHT", -18, 0)
     elseif PERSON_ROWS[kind] and not row.remove then
         row.remove = UI.IconButton(row, "close", function()
             row.item.remove()
@@ -1545,6 +1646,7 @@ local function EnsureControls(row, kind)
         select = row.dropdown,
         swatch = row.swatches,
         aliasEdit = row.editor,
+        action = row.action,
     }
     for controlKind, control in pairs(controls) do
         if control then
@@ -1566,6 +1668,8 @@ local function ControlWidth(row, kind)
         return row.dropdown:GetWidth()
     elseif kind == "swatch" then
         return row.swatches:GetWidth()
+    elseif kind == "action" then
+        return row.actionWidth
     elseif PERSON_ROWS[kind] then
         return 26
     end
@@ -1583,6 +1687,13 @@ local function RowSetItem(row, item, index, flat, last, width)
         aliasEditor:Relabel()
     elseif kind == "swatch" then
         RowRefresh(row, false) -- sizes the control before the text is laid out
+    elseif kind == "action" then
+        -- Room for the longer of the button's two labels, so that asking
+        -- does not push it over the text.
+        row.action:SetLabel(item.confirm())
+        local wide = row.action:GetWidth()
+        row.action:SetLabel(item.button())
+        row.actionWidth = math.max(wide, row.action:GetWidth())
     end
 
     local child = item.child and not flat
@@ -1637,7 +1748,7 @@ end
 local function RowClicked(row)
     local item = row.item
     local kind = item.kind
-    if row.disabled or kind == "info" or kind == "swatch" then
+    if row.disabled or kind == "info" or kind == "swatch" or kind == "action" then
         return
     end
     if PERSON_ROWS[kind] then
@@ -1649,7 +1760,7 @@ local function RowClicked(row)
     end
 end
 
-local HOVERLESS = { info = true, aliasEdit = true, swatch = true }
+local HOVERLESS = { info = true, aliasEdit = true, swatch = true, action = true }
 
 local function CreateRow(parent)
     local row = CreateFrame("Button", nil, parent)
@@ -1857,7 +1968,7 @@ local function ApplyScale()
 end
 
 -- Refreshes switches and counters without touching the layout.
-local function RefreshState(animate)
+function RefreshState(animate)
     for i = 1, #rows do
         if rows[i]:IsShown() then
             RowRefresh(rows[i], animate)
@@ -2097,6 +2208,7 @@ end
 
 function SelectPage(id)
     DisarmReset()
+    tidyArmed = false
     chronicleWho, fellowStory = nil, nil
     currentPage = id
     if searchText ~= "" then
@@ -2109,6 +2221,7 @@ end
 
 local function SelectTab(id)
     DisarmReset()
+    tidyArmed = false
     chronicleWho, fellowStory = nil, nil
     selectedTabs[currentPage] = id
     Render()
@@ -2524,6 +2637,7 @@ local function Build()
         UI.CloseMenu()
         PlayEmbers(false)
         DisarmReset()
+        tidyArmed = false
         renderedKey, railKey, chronicleWho, fellowStory = nil, nil, nil, nil
         window.search.edit:ClearFocus()
         if aliasEditor then
@@ -2622,6 +2736,10 @@ ns:On("ALIASES_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("FELLOWS_CHANGED", function()
+    RequestRefresh("layout")
+end)
+-- The guild roster came: tidying up can count again.
+ns:On("SOCIAL_CHANGED", function()
     RequestRefresh("layout")
 end)
 ns:On("PROFILE_CHANGED", function()

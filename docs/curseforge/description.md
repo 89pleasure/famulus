@@ -39,6 +39,7 @@ and special items. Beat a boss as a group, and the chronicle remembers who was t
 Famulus remembers everyone you grouped with: when and where you met, how often, for how long, and
 which bosses you beat together. The more time you spend together, the stronger your bond, from
 *Encounter* to *Acquainted*, *Trusted* and *Inseparable*. Click someone to see your story together.
+If you like, it keeps only friends and guild members, and tidying up removes former ones in one go.
 All of this stays on your computer and is never sent anywhere.
 
 ## Getting started
