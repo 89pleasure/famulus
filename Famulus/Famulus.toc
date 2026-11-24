@@ -9,6 +9,7 @@
 #@non-debug@
 # ## Version: @project-version@
 #@end-non-debug@
+## X-Curse-Project-ID: 1828785
 ## Category: Social
 ## IconTexture: Interface\AddOns\Famulus\Media\logo.tga
 ## SavedVariables: FamulusDB

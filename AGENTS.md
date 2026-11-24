@@ -1045,9 +1045,9 @@ Entscheidung des Assistenten. Hochgeladen ist noch nichts.
   --hide-scrollbars --force-device-scale-factor=1 --window-size=1024,1024
   --screenshot="<abs. Pfad>\logo.png" "file:///<abs. Pfad>/logo.svg"`.
   Eine Entscheidung des Assistenten, vom Auftraggeber noch nicht gesehen.
+- **Projekt angelegt** (vom Auftraggeber, 2026-11-24): CurseForge-Projekt-ID 1828785, steht als
+  `## X-Curse-Project-ID` in der `.toc`.
 - **Offen:**
-  - Projekt auf CurseForge anlegen (Auftraggeber; den Namen dort prüfen) und die ID als
-    `## X-Curse-Project-ID` in die `.toc`.
   - API-Token als Repository-Secret `CF_API_KEY`; setzt der Auftraggeber selbst, der Token geht
     nicht durch den Assistenten.
   - Dateityp der ersten Datei. Empfehlung des Assistenten: `v0.1.0` als Release mit „Alpha“ in
