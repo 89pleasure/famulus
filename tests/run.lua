@@ -1745,6 +1745,15 @@ enable("rememberFellows", false)
 check(ns:CountRegisteredEvents() == eventsBeforeFellows and not Fellows.IsTogether("Player-1-TOM"),
     "switched off, it neither listens nor counts")
 check(FamulusDB.fellows["Player-1-TOM"].seconds == 3600, "and what it counted stays")
+
+-- Sample people for a look at the list; clearing leaves the real ones.
+local realFellows = Fellows.Count()
+SlashCmdList.FAMULUS("fellows demo")
+SlashCmdList.FAMULUS("fellows demo")
+local added = Fellows.Count() - realFellows
+check(added > 3 and lastChat():find("/fam fellows demo clear", 1, true), "/fam fellows demo adds sample people, once")
+SlashCmdList.FAMULUS("fellows demo clear")
+check(Fellows.Count() == realFellows and FamulusDB.fellows["Player-1-TOM"] ~= nil, "/fam fellows demo clear removes only them")
 mock.Click(navButton("Aliases"))
 SlashCmdList.FAMULUS("")
 FamulusDB.fellows = nil

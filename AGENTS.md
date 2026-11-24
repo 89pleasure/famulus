@@ -294,6 +294,12 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   beim Login angefragt, weil der Client sie im Hintergrund lädt und der erste `SetFont` falsch
   liefert). Auf koKR/zhCN/zhTW-Clients bleibt die Spielschrift. Lädt eine Datei nicht, nimmt
   `UI.SetFont` die Spielschrift.
+  **Beobachtet 2026-11-24, ungeklärt:** Der Name des Reiters „Chronik“ im Kopf blieb leer,
+  über mehrere Seitenwechsel hinweg; Breite und Zähler stimmten, der Client kannte den Text also.
+  Einmal fehlte auch der Zähler und erschien erst, als sich seine Zahl änderte. Nach `/reload`
+  war alles da. Vermutung (unbestätigt): Der Text wurde gesetzt, bevor die Schrift fertig geladen
+  war, und weil er sich nicht ändert, zeichnet der Client ihn nicht neu. Tritt es wieder auf,
+  festhalten, wie lange nach dem Login das Fenster zum ersten Mal offen war.
 - Unverändert aus 2026-11-16: feste Fensterhöhe, längere Seiten scrollen; die Seite für
   Addon-eigene Einstellungen heißt „Einstellungen“ (intern `general`); Untertitel und
   Reiterbeschreibung sagen, was der Spieler dort findet, keine technischen Hinweise; Optionen eines
@@ -774,6 +780,10 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   Vorname) bzw. „mit 12 anderen“. Das gilt, sobald „Meine Reise festhalten“ läuft, unabhängig vom
   Schalter der Weggefährten. Beide Felder fehlen in `FIELDS` von `Sharing.lua` und werden also nicht
   geteilt. Der Beispiel-Boss in `/fam chronicle demo` hat zwei Gefährten.
+- **Beispieldaten (2026-11-24, Wunsch des Auftraggebers):** `/fam fellows demo` trägt sechs
+  erfundene Weggefährten ein (Klassen, Stufen, Gebiete, Zeiten von 25 Minuten bis 31 Stunden; Mira
+  und Borin wie in der Chronik), `/fam fellows demo clear` entfernt nur sie
+  (`FellowService.Demo`, `ClearDemo`). Sie tragen `demo = true` und GUIDs `Player-0-FAMDEMO..`.
 - **Im Spiel ungeprüft:** alles. Besonders: ob `UnitName` für `party1`… Vor- und Nachname liefert
   wie für `player`, ob `GROUP_ROSTER_UPDATE` nach dem Login von selbst kommt (sonst fängt
   `PLAYER_ENTERING_WORLD` es auf), ob `IsInInstance` in Forever `pvp` meldet und ob `BOSS_KILL` in

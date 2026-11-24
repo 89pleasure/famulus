@@ -364,6 +364,10 @@ SlashCmdList.FAMULUS = function(input)
         ns:Print(L.msg_demo_added:format(ns.ChronicleService.Demo()))
     elseif command == "chronicle demo clear" then
         ns:Print(L.msg_demo_cleared:format(ns.ChronicleService.ClearDemo()))
+    elseif command == "fellows demo" then
+        ns:Print(L.msg_fellow_demo_added:format(ns.FellowService.Demo()))
+    elseif command == "fellows demo clear" then
+        ns:Print(L.msg_fellow_demo_cleared:format(ns.FellowService.ClearDemo()))
     else
         ns:ToggleOptions()
     end

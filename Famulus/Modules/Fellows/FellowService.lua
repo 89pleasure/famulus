@@ -194,6 +194,63 @@ function FellowService.Seconds(guid, person, now)
     return seconds
 end
 
+-- Sample people, to look at the list without grouping for days:
+-- /fam fellows demo writes them, /fam fellows demo clear removes them.
+-- They carry `demo` and a GUID no real player has. Returns how many were
+-- written or removed.
+local DEMO_ZONES = {
+    enUS = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris", "Westfall", "The Deadmines" },
+    deDE = { "Ödland", "Uldaman", "Schlingendorntal", "Tanaris", "Westfall", "Die Todesminen" },
+}
+
+function FellowService.ClearDemo()
+    local fellows = Store()
+    local removed = 0
+    if fellows then
+        for guid, person in pairs(fellows) do
+            if person.demo then
+                fellows[guid] = nil
+                removed = removed + 1
+            end
+        end
+    end
+    if removed > 0 then
+        ns:Fire("FELLOWS_CHANGED")
+    end
+    return removed
+end
+
+function FellowService.Demo()
+    local fellows = Store(true)
+    if not fellows then
+        return 0
+    end
+    FellowService.ClearDemo()
+    local zone = DEMO_ZONES[GetLocale and GetLocale()] or DEMO_ZONES.enUS
+    local hour, day = 3600, 86400
+    -- name, class, level, { first: seconds ago, zone }, { last: seconds ago, zone }, times, seconds, bosses
+    local samples = {
+        { "Mira Sturmfeder", "MAGE", 40, { 9 * day, zone[5] }, { 1 * hour, zone[4] }, 14, 31 * hour + 20 * 60, 9 },
+        { "Borin Eisenbart", "WARRIOR", 38, { 6 * day, zone[6] }, { 1 * day + 5 * hour, zone[2] }, 6, 11 * hour + 5 * 60, 7 },
+        { "Lysa Morgentau", "PRIEST", 39, { 1 * day + 6 * hour, zone[2] }, { 1 * day + 5 * hour, zone[2] }, 1, 2 * hour + 40 * 60, 3 },
+        { "Kael Dornhain", "HUNTER", 34, { 4 * day, zone[3] }, { 3 * day, zone[3] }, 2, 1 * hour + 15 * 60, 0 },
+        { "Tomas Grauwind", "ROGUE", 41, { 2 * day, zone[1] }, { 2 * day, zone[1] }, 1, 25 * 60, 1 },
+        { "Ena Silberquell", "DRUID", 37, { 12 * day, zone[5] }, { 8 * day, zone[6] }, 3, 4 * hour + 50 * 60, 5 },
+    }
+    local now = time()
+    for index, sample in ipairs(samples) do
+        fellows[("Player-0-FAMDEMO%02d"):format(index)] = {
+            name = sample[1], class = sample[2], level = sample[3],
+            first = math.floor(now - sample[4][1]), firstZone = sample[4][2],
+            last = math.floor(now - sample[5][1]), zone = sample[5][2],
+            times = sample[6], seconds = sample[7], bosses = sample[8],
+            demo = true,
+        }
+    end
+    ns:Fire("FELLOWS_CHANGED")
+    return #samples
+end
+
 ns:On("DATABASE_READY", function()
     local fellows = Store()
     if not fellows then
