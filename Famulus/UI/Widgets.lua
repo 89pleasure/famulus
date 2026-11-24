@@ -1024,42 +1024,44 @@ function UI.TierBadge(parent)
     return badge
 end
 
--- Four steps on a line: the reached ones lit, the current one glowing, the
--- line filled up to where you stand.
-function UI.TierLadder(parent, width)
-    local ladder = CreateFrame("Frame", nil, parent)
-    ladder:SetSize(width, 40)
-    local step = width / 4
-    local track = ladder:CreateTexture(nil, "BORDER")
-    track:SetHeight(2)
-    track:SetPoint("TOPLEFT", step / 2, -7)
-    track:SetPoint("TOPRIGHT", -step / 2, -7)
-    UI.Paint(track, "track")
-    ladder.fill = ladder:CreateTexture(nil, "ARTWORK")
-    ladder.fill:SetHeight(2)
-    ladder.fill:SetPoint("TOPLEFT", step / 2, -7)
-    UI.Shade(ladder.fill, "HORIZONTAL", "accent", "accent2")
-    ladder.steps = {}
-    for index = 1, 4 do
-        local dot = UI.Icon(ladder, "circle", 10, "track", "OVERLAY")
-        dot:SetPoint("TOP", ladder, "TOPLEFT", step * (index - 0.5), -2)
-        dot.halo = UI.Halo(ladder, dot, 22, "accentGlow")
-        dot.label = UI.Text(ladder, 10, "textMuted", "medium")
-        dot.label:SetPoint("TOP", dot, "BOTTOM", 0, -6)
-        dot.label:SetJustifyH("CENTER")
-        ladder.steps[index] = dot
+-- The way to the next bond tier: the tier you stand at on the left, the next
+-- one on the right, below them three segments for the three steps up,
+-- filled as far as you have come. At the top tier all three are full.
+local TIER_SEGMENT_H, TIER_SEGMENT_GAP = 6, 4
+
+function UI.TierBar(parent, width)
+    local bar = CreateFrame("Frame", nil, parent)
+    bar:SetSize(width, 20 + TIER_SEGMENT_H)
+    bar.current = UI.Text(bar, 12, "textDim", "semibold")
+    bar.current:SetPoint("TOPLEFT")
+    bar.next = UI.Text(bar, 12, "textMuted")
+    bar.next:SetPoint("TOPRIGHT")
+    bar.next:SetJustifyH("RIGHT")
+    local segmentWidth = (width - TIER_SEGMENT_GAP * 2) / 3
+    bar.segments = {}
+    for index = 1, 3 do
+        local segment = CreateFrame("Frame", nil, bar)
+        segment:SetSize(segmentWidth, TIER_SEGMENT_H)
+        segment:SetPoint("BOTTOMLEFT", (index - 1) * (segmentWidth + TIER_SEGMENT_GAP), 0)
+        UI.Round(segment, "track", TIER_SEGMENT_H / 2)
+        segment.fill = CreateFrame("Frame", nil, segment)
+        segment.fill:SetPoint("TOPLEFT")
+        segment.fill:SetPoint("BOTTOMLEFT")
+        UI.Round(segment.fill, "accent", TIER_SEGMENT_H / 2)
+        bar.segments[index] = segment
     end
-    function ladder:SetTier(tier, progress)
-        for index, dot in ipairs(self.steps) do
-            dot.current = index == tier
-            dot.label:SetText(ns.L["ui_bond_" .. index])
-            UI.Tint(dot, index <= tier and "accent" or "track")
-            UI.Ink(dot.label, dot.current and "text" or index < tier and "textDim" or "textMuted")
-            dot.halo:SetShown(dot.current)
+    function bar:SetTier(tier, progress)
+        self.current:SetText(ns.L["ui_bond_" .. tier])
+        UI.Ink(self.current, tier >= 3 and "accent" or "textDim")
+        self.next:SetText(tier < 4 and ns.L["ui_bond_" .. (tier + 1)] or "")
+        for index, segment in ipairs(self.segments) do
+            -- Segment n is the step from tier n to n + 1.
+            local share = index < tier and 1 or index == tier and progress or 0
+            segment.share = share
+            -- A sliver keeps its round ends: never narrower than it is high.
+            segment.fill:SetWidth(math.max(TIER_SEGMENT_H, segmentWidth * share))
+            segment.fill:SetShown(share > 0)
         end
-        local reach = (tier - 1 + (tier < 4 and progress or 0)) * step
-        self.fill:SetWidth(math.max(1, reach))
-        self.fill:SetShown(reach > 0)
     end
-    return ladder
+    return bar
 end

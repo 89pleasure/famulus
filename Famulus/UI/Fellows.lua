@@ -13,10 +13,12 @@
 --       sort = "last" | "time", sortValues = { { value, text }, ... },
 --       onChoose(guid), onSort(value),
 --       onStory(guid), onAlias(guid), onForget(guid), -- the card's buttons
+--       onChronicle(who),          -- beside a story: their events in the chronicle
 --   }
 --   person = { guid, name, realName, classFile, levelClass, tier, progress,
---              nextText, timeText, statsText, times, bosses, together,
---              lastText, lastShort, firstText }
+--              nextText, timeText, hours, minutes, statsText, times, bosses,
+--              together, lastText, lastShort, firstText, firstLevelText,
+--              chronicle }          -- beside a story: their name in the chronicle, if it has entries
 --
 -- Frames are made as needed and used again; nothing runs per frame.
 
@@ -85,7 +87,17 @@ local function CreateTile(overview)
     tile.footText = Centered(tile.footFrame, 11, "textMuted", "medium")
     tile.footText:SetPoint("CENTER")
     tile.footText:SetJustifyV("MIDDLE")
+    -- Under the mouse the tile lights up, like a clickable card in the book.
+    tile.hover = UI.Round(tile, "hover", 8, { inset = 4, sublevel = 2 })
+    tile.hover:Hide()
+    tile:SetScript("OnEnter", function(self)
+        self.hover:Fade(true)
+    end)
+    tile:SetScript("OnLeave", function(self)
+        self.hover:Fade(false)
+    end)
     tile:SetScript("OnClick", function(self)
+        self.hover:Hide()
         overview.model.onChoose(self.guid)
     end)
     return tile
@@ -106,6 +118,9 @@ local function FillTile(tile, person, rank, chosen)
     tile.footText:SetText(person.lastText)
     UI.Ink(tile.footText, person.together and "accent" or "textMuted")
     MarkChosen(tile, chosen)
+    if not tile:IsMouseOver() then
+        tile.hover:Hide()
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -179,6 +194,48 @@ end
 -- The card of the chosen person
 ---------------------------------------------------------------------------
 
+local STRIP_H = 62 -- the strip of numbers on the card
+local STRIP_TOP = 11 -- from its top edge to the top of the numbers
+-- Between the parts of the card: who, the bond, the numbers, when you met.
+-- The card runs the full height; with this the parts fill it, and a two-line
+-- "met" sentence still ends well above the buttons.
+local SECTION_GAP = 32
+
+-- The time together with the digits large and "h" and "min" small beside
+-- them, centred in the cell: "2 h 40 min". Under an hour only the minutes,
+-- on the hour only the hours.
+local function SetTime(cell, hours, minutes)
+    local showHours, showMinutes = hours > 0, minutes > 0 or hours == 0
+    cell.hours:SetShown(showHours)
+    cell.hoursUnit:SetShown(showHours)
+    cell.minutes:SetShown(showMinutes)
+    cell.minutesUnit:SetShown(showMinutes)
+    local parts = {}
+    if showHours then
+        parts[#parts + 1] = { cell.hours, cell.hoursUnit, tostring(hours), L.ui_unit_hours }
+    end
+    if showMinutes then
+        parts[#parts + 1] = { cell.minutes, cell.minutesUnit, tostring(minutes), L.ui_unit_minutes }
+    end
+    local total = 0
+    for index, part in ipairs(parts) do
+        part[1]:SetText(part[3])
+        part[2]:SetText(part[4])
+        total = total + (index > 1 and 6 or 0) + part[1]:GetStringWidth() + 3 + part[2]:GetStringWidth()
+    end
+    local x = -total / 2
+    for _, part in ipairs(parts) do
+        local number, unit = part[1], part[2]
+        number:ClearAllPoints()
+        number:SetPoint("TOPLEFT", cell, "TOP", x, -STRIP_TOP)
+        -- The unit sits on the number's baseline, near enough: the smaller
+        -- type has the shorter descender.
+        unit:ClearAllPoints()
+        unit:SetPoint("BOTTOMLEFT", number, "BOTTOMRIGHT", 3, 2)
+        x = x + number:GetStringWidth() + 3 + unit:GetStringWidth() + 6
+    end
+end
+
 local function CreateProfile(overview, parent, width)
     local card = Card(parent)
     card:SetWidth(width)
@@ -196,36 +253,64 @@ local function CreateProfile(overview, parent, width)
     card.sub:SetWordWrap(false)
     card.status = Centered(card, 12, "textMuted", "medium")
     card.status:SetPoint("TOP", card.sub, "BOTTOM", 0, -6)
-    card.ladder = UI.TierLadder(card, inner)
-    card.ladder:SetPoint("TOP", card.status, "BOTTOM", 0, -18)
-    card.next = Centered(card, 11, "textMuted")
-    card.next:SetPoint("TOP", card.ladder, "BOTTOM", 0, -4)
+    -- The bond: where you stand, the next tier, and how much time is left.
+    card.bond = UI.TierBar(card, inner)
+    card.bond:SetPoint("TOP", card.status, "BOTTOM", 0, -SECTION_GAP)
+    card.remaining = Centered(card, 11, "textMuted")
+    card.remaining:SetPoint("TOP", card.bond, "BOTTOM", 0, -8)
 
-    -- Three numbers side by side: time, times, bosses.
+    -- Below it, the numbers in one sunken strip: the time takes half of it,
+    -- times and bosses a quarter each. All three numbers are the same size;
+    -- in the time, "h" and "min" stand small beside the digits.
+    card.strip = CreateFrame("Frame", nil, card)
+    card.strip:SetSize(inner, STRIP_H)
+    card.strip:SetPoint("TOP", card.remaining, "BOTTOM", 0, -SECTION_GAP)
+    UI.Card(card.strip, "sunken", "divider", 8)
     card.cells = {}
-    for index = 1, 3 do
-        local cell = CreateFrame("Frame", nil, card)
-        cell:SetSize(inner / 3, 44)
-        cell:SetPoint("TOPLEFT", card.next, "BOTTOM", -inner / 2 + (index - 1) * inner / 3, -16)
-        cell.value = Centered(cell, 17, "text", "semibold")
-        cell.value:SetPoint("TOP")
+    local shares = { 0.5, 0.25, 0.25 }
+    local x = 0
+    for index, share in ipairs(shares) do
+        local cell = CreateFrame("Frame", nil, card.strip)
+        cell:SetSize(inner * share, STRIP_H)
+        cell:SetPoint("TOPLEFT", x, 0)
+        if index > 1 then
+            local line = UI.VLine(cell, "divider")
+            line:SetPoint("TOPLEFT", 0, -8)
+            line:SetPoint("BOTTOMLEFT", 0, 8)
+        end
         cell.label = Centered(cell, 11, "textMuted")
-        cell.label:SetPoint("TOP", cell.value, "BOTTOM", 0, -4)
+        cell.label:SetPoint("BOTTOM", 0, 10)
+        if index == 1 then
+            cell.hours = UI.Text(cell, 20, "text", "semibold")
+            cell.hoursUnit = UI.Text(cell, 11, "textMuted")
+            cell.minutes = UI.Text(cell, 20, "text", "semibold")
+            cell.minutesUnit = UI.Text(cell, 11, "textMuted")
+        else
+            cell.value = Centered(cell, 20, "text", "semibold")
+            cell.value:SetPoint("TOP", 0, -STRIP_TOP)
+        end
         card.cells[index] = cell
+        x = x + inner * share
     end
 
+    -- When you met; when you were last together says the status below the name.
     card.first = Centered(card, 12, "textDim")
-    card.first:SetPoint("TOP", card.next, "BOTTOM", 0, -76)
+    card.first:SetPoint("TOP", card.strip, "BOTTOM", 0, -SECTION_GAP)
     card.first:SetWidth(inner)
-    card.last = Centered(card, 12, "textMuted")
-    card.last:SetPoint("TOP", card.first, "BOTTOM", 0, -5)
-    card.last:SetWidth(inner)
+    card.first:SetSpacing(3)
+    -- The player's level then, on a line of its own so the sentence above does not break.
+    card.firstLevel = Centered(card, 11, "textMuted")
+    card.firstLevel:SetPoint("TOP", card.first, "BOTTOM", 0, -4)
 
     card.storyButton = UI.Button(card, function()
         overview.actions.onStory(card.guid)
     end, "primary")
     card.alias = UI.Button(card, function()
         overview.actions.onAlias(card.guid)
+    end, "secondary")
+    -- Their own events, if the chronicle has any: that book is the chronicle's.
+    card.chronicle = UI.Button(card, function()
+        overview.actions.onChronicle(card.chronicleWho)
     end, "secondary")
     card.forget = UI.Button(card, function()
         overview.actions.onForget(card.guid)
@@ -243,26 +328,32 @@ local function FillProfile(card, person, inStory)
     card.sub:SetText(person.realName and (person.realName .. "  ·  " .. person.levelClass) or person.levelClass)
     card.status:SetText(person.lastText)
     UI.Ink(card.status, person.together and "accent" or "textMuted")
-    card.ladder:SetTier(person.tier, person.progress)
-    card.next:SetText(person.nextText or "")
-    local values = {
-        { person.timeText, L.ui_fellow_col_time },
-        { tostring(person.times), L.ui_fellow_stat_times },
-        { tostring(person.bosses), L.ui_fellow_stat_bosses },
-    }
-    for index, cell in ipairs(card.cells) do
-        cell.value:SetText(values[index][1])
-        cell.label:SetText(values[index][2])
-    end
+    card.bond:SetTier(person.tier, person.progress)
+    card.remaining:SetText(person.nextText or "")
+    local time, times, bosses = card.cells[1], card.cells[2], card.cells[3]
+    SetTime(time, person.hours, person.minutes)
+    time.label:SetText(L.ui_fellow_col_time)
+    times.value:SetText(tostring(person.times))
+    times.label:SetText(L.ui_fellow_stat_times)
+    bosses.value:SetText(tostring(person.bosses))
+    bosses.label:SetText(L.ui_fellow_stat_bosses)
     card.first:SetText(person.firstText or "")
-    card.last:SetText(person.together and "" or person.lastText)
+    card.firstLevel:SetText(person.firstLevelText or "")
 
     card.storyButton:SetLabel(L.ui_fellow_story)
     card.alias:SetLabel(L.ui_fellow_alias)
+    card.chronicle:SetLabel(L.ui_fellow_chronicle)
     card.forget:SetLabel(L.ui_fellow_forget)
     card.storyButton:SetShown(not inStory)
+    card.chronicleWho = inStory and person.chronicle or nil
+    card.chronicle:SetShown(card.chronicleWho ~= nil)
     card.alias:ClearAllPoints()
-    if inStory then
+    card.chronicle:ClearAllPoints()
+    if card.chronicleWho then
+        local both = card.alias:GetWidth() + 10 + card.chronicle:GetWidth()
+        card.alias:SetPoint("BOTTOMLEFT", card, "BOTTOM", -both / 2, 56)
+        card.chronicle:SetPoint("LEFT", card.alias, "RIGHT", 10, 0)
+    elseif inStory then
         card.alias:SetPoint("BOTTOM", card, "BOTTOM", 0, 56)
     else
         local both = card.storyButton:GetWidth() + 10 + card.alias:GetWidth()

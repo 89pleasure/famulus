@@ -1387,7 +1387,7 @@ end
 mock.Click(navButton("Chronicle"))
 mock.Click(tabButton("Everyone")) -- the page remembers the tab the window tests left it on
 mock.Advance(0.1)
-check(window.area.name:GetText() == "Chronicle" and tabButton("Everyone").selected and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Settings"),
+check(window.area.name:GetText() == "Chronicle" and tabButton("Everyone").selected and tabButton("Everyone") and tabButton("My journey") and tabButton("Friends") and tabButton("Settings"),
     "the chronicle has its own page: everyone, my journey, companions, recording")
 check(not navButton("Chronicle").pill:IsShown(), "the chronicle's entry shows no counter")
 -- The entries are told as a picture book: chapters, and events on a line.
@@ -1504,7 +1504,7 @@ end
 do -- companions: one profile each, and whether they are online
     Chronicle.Profile("Jaina Proudmoore", { level = 21, stats = { [60] = 12, [107] = 3456 } })
     mock.state.friends = { { name = "Jaina Proudmoore", guid = "Player-1-JAINA", connected = true, level = 21 } }
-    mock.Click(tabButton("Companions"))
+    mock.Click(tabButton("Friends"))
     local brief = railCard("brief")
     check(brief and brief.spec.level == "Level 21" and brief.spec.online and brief.spec.stats[1].value == "12"
         and brief.spec.stats[1].label == "Deaths" and brief.spec.stats[3].value == "-" and brief.rows[1].state:GetText() == "online",
@@ -1520,7 +1520,7 @@ mock.Advance(0.1)
 events = bookFrames("story")
 check(#events == 5 and events[1].story.title == "Challenge completed: Challenge 501" and events[1].story.chip == nil,
     "my journey: only my own")
-mock.Click(tabButton("Companions"))
+mock.Click(tabButton("Friends"))
 mock.Advance(0.1)
 check(#bookFrames("story") == 1 and #visibleRows() == 0, "companions: only theirs")
 do -- an item is shown with the game's icon of it, in its own colours
@@ -1528,7 +1528,7 @@ do -- an item is shown with the game's icon of it, in its own colours
     local function itemEvent()
         mock.Click(tabButton("My journey"))
         mock.Advance(0.1)
-        mock.Click(tabButton("Companions"))
+        mock.Click(tabButton("Friends"))
         mock.Advance(0.1)
         for _, event in ipairs(bookFrames("story")) do
             if event.story.kind == "item" then
@@ -1620,7 +1620,7 @@ do -- an item is shown with the game's icon of it, in its own colours
     end
     mock.Click(tabButton("My journey"))
     mock.Advance(0.1)
-    mock.Click(tabButton("Companions"))
+    mock.Click(tabButton("Friends"))
     mock.Advance(0.1)
     check(#bookFrames("story") == 1 and bookFrames("story")[1].story.texture == ns.UI.gameIcons.level
         and bookFrames("story")[1].story.item == nil, "a frame used again shows the picture of its new event")
@@ -1659,10 +1659,17 @@ do
     local badge = ns.UI.TierBadge(UIParent)
     badge:SetTier(3)
     check(badge.text:GetText() == "Trusted" and badge:GetWidth() > 0, "the badge names the tier")
-    local ladder = ns.UI.TierLadder(UIParent, 300)
-    ladder:SetTier(2, 0.5)
-    check(#ladder.steps == 4 and ladder.steps[4].label:GetText() == "Inseparable" and ladder.steps[2].current
-        and not ladder.steps[3].current and ladder.fill:GetWidth() > 0, "the ladder shows four steps and where you are")
+    local bar = ns.UI.TierBar(UIParent, 300)
+    bar:SetTier(2, 0.5)
+    check(bar.current:GetText() == "Acquainted" and bar.next:GetText() == "Trusted" and #bar.segments == 3
+        and bar.segments[1].share == 1 and bar.segments[2].share == 0.5 and bar.segments[3].share == 0
+        and bar.segments[2].fill:IsShown() and not bar.segments[3].fill:IsShown()
+        and bar.segments[2].fill:GetWidth() == bar.segments[2]:GetWidth() / 2,
+        "the bar names where you stand and the next tier; three segments, filled as far as you have come")
+    bar:SetTier(2, 0.001)
+    check(bar.segments[2].fill:GetWidth() == 6, "a sliver keeps its round ends")
+    bar:SetTier(4, 1)
+    check(bar.next:GetText() == "" and bar.segments[3].share == 1, "at the top all three are full and nothing is next")
 end
 
 ---------------------------------------------------------------------------
@@ -1715,6 +1722,8 @@ check(not Fellows.IsTogether("Player-1-TOM") and tomData.seconds == 3600 and tom
 local tomDay = tomData.days and tomData.days[Fellows.DayKey(clock)]
 check(tomDay and tomDay.s == 3600 and tomDay.z == "The Deadmines" and tomDay.b == 1 and tomDay.f == clock - 3600 and tomDay.l == clock,
     "a day records time, zone, bosses, first and last moment")
+check(tomDay.k and #tomDay.k == 1 and tomDay.k[1].n == "Edwin VanCleef" and tomDay.k[1].z == "The Deadmines" and tomDay.k[1].t == clock,
+    "in a party the day names the boss itself, without the chronicle")
 check(tomData.firstLevel == 18 and #Fellows.Days(tomData) == 1 and Fellows.Days(tomData)[1].key == Fellows.DayKey(clock),
     "the player's level when you met is kept, and the days can be listed")
 
@@ -1780,6 +1789,16 @@ check(overview.tiles[1].numeral:GetText() == "I" and overview.tiles[1].name:GetT
 check(overview.tiles[2].footText:GetText() == "In your group now" and overview.tiles[1].footText:GetText() == "Last together today in Westfall",
     "the foot says whether they are here or when you last were together")
 check(overview.tiles[1].name:GetWidth() > 0 and overview.tiles[1].name:GetWidth() < 300, "names are cut to their tile")
+do -- under the mouse a tile lights up, like a clickable card in the book
+    local tile = overview.tiles[1]
+    check(not tile.hover.parts[1]:IsShown(), "a tile is plain until the mouse is over it")
+    tile.scripts.OnEnter(tile)
+    mock.Advance(0.5)
+    check(tile.hover.parts[1]:IsShown() and tile.hover.level == 1, "under the mouse it lights up")
+    tile.scripts.OnLeave(tile)
+    mock.Advance(0.5)
+    check(tile.hover.level == 0, "and fades when the mouse leaves")
+end
 
 -- A click on a tile opens the person's story: their card on the left.
 mock.Click(overview.tiles[2])
@@ -1790,9 +1809,18 @@ check(overview.card:IsShown() and overview.card.name:GetText() == "Tom Hartwig" 
 mock.Click(window.tabs.back)
 mock.Click(overview.tiles[1])
 mock.Advance(0.1)
-check(overview.card.name:GetWidth() == 320 - 40 and overview.card.ladder.steps[2].current
-    and overview.card.next:GetText() == "8 h 50 min together to Trusted" and overview.card.cells[3].value:GetText() == "1",
-    "the card: the ladder and the way to the next tier: " .. overview.card.next:GetText())
+check(overview.card.name:GetWidth() == 320 - 40 and overview.card.bond.current:GetText() == "Acquainted"
+    and overview.card.bond.next:GetText() == "Trusted" and overview.card.remaining:GetText() == "8 h 50 min more together",
+    "the card: the bond above the numbers, and the time left to the next tier: " .. overview.card.remaining:GetText())
+do
+    local time = overview.card.cells[1]
+    check(time.hours:GetText() == "1" and time.hoursUnit:GetText() == "h" and time.minutes:GetText() == "10"
+        and time.minutesUnit:GetText() == "min" and time.label:GetText() == "Together"
+        and overview.card.cells[2].value:GetText() == "2" and overview.card.cells[3].value:GetText() == "1",
+        "the numbers in one strip: the time in large digits and small units, then times and bosses")
+    check(overview.card.first:GetText() == "Met today in The Deadmines" and overview.card.firstLevel:GetText() == "at level 18",
+        "when you met, and on a line of its own the player's level then: " .. tostring(overview.card.first:GetText()))
+end
 mock.Click(window.tabs.back)
 mock.Click(pageTab("Settings"))
 mock.Advance(0.1)
@@ -1851,6 +1879,8 @@ check(overview.rows[1].guid == "Player-1-P11" and overview.sortBox.text:GetText(
     and overview.tiles[1].guid == "Player-1-MIRA", "the select sorts the list by time; the tiles stay")
 mock.Click(overview.rows[1])
 check(overview.card.name:GetText() == "Person 11" and window.tabs.back:IsShown(), "a click on a row opens the person's story")
+check(not overview.card.cells[1].hours:IsShown() and overview.card.cells[1].minutes:IsShown()
+    and overview.card.cells[1].minutes:GetText() == "0", "under an hour the strip shows only the minutes")
 mock.Click(window.tabs.back)
 window.search.edit:SetText("person 70")
 check(#visibleRows() == 1 and visibleRows()[1].item.kind == "fellow" and not overview:IsShown(),
@@ -1878,21 +1908,21 @@ mock.Advance(0.1)
 check(Fellows.Count() == 1 and FamulusDB.fellows["Player-1-MIRA"] == nil and lastChat():find("Mira Sturmfeder removed", 1, true)
     and overview:IsShown() and not overview.card:IsShown(), "forget removes the person, says so, and goes back to the overview")
 
--- The story of one fellow traveller: their days as a book.
+-- The story of one fellow traveller: what you did together, as a book.
 local storyDay, olderDay = Fellows.DayKey(clock - 3600), Fellows.DayKey(clock - 2 * 86400)
 FamulusDB.fellows["Player-1-STORY"] = {
     name = "Lysa Morgentau", class = "PRIEST", level = 30, first = clock - 5 * 86400, firstZone = "Westfall", firstLevel = 25,
-    last = clock - 3600, zone = "Uldaman", times = 3, seconds = 11 * 3600, bosses = 1,
+    last = clock - 3600, zone = "Uldaman", times = 3, seconds = 11 * 3600, bosses = 4,
     days = {
-        [storyDay] = { s = 2 * 3600, z = "Uldaman", b = 1, f = clock - 3 * 3600, l = clock - 3600 },
-        [olderDay] = { s = 3600, z = "Badlands", b = 0, f = clock - 2 * 86400 - 3600, l = clock - 2 * 86400 },
+        [storyDay] = { s = 2 * 3600, z = "Uldaman", b = 1, f = clock - 3 * 3600, l = clock - 3600,
+            k = { { t = clock - 2 * 3600, n = "Archaedas", z = "Uldaman" } } },
+        -- two bosses in a raid: counted, not named
+        [olderDay] = { s = 3600, z = "Badlands", b = 2, f = clock - 2 * 86400 - 3600, l = clock - 2 * 86400 },
     },
 }
-Chronicle.Add("boss", { name = "Archaedas", zone = "Uldaman", with = { "Lysa Morgentau", "Tom Hartwig" }, t = clock - 2 * 3600 })
-Chronicle.Add("level", { level = 31, who = "Lysa Morgentau", zone = "Uldaman", t = clock - 2 * 3600 - 60 })
-Chronicle.Add("death", { zone = "Uldaman", level = 20, t = clock - 2 * 3600 - 120 }) -- not hers
-Chronicle.Add("boss", { name = "Archaedas", zone = "Uldaman", who = "Lysa Morgentau", t = clock - 2 * 3600 + 30 }) -- her copy of the same boss
-Chronicle.Add("level", { level = 32, who = "Lysa-Morgentau", zone = "Uldaman", t = clock - 2 * 3600 - 30 }) -- her name written with a hyphen
+-- The chronicle knows her too; that is the chronicle's to tell.
+Chronicle.Add("level", { level = 31, who = "Lysa-Morgentau", zone = "Uldaman", t = clock - 2 * 3600 - 60 }) -- her name with a hyphen
+Chronicle.Add("boss", { name = "Ironaya", zone = "Uldaman", with = { "Lysa Morgentau" }, t = clock - 2 * 3600 - 300 })
 FamulusDB.fellows["Player-1-STORY"].days[Fellows.DayKey(clock - 3 * 86400)] = { s = 0, b = 1 } -- a boss, no time yet
 ns:Fire("FELLOWS_CHANGED")
 mock.Advance(0.1)
@@ -1915,30 +1945,55 @@ for _, event in ipairs(bookFrames("story")) do
     found[event.story.title] = event.story
 end
 check(found["You are now trusted"] and found["You are now trusted"].big, "the day you crossed ten hours is a milestone")
-local spans = 0
+local spans, raidLine, partyLine = 0, nil, nil
 for _, event in ipairs(bookFrames("story")) do
-    if event.story.title == "Together on the road" and event.story.detail and event.story.detail:find(" to ", 1, true) then
+    local detail = event.story.detail
+    if event.story.title == "Together on the road" and detail and detail:find(" to ", 1, true) then
         spans = spans + 1
+        if detail:find("2 bosses$") then
+            raidLine = detail
+        elseif not detail:find("boss", 1, true) then
+            partyLine = detail
+        end
     end
 end
 check(spans == 2, "a day tells when you were together")
-check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss"
-    and found["Archaedas defeated"].detail:find("with Lysa and Tom", 1, true), "bosses you defeated together, and who else was there")
-check(found["Reached level 31"] and found["Reached level 31"].chip.text == "from Lysa Morgentau's chronicle",
-    "and their own entries, marked as theirs")
+check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss" and found["Archaedas defeated"].detail == "in Uldaman"
+    and found["Archaedas defeated"].chip == nil, "bosses defeated together, from the fellow travellers' own day log")
+check(raidLine and partyLine, "bosses without a name (a raid) are counted on the day's line, named ones are not")
+check(partyLine and partyLine:match("^%d%d:%d%d to %d%d:%d%d$") and raidLine:match("^%d%d:%d%d to %d%d:%d%d  ·  2 bosses$"),
+    "the line says from when to when; how long, the chapter's heading says: " .. tostring(partyLine))
+check(not found["Ironaya defeated"] and not found["Reached level 31"],
+    "nothing from the chronicle: not her own entries, not its bosses")
 check(found["Met"] and found["Met"].big and found["Met"].detail:find("at level 25", 1, true), "the first meeting, at the player's level then")
 local bossCards, togetherCards = 0, 0
 for _, event in ipairs(bookFrames("story")) do
     bossCards = bossCards + (event.story.kind == "boss" and 1 or 0)
     togetherCards = togetherCards + (event.story.title == "Together on the road" and 1 or 0)
 end
-check(bossCards == 1 and found["Reached level 32"], "a boss you both recorded shows once; a name with a hyphen is still hers")
-check(togetherCards == 3, "a day with only a boss and no times still tells that you were together")
-local deathShown = false
-for title in pairs(found) do
-    deathShown = deathShown or title:find("Fallen", 1, true) ~= nil
-end
-check(not deathShown, "nothing that was not shared with them")
+check(bossCards == 1 and togetherCards == 3, "a day with only a boss and no times still tells that you were together")
+
+-- Her own events are in the chronicle: the card leads there, and back.
+check(overview.card.chronicle:IsShown() and overview.card.chronicleWho == "Lysa-Morgentau"
+    and overview.card.chronicle.label:GetText() == "In the chronicle",
+    "the card leads to her events in the chronicle, whatever the spelling of her name there")
+mock.Click(overview.card.chronicle)
+mock.Advance(0.1)
+check(window.area.name:GetText() == "Chronicle" and tabButton("Friends").selected and window.bookFilter:IsVisible()
+    and window.bookFilter.text:GetText() == "Only events of Lysa-Morgentau" and #bookFrames("story") == 1
+    and bookFrames("story")[1].story.title == "Reached level 31" and not overview.card:IsShown(),
+    "the chronicle opens on friends, narrowed to her")
+check(window.bookFilter.toStory:IsShown() and window.bookFilter.toStory.label:GetText() == "Your story",
+    "above her events, the way to your story with her")
+mock.Click(window.bookFilter.toStory)
+mock.Advance(0.1)
+check(window.area.name:GetText() == "Fellow travellers" and overview.card:IsShown() and overview.card.name:GetText() == "Lysa Morgentau"
+    and window.fellowBook:IsShown() and window.tabs.back:IsShown(), "and back to her story")
+ns:SetOption("categories", "chronicle", false)
+mock.Advance(0.1)
+check(not overview.card.chronicle:IsShown(), "with the chronicle switched off, the card does not lead there")
+ns:SetOption("categories", "chronicle", true)
+mock.Advance(0.1)
 mock.Click(window.tabs.back)
 mock.Advance(0.1)
 check(overview:IsShown() and not overview.card:IsShown() and pageTab("Overview")
@@ -2006,6 +2061,22 @@ check(#danaDays == 30 and dana.days[Fellows.DayKey(firstDay)] == nil and danaDay
     and danaDays[1].s == 60, "at most 30 days are kept, the oldest goes first")
 FamulusDB.fellows["Player-1-DAYS"] = nil
 
+-- Bosses: named in a party (a dozen a day at most), only counted in a raid.
+local raider = { name = "Rai Der", guid = "Player-1-KILLS", level = 60, class = "WARRIOR" }
+Fellows.Sync({ raider }, clock, "Molten Core", 60)
+Fellows.Boss("Lucifron", "Molten Core", true)
+Fellows.Boss(mock.SECRET, "Molten Core", false)
+for i = 1, 14 do
+    Fellows.Boss("Boss " .. i, "Uldaman", false)
+end
+Fellows.Sync({}, clock + 60, "Molten Core", 60)
+local killDay = FamulusDB.fellows["Player-1-KILLS"].days[Fellows.DayKey(clock)]
+check(killDay.b == 16 and #killDay.k == 12 and killDay.k[1].n == "Boss 1" and killDay.k[1].z == "Uldaman",
+    "every boss counts; a raid's boss and a secret name are not written down, nor more than twelve a day")
+check(Fellows.Find("rai der") == "Player-1-KILLS" and Fellows.Find("Rai-Der") == "Player-1-KILLS" and Fellows.Find("Nobody") == nil,
+    "a person is found by name, in any spelling")
+FamulusDB.fellows["Player-1-KILLS"] = nil
+
 -- Tier-up days: counted from the time before the log.
 local today = Fellows.DayKey(clock)
 local oldPerson = { seconds = 41 * 3600, days = { [today] = { s = 3600 } } }
@@ -2017,9 +2088,13 @@ check(next(Fellows.Milestones("Player-1-NONE", { seconds = 120 }, clock)) == nil
 -- A broken log from a hand-edited file is dropped.
 FamulusDB.fellows["Player-1-BAD"] = { name = "Bad", last = clock, times = 1, firstLevel = "x",
     days = { x = { s = 5 }, [20261124] = "y", [20261123] = { s = -1 }, [20261122] = { s = 60 },
-        [20261121] = { s = 60, f = "abc" }, [20261120] = { s = 60, z = {} }, [20261119] = { s = 60, b = "2" } } }
+        [20261121] = { s = 60, f = "abc" }, [20261120] = { s = 60, z = {} }, [20261119] = { s = 60, b = "2" },
+        [20261118] = { s = 60, k = { { t = 1, n = "Ok" }, { t = "x", n = "Bad time" }, { t = 2, n = {} }, "z", { t = 3, n = "Z", z = 4 } } },
+        [20261117] = { s = 60, k = "no list" }, [20261116] = { s = 60, k = { { t = 1 } } } } }
 ns:Fire("DATABASE_READY")
 local bad = FamulusDB.fellows["Player-1-BAD"]
+check(#bad.days[20261118].k == 1 and bad.days[20261118].k[1].n == "Ok" and bad.days[20261117].k == nil
+    and bad.days[20261116] and bad.days[20261116].k == nil, "broken bosses of a day are dropped, the day stays")
 check(bad.days[20261122] and bad.days.x == nil and bad.days[20261124] == nil and bad.days[20261123] == nil and bad.firstLevel == nil,
     "broken days are dropped, good ones stay")
 check(bad.days[20261121] == nil and bad.days[20261120] == nil and bad.days[20261119] == nil and bad.days[20261122].b == 0,
@@ -2039,6 +2114,15 @@ for _, day in ipairs(Fellows.Days(demoMira)) do
 end
 check(demoMira.firstLevel and #Fellows.Days(demoMira) >= 3 and demoSum <= demoMira.seconds
     and next(Fellows.Milestones("Player-0-FAMDEMO01", demoMira, time())) ~= nil, "sample people have days to tell and a tier-up")
+local demoKills, demoNames, demoRepeat = 0, {}, false
+for _, day in ipairs(Fellows.Days(FamulusDB.fellows["Player-0-FAMDEMO02"])) do
+    demoKills = demoKills + #day.k
+    for _, kill in ipairs(day.k) do
+        demoRepeat = demoRepeat or demoNames[kill.n] ~= nil
+        demoNames[kill.n] = true
+    end
+end
+check(demoKills > 1 and not demoRepeat, "and bosses with names, from the dungeons they were in, each visit going on from the last")
 SlashCmdList.FAMULUS("fellows demo clear")
 check(Fellows.Count() == realFellows and FamulusDB.fellows["Player-1-TOM"] ~= nil, "/fam fellows demo clear removes only them")
 mock.Click(navButton("Aliases"))

@@ -103,7 +103,16 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
 - **Neuer Rahmen und Weggefährten-Übersicht (2026-11-24, nur gegen den Mock geprüft, noch nicht im
   Spiel):** siehe „Das Fenster“ und „Weggefährten“. Offen im Spiel: Ring ums Wappen (`/fam test`,
   Gruppe `media`, Prüfung `ring`), Klassensymbole (Prüfung `class icons`), die Seite ohne
-  Seitenleiste, der durchgehende Grund von Kopf und Seitenleiste.
+  Seitenleiste, der durchgehende Grund von Kopf und Seitenleiste. Auf einem Screenshot vom
+  2026-11-24 (Beispieldaten) zu sehen: Ring mit Fortschritt und Klassensymbol (Krieger) am Wappen
+  in der Geschichte einer Person.
+- **Klare Kante zwischen Chronik und Weggefährten (2026-11-24):** siehe „Chronik und
+  Weggefährten“. Im Spiel mit den Beispieldaten gesehen (Screenshots vom Auftraggeber, 2026-11-24):
+  Reiter und Randspalte „Freunde“, die Bilanz-Karten, die Filterzeile mit „Alle zeigen“ und „Eure
+  Geschichte“ in einer Zeile, auf der Karte der Person „Alias festlegen“ und „In der Chronik“
+  nebeneinander, Bosse mit Namen als eigene Karten, keine Einträge aus der Chronik in „Eure
+  Geschichte“. Offen im Spiel: ob `BOSS_KILL` in einer echten Gruppe den Bossnamen so liefert, wie
+  die Karten ihn zeigen.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster),
   im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values, Taint).
 - **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
@@ -349,7 +358,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
 - **Aufbau:** Bereich und Kategorie `chronicle`, Daten über `ns.ChronicleService`
   (`Modules/Chronicle/ChronicleService.lua`) in `FamulusDB.chronicle` (accountweit, außerhalb der
   Profile, höchstens 2000 Einträge, Art und Werte statt Text). Reiter „Alle“, „Meine Reise“,
-  „Gefährten“ und „Einstellungen“ (bis 2026-11-23 „Aufzeichnung“) (`layouts.chronicle`).
+  „Freunde“ (bis 2026-11-24 „Gefährten“, siehe „Chronik und Weggefährten“) und „Einstellungen“
+  (bis 2026-11-23 „Aufzeichnung“) (`layouts.chronicle`). In dieser Datei heißen die Personen der
+  Chronik aus der Zeit davor oft noch „Gefährten“; im Fenster sind es „Freunde“.
 - **Buch mit Randspalte (Entscheidung des Auftraggebers, 2026-11-23, am HTML-Mockup „Famulus
   Chronik“ gewählt: Variante A mit „Wiederholungen bündeln“ und „Kapitelkopf in einer Zeile“):**
   Anlass war der erste Screenshot im 1180er-Fenster: Karten 428 px breit bei etwa 170 px Text,
@@ -364,17 +375,20 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     bekommt die Breite übergeben).
   - „Alle“: Karte „Diese Woche“ (Stufe mit Zahl der Aufstiege, Tode, neu entdeckte Gebiete,
     Berufe und Meilensteine; nur der gespielte Charakter, letzte sieben Tage, Vorname rechts) und
-    Karte „Gefährten“ (Alias, letztes Ereignis mit Uhrzeit oder Tag, Stufe, online/offline).
-    „Meine Reise“: „Diese Woche“ und „Berufe“ mit Punkten und Balken. „Gefährten“: je Gefährte
-    ein Steckbrief (Stufe, online, die vier geteilten Zahlen), ohne geteilte Zahlen „Noch kein
-    Steckbrief geteilt.“; die Steckbriefe stehen nicht mehr über dem Buch.
+    Karte „Freunde“ (Alias, letztes Ereignis mit Uhrzeit oder Tag, Stufe, online/offline).
+    „Meine Reise“: „Diese Woche“ und „Berufe“ mit Punkten und Balken. „Freunde“: je Person
+    eine Karte mit ihrer „Bilanz“ (bis 2026-11-24 „Steckbrief“; Stufe, online, die vier geteilten
+    Zahlen), ohne geteilte Zahlen „Noch keine Bilanz geteilt.“; diese Karten stehen nicht mehr
+    über dem Buch.
   - Gefährten sind alle mit Eintrag oder Steckbrief (`ChronicleService.Companions`), zuletzt
     gehörte zuerst. Stufe: die höhere aus letztem Stufeneintrag und Steckbrief. Online:
     `ChronicleService.OnlineCheck` sieht einmal je Aufbau in Freundesliste und Gildenliste; der
     Stand gilt beim Aufbau des Fensters und wird nicht nachgeführt, wenn jemand online kommt.
-  - Ein Klick auf einen Gefährten (Liste oder Steckbrief) zeigt im Buch nur seine Ereignisse;
+  - Ein Klick auf einen Gefährten (Liste oder Bilanz) zeigt im Buch nur seine Ereignisse;
     darüber steht „Nur Ereignisse von …“ mit „Alle zeigen“, ein zweiter Klick hebt es auf. Ein
     anderer Reiter, eine andere Seite oder das Schließen vergisst die Wahl (`chronicleWho`).
+    Kennen die Weggefährten die Person (`FellowService.Find`, Name in jeder Schreibweise) und
+    sind sie eingeschaltet, steht dort zusätzlich „Eure Geschichte“ und öffnet ihre Geschichte.
   - **Wiederholungen bündeln:** Folgen im Buch direkt aufeinander Tode im selben Gebiet oder
     Stufenaufstiege desselben Gefährten, teilen sie sich eine Karte (`SameRun`, `ChronicleRun` in
     `UI/Options.lua`; Satz aus `ChronicleService.TextRun`): „3-mal gefallen in Dunkelküste“ mit
@@ -564,8 +578,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     verbunden und bekommt die eigenen Meilensteine live. Auf einen Gruß folgen bis zu 20 verpasste
     Einträge und die Statistiken.
   - Geteilte Statistiken (IDs des Spiels): 60 Tode, 107 besiegte Kreaturen, 98 Quests, 932 betretene
-    Dungeons. Sie stehen als „Steckbrief“ je Gefährte in der Randspalte des Reiters „Gefährten“
-    (`FamulusDB.chronicle.profiles`).
+    Dungeons. Sie stehen als „Bilanz“ je Person in der Randspalte des Reiters „Freunde“
+    (`FamulusDB.chronicle.profiles`; im Code heißen sie weiter `profile`).
   - Alles läuft über eine Warteschlange mit Ticker (eine Nachricht je halbe Sekunde, nur solange
     etwas wartet). Während der Chat-Sperre (Bosskampf, gesperrte Karte) bleibt sie stehen.
   - Frische Neuigkeiten erscheinen am Bildschirm über die Live-Einblendung (`liveFeed`, siehe
@@ -597,7 +611,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     jetzt der Kern des Features, sie abzuschalten hieße das Feature abzuschalten, und mit beiden
     Schaltern aus wäre das Feature an, zeigte aber nichts. Wer einen der beiden Fälle will (nur
     eigene), kann es nicht mehr; falls das fehlt, nachfragen. Mit Standardwerten erscheint erst
-    etwas, wenn „Mit Freunden teilen“ (`sharing`) oder „Gefährten begleiten“ (`companions`) läuft.
+    etwas, wenn „Mit Freunden teilen“ (`sharing`) oder „Freunde begleiten“ (`companions`) läuft.
     Ein gespeicherter Wert des alten Schalters bleibt ungenutzt im Profil, bis „Zurücksetzen“ ihn
     entfernt. Nur gegen den Mock geprüft.
   - Schalter je Ereignisart (`level`, `death`, `boss`, `achievement`, `ability`, `item`,
@@ -774,6 +788,40 @@ Eigene Namen für andere Spieler, Vorbild ist das Addon CustomNames
   (CustomNames überschreibt dort `SetText` auf Blizzards FontStrings, Taint-Risiko, Namen im Kampf
   secret), Gildenliste, Import/Export, Slash-Befehl zum Eintragen.
 
+## Chronik und Weggefährten
+
+Am 2026-11-24 hat der Auftraggeber gefragt, ob es Sinn ergibt, beide getrennt zu führen. Bewertung
+des Assistenten: getrennt lassen, denn sie unterscheiden sich in der Grundlage. Die Chronik lebt
+von eigenen Ereignissen und dem, was Freunde mit Famulus schicken (Freundesliste und Gilde,
+teilt Daten); die Weggefährten von der Gruppenliste (jeder aus einer Gruppe, auch Fremde, nichts
+wird verschickt, bis 500 Personen). Sie waren aber an vier Stellen ineinander gewachsen: dasselbe
+Wort „Gefährten“ für zwei Personenkreise, zwei „Steckbriefe“, zwei Bücher je Person mit teils
+denselben Karten, und die Bossnamen der Weggefährten kamen aus der Chronik. Von drei Varianten
+(klare Kante; Weggefährten als einziger Ort für Personen; zusammenlegen) hat der Auftraggeber
+**„Klare Kante“** gewählt. Die Regel seitdem:
+
+- **Die Chronik erzählt, was passiert ist; die Weggefährten zeigen, mit wem du spielst und wie
+  nah ihr euch seid.** Nichts, was der eine Bereich zeigt, wird im anderen wiederholt; sie
+  verweisen aufeinander.
+- **Namen:** Die Personen der Chronik heißen im Fenster „Freunde“ (Reiter, Randspalte, Feature
+  „Freunde begleiten“, Texte der Live-Einblendung), „Gefährten“ steht nur noch bei den
+  Weggefährten („Engste Gefährten“). Die geteilten Zahlen heißen „Bilanz“ (enUS „Stats“), nicht
+  mehr „Steckbrief“. Im Code bleiben `companions`, `ui_tab_companions`, `c_profiles` usw.
+- **Zwei Bücher je Person mit verschiedenen Fragen:** Chronik › Freunde, gefiltert auf eine
+  Person, zeigt ihre eigene Reise; „Eure Geschichte“ bei den Weggefährten nur das Gemeinsame
+  (Tage zusammen, gemeinsame Bosse, Verbundenheit, Kennenlernen). Die Einträge „aus <Name>s
+  Chronik“ dort sind entfallen. Verweise: „In der Chronik“ auf der Karte der Person,
+  „Eure Geschichte“ über dem gefilterten Buch der Chronik; beide nur, wenn der andere Bereich
+  eingeschaltet ist und die Person kennt.
+- **Jeder Bereich steht für sich:** Die Weggefährten merken sich die Namen gemeinsamer Bosse
+  selbst (`k` im Tagesprotokoll) und lesen die Chronik nur noch für den Verweis.
+- Umsetzung und Begriffe sind Entscheidungen des Assistenten im Rahmen der Variante („Freunde“,
+  „Bilanz“, „Stats“, „In der Chronik“, Bosse nur in Gruppen mit Namen). Nur gegen den Mock
+  geprüft, im Spiel noch nicht gesehen. Die Website zeigt noch den alten Stand (Reiter
+  „Gefährten“, „Steckbriefe“).
+- **Ideen, die nur die Weggefährten können** (vorgeschlagen, nicht beauftragt): Stammgruppen
+  (wer immer wieder gemeinsam in der Gruppe ist) und gemeinsame Dungeons je Person.
+
 ## Weggefährten
 
 Idee aus einer Ideensammlung des Assistenten (2026-11-23), vom Auftraggeber ausgewählt: Famulus merkt
@@ -820,7 +868,8 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   - **Übersicht** (`FellowModel` in `UI/Options.lua`, gezeichnet von `UI.FellowOverview` in
     `UI/Fellows.lua`): links „Engste Gefährten“, die drei mit der meisten gemeinsamen Zeit als
     Kacheln (Rang I–III, Wappen mit Ring, Name in der Buchschrift, Stufe und Klasse, Abzeichen der
-    Stufe, Zahlen, Fuß „In deiner Gruppe“ oder „Zuletzt … in …“). Darunter „Alle weiteren · N“
+    Stufe, Zahlen, Fuß „In deiner Gruppe“ oder „Zuletzt … in …“; unter der Maus leuchten sie wie
+    eine klickbare Karte im Buch, seit 2026-11-24 auf Wunsch des Auftraggebers). Darunter „Alle weiteren · N“
     mit Auswahl „Zuletzt gesehen“ / „Meiste gemeinsame Zeit“ (sortiert nur die Liste) und die
     Liste mit Spaltenköpfen, höchstens 60 Zeilen (`FELLOW_ROWS`) plus „N weitere“. Bis drei
     Personen gibt es keine Liste; ohne Personen den Hinweis, wie man anfängt.
@@ -828,19 +877,45 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
     Auftraggebers, 2026-11-24: mit Seitenleiste wäre ein Steckbrief neben der Übersicht zu eng).
     Die Sortierung gilt für die Sitzung.
   - **Eure Geschichte** (`FellowStory`): links fest der **Steckbrief** (320 breit): Wappen, Name,
-    Stufe und Klasse, Online-Zeile, Stufenleiter mit „Noch … gemeinsam bis …“, drei Zahlen,
-    „Kennengelernt …“, „Zuletzt …“, Knöpfe „Alias festlegen“ (`ns:EditAlias`) und „Vergessen“
+    Stufe und Klasse, Online-Zeile („In deiner Gruppe“ oder „Zuletzt …“), dann die Leiste der
+    Verbundenheit, darunter die Zahlenleiste und „Kennengelernt …“, mit „auf Stufe N“ in einer eigenen
+    Zeile darunter, damit der Satz nicht umbricht (die frühere zweite Zeile
+    „Zuletzt …“ darunter ist seit 2026-11-24 entfallen, sie wiederholte die Online-Zeile; Wunsch
+    des Auftraggebers nach einem Screenshot), Knöpfe „Alias festlegen“ (`ns:EditAlias`) und „Vergessen“
     (das Kreuz an den Zeilen ist entfallen; eine Chat-Zeile sagt es). Rechts daneben scrollt ein
     Buch (`UI.Book`, 560 breit; Wunsch des Auftraggebers nach dem ersten Blick ins Spiel: Person
     links, Buch rechts statt eines breiten Kopfes über einem zu breiten Buch) mit einem Kapitel je Tag im
     Tagesprotokoll, das neueste zuerst: Gebiet des Tages, „N Std. zusammen“; Ereignisse
-    „Gemeinsam unterwegs“ (von bis, Dauer), Bosse aus der Chronik mit der Person in `with`,
-    Einträge der Person selbst („aus <Name>s Chronik“), „Ihr seid jetzt <Stufe>“ am Tag eines
-    Aufstiegs und „Kennengelernt“ (auf Stufe N). Fehlt der erste Tag im Protokoll, bekommt das
-    Kennenlernen ein eigenes letztes Kapitel. Namen werden über den Alias-Schlüssel verglichen
-    (Leerzeichen und Bindestrich gleich); ein Boss, den beide aufgezeichnet haben, steht nur einmal
-    da (aus der eigenen Chronik). Statt der Tabs steht „Alle Weggefährten“
-    oben; ein anderer Reiter, eine andere Seite oder Schließen schließt die Geschichte.
+    „Gemeinsam unterwegs“ (von bis; Bosse ohne Namen, etwa aus einem Schlachtzug, als Zahl
+    dahinter; die Dauer stand bis 2026-11-24 auch dort, brach um und wiederholte den
+    Kapitelkopf, deshalb auf Wunsch des Auftraggebers entfernt), je Boss mit Namen eine Karte („Archaedas bezwungen“, „in Uldaman“), „Ihr seid
+    jetzt <Stufe>“ am Tag eines Aufstiegs und „Kennengelernt“ (auf Stufe N). Fehlt der erste Tag
+    im Protokoll, bekommt das Kennenlernen ein eigenes letztes Kapitel. Seit 2026-11-24 steht dort
+    nur Gemeinsames aus dem eigenen Tagesprotokoll, nichts aus der Chronik (siehe „Chronik und
+    Weggefährten“). Hat die Chronik Einträge der Person (`ChronicleService.Who`, Name in jeder
+    Schreibweise) und ist sie eingeschaltet, trägt die Karte neben „Alias festlegen“ den Knopf
+    „In der Chronik“: Er öffnet Chronik › Freunde, gefiltert auf die Person. Statt der Tabs
+    steht „Alle Weggefährten“ oben; ein anderer Reiter, eine andere Seite oder Schließen schließt
+    die Geschichte.
+  - **Aufbau des Steckbriefs (Entscheidung des Auftraggebers, 2026-11-24, an der Leinwand
+    „Weggefährten – Personenkarte“, claude.ai-Artifact `EyiMx3kvy6qkrjnkYKV8eX`: Variante B
+    „Zahlenleiste“, mit der Leiste der Verbundenheit über den Zahlen statt darunter):** Anlass:
+    Die Karte wirkte unordentlich, die Zeit war zu groß (17 px halbfett, breiter als ihre
+    Spalte). Verworfen: A (ruhige Liste), C (großer Ring, Zeit als Satz, Weg aus zwei Punkten),
+    D (linksbündig mit Abschnitten). Die Leiste der Verbundenheit (`UI.TierBar`, ersetzt die
+    Leiter mit vier Punkten) nennt links die Stufe (Akzent ab Vertraut) und rechts die nächste,
+    darunter drei Abschnitte für die drei Schritte, gefüllt so weit, wie man gekommen ist, und
+    mittig „Noch … gemeinsam“. Die Zahlenleiste ist ein vertiefter Kasten: die Zeit auf der
+    halben Breite, Mal und Bosse auf je einem Viertel, getrennt durch Haarlinien; alle Zahlen
+    20 px halbfett, bei der Zeit „Std.“ und „Min.“ klein daneben (unter einer Stunde nur
+    Minuten, zur vollen Stunde nur Stunden). Im Spiel gesehen (Screenshot vom Auftraggeber,
+    2026-11-24, Mira aus den Beispieldaten): Leiste, Abschnitte und Zahlenleiste wie geplant,
+    „Std.“ und „Min.“ sitzen auf der Grundlinie. Danach kam die Stufe beim Kennenlernen in eine
+    eigene Zeile, weil „…, auf Stufe 29“ den Satz eng umbrach. Die Karte bleibt auf voller Höhe
+    (Entscheidung des Auftraggebers, 2026-11-24, statt sie auf ihren Inhalt zu kürzen); dafür
+    stehen zwischen Person, Verbundenheit, Zahlen und Kennenlernen je 32 px (`SECTION_GAP`,
+    vorher 18 bis 22), sodass auch ein zweizeiliges „Kennengelernt …“ gut über den Knöpfen endet.
+    Beides ist im Spiel noch nicht gesehen.
   - Die Suche findet weiter jede Person als einfache Personenzeile (`FellowItem`, `tab.search`).
     Unter einem Alias steht der Name in der zweiten Zeile. Die Klasse kommt aus
     `LOCALIZED_CLASS_NAMES_MALE`, also in der Sprache des Clients.
@@ -848,16 +923,19 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   Zeit, `FellowService.TIERS`: Begegnung unter 1 Std., Bekannt ab 1, Vertraut ab 10, Unzertrennlich
   ab 40 (enUS: Encounter, Acquainted, Trusted, Inseparable; die englischen Namen hat der Assistent
   gewählt). `FellowService.Tier(sekunden)` liefert Stufe, Fortschritt und Rest. Angezeigt als Ring
-  ums Wappen (`UI.Crest`), Abzeichen (`UI.TierBadge`, Akzent ab Vertraut) und Leiter
-  (`UI.TierLadder`). Der Ring ist ein angehaltener `Cooldown`-Swipe mit `ring.tga` (ohne
+  ums Wappen (`UI.Crest`), Abzeichen (`UI.TierBadge`, Akzent ab Vertraut) und Leiste
+  (`UI.TierBar`, bis 2026-11-24 die Leiter `UI.TierLadder`). Der Ring ist ein angehaltener `Cooldown`-Swipe mit `ring.tga` (ohne
   `OnUpdate`; die höchste Stufe steht knapp vor dem Ende, weil ein abgelaufener Cooldown nichts
   zeichnet; `noCooldownCount` hält OmniCC und Ähnliche fern); fehlt `Cooldown:Pause`, ein voller
   Ring ohne Fortschritt. Das Klassensymbol kommt
   aus `UI-Classes-Circles` mit `CLASS_ICON_TCOORDS`, sonst der Anfangsbuchstabe. Beides prüft
   `/fam test` (Gruppe `media`).
-- **Tagesprotokoll (seit 2026-11-24):** je Person `days = { [JJJJMMTT] = { s, z, b, f, l } }`
-  (Sekunden, Gebiet zuletzt an dem Tag, Bosse, erster und letzter Moment) und `firstLevel` (die
-  Stufe des Spielers beim Kennenlernen). Höchstens 30 Tage, der älteste fällt zuerst. Eine
+- **Tagesprotokoll (seit 2026-11-24):** je Person `days = { [JJJJMMTT] = { s, z, b, f, l, k } }`
+  (Sekunden, Gebiet zuletzt an dem Tag, Bosse, erster und letzter Moment, die Bosse mit Namen) und
+  `firstLevel` (die Stufe des Spielers beim Kennenlernen). `k = { { t, n, z } }` (Zeit, Boss,
+  Gebiet) gibt es nur in einer Gruppe, höchstens zwölf je Tag (`MAX_KILLS`); im Schlachtzug zählt
+  nur `b`, damit nicht 39 Personen jeden Boss des Abends speichern (dieselbe Regel wie `with` und
+  `others` in der Chronik). Höchstens 30 Tage, der älteste fällt zuerst. Eine
   Strecke über Mitternacht zählt für den Tag, an dem sie endet. Aufstiegstage werden beim Aufbau
   berechnet (`FellowService.Milestones`), ab der Zeit vor dem Protokoll (`seconds − Σ s`), damit
   frühere Zeit keine Meilensteine erfindet. Beim Laden fallen kaputte Tage heraus.
@@ -866,12 +944,15 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   nicht aufblähen). Die Zeile darunter lautet „in Uldaman  ·  mit Mira und Tom“ (Alias, sonst
   Vorname) bzw. „mit 12 anderen“. Das gilt, sobald „Meine Reise festhalten“ läuft, unabhängig vom
   Schalter der Weggefährten. Beide Felder fehlen in `FIELDS` von `Sharing.lua` und werden also nicht
-  geteilt. Der Beispiel-Boss in `/fam chronicle demo` hat zwei Gefährten.
+  geteilt. Der Beispiel-Boss in `/fam chronicle demo` hat zwei Gefährten. Die Weggefährten lesen
+  `with` seit 2026-11-24 nicht mehr; sie merken sich ihre Bosse selbst (`k` im Tagesprotokoll).
 - **Beispieldaten (2026-11-24, Wunsch des Auftraggebers):** `/fam fellows demo` trägt sechs
   erfundene Weggefährten ein (Klassen, Stufen, Gebiete, Zeiten von 25 Minuten bis 31 Stunden; Mira
   und Borin wie in der Chronik), `/fam fellows demo clear` entfernt nur sie
   (`FellowService.Demo`, `ClearDemo`). Sie tragen `demo = true` und GUIDs `Player-0-FAMDEMO..`;
-  seit 2026-11-24 auch Tage und `firstLevel`, sodass Mira und Borin einen Aufstieg erzählen.
+  seit 2026-11-24 auch Tage und `firstLevel`, sodass Mira und Borin einen Aufstieg erzählen, und
+  an Tagen in Uldaman oder den Todesminen Bosse mit Namen (je Person reihum, damit derselbe Boss
+  nicht an jedem Tag fällt).
 - **Im Spiel ungeprüft:** alles. Besonders: ob `UnitName` für `party1`… Vor- und Nachname liefert
   wie für `player`, ob `GROUP_ROSTER_UPDATE` nach dem Login von selbst kommt (sonst fängt
   `PLAYER_ENTERING_WORLD` es auf), ob `IsInInstance` in Forever `pvp` meldet und ob `BOSS_KILL` in

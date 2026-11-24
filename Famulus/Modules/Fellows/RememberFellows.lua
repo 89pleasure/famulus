@@ -47,9 +47,9 @@ function rememberFellows:OnOptionChanged(key)
     end
 end
 
-function rememberFellows:BOSS_KILL()
+function rememberFellows:BOSS_KILL(_, _, name)
     self:Scan()
-    Fellows.Boss()
+    Fellows.Boss(name, Zone(), ns.GroupService.InRaid())
 end
 
 -- The saved data is written after this event, so the stretches end here.

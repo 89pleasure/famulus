@@ -443,6 +443,25 @@ function ChronicleService.Character()
     return character
 end
 
+-- The name a companion's entries carry, for a character name in any
+-- spelling ("First Last", "First-Last"), or nil if the chronicle has no
+-- entry of theirs. The fellow travellers link a person to their events.
+function ChronicleService.Who(name)
+    local Key = ns.AliasService.Key
+    local key = IsPlainText(name) and Key(name)
+    if not key then
+        return nil
+    end
+    local entries = ChronicleService.Entries()
+    for i = #entries, 1, -1 do
+        local who = entries[i].who
+        if type(who) == "string" and (who == name or Key(who) == key) then
+            return who
+        end
+    end
+    return nil
+end
+
 -- The entries, oldest first. The array is shared; callers must not change it.
 function ChronicleService.Entries()
     local chronicle = Store()

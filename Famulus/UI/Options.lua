@@ -49,7 +49,7 @@ local fellowStory -- the fellow traveller whose story is open, or nil
 local resetArmed, resetToken = false, 0
 local aliasEditor -- input row of the aliases page, once it has been shown
 local embers = {} -- the sparks in the background, one set per ground
-local Render, PlayEmbers -- forward declarations
+local Render, PlayEmbers, SelectPage -- forward declarations
 
 -- Grain lies in a band across the top of the window, sidebar and content
 -- alike, and fades out below the tabs.
@@ -1121,8 +1121,10 @@ local function FellowPerson(guid, person, now)
             or level and L.c_p_level:format(level) or class or "",
         tier = tier,
         progress = progress,
-        nextText = toNext and L.ui_bond_next:format(Duration(toNext) or L.ui_fellow_minutes:format(1), L["ui_bond_" .. (tier + 1)]),
+        nextText = toNext and L.ui_bond_next:format(Duration(toNext) or L.ui_fellow_minutes:format(1)),
         timeText = timeText,
+        hours = math.floor(seconds / 3600),
+        minutes = math.floor(seconds / 60) % 60,
         statsText = table.concat(stats, "  ·  "),
         times = times,
         bosses = bosses,
@@ -1130,18 +1132,22 @@ local function FellowPerson(guid, person, now)
         lastText = Capital(last),
         lastShort = together and L.ui_fellow_now_short or Capital(When(person.last, now)),
         firstText = firstText,
-        sinceText = first and L.ui_fellow_since:format(DayTitle(DayKey(first))) or nil,
+        -- The card puts the player's level then on a line of its own: "at level 31".
+        firstLevelText = first and tonumber(person.firstLevel) and L.ui_fellow_met_detail:format(tonumber(person.firstLevel)) or nil,
+        sinceText =first and L.ui_fellow_since:format(DayTitle(DayKey(first))) or nil,
     }
 end
 
--- "10:40 to 12:50  ·  2 h 10 min"
-local function Span(from, to, seconds)
-    return L.ui_fellow_span:format(date("%H:%M", from), date("%H:%M", to), Duration(seconds) or L.ui_fellow_minutes:format(0))
+-- "10:40 to 12:50"
+local function Span(from, to)
+    return L.ui_fellow_span:format(date("%H:%M", from), date("%H:%M", to))
 end
 
 -- A fellow traveller's story as a book: one chapter per day together, the
--- newest first, and the first meeting. Returns the person (as in the
--- overview) and the chapters, or nil if they are gone.
+-- newest first, and the first meeting. It tells only what you did together,
+-- from the fellow travellers' own records; what the person did on their
+-- own is the chronicle's to tell. Returns the person (as in the overview)
+-- and the chapters, or nil if they are gone.
 local function FellowStory(guid)
     local Fellows = ns.FellowService
     local person
@@ -1155,54 +1161,6 @@ local function FellowStory(guid)
     end
     local now = time()
     local today, yesterday = DayKey(now), DayKey(now - 86400)
-    local name = person.name
-    -- Names reach the chronicle in more than one spelling ("First Last",
-    -- "First-Last"); the alias key evens that out.
-    local Key = ns.AliasService.Key
-    local nameKey = Key(name)
-    local function IsThem(other)
-        return nameKey ~= nil and type(other) == "string" and Key(other) == nameKey
-    end
-
-    -- What the chronicle knows of that person, by day: bosses defeated
-    -- together, and the entries they shared themselves. A boss both of you
-    -- recorded shows once, from your own chronicle.
-    local byDay, ownBosses = {}, {}
-    local entries = ns.ChronicleService.Entries()
-    for _, entry in ipairs(entries) do
-        if entry.k == "boss" and not entry.who and type(entry.with) == "table" then
-            for _, other in ipairs(entry.with) do
-                if IsThem(other) then
-                    ownBosses[Fellows.DayKey(entry.t) .. ":" .. tostring(entry.id or entry.name)] = true
-                end
-            end
-        end
-    end
-    for _, entry in ipairs(entries) do
-        local key = Fellows.DayKey(entry.t)
-        local shared = IsThem(entry.who)
-        if shared and entry.k == "boss" and ownBosses[key .. ":" .. tostring(entry.id or entry.name)] then
-            shared = false
-        end
-        if not shared and entry.k == "boss" and not entry.who and type(entry.with) == "table" then
-            for _, other in ipairs(entry.with) do
-                shared = shared or IsThem(other)
-            end
-        end
-        if shared then
-            byDay[key] = byDay[key] or {}
-            table.insert(byDay[key], entry)
-        end
-    end
-    local function Told(entry)
-        local event = ChronicleEvent(entry)
-        event.t = entry.t
-        if IsThem(entry.who) then
-            event.chip = { initial = Initial(name), text = L.ui_fellow_from:format(name) }
-        end
-        return event
-    end
-
     local milestones = Fellows.Milestones(guid, person, now)
     local first = tonumber(person.first)
     local firstKey = first and Fellows.DayKey(first)
@@ -1218,17 +1176,24 @@ local function FellowStory(guid)
     local chapters = {}
     for _, day in ipairs(Fellows.Days(person)) do
         local events = {}
+        -- Named bosses get a card each; the others (a raid, or more than a
+        -- day keeps) are counted on the day's line.
+        local unnamed = math.max(0, day.b - #day.k)
+        local bosses = unnamed == 1 and L.ui_fellow_boss or unnamed > 1 and L.ui_fellow_bosses:format(unnamed) or nil
         if day.f and day.l then
-            events[#events + 1] = { kind = "fellow", title = L.ui_fellow_together, detail = Span(day.f, day.l, day.s), t = day.f }
+            -- How long, the chapter's heading already says.
+            local span = Span(day.f, day.l)
+            events[#events + 1] = { kind = "fellow", title = L.ui_fellow_together,
+                detail = bosses and (span .. "  ·  " .. bosses) or span, t = day.f }
         end
-        for _, entry in ipairs(byDay[day.key] or {}) do
-            events[#events + 1] = Told(entry)
+        for _, kill in ipairs(day.k) do
+            local event = ChronicleEvent({ k = "boss", name = kill.n, zone = kill.z, t = kill.t })
+            event.t = kill.t
+            events[#events + 1] = event
         end
-        byDay[day.key] = nil
         if #events == 0 then
             -- Counted a boss, but no time yet: still a day together.
-            events[1] = { kind = "fellow", title = L.ui_fellow_together,
-                detail = day.b == 1 and L.ui_fellow_boss or day.b > 1 and L.ui_fellow_bosses:format(day.b) or nil, t = 0 }
+            events[1] = { kind = "fellow", title = L.ui_fellow_together, detail = bosses, t = 0 }
         end
         local tier = milestones[day.key]
         if tier then
@@ -1263,12 +1228,32 @@ local function FellowStory(guid)
             events = { met },
         }
     end
-    return FellowPerson(guid, person, now), chapters
+    local shown = FellowPerson(guid, person, now)
+    -- Their own events are the chronicle's; the card leads there if it has any.
+    shown.chronicle = ns:IsCategoryEnabled("chronicle") and ns.ChronicleService.Who(person.name) or nil
+    return shown, chapters
+end
+
+-- A person has two books: their own events in the chronicle, and what you
+-- did together among the fellow travellers. These lead from one to the other.
+local function ShowChronicleOf(who)
+    SelectPage("chronicle")
+    selectedTabs.chronicle = "companions"
+    chronicleWho = who
+    Render()
+end
+
+local function ShowStoryOf(guid)
+    SelectPage("fellows")
+    selectedTabs.fellows = "overview"
+    fellowStory = guid
+    Render()
 end
 
 -- What the buttons on a fellow traveller's card do, in the overview and
 -- beside their story.
 FELLOW_ACTIONS = {
+    onChronicle = ShowChronicleOf,
     onStory = function(guid)
         fellowStory = guid
         Render()
@@ -1960,10 +1945,18 @@ function Render()
                 SelectCompanion(chronicleWho)
             end, "ghost")
             bar.clear:SetPoint("LEFT", bar.text, "RIGHT", 6, 0)
+            -- What you did together is the fellow travellers' to tell.
+            bar.toStory = UI.Button(bar, function()
+                ShowStoryOf(bar.guid)
+            end, "ghost")
+            bar.toStory:SetPoint("LEFT", bar.clear, "RIGHT", 4, 0)
             window.bookFilter = bar
         end
         bar.text:SetText(L.c_only_who:format((ns.ChronicleService.Companion({ who = chronicleWho }))))
         bar.clear:SetLabel(L.c_show_all)
+        bar.guid = ns:IsCategoryEnabled("fellows") and ns.FellowService.Find(chronicleWho) or nil
+        bar.toStory:SetLabel(L.ui_fellow_story)
+        bar.toStory:SetShown(bar.guid ~= nil)
         bar:ClearAllPoints()
         bar:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
         bar:Show()
@@ -2102,7 +2095,7 @@ function Render()
     RefreshTabs()
 end
 
-local function SelectPage(id)
+function SelectPage(id)
     DisarmReset()
     chronicleWho, fellowStory = nil, nil
     currentPage = id

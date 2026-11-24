@@ -24,23 +24,25 @@ mit denen du in einer Gruppe warst. Englisch und Deutsch, keine Bibliotheken, ke
 | Chronik | Eigene Reise aufzeichnen (Stufen, Tode, Bosse, Herausforderungen, Gebiete, Berufe, Fähigkeiten, Gegenstände) | aus |
 | Chronik | Stufenaufstiege der Freundesliste festhalten | aus |
 | Chronik | Mit Freunden und Gilde teilen (Addon-Nachrichten zwischen Famulus-Nutzern) | aus |
-| Chronik | Ereignisse von Gefährten live als Karte am Bildschirm einblenden, auf Wunsch auch eigene | **an** |
+| Chronik | Ereignisse von Freunden live als Karte am Bildschirm einblenden, auf Wunsch auch eigene | **an** |
 | Weggefährten | Merken, mit wem du in einer Gruppe warst: wann, wo, wie oft, wie lange, gemeinsame Bosse (wahlweise ohne Schlachtzüge) | aus |
 
 **Das Fenster** (`/fam`): Links die Suche, darunter die Hauptfunktionen **Aliase**, **Chronik** und
 **Weggefährten**, unten **Einstellungen** und **Über**; die Unterbereiche der gewählten Funktion
 stehen als Tabs oben im Inhalt.
-Die Chronik erzählt die Reise deiner Charaktere und deiner Gefährten als Bilderbuch und tauscht sie
+Die **Chronik erzählt, was passiert ist**, die **Weggefährten zeigen, mit wem du spielst**.
+Die Chronik erzählt die Reise deiner Charaktere und deiner Freunde als Bilderbuch und tauscht sie
 auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus ebenfalls nutzen, auch über
-gemeinsame Gefährten, wenn jemand offline ist. Besiegt ihr einen Boss als Gruppe, nennt die Chronik,
+gemeinsame Freunde, wenn jemand offline ist. Besiegt ihr einen Boss als Gruppe, nennt die Chronik,
 wer dabei war. Neben dem Buch zeigt eine Spalte deine Woche in Zahlen, deine Berufe und deine
-Gefährten mit Stufe und Online-Stand; ein Klick auf einen Gefährten zeigt nur seine Ereignisse. Die
-Aliase haben ihre Namensliste und einen Unterbereich „Einstellungen“. Die Weggefährten zeigen deine
-drei engsten Gefährten als Kacheln und alle weiteren in einer Liste (nach dem letzten Mal oder nach
-der gemeinsamen Zeit), jeweils mit ihrer **Verbundenheit**: Begegnung, Bekannt (ab 1 Std.),
-Vertraut (ab 10 Std.), Unzertrennlich (ab 40 Std.). Ein Klick zeigt den Steckbrief und „Eure
-Geschichte“, eure gemeinsamen Tage als Bilderbuch. Diese Daten bleiben auf deinem Rechner, nichts davon wird
-verschickt. Fünf Farbwelten, die Funken im Hintergrund und die Fenstergröße stehen unter
+Freunde mit Stufe, Online-Stand und ihrer Bilanz; ein Klick auf eine Person zeigt nur ihre
+Ereignisse. Die Aliase haben ihre Namensliste und einen Unterbereich „Einstellungen“. Die
+Weggefährten zeigen deine drei engsten Gefährten als Kacheln und alle weiteren in einer Liste (nach
+dem letzten Mal oder nach der gemeinsamen Zeit), jeweils mit ihrer **Verbundenheit**: Begegnung,
+Bekannt (ab 1 Std.), Vertraut (ab 10 Std.), Unzertrennlich (ab 40 Std.). Ein Klick zeigt die Person
+und „Eure Geschichte“: eure gemeinsamen Tage und Bosse als Bilderbuch. Kennt auch die Chronik die
+Person, führt ein Knopf zu ihren Ereignissen dort, und von dort zurück. Diese Daten bleiben auf
+deinem Rechner, nichts davon wird verschickt. Fünf Farbwelten, die Funken im Hintergrund und die Fenstergröße stehen unter
 Einstellungen › Darstellung. Die Suche oben findet Einstellungen, Aliase und Weggefährten auf allen
 Seiten.
 

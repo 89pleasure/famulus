@@ -13,12 +13,18 @@
 --           bosses = <n>,                         -- bosses defeated together
 --           firstLevel = <n>,                     -- the player's level when you met
 --           days = { [YYYYMMDD] = { s = <seconds>, z = "<zone>", b = <bosses>,
---                                   f = <first time>, l = <last time> } },
+--                                   f = <first time>, l = <last time>,
+--                                   k = { { t = <time>, n = "<boss>", z = "<zone>" }, ... } } },
 --       },
 --   }
 --
+-- `k` names the bosses defeated together in a party, at most MAX_KILLS a
+-- day; a raid only counts them in `b`, so that forty people do not each
+-- keep every boss of the evening.
+--
 -- Modules/Fellows/RememberFellows.lua does the counting; the window reads.
--- Changes are announced with the internal message FELLOWS_CHANGED.
+-- Changes are announced with the internal message FELLOWS_CHANGED. None of
+-- this needs the chronicle: what you did together is kept here.
 
 local _, ns = ...
 
@@ -30,6 +36,7 @@ local IsPlainText = ns.ChatService.IsPlainText
 local MAX_PEOPLE = 500 -- beyond this, whoever was seen longest ago is forgotten
 local MEET_GAP = 30 * 60 -- apart for this long, the next group is a new time together
 local MAX_DAYS = 30 -- days kept per person in the day log
+local MAX_KILLS = 12 -- bosses named per person and day
 
 -- Bond tiers: the time together (seconds) at which tier 1..4 starts.
 FellowService.TIERS = { 0, 3600, 36000, 144000 }
@@ -190,19 +197,29 @@ function FellowService.PartAll(now, zone)
     FellowService.Sync({}, now, zone)
 end
 
--- A boss fell: it counts for everyone in the group now.
-function FellowService.Boss()
+-- A boss fell: it counts for everyone in the group now. name, zone: the
+-- boss and where (either may be nil); raid: true in a raid group, where the
+-- boss is counted but not named.
+function FellowService.Boss(name, zone, raid)
     local fellows = Store()
     if not fellows or next(together) == nil then
         return
     end
     local now = time()
+    local named = not raid and IsPlainText(name)
+    zone = IsPlainText(zone) and zone or nil
     for guid in pairs(together) do
         local person = fellows[guid]
         if person then
             person.bosses = (person.bosses or 0) + 1
             local day = Today(person, now)
             day.b = day.b + 1
+            if named then
+                day.k = day.k or {}
+                if #day.k < MAX_KILLS then
+                    day.k[#day.k + 1] = { t = now, n = name, z = zone }
+                end
+            end
         end
     end
     ns:Fire("FELLOWS_CHANGED")
@@ -219,6 +236,25 @@ function FellowService.Forget(guid)
     together[guid] = nil
     ns:Fire("FELLOWS_CHANGED")
     return person.name
+end
+
+-- The GUID of the person with that character name, in any spelling
+-- ("First Last", "First-Last"), or nil. Of two with the same name, the one
+-- seen last. The chronicle links a friend to your story with them this way.
+function FellowService.Find(name)
+    local Key = ns.AliasService.Key
+    local key = IsPlainText(name) and Key(name)
+    local fellows = Store()
+    if not key or not fellows then
+        return nil
+    end
+    local found, foundLast
+    for guid, person in pairs(fellows) do
+        if Key(person.name) == key and (not foundLast or person.last > foundLast) then
+            found, foundLast = guid, person.last
+        end
+    end
+    return found
 end
 
 -- True while the person is in the player's group.
@@ -260,12 +296,13 @@ function FellowService.Seconds(guid, person, now)
     return seconds
 end
 
--- The day log as a list of { key, s, z, b, f, l }, newest first.
+-- The day log as a list of { key, s, z, b, f, l, k }, newest first. `k`
+-- (the bosses named that day, oldest first) is shared; callers must not change it.
 function FellowService.Days(person)
     local list = {}
     if type(person.days) == "table" then
         for key, day in pairs(person.days) do
-            list[#list + 1] = { key = key, s = day.s, z = day.z, b = day.b or 0, f = day.f, l = day.l }
+            list[#list + 1] = { key = key, s = day.s, z = day.z, b = day.b or 0, f = day.f, l = day.l, k = day.k or {} }
         end
     end
     table.sort(list, function(a, b)
@@ -307,6 +344,11 @@ local DEMO_ZONES = {
     enUS = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris", "Westfall", "The Deadmines" },
     deDE = { "Ödland", "Uldaman", "Schlingendorntal", "Tanaris", "Westfall", "Die Todesminen" },
 }
+-- Bosses of the two dungeons above (zones 2 and 6); bosses elsewhere stay unnamed, as in a raid.
+local DEMO_BOSSES = {
+    enUS = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin VanCleef" } },
+    deDE = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin van Cleef" } },
+}
 
 function FellowService.ClearDemo()
     local fellows = Store()
@@ -332,6 +374,7 @@ function FellowService.Demo()
     end
     FellowService.ClearDemo()
     local zone = DEMO_ZONES[GetLocale and GetLocale()] or DEMO_ZONES.enUS
+    local bossesIn = DEMO_BOSSES[GetLocale and GetLocale()] or DEMO_BOSSES.enUS
     local hour, day = 3600, 86400
     -- name, class, level, { first: seconds ago, zone }, { last: seconds ago, zone }, times, seconds, bosses
     local samples = {
@@ -350,16 +393,24 @@ function FellowService.Demo()
         local count = math.min(sample[6], 6)
         local share = math.floor(sample[7] * 0.8 / count)
         local days = {}
+        local turn = {} -- per dungeon, the boss that falls next: each visit goes on where the last one stopped
         for day = 1, count do
             local at = count == 1 and last or math.floor(first + (last - first) * (day - 1) / (count - 1))
             if day < count then
                 at = at - (day * 7919) % 18000 -- not every day at the same hour
             end
             local zoneOf = day == 1 and sample[4][2] or day == count and sample[5][2] or zone[(index + day) % #zone + 1]
-            days[FellowService.DayKey(at)] = {
-                s = share, z = zoneOf, f = at - share, l = at,
-                b = math.floor(sample[8] / count) + (day == count and sample[8] % count or 0),
-            }
+            local bosses = math.floor(sample[8] / count) + (day == count and sample[8] % count or 0)
+            local names = bossesIn[zoneOf == zone[2] and 2 or zoneOf == zone[6] and 6 or 0]
+            local kills
+            if names and bosses > 0 then
+                kills = {}
+                for kill = 1, math.min(bosses, #names) do
+                    turn[names] = (turn[names] or 0) % #names + 1
+                    kills[kill] = { t = at - share + math.floor(share * kill / (bosses + 1)), n = names[turn[names]], z = zoneOf }
+                end
+            end
+            days[FellowService.DayKey(at)] = { s = share, z = zoneOf, f = at - share, l = at, b = bosses, k = kills }
         end
         fellows[("Player-0-FAMDEMO%02d"):format(index)] = {
             name = sample[1], class = sample[2], level = sample[3],
@@ -397,6 +448,20 @@ ns:On("DATABASE_READY", function()
                         days[key] = nil
                     else
                         day.b = day.b or 0
+                        if type(day.k) == "table" then
+                            for index = #day.k, 1, -1 do
+                                local kill = day.k[index]
+                                if type(kill) ~= "table" or type(kill.t) ~= "number" or not IsPlainText(kill.n)
+                                    or (kill.z ~= nil and not IsPlainText(kill.z)) then
+                                    table.remove(day.k, index)
+                                end
+                            end
+                            if #day.k == 0 then
+                                day.k = nil
+                            end
+                        elseif day.k ~= nil then
+                            day.k = nil
+                        end
                     end
                 end
             elseif days ~= nil then
