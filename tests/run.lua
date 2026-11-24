@@ -445,23 +445,38 @@ local function tabButton(text)
     end
 end
 
-check(window.title:GetText() == "Names" and window.subtitle:GetText() == ns.L.ui_tab_names_desc
+-- A tab in the bar of a page without sidebar.
+local function pageTab(text)
+    for _, button in ipairs(window.tabs.buttons) do
+        if button:IsShown() and button.label:GetText() == text then
+            return button
+        end
+    end
+end
+
+check(tabButton("Names") and tabButton("Names").selected
     and window.area.name:GetText() == "Aliases" and window.area.desc:GetText() == ns.L.area_aliases_desc,
     "the first page is the aliases: named in the sidebar, the content headed by its first tab")
 check(navButton("Aliases") and navButton("Chronicle") and navButton("Settings") and navButton("About"),
     "the head lists the main features and the addon's own pages")
 check(not navButton("Quality of Life") and not navButton("Journal"), "and nothing else")
-check(navButton("Aliases").selected and navButton("Aliases").count:GetText() == "5/5",
-    "the main feature is selected and counts its active features")
+check(window.search:GetParent() == window.sidebar and window.search:IsShown(), "the search sits at the top of the sidebar")
+check(navButton("Aliases"):GetParent() == window.sidebar and navButton("Settings"):GetParent() == window.sidebar
+    and navButton("About"):GetParent() == window.sidebar, "the main features and the addon's own pages are entries in the sidebar")
+check(navButton("Aliases").selected and not navButton("Aliases").pill:IsShown(),
+    "the main feature is selected and shows no counter")
 mock.Click(tabButton("Settings"))
-check(tabButton("Settings").selected and window.subtitle:GetText() == ns.L.ui_tab_display_desc, "the content is headed by the tab and its description")
+check(tabButton("Settings").selected and not tabButton("Names").selected, "a click on a tab chooses it")
 local rows = visibleRows()
 check(#rows == 7, "the display tab shows the five features and their options (got " .. #rows .. ")")
 check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
 mock.Click(window.resetButton)
 check(window.resetButton.label:GetText() == "Reset", "and a click on it does nothing")
-local master = window.master
-check(master:IsShown() and master.toggle.on and master.caption:GetText() == "ON", "the tab carries the category's master switch, labelled ON")
+check(window.master == nil, "the pages carry no master switch any more")
+-- The master switches live in Settings › General; tests flip them directly.
+local function flipAliases()
+    ns:SetOption("categories", "aliases", not ns:IsCategoryEnabled("aliases"))
+end
 local function visibleCards()
     local list = {}
     for _, frame in ipairs(mock.frames) do
@@ -490,7 +505,7 @@ check(optionRow.bullet:IsShown() and not rows[1].bullet:IsShown(), "options are 
 check(optionRow.sunkenLast.parts[1]:IsShown() and not optionRow.sunken:IsShown(), "an option that ends its card has the rounded ground")
 check(not aliasCards[1].mark:IsShown() and aliasCards[2].mark:IsShown(), "the card of a switched-off feature loses the mark")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
-check(navButton("Aliases").count:GetText() == "4/5", "the head counts it")
+check(not navButton("Aliases").pill:IsShown(), "the sidebar counts nothing")
 ns:SetOption("chatAliases", "style", "both")
 mock.Advance(0.3)
 check(optionRow.dropdown.text:GetText() == ns.L.o_chatAliases_style_both and isFolded(optionRow), "a chosen value shows while folded as well")
@@ -504,36 +519,29 @@ check(not menuOpen and ns:GetOption("chatAliases", "style") == "both", "and clic
 ns:SetOption("chatAliases", "style", "alias")
 
 -- Master switch: everything on the tab stops, the choices stay.
-mock.Click(master)
+flipAliases()
 mock.Advance(0.3)
 check(not ns:IsCategoryEnabled("aliases") and not ns.features.tooltipAliases.enabled, "the master switch stops the features of its category")
 check(mock.CountSenderFilters() == 0, "nothing of a switched-off category reacts to the game")
 check(ns:GetOption("tooltipAliases", "enabled") == true and ns:GetOption("chatAliases", "enabled") == false, "the features' own settings are kept")
-check(not master.toggle.on and master.caption:GetText() == "OFF", "the switch reads OFF")
-check(window.subtitle:GetText() == ns.L.ui_tab_display_desc, "the description stays")
-check(rows[3].disabled and rows[3].toggle.on, "feature rows are greyed out but still show the choice")
+check(window.area.name:GetText() == "Aliases", "the page's name stays in the head")
+check(window.offNotice:IsShown() and #visibleRows() == 0 and not window.resetButton:IsShown(), "the page shows only the notice")
 check(tabButton("Settings").label:GetAlpha() < 1, "the tab of the category is greyed out")
 check(FamulusDB.profile.categories.aliases == false, "the switch is saved")
 enable("chatAliases")
 check(not ns.features.chatAliases.enabled, "a feature cannot be started while its category is off")
 enable("chatAliases", false)
 check(ns.features.liveFeed.enabled, "other categories keep running")
-mock.Click(master)
+flipAliases()
 mock.Advance(0.3)
 check(ns.features.tooltipAliases.enabled and FamulusDB.profile.categories == nil, "switching the category on again resumes the features")
-check(tabButton("Settings").label:GetAlpha() == 1, "and the tab is back to normal")
-check(master.toggle.on and master.caption:GetText() == "ON", "as is the switch")
+check(tabButton("Settings").label:GetAlpha() == 1 and not window.offNotice:IsShown() and #visibleRows() == 7, "and the tab is back to normal")
 
 mock.Click(rows[1])
 check(ns.features.chatAliases.enabled, "and the feature on again")
 mock.Advance(0.3)
 check(not isFolded(optionRow) and optionRow.desc:IsShown() and not optionRow.disabled, "which unfolds its option with its help text")
 check(window.resetButton.disabled, "back on defaults, reset is greyed out again")
-mock.Click(master)
-mock.Advance(0.3)
-check(not window.resetButton.disabled, "a switched-off category alone makes the tab resettable")
-mock.Click(master)
-mock.Advance(0.3)
 window.scroll:SetVerticalScroll(30)
 mock.Click(rows[1])
 mock.Advance(0.3)
@@ -544,11 +552,12 @@ window.scroll:SetVerticalScroll(0)
 
 -- Tabs.
 mock.Click(tabButton("Names"))
-check(tabButton("Names").selected and window.subtitle:GetText() == ns.L.ui_tab_names_desc, "a click on a tab opens it")
+check(tabButton("Names").selected, "a click on a tab opens it")
 mock.Advance(0.3)
 check(mock.CountOnUpdateFrames() == 0, "the sliding tab bar comes to rest")
 mock.Click(tabButton("Settings"))
 mock.Click(navButton("Settings"))
+check(navButton("Settings").bar:IsShown(), "the chosen icon carries the accent stroke")
 mock.Click(navButton("Aliases"))
 check(tabButton("Settings").selected, "a page remembers its tab")
 
@@ -578,8 +587,8 @@ for _, language in ipairs({ "enUS", "deDE" }) do
         end
     end
 end
-check(window.title:GetText() == "Über", "language switch applies immediately, without reload")
-check(not window.master:IsShown() and tabButton("Über") and tabButton("Über").selected, "the about page lists itself in the sidebar and has no master switch")
+check(window.area.name:GetText() == "Über", "language switch applies immediately, without reload")
+check(navButton("Über").selected and not tabButton("Über"), "the about page is chosen in the sidebar; with a single tab it shows none")
 for _, area in ipairs(ns.areas) do
     for _, category in ipairs(area.categories) do
         local owners = 0
@@ -603,10 +612,14 @@ end
 
 -- Search across pages.
 window.search.edit:SetText("kontextm")
-check(window.title:GetText() == "Suche" and #visibleRows() >= 1, "search finds the context menu feature in German")
+check(window.area.name:GetText() == "Suche" and #visibleRows() >= 1, "search finds the context menu feature in German")
 check(window.search.clear:IsShown(), "the search field offers a clear button while it has text")
-check(not window.master:IsShown() and not window.tabs:IsShown() and not window.area:IsShown() and not navButton("Über").selected,
-    "search results belong to no page: the sidebar shows neither name, tabs nor master switch")
+local tabsShown = false
+for _, button in ipairs(window.tabs.buttons) do
+    tabsShown = tabsShown or button:IsShown()
+end
+check(not navButton("Über").selected and not tabsShown and window.area.desc:GetText():find("^%d"),
+    "search results belong to no page: no entry chosen, no tabs, the head names the hits")
 local firstCard
 for _, frame in ipairs(mock.frames) do
     if frame.title and frame.note and frame:IsVisible() then
@@ -617,7 +630,7 @@ check(firstCard and firstCard.title:GetText() == "Aliase  ·  Einstellungen", "h
 window.search.edit:SetText("zzzz")
 check(#visibleRows() == 0, "search with no hit shows no rows")
 mock.Click(window.search.clear)
-check(window.search.edit:GetText() == "" and window.title:GetText() == "Über", "the clear button empties the field and returns to the page")
+check(window.search.edit:GetText() == "" and window.area.name:GetText() == "Über", "the clear button empties the field and returns to the page")
 check(not window.search.clear:IsShown(), "and disappears again")
 
 -- Reset.
@@ -629,8 +642,6 @@ check(tabButton("Settings").selected, "back on the display tab")
 enable("chatAliases", false)
 enable("tooltipAliases", false)
 enable("liveFeed", false)
-mock.Advance(0.1)
-ns:SetOption("categories", "aliases", false)
 mock.Advance(0.1)
 mock.Click(window.resetButton)
 mock.Advance(0.1)
@@ -647,28 +658,50 @@ mock.Click(window.resetButton)
 mock.Advance(4.1)
 check(ns.features.chatAliases.enabled and ns.features.tooltipAliases.enabled, "the second click puts the tab back to defaults")
 check(window.resetButton.disabled and window.resetButton.label:GetText() == "Reset", "after which reset is greyed out")
-check(ns:IsCategoryEnabled("aliases"), "including the category's master switch")
 check(ns:GetOption("liveFeed", "enabled") == false, "other pages are left alone")
 enable("liveFeed")
 
 -- Aliases page: the list first, where aliases show on the second tab.
 mock.Click(navButton("Aliases"))
 mock.Click(tabButton("Names"))
-check(window.area.name:GetText() == "Aliases" and window.title:GetText() == "Names" and tabButton("Names").selected and tabButton("Settings"), "the aliases page has its own tabs")
-check(window.master:IsShown() and not window.resetButton:IsShown(), "the list tab has the master switch, but no reset: aliases are data")
+check(window.area.name:GetText() == "Aliases" and tabButton("Names").selected and tabButton("Settings"), "the aliases page has its own tabs")
+check(not window.resetButton:IsShown(), "the list tab has no reset: aliases are data")
 local aliasRows = visibleRows()
 check(#aliasRows == 2, "the list tab shows the input row and an empty hint (got " .. #aliasRows .. ")")
 local editor = aliasRows[1].editor
 check(editor ~= nil and editor:IsVisible() and aliasRows[2].item.kind == "info", "the input row comes before the hint")
 check(editor.name.placeholder:GetText() == "Character or BattleTag#1234" and editor.save.label:GetText() == "Save", "the input row is labelled")
-check(navButton("Aliases").count:GetText() == "5/5", "the head counts the alias features")
+check(not navButton("Aliases").pill:IsShown(), "the sidebar entry shows no counter")
 mock.Click(tabButton("Settings"))
 check(#visibleRows() == 7 and window.resetButton:IsShown(), "the display tab shows the five features with their options, and reset")
-mock.Click(window.master)
+-- The master switches in Settings › General.
+mock.Click(navButton("Settings"))
+mock.Click(tabButton("General"))
+local switches = visibleRows()
+check(switches[1].item.section == "categories" and switches[1].item.key == "aliases" and switches[3].item.key == "fellows"
+    and switches[1].toggle.on, "settings › general starts with the three main features")
+mock.Click(switches[1])
 mock.Advance(0.1)
-check(navButton("Aliases").count:GetText() == "OFF" and navButton("Aliases").label:GetAlpha() < 1, "a switched-off area reads OFF in the head")
-mock.Click(window.master)
+check(not ns:IsCategoryEnabled("aliases") and navButton("Aliases").pill:IsShown() and navButton("Aliases").count:GetText() == "OFF"
+    and navButton("Aliases").label:GetAlpha() < 1,
+    "switching one off greys it in the head")
+check(not window.resetButton.disabled, "and makes settings › general resettable")
+mock.Click(navButton("Aliases"))
+check(window.offNotice:IsShown() and #visibleRows() == 0 and window.offNotice.text:GetText():find("Aliases", 1, true),
+    "its page shows only the notice")
+window.search.edit:SetText("kontextm")
+check(#visibleRows() == 0, "search leaves a switched-off feature out")
+window.search.edit:SetText("aliases")
+check(visibleRows()[1] and visibleRows()[1].item.section == "categories", "but finds its switch")
+window.search.edit:SetText("")
+mock.Click(window.offNotice.button)
+check(window.area.name:GetText() == ns.L.cat_general and tabButton(ns.L.ui_tab_general).selected and not window.offNotice:IsShown(),
+    "the notice's button opens settings › general")
+mock.Click(window.resetButton)
+mock.Click(window.resetButton)
 mock.Advance(0.1)
+check(ns:IsCategoryEnabled("aliases"), "reset there switches the main features back on")
+mock.Click(navButton("Aliases"))
 mock.Click(tabButton("Names"))
 mock.Click(editor.save)
 check(ns.AliasService.Count() == 0 and mock.focus == editor.name.edit, "saving without a name asks for the name")
@@ -763,8 +796,8 @@ mock.Click(navButton("Settings"))
 mock.Click(tabButton("General"))
 check(tabButton("General").selected and tabButton("Appearance"), "the settings page has a general and an appearance tab")
 local generalRows = visibleRows()
-check(#generalRows == 4, "language, chat feedback, minimap button and character profile (got " .. #generalRows .. ")")
-mock.Click(generalRows[1]) -- language
+check(#generalRows == 7, "the three main features, language, chat feedback, minimap button and character profile (got " .. #generalRows .. ")")
+mock.Click(generalRows[4]) -- language
 mock.Advance(0.05)
 local picked = false
 for _, frame in ipairs(mock.frames) do
@@ -781,11 +814,11 @@ ns:SetOption("general", "language", "auto")
 
 -- Character profile.
 enable("tooltipAliases", false)
-mock.Click(generalRows[4])
+mock.Click(generalRows[7])
 mock.Advance(0.1)
 check(ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "character profile starts as a copy")
 enable("tooltipAliases")
-mock.Click(generalRows[4])
+mock.Click(generalRows[7])
 mock.Advance(0.1)
 check(not ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "switching back restores the account settings")
 enable("tooltipAliases")
@@ -886,7 +919,8 @@ check(not window:IsShown(), "/fam closes the window again")
 check(sparkGroups() == 0, "a closed window animates nothing")
 mock.reset()
 SlashCmdList.FAMULUS("status")
-check(lastChat():find("6 of 10", 1, true) ~= nil, "/fam status reports: " .. lastChat())
+check(not lastChat():find("of 10", 1, true), "/fam status is gone; it counted features")
+SlashCmdList.FAMULUS("status") -- it opened the window; close it again
 
 ---------------------------------------------------------------------------
 section("Chronicle")
@@ -1159,8 +1193,20 @@ do -- sample entries for looking at the book
         end
         return true
     end)(), "sample entries are not passed on to companions")
+    Chronicle.Profile("Real Friend", { level = 12, stats = { [60] = 1 } })
+    local profiles = Chronicle.ProfileNames()
+    local mira = Chronicle.Profile("Mira Sturmfeder")
+    check(#profiles >= 4 and mira and mira.demo and mira.level == 40 and mira.stats[60] ~= nil,
+        "the companions have sample profiles with their numbers")
+    local lysa = 0
+    for _, entry in ipairs(Chronicle.Entries()) do
+        lysa = lysa + (entry.who == "Lysa Morgentau" and 1 or 0)
+    end
+    check(lysa >= 3, "and a third companion tells some of the story")
     SlashCmdList.FAMULUS("chronicle demo clear")
     check(#Chronicle.Entries() == count, "/fam chronicle demo clear removes them and nothing else")
+    check(#Chronicle.ProfileNames() == 1 and Chronicle.Profile("Real Friend"), "and only the sample profiles")
+    FamulusDB.chronicle.profiles = nil
 end
 enable("ownJourney", false)
 mock.Fire("PLAYER_LEVEL_UP", 14)
@@ -1336,9 +1382,9 @@ end
 mock.Click(navButton("Chronicle"))
 mock.Click(tabButton("Everyone")) -- the page remembers the tab the window tests left it on
 mock.Advance(0.1)
-check(window.area.name:GetText() == "Chronicle" and window.title:GetText() == "Everyone" and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Settings"),
+check(window.area.name:GetText() == "Chronicle" and tabButton("Everyone").selected and tabButton("Everyone") and tabButton("My journey") and tabButton("Companions") and tabButton("Settings"),
     "the chronicle has its own page: everyone, my journey, companions, recording")
-check(navButton("Chronicle").count:GetText() == "1/4", "the head counts its four switches; the feed is on")
+check(not navButton("Chronicle").pill:IsShown(), "the chronicle's entry shows no counter")
 -- The entries are told as a picture book: chapters, and events on a line.
 local function bookFrames(field)
     local list = {}
@@ -1576,9 +1622,9 @@ do -- an item is shown with the game's icon of it, in its own colours
 end
 mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
-check(#visibleRows() == 15 and visibleRows()[1].toggle ~= nil and window.master:IsShown() and #bookFrames("story") == 0
+check(#visibleRows() == 15 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
     and not window.railScroll:IsShown() and visibleRows()[1].width == 900,
-    "recording: the four switches, the feed's eleven options and the master switch; no book, no rail (got " .. #visibleRows() .. ")")
+    "recording: the four switches and the feed's eleven options; no book, no rail (got " .. #visibleRows() .. ")")
 Chronicle.Clear()
 mock.Advance(0.1)
 mock.Click(tabButton("Everyone"))
@@ -1587,6 +1633,32 @@ check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nothing recor
     "an empty chronicle says how to begin")
 mock.Click(navButton("Aliases"))
 SlashCmdList.FAMULUS("")
+
+---------------------------------------------------------------------------
+section("Widgets: crest")
+---------------------------------------------------------------------------
+
+do
+    local crest = ns.UI.Crest(UIParent, 40)
+    crest:SetPerson("Mira", "MAGE")
+    check(crest.icon:IsShown() and not crest.initial:IsShown(), "a known class shows its icon")
+    crest:SetPerson("Mira", nil)
+    check(crest.initial:GetText() == "M" and crest.initial:IsShown() and not crest.icon:IsShown(), "without a class, the initial")
+    crest:SetPerson("Ena", "NOSUCHCLASS")
+    check(crest.initial:GetText() == "E" and not crest.icon:IsShown(), "a class the client has no icon for shows the initial too")
+    crest:SetProgress(0.7)
+    check(crest.ringShown and crest.swipe.paused and crest.swipe.progress == 0.7, "the ring stands still at the progress")
+    crest:SetProgress(1)
+    check(crest.swipe.paused and crest.swipe.cooldown[1] > GetTime() - 100, "at the top tier the ring is full, not a finished cooldown")
+    check(crest.swipe.noCooldownCount == true, "cooldown-count addons leave the ring alone")
+    local badge = ns.UI.TierBadge(UIParent)
+    badge:SetTier(3)
+    check(badge.text:GetText() == "Trusted" and badge:GetWidth() > 0, "the badge names the tier")
+    local ladder = ns.UI.TierLadder(UIParent, 300)
+    ladder:SetTier(2, 0.5)
+    check(#ladder.steps == 4 and ladder.steps[4].label:GetText() == "Inseparable" and ladder.steps[2].current
+        and not ladder.steps[3].current and ladder.fill:GetWidth() > 0, "the ladder shows four steps and where you are")
+end
 
 ---------------------------------------------------------------------------
 section("Fellow travellers")
@@ -1603,8 +1675,13 @@ end
 local mira = { name = "Mira", surname = "Sturmfeder", guid = "Player-1-MIRA", level = 20, class = "MAGE" }
 local tom = { name = "Tom", surname = "Hartwig", guid = "Player-1-TOM", level = 21, class = "PRIEST" }
 
+check(Fellows.Tier(0) == 1 and select(2, Fellows.Tier(1800)) == 0.5, "under an hour: encounter, halfway at 30 min")
+check(Fellows.Tier(3600) == 2 and Fellows.Tier(36000) == 3 and Fellows.Tier(144000) == 4, "tiers start at 1, 10 and 40 hours")
+check(select(2, Fellows.Tier(200000)) == 1 and select(3, Fellows.Tier(200000)) == nil, "the top tier is full and has no next step")
+check(select(3, Fellows.Tier(3000)) == 600, "and below it, the time to the next tier")
+
 check(not fellows.enabled and FamulusDB.fellows == nil, "nobody is remembered until the feature is switched on")
-setState({ zone = "Westfall" })
+setState({ zone = "Westfall", level = 18 })
 enable("rememberFellows")
 check(fellows.enabled and fellows.events.GROUP_ROSTER_UPDATE and fellows.events.BOSS_KILL and fellows.events.PLAYER_LOGOUT,
     "switched on, it listens to the group")
@@ -1630,6 +1707,11 @@ mock.state.group = { members = { mira } }
 mock.Fire("GROUP_ROSTER_UPDATE")
 check(not Fellows.IsTogether("Player-1-TOM") and tomData.seconds == 3600 and tomData.zone == "The Deadmines",
     "whoever leaves has their time together counted")
+local tomDay = tomData.days and tomData.days[Fellows.DayKey(clock)]
+check(tomDay and tomDay.s == 3600 and tomDay.z == "The Deadmines" and tomDay.b == 1 and tomDay.f == clock - 3600 and tomDay.l == clock,
+    "a day records time, zone, bosses, first and last moment")
+check(tomData.firstLevel == 18 and #Fellows.Days(tomData) == 1 and Fellows.Days(tomData)[1].key == Fellows.DayKey(clock),
+    "the player's level when you met is kept, and the days can be listed")
 
 -- A /reload: logging out ends the stretch, the group goes on.
 clock = clock + 600
@@ -1675,62 +1757,222 @@ mock.Fire("GROUP_ROSTER_UPDATE")
 SlashCmdList.FAMULUS("")
 mock.Click(navButton("Fellow travellers"))
 mock.Advance(0.1)
-check(window.area.name:GetText() == "Fellow travellers" and window.title:GetText() == "Recent" and tabButton("Recent") and tabButton("Most often") and tabButton("Settings"),
-    "fellow travellers have their own page: recent, most often, settings")
-check(navButton("Fellow travellers").count:GetText() == "1/1", "the head counts its switch")
-local fellowRows = visibleRows()
-check(#fellowRows == 2 and fellowRows[1].item.kind == "fellow" and fellowRows[1].label:GetText() == "Tom Hartwig"
-    and fellowRows[1].initial:GetText() == "T" and fellowRows[1].remove:IsShown(),
-    "whoever is in the group now comes first, with an avatar")
-check(fellowRows[1].desc:GetText() == "Level 21 Priest  ·  in your group now  ·  2× together  ·  1 h 0 min  ·  1 boss",
-    "the line says who and how much: " .. fellowRows[1].desc:GetText())
-check(fellowRows[2].desc:GetText() == "Level 20 Mage  ·  last together today in Westfall  ·  2× together  ·  1 h 10 min  ·  1 boss",
-    "and when and where you were last together: " .. fellowRows[2].desc:GetText())
-mock.Click(tabButton("Most often"))
-mock.Advance(0.1)
-fellowRows = visibleRows()
-check(#fellowRows == 2 and fellowRows[1].label:GetText() == "Mira Sturmfeder", "most often: the longest time together first")
-mock.Click(tabButton("Settings"))
-mock.Advance(0.1)
-check(#visibleRows() == 2 and visibleRows()[1].toggle and window.master:IsShown(), "settings: the switch, its raid option and the master switch")
+check(window.sidebar:IsShown() and window.area.name:GetText() == "Fellow travellers" and window.area.desc:GetText() == ns.L.area_fellows_desc
+    and pageTab("Overview") and pageTab("Overview").selected and pageTab("Settings") and not pageTab("Most often"),
+    "fellow travellers: the sidebar as everywhere, the name in the head, overview and settings as tabs")
+check(window.fellows:GetHeight() > 200, "the overview has a height, so the client can place what is in it")
+check(window.fellows:GetWidth() == 1180 - 224 - 2 * 28 and not window.fellows.card:IsShown(),
+    "the overview takes the content's width; no card beside it")
+check(not navButton("Fellow travellers").pill:IsShown(), "no counter in the sidebar")
+local overview = window.fellows
+check(overview and overview:IsShown() and overview.tiles[1].guid == "Player-1-MIRA" and overview.tiles[2].guid == "Player-1-TOM"
+    and not (overview.tiles[3] and overview.tiles[3]:IsShown()) and not overview.list:IsShown(),
+    "up to three people are tiles, the most time together first; no list below")
+check(overview.tiles[1].numeral:GetText() == "I" and overview.tiles[1].name:GetText() == "Mira Sturmfeder"
+    and overview.tiles[1].sub:GetText() == "Level 20 Mage" and overview.tiles[1].badge.text:GetText() == "Acquainted"
+    and overview.tiles[1].stats:GetText() == "1 h 10 min  ·  2×  ·  1 boss" and overview.tiles[1].crest.icon:IsShown(),
+    "a tile: rank, name, level and class, bond, numbers: " .. overview.tiles[1].stats:GetText())
+check(overview.tiles[2].footText:GetText() == "In your group now" and overview.tiles[1].footText:GetText() == "Last together today in Westfall",
+    "the foot says whether they are here or when you last were together")
+check(overview.tiles[1].name:GetWidth() > 0 and overview.tiles[1].name:GetWidth() < 300, "names are cut to their tile")
 
--- A click gives someone an alias; the list then shows it.
-mock.Click(tabButton("Recent"))
+-- A click on a tile opens the person's story: their card on the left.
+mock.Click(overview.tiles[2])
 mock.Advance(0.1)
-mock.Click(visibleRows()[1])
+check(overview.card:IsShown() and overview.card.name:GetText() == "Tom Hartwig" and overview.card.status:GetText() == "In your group now"
+    and not overview:IsShown() and window.tabs.back:IsShown() and not pageTab("Overview"),
+    "a click on a tile opens the story, the way back instead of the tabs")
+mock.Click(window.tabs.back)
+mock.Click(overview.tiles[1])
 mock.Advance(0.1)
-check(window.area.name:GetText() == "Aliases" and tabButton("Names").selected and editor.name.edit:GetText() == "Tom Hartwig", "a click opens the alias input with the name")
+check(overview.card.name:GetWidth() == 320 - 40 and overview.card.ladder.steps[2].current
+    and overview.card.next:GetText() == "8 h 50 min together to Trusted" and overview.card.cells[3].value:GetText() == "1",
+    "the card: the ladder and the way to the next tier: " .. overview.card.next:GetText())
+mock.Click(window.tabs.back)
+mock.Click(pageTab("Settings"))
+mock.Advance(0.1)
+check(#visibleRows() == 2 and visibleRows()[1].toggle and pageTab("Settings").selected and window.resetButton:IsShown()
+    and not overview:IsShown() and not overview.card:IsShown(),
+    "settings: the switch and its raid option, with reset beside the tabs; no overview")
+mock.Click(navButton("Chronicle"))
+check(window.area.name:GetText() == "Chronicle" and pageTab("Everyone"), "another page from the sidebar, with its own tabs")
+mock.Click(navButton("Fellow travellers"))
+check(pageTab("Settings").selected, "the page remembers its tab")
+
+-- The card gives someone an alias; the overview then shows it.
+mock.Click(pageTab("Overview"))
+mock.Advance(0.1)
+mock.Click(overview.tiles[2])
+mock.Click(overview.card.alias)
+mock.Advance(0.1)
+check(window.area.name:GetText() == "Aliases" and tabButton("Names").selected and editor.name.edit:GetText() == "Tom Hartwig",
+    "the alias button opens the alias input with the name")
 ns.AliasService.Set("Tom Hartwig", "Tommy")
 mock.Click(navButton("Fellow travellers"))
 mock.Advance(0.1)
-check(visibleRows()[1].label:GetText() == "Tommy" and visibleRows()[1].desc:GetText():find("^Tom Hartwig  ·  ") ~= nil,
-    "under an alias, the name moves into the line below")
+check(overview.tiles[2].name:GetText() == "Tommy", "under an alias, the tile shows it")
+mock.Click(overview.tiles[2])
+check(overview.card.sub:GetText():find("^Tom Hartwig  ·  ") ~= nil, "and the card has the name in the line below")
+mock.Click(window.tabs.back)
 ns.AliasService.Set("Tom Hartwig", nil)
 
--- A long list: sixty rows per tab; the search finds everyone, once.
+-- From the fourth on, a list; sixty rows, the search finds everyone, once.
 for i = 1, 70 do
     FamulusDB.fellows["Player-1-P" .. i] = { name = "Person " .. i, first = clock - i * 600, last = clock - i * 600, times = 1, seconds = 0, bosses = 0 }
 end
 ns:Fire("FELLOWS_CHANGED")
 mock.Advance(0.1)
-fellowRows = visibleRows()
-check(#fellowRows == 61 and fellowRows[61].item.kind == "info" and fellowRows[61].label:GetText() == "12 more",
-    "a long list shows sixty and says how many more (got " .. #fellowRows .. ")")
+local function shownRows()
+    local count = 0
+    for _, row in ipairs(overview.rows) do
+        count = count + (row:IsShown() and 1 or 0)
+    end
+    return count
+end
+check(overview.tiles[3]:IsShown() and overview.tiles[3].guid == "Player-1-P10" and overview.list:IsShown()
+    and overview.others:GetText() == "Everyone else  ·  69", "the third tile is filled, everyone else is in the list")
+check(shownRows() == 60 and overview.more:IsShown() and overview.more:GetText():find("^9 more") ~= nil
+    and overview.rows[1].guid == "Player-1-P1", "the list shows sixty, last seen first, and says how many more")
+mock.Click(overview.sort)
+mock.Advance(0.05)
+for _, frame in ipairs(mock.frames) do
+    if frame.value == "time" and frame.check and frame:IsVisible() then
+        mock.Click(frame)
+        break
+    end
+end
+mock.Advance(0.1)
+check(overview.rows[1].guid == "Player-1-P11" and overview.sortBox.text:GetText() == "Most time together"
+    and overview.tiles[1].guid == "Player-1-MIRA", "the select sorts the list by time; the tiles stay")
+mock.Click(overview.rows[1])
+check(overview.card.name:GetText() == "Person 11" and window.tabs.back:IsShown(), "a click on a row opens the person's story")
+mock.Click(window.tabs.back)
 window.search.edit:SetText("person 70")
-check(#visibleRows() == 1 and visibleRows()[1].item.kind == "fellow", "the search finds someone beyond the sixty, once")
+check(#visibleRows() == 1 and visibleRows()[1].item.kind == "fellow" and not overview:IsShown(),
+    "the search finds someone beyond the sixty, once")
 window.search.edit:SetText("")
 for i = 1, 70 do
     FamulusDB.fellows["Player-1-P" .. i] = nil
 end
+mock.Click(overview.sort)
+mock.Advance(0.05)
+for _, frame in ipairs(mock.frames) do
+    if frame.value == "last" and frame.check and frame:IsVisible() then
+        mock.Click(frame)
+        break
+    end
+end
 
--- Forgetting someone.
+-- Forgetting someone, from the card.
 mock.reset()
 ns:Fire("FELLOWS_CHANGED")
 mock.Advance(0.1)
-mock.Click(visibleRows()[2].remove)
+mock.Click(overview.tiles[1])
+mock.Click(overview.card.forget)
 mock.Advance(0.1)
-check(Fellows.Count() == 1 and FamulusDB.fellows["Player-1-MIRA"] == nil and lastChat():find("Mira Sturmfeder removed", 1, true),
-    "the cross forgets someone and says so")
+check(Fellows.Count() == 1 and FamulusDB.fellows["Player-1-MIRA"] == nil and lastChat():find("Mira Sturmfeder removed", 1, true)
+    and overview:IsShown() and not overview.card:IsShown(), "forget removes the person, says so, and goes back to the overview")
+
+-- The story of one fellow traveller: their days as a book.
+local storyDay, olderDay = Fellows.DayKey(clock - 3600), Fellows.DayKey(clock - 2 * 86400)
+FamulusDB.fellows["Player-1-STORY"] = {
+    name = "Lysa Morgentau", class = "PRIEST", level = 30, first = clock - 5 * 86400, firstZone = "Westfall", firstLevel = 25,
+    last = clock - 3600, zone = "Uldaman", times = 3, seconds = 11 * 3600, bosses = 1,
+    days = {
+        [storyDay] = { s = 2 * 3600, z = "Uldaman", b = 1, f = clock - 3 * 3600, l = clock - 3600 },
+        [olderDay] = { s = 3600, z = "Badlands", b = 0, f = clock - 2 * 86400 - 3600, l = clock - 2 * 86400 },
+    },
+}
+Chronicle.Add("boss", { name = "Archaedas", zone = "Uldaman", with = { "Lysa Morgentau", "Tom Hartwig" }, t = clock - 2 * 3600 })
+Chronicle.Add("level", { level = 31, who = "Lysa Morgentau", zone = "Uldaman", t = clock - 2 * 3600 - 60 })
+Chronicle.Add("death", { zone = "Uldaman", level = 20, t = clock - 2 * 3600 - 120 }) -- not hers
+Chronicle.Add("boss", { name = "Archaedas", zone = "Uldaman", who = "Lysa Morgentau", t = clock - 2 * 3600 + 30 }) -- her copy of the same boss
+Chronicle.Add("level", { level = 32, who = "Lysa-Morgentau", zone = "Uldaman", t = clock - 2 * 3600 - 30 }) -- her name written with a hyphen
+FamulusDB.fellows["Player-1-STORY"].days[Fellows.DayKey(clock - 3 * 86400)] = { s = 0, b = 1 } -- a boss, no time yet
+ns:Fire("FELLOWS_CHANGED")
+mock.Advance(0.1)
+check(overview.tiles[1].guid == "Player-1-STORY", "the one with the most time together is first")
+mock.Click(overview.tiles[1])
+mock.Advance(0.1)
+check(overview.card:IsShown() and overview.card.name:GetText() == "Lysa Morgentau" and not overview.card.storyButton:IsShown()
+    and overview.card.alias:IsShown() and window.tabs.back:IsShown() and not pageTab("Overview") and not overview:IsShown(),
+    "the story keeps the person's card on the left and a way back instead of the tabs")
+check(window.fellowBook:IsShown() and window.fellowBook.width == 1180 - 224 - 2 * 28 - 320 - 20,
+    "the book fills the rest of the width beside the card")
+local storyChapters = bookFrames("chapter")
+check(#storyChapters == 4 and storyChapters[1].chapter.title == "Uldaman" and storyChapters[2].chapter.title == "Badlands"
+    and storyChapters[4].chapter.title == "Westfall" and storyChapters[1].chapter.sub == "2 h 0 min together",
+    "a chapter per day together, the newest first, and one for the first meeting")
+check(storyChapters[3].chapter.small == nil and storyChapters[3].chapter.title ~= storyChapters[4].chapter.small,
+    "a day without a zone is named by its own date, once")
+local found = {}
+for _, event in ipairs(bookFrames("story")) do
+    found[event.story.title] = event.story
+end
+check(found["You are now trusted"] and found["You are now trusted"].big, "the day you crossed ten hours is a milestone")
+local spans = 0
+for _, event in ipairs(bookFrames("story")) do
+    if event.story.title == "Together on the road" and event.story.detail and event.story.detail:find(" to ", 1, true) then
+        spans = spans + 1
+    end
+end
+check(spans == 2, "a day tells when you were together")
+check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss"
+    and found["Archaedas defeated"].detail:find("with Lysa and Tom", 1, true), "bosses you defeated together, and who else was there")
+check(found["Reached level 31"] and found["Reached level 31"].chip.text == "from Lysa Morgentau's chronicle",
+    "and their own entries, marked as theirs")
+check(found["Met"] and found["Met"].big and found["Met"].detail:find("at level 25", 1, true), "the first meeting, at the player's level then")
+local bossCards, togetherCards = 0, 0
+for _, event in ipairs(bookFrames("story")) do
+    bossCards = bossCards + (event.story.kind == "boss" and 1 or 0)
+    togetherCards = togetherCards + (event.story.title == "Together on the road" and 1 or 0)
+end
+check(bossCards == 1 and found["Reached level 32"], "a boss you both recorded shows once; a name with a hyphen is still hers")
+check(togetherCards == 3, "a day with only a boss and no times still tells that you were together")
+local deathShown = false
+for title in pairs(found) do
+    deathShown = deathShown or title:find("Fallen", 1, true) ~= nil
+end
+check(not deathShown, "nothing that was not shared with them")
+mock.Click(window.tabs.back)
+mock.Advance(0.1)
+check(overview:IsShown() and not overview.card:IsShown() and pageTab("Overview")
+    and #bookFrames("chapter") == 0, "back leads to the overview")
+mock.Click(overview.tiles[1])
+local lysa = FamulusDB.fellows["Player-1-STORY"]
+FamulusDB.fellows["Player-1-STORY"] = nil
+ns:Fire("FELLOWS_CHANGED")
+mock.Advance(0.1)
+check(overview:IsShown() and pageTab("Overview") and not window.tabs.back:IsShown(), "a story whose person is gone falls back to the overview")
+FamulusDB.fellows["Player-1-STORY"] = lysa
+ns:Fire("FELLOWS_CHANGED")
+mock.Advance(0.1)
+mock.Click(overview.tiles[1])
+mock.Click(navButton("Aliases"))
+mock.Click(navButton("Fellow travellers"))
+check(not window.fellowBook:IsShown() and overview:IsShown() and pageTab("Overview"), "leaving the page closes the story")
+-- Someone from before the day log: just the first meeting.
+FamulusDB.fellows["Player-1-OLD"] = { name = "Old Friend", first = clock - 40 * 86400, firstZone = "Duskwood",
+    last = clock - 39 * 86400, times = 1, seconds = 600, bosses = 0 }
+ns:Fire("FELLOWS_CHANGED")
+mock.Advance(0.1)
+mock.Click(overview.tiles[3])
+mock.Advance(0.1)
+storyChapters = bookFrames("chapter")
+check(#storyChapters == 1 and storyChapters[1].chapter.title == "Duskwood" and #bookFrames("story") == 1,
+    "a person without a day log has only the chapter of the first meeting")
+mock.Click(window.tabs.back)
+FamulusDB.fellows["Player-1-STORY"], FamulusDB.fellows["Player-1-OLD"] = nil, nil
+Chronicle.Clear()
+
+-- Nobody at all: the empty hint instead of the overview.
+local kept = FamulusDB.fellows
+FamulusDB.fellows = {}
+ns:Fire("FELLOWS_CHANGED")
+mock.Advance(0.1)
+check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "Nobody yet" and not overview:IsShown() and not overview.card:IsShown(),
+    "without anyone, the page says how to begin")
+FamulusDB.fellows = kept
 
 -- The list has a limit; whoever was seen longest ago goes first.
 for i = 1, 499 do
@@ -1746,12 +1988,52 @@ check(ns:CountRegisteredEvents() == eventsBeforeFellows and not Fellows.IsTogeth
     "switched off, it neither listens nor counts")
 check(FamulusDB.fellows["Player-1-TOM"].seconds == 3600, "and what it counted stays")
 
+-- The day log keeps 30 days, newest first.
+local daily = { name = "Dana", surname = "Tag", guid = "Player-1-DAYS", level = 30, class = "MAGE" }
+local firstDay = clock
+for i = 0, 30 do
+    Fellows.Sync({ daily }, firstDay + i * 86400, "Westfall", 30)
+    Fellows.Sync({}, firstDay + i * 86400 + 60, "Westfall", 30)
+end
+local dana = FamulusDB.fellows["Player-1-DAYS"]
+local danaDays = Fellows.Days(dana)
+check(#danaDays == 30 and dana.days[Fellows.DayKey(firstDay)] == nil and danaDays[1].key == Fellows.DayKey(firstDay + 30 * 86400)
+    and danaDays[1].s == 60, "at most 30 days are kept, the oldest goes first")
+FamulusDB.fellows["Player-1-DAYS"] = nil
+
+-- Tier-up days: counted from the time before the log.
+local today = Fellows.DayKey(clock)
+local oldPerson = { seconds = 41 * 3600, days = { [today] = { s = 3600 } } }
+check(next(Fellows.Milestones("Player-1-OLD", oldPerson, clock)) == nil, "time from before the log does not invent milestones")
+local newPerson = { seconds = 11 * 3600, days = { [today] = { s = 2 * 3600 } } }
+check(Fellows.Milestones("Player-1-NEW", newPerson, clock)[today] == 3, "crossing 10 hours marks the day")
+check(next(Fellows.Milestones("Player-1-NONE", { seconds = 120 }, clock)) == nil, "without a log there are no milestones")
+
+-- A broken log from a hand-edited file is dropped.
+FamulusDB.fellows["Player-1-BAD"] = { name = "Bad", last = clock, times = 1, firstLevel = "x",
+    days = { x = { s = 5 }, [20261124] = "y", [20261123] = { s = -1 }, [20261122] = { s = 60 },
+        [20261121] = { s = 60, f = "abc" }, [20261120] = { s = 60, z = {} }, [20261119] = { s = 60, b = "2" } } }
+ns:Fire("DATABASE_READY")
+local bad = FamulusDB.fellows["Player-1-BAD"]
+check(bad.days[20261122] and bad.days.x == nil and bad.days[20261124] == nil and bad.days[20261123] == nil and bad.firstLevel == nil,
+    "broken days are dropped, good ones stay")
+check(bad.days[20261121] == nil and bad.days[20261120] == nil and bad.days[20261119] == nil and bad.days[20261122].b == 0,
+    "a day with odd times, zone or bosses is dropped; a missing boss count is zero")
+FamulusDB.fellows["Player-1-BAD"] = nil
+
 -- Sample people for a look at the list; clearing leaves the real ones.
 local realFellows = Fellows.Count()
 SlashCmdList.FAMULUS("fellows demo")
 SlashCmdList.FAMULUS("fellows demo")
 local added = Fellows.Count() - realFellows
 check(added > 3 and lastChat():find("/fam fellows demo clear", 1, true), "/fam fellows demo adds sample people, once")
+local demoMira = FamulusDB.fellows["Player-0-FAMDEMO01"]
+local demoSum = 0
+for _, day in ipairs(Fellows.Days(demoMira)) do
+    demoSum = demoSum + day.s
+end
+check(demoMira.firstLevel and #Fellows.Days(demoMira) >= 3 and demoSum <= demoMira.seconds
+    and next(Fellows.Milestones("Player-0-FAMDEMO01", demoMira, time())) ~= nil, "sample people have days to tell and a tier-up")
 SlashCmdList.FAMULUS("fellows demo clear")
 check(Fellows.Count() == realFellows and FamulusDB.fellows["Player-1-TOM"] ~= nil, "/fam fellows demo clear removes only them")
 mock.Click(navButton("Aliases"))
@@ -1790,9 +2072,9 @@ check(findCheck(result, "api", "C_Timer.After").status == "ok", "present API is 
 check(findCheck(result, "api", "MenuUtil").status == "warn", "API missing from the client is a warning")
 check(findCheck(result, "api", "GetItemInfo").status == "ok", "removed API is confirmed as removed")
 check(result.idle.events == eventsBefore and ns:CountRegisteredEvents() == eventsBefore, "the test registers no events")
-check(#mock.frames - framesBeforeTest == 1, "the test creates one hidden probe frame")
+check(#mock.frames - framesBeforeTest == 2, "the test creates one hidden probe frame, with a Cooldown in it")
 SlashCmdList.FAMULUS("test")
-check(#mock.frames - framesBeforeTest == 1, "and reuses it on the next run")
+check(#mock.frames - framesBeforeTest == 2, "and reuses them on the next run")
 
 -- A feature that needs API the client lacks is a failure in the report.
 local needy = ns:NewFeature({ id = "fastLootProbe", category = "chronicle", requires = { "C_Nope.Missing" } })

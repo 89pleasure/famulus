@@ -924,3 +924,142 @@ function UI.Scroll(parent)
     end)
     return scroll
 end
+
+---------------------------------------------------------------------------
+-- Fellow travellers: crest, bond badge and bond ladder
+---------------------------------------------------------------------------
+
+-- The first letter of a name (UTF-8 aware), upper case.
+function UI.Initial(text)
+    local first = string.match(text or "", "^[%z\1-\127\194-\244][\128-\191]*") or "?"
+    return string.upper(first)
+end
+
+local CLASS_ICONS = "Interface\\TargetingFrame\\UI-Classes-Circles"
+
+-- A person's crest: the game's class icon (else the initial) on a disc,
+-- inside a ring that shows the way to the next bond tier. The ring is a
+-- paused Cooldown swipe: drawn once, nothing runs per frame. Without
+-- Cooldown:Pause it is a plain full ring.
+function UI.Crest(parent, size)
+    local crest = CreateFrame("Frame", nil, parent)
+    crest:SetSize(size, size)
+    local inner = math.floor(size * 0.74 + 0.5)
+
+    local disc = UI.Icon(crest, "circle", inner, "chip", "BACKGROUND")
+    disc:SetPoint("CENTER")
+    crest.icon = crest:CreateTexture(nil, "ARTWORK")
+    crest.icon:SetTexture(CLASS_ICONS)
+    crest.icon:SetSize(inner, inner)
+    crest.icon:SetPoint("CENTER")
+    crest.initial = UI.Text(crest, math.floor(size * 0.36), "textDim", "semibold")
+    crest.initial:SetPoint("CENTER")
+    crest.initial:SetJustifyH("CENTER")
+    crest.initial:SetJustifyV("MIDDLE")
+
+    local track = UI.Icon(crest, "ring", size, "track", "BORDER")
+    track:SetPoint("CENTER")
+    local swipe = CreateFrame("Cooldown", nil, crest)
+    swipe:SetAllPoints(crest)
+    swipe.noCooldownCount = true -- OmniCC and the like: no countdown on the ring
+    crest.ringShown = swipe.Pause ~= nil and swipe.SetSwipeTexture ~= nil
+    if crest.ringShown then
+        swipe:SetSwipeTexture(UI.media.ring)
+        swipe:SetDrawEdge(false)
+        swipe:SetDrawBling(false)
+        swipe:SetHideCountdownNumbers(true)
+        swipe:SetReverse(true) -- the swipe paints the part that has passed
+        UI.Swipe(swipe, "accent")
+    else
+        swipe:Hide()
+        UI.Tint(track, "accentLine")
+    end
+    crest.swipe = swipe
+
+    function crest:SetPerson(name, classFile)
+        local coords = classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
+        self.icon:SetShown(coords ~= nil)
+        self.initial:SetShown(coords == nil)
+        if coords then
+            self.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+        else
+            self.initial:SetText(UI.Initial(name))
+        end
+    end
+
+    -- progress: 0..1 of the way to the next tier.
+    function crest:SetProgress(progress)
+        -- A cooldown at its end draws nothing; the top tier stays just short of it.
+        progress = math.max(0, math.min(0.999, progress or 0))
+        if not self.ringShown then
+            return
+        end
+        self.swipe.progress = progress
+        if progress <= 0 then
+            self.swipe:Clear()
+            return
+        end
+        -- 100 seconds of which `progress` have passed, then held still.
+        self.swipe:SetCooldown(GetTime() - progress * 100, 100)
+        self.swipe:Pause()
+    end
+    return crest
+end
+
+-- The bond tier's name on a small plate: accent from Trusted on, muted below.
+function UI.TierBadge(parent)
+    local badge = CreateFrame("Frame", nil, parent)
+    badge:SetHeight(18)
+    badge.plate = UI.Round(badge, "chip", 9)
+    badge.text = UI.Text(badge, 10, "textMuted", "semibold")
+    badge.text:SetPoint("CENTER")
+    badge.text:SetJustifyV("MIDDLE")
+    function badge:SetTier(tier)
+        local high = tier >= 3
+        self.text:SetText(ns.L["ui_bond_" .. tier])
+        UI.Ink(self.text, high and "accent" or "textMuted")
+        self.plate:SetColor(high and "accentSoft" or "chip")
+        self:SetWidth(self.text:GetStringWidth() + 16)
+    end
+    return badge
+end
+
+-- Four steps on a line: the reached ones lit, the current one glowing, the
+-- line filled up to where you stand.
+function UI.TierLadder(parent, width)
+    local ladder = CreateFrame("Frame", nil, parent)
+    ladder:SetSize(width, 40)
+    local step = width / 4
+    local track = ladder:CreateTexture(nil, "BORDER")
+    track:SetHeight(2)
+    track:SetPoint("TOPLEFT", step / 2, -7)
+    track:SetPoint("TOPRIGHT", -step / 2, -7)
+    UI.Paint(track, "track")
+    ladder.fill = ladder:CreateTexture(nil, "ARTWORK")
+    ladder.fill:SetHeight(2)
+    ladder.fill:SetPoint("TOPLEFT", step / 2, -7)
+    UI.Shade(ladder.fill, "HORIZONTAL", "accent", "accent2")
+    ladder.steps = {}
+    for index = 1, 4 do
+        local dot = UI.Icon(ladder, "circle", 10, "track", "OVERLAY")
+        dot:SetPoint("TOP", ladder, "TOPLEFT", step * (index - 0.5), -2)
+        dot.halo = UI.Halo(ladder, dot, 22, "accentGlow")
+        dot.label = UI.Text(ladder, 10, "textMuted", "medium")
+        dot.label:SetPoint("TOP", dot, "BOTTOM", 0, -6)
+        dot.label:SetJustifyH("CENTER")
+        ladder.steps[index] = dot
+    end
+    function ladder:SetTier(tier, progress)
+        for index, dot in ipairs(self.steps) do
+            dot.current = index == tier
+            dot.label:SetText(ns.L["ui_bond_" .. index])
+            UI.Tint(dot, index <= tier and "accent" or "track")
+            UI.Ink(dot.label, dot.current and "text" or index < tier and "textDim" or "textMuted")
+            dot.halo:SetShown(dot.current)
+        end
+        local reach = (tier - 1 + (tier < 4 and progress or 0)) * step
+        self.fill:SetWidth(math.max(1, reach))
+        self.fill:SetShown(reach > 0)
+    end
+    return ladder
+end

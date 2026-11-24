@@ -16,9 +16,11 @@ local UI = ns.UI
 local WIDTH, HEIGHT = 1180, 730
 local SIDEBAR, PAD, RADIUS = 224, 28, 12
 local CONTENT_W = WIDTH - SIDEBAR - PAD * 2
--- HEAD: the band across the top with the logo and the pages as tabs.
--- HEADER: title and description of what the content shows, below it.
-local HEAD, HEADER = 76, 84
+-- HEAD: the band across the top: logo, the chosen page's name, close.
+-- TABS: the page's tabs at the top of the content; HEADER: from there to
+-- where the content begins.
+local HEAD, TABS = 76, 48
+local HEADER = TABS + 20
 -- The chronicle's story tabs: the book, and beside it a rail that stays put
 -- while the book scrolls.
 local BOOK_W, RAIL_GAP = 600, 28
@@ -42,6 +44,8 @@ local rows, cards, navButtons = {}, {}, {}
 local renderedKey -- page, tab or search the rows were last laid out for
 local railKey -- page and tab the chronicle's rail was last filled for
 local chronicleWho -- the companion the chronicle's book is narrowed to, or nil
+local fellowSort = "last" -- order of the fellow travellers' list: "last" or "time"
+local fellowStory -- the fellow traveller whose story is open, or nil
 local resetArmed, resetToken = false, 0
 local aliasEditor -- input row of the aliases page, once it has been shown
 local embers = {} -- the sparks in the background, one set per ground
@@ -147,6 +151,27 @@ local function GeneralItem(key, kind, values)
             ns:SetOption("general", key, value)
         end,
         values = values,
+    }
+end
+
+-- The master switch of a main feature, in Settings › General.
+local function CategoryItem(category)
+    return {
+        kind = "toggle",
+        section = "categories",
+        key = category,
+        label = function()
+            return L["area_" .. category]
+        end,
+        desc = function()
+            return L["area_" .. category .. "_desc"]
+        end,
+        get = function()
+            return ns:IsCategoryEnabled(category)
+        end,
+        set = function(value)
+            ns:SetOption("categories", category, value)
+        end,
     }
 end
 
@@ -289,10 +314,7 @@ end
 
 -- First letter of an alias for its avatar; UTF-8 aware, upper case for
 -- plain letters.
-local function Initial(text)
-    local first = string.match(text or "", "^[%z\1-\127\194-\244][\128-\191]*") or "?"
-    return string.upper(first)
-end
+local Initial = UI.Initial
 
 ---------------------------------------------------------------------------
 -- Pages and tabs
@@ -335,7 +357,7 @@ end
 local layouts = {}
 
 -- Aliases: the list is the heart of the page; where aliases show up is the
--- second tab. The category's master switch is the same on both.
+-- second tab.
 function layouts.aliases()
     local display = CategoryTab("aliases")
     display.id = "display"
@@ -402,6 +424,10 @@ local function SettingsTabs()
         ns:SetUseCharacterProfile(value)
     end
 
+    local switches = {}
+    for _, category in ipairs(ns.categories) do
+        switches[#switches + 1] = CategoryItem(category)
+    end
     local general = SimpleTab("general", {
         GeneralItem("language", "select", function()
             local list = { { value = "auto", text = L.lang_auto } }
@@ -414,6 +440,18 @@ local function SettingsTabs()
         GeneralItem("minimapButton", "toggle"),
         profileItem,
     })
+    -- The main features' switches come first, under a heading of their own.
+    local others = general.settings
+    general.settings = {}
+    for _, item in ipairs(switches) do
+        general.settings[#general.settings + 1] = item
+    end
+    for _, item in ipairs(others) do
+        general.settings[#general.settings + 1] = item
+    end
+    general.blocks = function()
+        return { { title = L.ui_features, items = switches }, { items = others } }
+    end
 
     local appearance = SimpleTab("appearance", {
         GeneralItem("accent", "swatch", function()
@@ -900,7 +938,11 @@ end
 -- third holds the switches. A click on someone gives them an alias.
 ---------------------------------------------------------------------------
 
-local FELLOW_ROWS = 60 -- people per tab; the search finds all of them
+local FELLOW_ROWS = 60 -- people in the list; the search finds all of them
+local FELLOW_CARD_W, FELLOW_GAP = 320, 20 -- the person's card beside their story
+-- A fellow traveller's story: their card on the left, the book beside it.
+local FELLOW_BOOK_W = CONTENT_W - FELLOW_CARD_W - FELLOW_GAP
+local FELLOW_ACTIONS -- the card's buttons, see below
 
 local FELLOW_EMPTY_ITEM = {
     kind = "info",
@@ -1031,57 +1073,294 @@ local function ByTime(a, b, now)
     return Tiebreak(a, b)
 end
 
--- A tab listing everyone in an order. searchable: the search looks through
--- this tab; the other one lists the same people and is left out.
-local function FellowTab(id, order, searchable)
-    local function Items(limit)
-        local list, now = ns.FellowService.List(), time()
-        table.sort(list, function(a, b)
-            return order(a, b, now)
-        end)
-        local items = {}
-        for index, each in ipairs(list) do
-            if limit and index > limit then
-                break
-            end
-            items[#items + 1] = FellowItem(each.guid, each.person)
-        end
-        return items, #list
+-- "Kennengelernt ...": a sentence fragment as the start of a line.
+local function Capital(text)
+    return (string.gsub(text, "^%l", string.upper))
+end
+
+-- One person as the overview shows them; all texts made here.
+local function FellowPerson(guid, person, now)
+    local Fellows = ns.FellowService
+    local seconds = Fellows.Seconds(guid, person, now)
+    local tier, progress, toNext = Fellows.Tier(seconds)
+    local alias = ns.AliasService.Get(person.name)
+    local level, class = tonumber(person.level), ClassName(person.class)
+    local together = Fellows.IsTogether(guid)
+    local times, bosses = tonumber(person.times) or 1, tonumber(person.bosses) or 0
+    local timeText = Duration(seconds) or L.ui_fellow_minutes:format(0)
+
+    local stats = { timeText, L.ui_fellow_times_short:format(times) }
+    if bosses == 1 then
+        stats[#stats + 1] = L.ui_fellow_boss
+    elseif bosses > 1 then
+        stats[#stats + 1] = L.ui_fellow_bosses:format(bosses)
+    end
+    local last
+    if together then
+        last = L.ui_fellow_now
+    elseif type(person.zone) == "string" then
+        last = L.ui_fellow_last:format(When(person.last, now), person.zone)
+    else
+        last = L.ui_fellow_last_nowhere:format(When(person.last, now))
+    end
+    local first = tonumber(person.first)
+    local firstText
+    if first and type(person.firstZone) == "string" then
+        firstText = Capital(L.ui_fellow_first:format(When(first, now), person.firstZone))
+    elseif first then
+        firstText = Capital(L.ui_fellow_first_nowhere:format(When(first, now)))
     end
     return {
-        id = id,
+        guid = guid,
+        person = person,
+        seconds = seconds,
+        name = alias or person.name,
+        realName = alias and person.name or nil,
+        classFile = person.class,
+        levelClass = level and class and L.ui_fellow_level_class:format(level, class)
+            or level and L.c_p_level:format(level) or class or "",
+        tier = tier,
+        progress = progress,
+        nextText = toNext and L.ui_bond_next:format(Duration(toNext) or L.ui_fellow_minutes:format(1), L["ui_bond_" .. (tier + 1)]),
+        timeText = timeText,
+        statsText = table.concat(stats, "  ·  "),
+        times = times,
+        bosses = bosses,
+        together = together,
+        lastText = Capital(last),
+        lastShort = together and L.ui_fellow_now_short or Capital(When(person.last, now)),
+        firstText = firstText,
+        sinceText = first and L.ui_fellow_since:format(DayTitle(DayKey(first))) or nil,
+    }
+end
+
+-- "10:40 to 12:50  ·  2 h 10 min"
+local function Span(from, to, seconds)
+    return L.ui_fellow_span:format(date("%H:%M", from), date("%H:%M", to), Duration(seconds) or L.ui_fellow_minutes:format(0))
+end
+
+-- A fellow traveller's story as a book: one chapter per day together, the
+-- newest first, and the first meeting. Returns the person (as in the
+-- overview) and the chapters, or nil if they are gone.
+local function FellowStory(guid)
+    local Fellows = ns.FellowService
+    local person
+    for _, each in ipairs(Fellows.List()) do
+        if each.guid == guid then
+            person = each.person
+        end
+    end
+    if not person then
+        return nil
+    end
+    local now = time()
+    local today, yesterday = DayKey(now), DayKey(now - 86400)
+    local name = person.name
+    -- Names reach the chronicle in more than one spelling ("First Last",
+    -- "First-Last"); the alias key evens that out.
+    local Key = ns.AliasService.Key
+    local nameKey = Key(name)
+    local function IsThem(other)
+        return nameKey ~= nil and type(other) == "string" and Key(other) == nameKey
+    end
+
+    -- What the chronicle knows of that person, by day: bosses defeated
+    -- together, and the entries they shared themselves. A boss both of you
+    -- recorded shows once, from your own chronicle.
+    local byDay, ownBosses = {}, {}
+    local entries = ns.ChronicleService.Entries()
+    for _, entry in ipairs(entries) do
+        if entry.k == "boss" and not entry.who and type(entry.with) == "table" then
+            for _, other in ipairs(entry.with) do
+                if IsThem(other) then
+                    ownBosses[Fellows.DayKey(entry.t) .. ":" .. tostring(entry.id or entry.name)] = true
+                end
+            end
+        end
+    end
+    for _, entry in ipairs(entries) do
+        local key = Fellows.DayKey(entry.t)
+        local shared = IsThem(entry.who)
+        if shared and entry.k == "boss" and ownBosses[key .. ":" .. tostring(entry.id or entry.name)] then
+            shared = false
+        end
+        if not shared and entry.k == "boss" and not entry.who and type(entry.with) == "table" then
+            for _, other in ipairs(entry.with) do
+                shared = shared or IsThem(other)
+            end
+        end
+        if shared then
+            byDay[key] = byDay[key] or {}
+            table.insert(byDay[key], entry)
+        end
+    end
+    local function Told(entry)
+        local event = ChronicleEvent(entry)
+        event.t = entry.t
+        if IsThem(entry.who) then
+            event.chip = { initial = Initial(name), text = L.ui_fellow_from:format(name) }
+        end
+        return event
+    end
+
+    local milestones = Fellows.Milestones(guid, person, now)
+    local first = tonumber(person.first)
+    local firstKey = first and Fellows.DayKey(first)
+    local met = first and {
+        kind = "bond",
+        big = true,
+        title = L.ui_fellow_met,
+        detail = person.firstLevel and L.ui_fellow_met_detail:format(person.firstLevel) or nil,
+        when = date("%H:%M", first),
+        t = first,
+    }
+
+    local chapters = {}
+    for _, day in ipairs(Fellows.Days(person)) do
+        local events = {}
+        if day.f and day.l then
+            events[#events + 1] = { kind = "fellow", title = L.ui_fellow_together, detail = Span(day.f, day.l, day.s), t = day.f }
+        end
+        for _, entry in ipairs(byDay[day.key] or {}) do
+            events[#events + 1] = Told(entry)
+        end
+        byDay[day.key] = nil
+        if #events == 0 then
+            -- Counted a boss, but no time yet: still a day together.
+            events[1] = { kind = "fellow", title = L.ui_fellow_together,
+                detail = day.b == 1 and L.ui_fellow_boss or day.b > 1 and L.ui_fellow_bosses:format(day.b) or nil, t = 0 }
+        end
+        local tier = milestones[day.key]
+        if tier then
+            events[#events + 1] = {
+                kind = "bond",
+                big = true,
+                title = L.ui_fellow_tier_up:format(string.lower(L["ui_bond_" .. tier])),
+                t = day.l or day.f or 0,
+            }
+        end
+        if met and day.key == firstKey then
+            events[#events + 1], met = met, nil
+        end
+        table.sort(events, function(a, b)
+            return (a.t or 0) > (b.t or 0)
+        end)
+        -- The day's own date; a day without a zone is named by it alone.
+        local dayTitle = DayTitle(string.format("%04d-%02d-%02d", math.floor(day.key / 10000), math.floor(day.key / 100) % 100, day.key % 100),
+            today, yesterday)
+        chapters[#chapters + 1] = {
+            small = day.z and dayTitle or nil,
+            title = day.z or dayTitle,
+            sub = L.ui_fellow_day_time:format(Duration(day.s) or L.ui_fellow_minutes:format(0)),
+            events = events,
+        }
+    end
+    -- Met before the day log, or the day fell out of it: a chapter of its own.
+    if met then
+        chapters[#chapters + 1] = {
+            small = DayTitle(DayKey(first), today, yesterday),
+            title = type(person.firstZone) == "string" and person.firstZone or DayTitle(DayKey(first), today, yesterday),
+            events = { met },
+        }
+    end
+    return FellowPerson(guid, person, now), chapters
+end
+
+-- What the buttons on a fellow traveller's card do, in the overview and
+-- beside their story.
+FELLOW_ACTIONS = {
+    onStory = function(guid)
+        fellowStory = guid
+        Render()
+    end,
+    onAlias = function(guid)
+        for _, each in ipairs(ns.FellowService.List()) do
+            if each.guid == guid then
+                ns:EditAlias(each.person.name)
+            end
+        end
+    end,
+    onForget = function(guid)
+        local name = ns.FellowService.Forget(guid)
+        if name then
+            ns:Notify(L.msg_fellow_forgotten:format(name))
+        end
+    end,
+}
+
+-- The overview's model: the three with the most time together, everyone
+-- else sorted by the chosen order, and the person on the card.
+local function FellowModel()
+    local list, now = ns.FellowService.List(), time()
+    if #list == 0 then
+        return nil
+    end
+    table.sort(list, function(a, b)
+        return ByTime(a, b, now)
+    end)
+    local model = { top = {}, rest = {}, more = 0, sort = fellowSort }
+    local others = {}
+    for index, each in ipairs(list) do
+        if index <= 3 then
+            model.top[index] = FellowPerson(each.guid, each.person, now)
+        else
+            others[#others + 1] = each
+        end
+    end
+    table.sort(others, function(a, b)
+        if fellowSort == "time" then
+            return ByTime(a, b, now)
+        end
+        return ByLast(a, b)
+    end)
+    for index, each in ipairs(others) do
+        if index > FELLOW_ROWS then
+            model.more = #others - FELLOW_ROWS
+            break
+        end
+        model.rest[index] = FellowPerson(each.guid, each.person, now)
+    end
+    model.sortValues = {
+        { value = "last", text = L.ui_fellow_sort_last },
+        { value = "time", text = L.ui_fellow_sort_time },
+    }
+    model.onChoose = FELLOW_ACTIONS.onStory -- a click opens the person's story
+    model.onSort = function(value)
+        fellowSort = value
+        Render()
+    end
+    for key, action in pairs(FELLOW_ACTIONS) do
+        model[key] = action
+    end
+    return model
+end
+
+-- The overview tab: tiles, list and card, drawn by UI.FellowOverview. The
+-- search looks through everyone as plain person rows.
+local function FellowOverviewTab()
+    return {
+        id = "overview",
         category = "fellows",
         label = function()
-            return L["ui_tab_" .. id]
+            return L.ui_tab_overview
         end,
         desc = function()
-            return L["ui_tab_" .. id .. "_desc"]
+            return L.ui_tab_overview_desc
         end,
         settings = {},
+        overview = FellowModel,
         blocks = function()
-            local items, total = Items(FELLOW_ROWS)
-            if total == 0 then
+            if ns.FellowService.Count() == 0 then
                 return { { items = { FELLOW_EMPTY_ITEM } } }
             end
-            if total > #items then
-                local more = total - #items
-                items[#items + 1] = {
-                    kind = "info",
-                    label = function()
-                        return L.ui_fellow_more:format(more)
-                    end,
-                    desc = function()
-                        return L.ui_fellow_more_desc
-                    end,
-                }
-            end
-            return { { title = L.ui_fellow_list, note = tostring(total), items = items } }
+            return {}
         end,
         search = function()
-            if not searchable then
-                return {}
+            local list, items = ns.FellowService.List(), {}
+            for _, each in ipairs(list) do
+                items[#items + 1] = FellowItem(each.guid, each.person)
             end
-            return { { items = (Items()) } }
+            return { { items = items } }
         end,
     }
 end
@@ -1096,8 +1375,7 @@ function layouts.fellows()
         return L.ui_fellows_record_desc
     end
     return {
-        FellowTab("recent", ByLast, true),
-        FellowTab("frequent", ByTime, false),
+        FellowOverviewTab(),
         record,
     }
 end
@@ -1134,10 +1412,6 @@ local function BuildPages()
     local about = {
         InfoItem("version", function()
             return ns.version
-        end),
-        InfoItem("status", function()
-            local active, total = ns:CountActiveFeatures()
-            return L.about_status_value:format(active, total, ns:CountRegisteredEvents())
         end),
         InfoItem("commands", function()
             return L.about_commands_value
@@ -1188,26 +1462,29 @@ local function SearchBlocks(query)
         local page = pages[id]
         local pageTitle = page.title()
         for _, tab in ipairs(page.tabs) do
-            local where = pageTitle
-            if #page.tabs > 1 then
-                where = pageTitle .. "  ·  " .. tab.label()
-            end
-            local context = string.lower(where)
-            local hits = {}
-            -- A tab that shows only part of a long list searches all of it.
-            for _, block in ipairs(tab.search and tab.search() or tab.blocks()) do
-                for _, item in ipairs(block.items) do
-                    if item.kind ~= "info" and item.kind ~= "aliasEdit" then
-                        local haystack = string.lower(item.label() .. " " .. item.desc()) .. " " .. context
-                        if string.find(haystack, query, 1, true) then
-                            hits[#hits + 1] = item
+            -- A switched-off feature is left out; its switch in the settings is not.
+            if not tab.category or ns:IsCategoryEnabled(tab.category) then
+                local where = pageTitle
+                if #page.tabs > 1 then
+                    where = pageTitle .. "  ·  " .. tab.label()
+                end
+                local context = string.lower(where)
+                local hits = {}
+                -- A tab that shows only part of a long list searches all of it.
+                for _, block in ipairs(tab.search and tab.search() or tab.blocks()) do
+                    for _, item in ipairs(block.items) do
+                        if item.kind ~= "info" and item.kind ~= "aliasEdit" then
+                            local haystack = string.lower(item.label() .. " " .. item.desc()) .. " " .. context
+                            if string.find(haystack, query, 1, true) then
+                                hits[#hits + 1] = item
+                            end
                         end
                     end
                 end
-            end
-            if #hits > 0 then
-                blocks[#blocks + 1] = { title = where, items = hits }
-                total = total + #hits
+                if #hits > 0 then
+                    blocks[#blocks + 1] = { title = where, items = hits }
+                    total = total + #hits
+                end
             end
         end
     end
@@ -1468,119 +1745,80 @@ end
 -- Rendering
 ---------------------------------------------------------------------------
 
-local function CategoryCount(category)
-    local active, total = 0, 0
-    for _, feature in ipairs(ns.featureList) do
-        if feature.category == category and feature:IsShown() then
-            total = total + 1
-            if feature.enabled then
-                active = active + 1
-            end
+-- Whether any of an area's categories is switched on.
+local function AreaOn(area)
+    for _, category in ipairs(area.categories) do
+        if ns:IsCategoryEnabled(category) then
+            return true
         end
     end
-    return active, total
+    return false
 end
 
--- Active and total features of an area, and whether any of its categories
--- is switched on at all.
-local function AreaCount(area)
-    local active, total, anyOn = 0, 0, false
-    for _, category in ipairs(area.categories) do
-        local a, t = CategoryCount(category)
-        active, total = active + a, total + t
-        anyOn = anyOn or ns:IsCategoryEnabled(category)
-    end
-    return active, total, anyOn
-end
-
--- The pages stand as tabs in the head: the main features from the left, the
--- addon's own pages from the right.
-local function RefreshHead()
+-- The sidebar lists the pages: the main features at the top (a switched-off
+-- one greyed and marked OFF), the addon's own pages at the bottom. The head names the chosen page,
+-- or the search while there is one.
+local function RefreshNav()
     local searching = searchText ~= ""
-    local left, trailing = SIDEBAR + 12, {}
     for _, id in ipairs(pageOrder) do
         local button, page = navButtons[id], pages[id]
         local selected = not searching and id == currentPage
         button.selected = selected
+        button.fill:SetShown(selected)
         button.bar:SetShown(selected)
         button.label:SetText(page.title())
         UI.Ink(button.label, selected and "text" or "textDim")
         UI.Tint(button.icon, selected and "accent" or "textMuted")
-        local width = 12 + 16 + 8 + button.label:GetStringWidth() + 12
         if page.area then
-            local active, total, anyOn = AreaCount(page.area)
-            -- A switched-off area is greyed out here as well.
-            button.label:SetAlpha(anyOn and 1 or 0.45)
-            button.icon:SetAlpha(anyOn and 1 or 0.45)
-            -- The counter sits on a small plate; "off" stands alone.
-            button.count:SetText(anyOn and (active .. "/" .. total) or L.ui_category_off)
-            UI.Ink(button.count, anyOn and selected and "accent" or "textMuted")
-            local pill = button.count:GetStringWidth() + 14
-            button.pill:SetWidth(pill)
-            button.plate:SetShown(anyOn)
-            button.plate:SetColor(selected and "accentSoft" or "chip")
-            width = width + 8 + pill
+            local on = AreaOn(page.area)
+            button.label:SetAlpha(on and 1 or 0.45)
+            button.icon:SetAlpha(on and 1 or 0.45)
+            button.pill:SetShown(not on)
+            button.count:SetText(L.ui_category_off)
+            button.pill:SetWidth(button.count:GetStringWidth() + 14)
         end
-        button:SetWidth(width)
-        button:ClearAllPoints()
-        if page.bottom then
-            trailing[#trailing + 1] = button
-        else
-            button:SetPoint("BOTTOMLEFT", window, "TOPLEFT", left, -HEAD + 8)
-            left = left + width + 4
-        end
-    end
-    local right = 52 -- room for the close button
-    for i = #trailing, 1, -1 do
-        trailing[i]:SetPoint("BOTTOMRIGHT", window, "TOPRIGHT", -right, -HEAD + 8)
-        right = right + trailing[i]:GetWidth() + 4
     end
     window.tagline:SetText(L.ui_tagline)
-end
-
--- The sidebar belongs to the chosen page: its name, what it is for and its
--- tabs as a list. While searching it shows none of that.
-local function RefreshSidebar()
-    local searching = searchText ~= ""
     local page = pages[currentPage]
-    local area = window.area
-    area:SetShown(not searching)
-    window.tabs:SetShown(not searching)
     if not searching then
-        area.name:SetText(page.title())
-        area.desc:SetText(page.desc())
-        local current = CurrentTab(page).id
-        local list = {}
-        for i, tab in ipairs(page.tabs) do
-            list[i] = {
-                id = tab.id,
-                -- A page with a single tab lists itself.
-                text = tab.label and tab.label() or page.title(),
-                dim = tab.category ~= nil and not ns:IsCategoryEnabled(tab.category),
-            }
-        end
-        window.tabs:ClearAllPoints()
-        window.tabs:SetPoint("TOPLEFT", area.desc, "BOTTOMLEFT", -12, -16)
-        window.tabs:SetTabs(list, current)
+        window.area.name:SetText(page.title())
+        window.area.desc:SetText(page.desc())
     end
-    local active, total = ns:CountActiveFeatures()
-    window.status:SetText(L.ui_active_count:format(active, total))
 end
 
--- The master switch of the tab's category, next to the page's name in the
--- sidebar.
-local function RefreshMaster(animate)
-    local master = window.master
-    local tab = CurrentTab()
-    if searchText ~= "" or not tab.category then
-        master:Hide()
-        return
+-- The chosen page's tabs at the top of the content, left to right. In a
+-- fellow traveller's story the way back stands there instead; while
+-- searching there are none. A page with a single tab shows none.
+local function RefreshTabs()
+    local bar = window.tabs
+    local page = pages[currentPage]
+    local searching = searchText ~= ""
+    local story = not searching and fellowStory ~= nil
+    bar.back:SetShown(story)
+    if story then
+        bar.back:SetLabel(L.ui_fellow_back)
     end
-    local enabled = ns:IsCategoryEnabled(tab.category)
-    master:Show()
-    master.caption:SetText(enabled and L.ui_category_on or L.ui_category_off)
-    master:SetWidth(master.caption:GetStringWidth() + 10 + 34)
-    master.toggle:Set(enabled, animate)
+    local shown = not searching and not story and #page.tabs > 1
+    local current = CurrentTab(page).id
+    local left = 0
+    for index, tab in ipairs(shown and page.tabs or {}) do
+        local button = bar.buttons[index] or bar.NewTab(index)
+        button.id = tab.id
+        button.label:SetText(tab.label and tab.label() or page.title())
+        button.label:SetAlpha(tab.category ~= nil and not ns:IsCategoryEnabled(tab.category) and 0.5 or 1)
+        button.selected = tab.id == current
+        button.bar:SetShown(button.selected)
+        UI.Ink(button.label, button.selected and "text" or "textDim")
+        local width = button.label:GetStringWidth() + 24
+        button:SetWidth(width)
+        button:ClearAllPoints()
+        button:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", left, 0)
+        button:Show()
+        left = left + width + 4
+    end
+    for index = (shown and #page.tabs or 0) + 1, #bar.buttons do
+        bar.buttons[index]:Hide()
+    end
 end
 
 local function HasSettings(tab)
@@ -1594,9 +1832,6 @@ end
 
 -- True if "reset" would change anything on the current tab.
 local function TabDiffersFromDefaults(tab)
-    if tab.category and not ns:IsCategoryEnabled(tab.category) and HasSettings(tab) then
-        return true
-    end
     for _, item in ipairs(tab.settings) do
         if item.section then
             if item.key then
@@ -1648,10 +1883,9 @@ local function RefreshState(animate)
             CardRefresh(cards[i])
         end
     end
-    RefreshMaster(animate)
     UpdateResetButton()
-    RefreshHead()
-    RefreshSidebar()
+    RefreshNav()
+    RefreshTabs()
 end
 
 function Render()
@@ -1664,31 +1898,52 @@ function Render()
     if searching then
         local total
         blocks, total = SearchBlocks(searchText)
-        window.title:SetText(L.ui_search_title)
+        window.area.name:SetText(L.ui_search_title)
         if total > 0 then
-            window.subtitle:SetText(L.ui_search_results:format(total))
+            window.area.desc:SetText(L.ui_search_results:format(total))
         else
-            window.subtitle:SetText(L.ui_search_none:format(searchText))
+            window.area.desc:SetText(L.ui_search_none:format(searchText))
         end
         key = "search:" .. searchText
     else
         blocks = tab.blocks()
-        -- The content is headed by its tab; a page with a single tab by itself.
-        window.title:SetText(tab.label and tab.label() or page.title())
-        window.subtitle:SetText(tab.desc and tab.desc() or page.desc())
-        key = page.id .. ":" .. tab.id .. ":" .. (chronicleWho or "")
+        key = page.id .. ":" .. tab.id .. ":" .. (chronicleWho or "") .. ":" .. (fellowStory or "")
     end
 
-    -- Reset where the tab has settings, the master switch where it belongs
-    -- to a category.
-    window.resetButton:SetShown(not searching and HasSettings(tab))
+    -- A switched-off main feature shows a notice instead of its content.
+    local off = not searching and tab.category ~= nil and not ns:IsCategoryEnabled(tab.category)
+    if off then
+        blocks = {}
+    end
+    window.offNotice:SetShown(off)
+    window.offNotice.text:SetText(L.ui_off_notice:format(page.title()))
+    window.offNotice.button:SetLabel(L.ui_off_enable)
+
+    -- A fellow traveller's story, if one is open and the person still there.
+    local storyPerson, storyChapters
+    if not searching and not off and tab.overview and fellowStory then
+        storyPerson, storyChapters = FellowStory(fellowStory)
+        fellowStory = storyPerson and fellowStory or nil
+    end
+
+    -- A story keeps the person's card on the left; the book scrolls beside it.
+    local left, contentWidth, top = SIDEBAR + PAD, CONTENT_W, HEAD + HEADER
+    if storyPerson then
+        left, contentWidth = left + FELLOW_CARD_W + FELLOW_GAP, contentWidth - FELLOW_CARD_W - FELLOW_GAP
+    end
+    window.scroll:SetPoint("TOPLEFT", window, "TOPLEFT", left, -top)
+    window.scroll.content:SetWidth(contentWidth)
+
+    -- Reset where the tab has settings, at the right end of the tabs.
+    window.resetButton:SetShown(not searching and not off and not storyPerson and HasSettings(tab))
     UpdateResetButton()
-    RefreshMaster(false)
 
     -- A tab with a rail leaves it the right part of the content.
-    local railCards = not searching and tab.rail and tab.rail() or nil
-    local width = railCards and BOOK_W or CONTENT_W
-    window.scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -(railCards and PAD + RAIL_GAP + RAIL_W or PAD), 18)
+    local railCards = not searching and not off and tab.rail and tab.rail() or nil
+    local overview = not searching and not off and not storyPerson and tab.overview and tab.overview() or nil
+    local aside = railCards and RAIL_GAP + RAIL_W or 0
+    local width = railCards and BOOK_W or contentWidth
+    window.scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -(PAD + aside), 18)
 
     local content = window.scroll.content
     local y, rowCount = 0, 0
@@ -1761,7 +2016,7 @@ function Render()
 
     -- A tab that tells a story lays its book out below its cards.
     local chapters, footer
-    if not searching and tab.book then
+    if not searching and not off and tab.book then
         chapters, footer = tab.book()
     end
     if chapters then
@@ -1774,6 +2029,42 @@ function Render()
         window.book:Show()
     elseif window.book then
         window.book:Hide()
+    end
+
+    if storyPerson then
+        if not window.fellowBook then
+            window.fellowBook = UI.Book(content, FELLOW_BOOK_W)
+        end
+        if not window.fellows then
+            window.fellows = UI.FellowOverview(content, window, FELLOW_CARD_W)
+        end
+        window.fellowBook:ClearAllPoints()
+        window.fellowBook:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
+        y = y + window.fellowBook:SetChapters(storyChapters)
+        window.fellowBook:Show()
+        local card = window.fellows.card
+        window.fellows:SetCard(storyPerson, true, FELLOW_ACTIONS)
+        card:ClearAllPoints()
+        card:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -top)
+        card:SetPoint("BOTTOMLEFT", window, "BOTTOMLEFT", SIDEBAR + PAD, 18)
+        card:Show()
+    elseif window.fellowBook then
+        window.fellowBook:Hide()
+    end
+
+    if overview then
+        if not window.fellows then
+            window.fellows = UI.FellowOverview(content, window, FELLOW_CARD_W)
+        end
+        local fellows = window.fellows
+        fellows:ClearAllPoints()
+        fellows:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
+        y = y + fellows:SetModel(overview, width)
+        fellows:Show()
+        fellows.card:SetShown(storyPerson ~= nil)
+    elseif window.fellows then
+        window.fellows:Hide()
+        window.fellows.card:SetShown(storyPerson ~= nil)
     end
 
     window.scroll:SetContentHeight(y)
@@ -1807,13 +2098,13 @@ function Render()
     end
 
     window.search.placeholder:SetText(L.ui_search)
-    RefreshHead()
-    RefreshSidebar()
+    RefreshNav()
+    RefreshTabs()
 end
 
 local function SelectPage(id)
     DisarmReset()
-    chronicleWho = nil
+    chronicleWho, fellowStory = nil, nil
     currentPage = id
     if searchText ~= "" then
         window.search.edit:SetText("") -- triggers Render through the search callback
@@ -1825,7 +2116,7 @@ end
 
 local function SelectTab(id)
     DisarmReset()
-    chronicleWho = nil
+    chronicleWho, fellowStory = nil, nil
     selectedTabs[currentPage] = id
     Render()
 end
@@ -1842,9 +2133,6 @@ local function ResetTab()
         end
     end
     ns:ResetSections(sections)
-    if tab.category then
-        ns:SetOption("categories", tab.category, true)
-    end
 end
 
 -- The first click asks, the second one within a few seconds resets.
@@ -1870,38 +2158,41 @@ end
 -- Window
 ---------------------------------------------------------------------------
 
--- A page's tab in the head.
+-- A page's entry in the sidebar: icon, name and, for a main feature, its
+-- counter. The chosen one: the accent fading out to the right, and a glowing
+-- bar at its left edge.
 local function CreateNavButton(parent, page)
+    local width = SIDEBAR - 24
     local button = CreateFrame("Button", nil, parent)
-    button:SetHeight(NAV_ROW)
+    button:SetSize(width, NAV_ROW)
     button.navId = page.id
 
+    button.fill = UI.Round(button, "accentFade", 8)
+    button.fill:SetGradient("HORIZONTAL", "accentFade", "accentFadeEnd", width, NAV_ROW)
+    button.fill:Hide()
     local hover = UI.Round(button, "hover", 8, { sublevel = 1 })
     hover:Hide()
 
-    -- The chosen page: a glowing stroke on the line below the head.
     button.bar = CreateFrame("Frame", nil, button)
-    button.bar:SetHeight(2)
-    button.bar:SetPoint("BOTTOMLEFT", 10, -8)
-    button.bar:SetPoint("BOTTOMRIGHT", -10, -8)
-    local stroke = button.bar:CreateTexture(nil, "OVERLAY")
+    button.bar:SetSize(3, NAV_ROW - 16)
+    button.bar:SetPoint("LEFT")
+    local stroke = button.bar:CreateTexture(nil, "ARTWORK")
     stroke:SetAllPoints(button.bar)
-    UI.Shade(stroke, "HORIZONTAL", "accent", "accent2")
-    UI.Shadow(button.bar, 7, 1, 0, "accentGlow")
+    UI.Shade(stroke, "VERTICAL", "accent2", "accent")
+    UI.Shadow(button.bar, 6, 1, 0, "accentGlow")
     button.bar:Hide()
 
     button.icon = UI.Icon(button, page.icon, 16, "textMuted")
-    button.icon:SetPoint("LEFT", 12, 0)
-
+    button.icon:SetPoint("LEFT", 14, 0)
     button.label = UI.Text(button, 13, "textDim", "medium")
-    button.label:SetPoint("LEFT", button.icon, "RIGHT", 8, 0)
+    button.label:SetPoint("LEFT", button.icon, "RIGHT", 10, 0)
     button.label:SetJustifyV("MIDDLE")
 
     if page.area then
+        -- "OFF" beside a switched-off main feature.
         button.pill = CreateFrame("Frame", nil, button)
         button.pill:SetHeight(18)
-        button.pill:SetPoint("RIGHT", -12, 0)
-        button.plate = UI.Round(button.pill, "chip", 9)
+        button.pill:SetPoint("RIGHT", -10, 0)
         button.count = UI.Text(button.pill, 11, "textMuted", "medium")
         button.count:SetPoint("CENTER")
         button.count:SetJustifyH("CENTER")
@@ -1924,77 +2215,58 @@ local function CreateNavButton(parent, page)
     return button
 end
 
--- The tabs of the chosen page, as a list in the sidebar.
-local function CreateTabList(parent)
-    local tabs = CreateFrame("Frame", nil, parent)
-    tabs:SetSize(SIDEBAR - 24, 1)
-    tabs.buttons = {}
+-- The chosen page's tabs, at the top of the content: small buttons with the
+-- accent stroke on the line below them. RefreshTabs fills them.
+local function CreateContentTabs()
+    local pixel = UI.Pixel(window)
+    local bar = CreateFrame("Frame", nil, window)
+    bar:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD - 12, -HEAD - pixel)
+    bar:SetPoint("TOPRIGHT", window, "TOPRIGHT", -PAD, -HEAD - pixel)
+    bar:SetHeight(TABS)
+    local line = UI.Line(window, "cardBorder")
+    line:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR, -HEAD - TABS)
+    line:SetPoint("TOPRIGHT", window, "TOPRIGHT", -pixel, -HEAD - TABS)
 
-    local function CreateEntry()
-        local button = CreateFrame("Button", nil, tabs)
-        button:SetSize(SIDEBAR - 24, NAV_ROW)
-
-        -- The chosen entry: the accent fading out to the right, and a
-        -- glowing bar at its left edge.
-        button.fill = UI.Round(button, "accentFade", 8)
-        button.fill:SetGradient("HORIZONTAL", "accentFade", "accentFadeEnd", SIDEBAR - 24, NAV_ROW)
-        button.fill:Hide()
-        local hover = UI.Round(button, "hover", 8, { sublevel = 1 })
-        hover:Hide()
-
-        button.bar = CreateFrame("Frame", nil, button)
-        button.bar:SetSize(3, NAV_ROW - 16)
-        button.bar:SetPoint("LEFT")
-        local stroke = button.bar:CreateTexture(nil, "ARTWORK")
-        stroke:SetAllPoints(button.bar)
-        UI.Shade(stroke, "VERTICAL", "accent2", "accent")
-        UI.Shadow(button.bar, 6, 1, 0, "accentGlow")
-        button.bar:Hide()
-
+    bar.buttons = {}
+    function bar.NewTab(index)
+        local button = CreateFrame("Button", nil, bar)
+        button:SetHeight(TABS)
         button.label = UI.Text(button, 13, "textDim", "medium")
-        button.label:SetPoint("LEFT", 14, 0)
+        button.label:SetPoint("CENTER")
         button.label:SetJustifyV("MIDDLE")
-
+        button.bar = CreateFrame("Frame", nil, button)
+        button.bar:SetHeight(2)
+        button.bar:SetPoint("BOTTOMLEFT", 10, 0)
+        button.bar:SetPoint("BOTTOMRIGHT", -10, 0)
+        local stroke = button.bar:CreateTexture(nil, "OVERLAY")
+        stroke:SetAllPoints(button.bar)
+        UI.Shade(stroke, "HORIZONTAL", "accent", "accent2")
+        UI.Shadow(button.bar, 7, 1, 0, "accentGlow")
         button:SetScript("OnEnter", function(self)
-            if not self.selected then
-                hover:Fade(true)
-            end
+            UI.Ink(self.label, "text")
         end)
-        button:SetScript("OnLeave", function()
-            hover:Fade(false)
+        button:SetScript("OnLeave", function(self)
+            UI.Ink(self.label, self.selected and "text" or "textDim")
         end)
         button:SetScript("OnClick", function(self)
-            hover:Hide()
             SelectTab(self.id)
         end)
+        bar.buttons[index] = button
         return button
     end
 
-    -- list: array of { id = ..., text = "...", dim = bool }
-    function tabs:SetTabs(list, selected)
-        for i, entry in ipairs(list) do
-            local button = self.buttons[i]
-            if not button then
-                button = CreateEntry()
-                button:SetPoint("TOPLEFT", self, "TOPLEFT", 0, -(i - 1) * (NAV_ROW + 2))
-                self.buttons[i] = button
-            end
-            button.id = entry.id
-            button.selected = entry.id == selected
-            button.fill:SetShown(button.selected)
-            button.bar:SetShown(button.selected)
-            button.label:SetText(entry.text)
-            button.label:SetAlpha(entry.dim and 0.5 or 1)
-            UI.Ink(button.label, button.selected and "text" or "textDim")
-            button:Show()
-        end
-        for i = #list + 1, #self.buttons do
-            self.buttons[i]:Hide()
-        end
-        self:SetHeight(math.max(1, #list * (NAV_ROW + 2)))
-    end
+    -- In a fellow traveller's story: the way back to the overview.
+    bar.back = UI.Button(bar, function()
+        fellowStory = nil
+        Render()
+    end, "ghost", "chevron")
+    bar.back.icon:SetTexCoord(0, 1, 1, 1, 0, 0, 1, 0) -- the chevron turned to point left
+    bar.back:SetPoint("LEFT", 2, 0)
+    bar.back:Hide()
 
-    return tabs
+    window.resetButton = UI.Button(bar, ResetClicked, "ghost", "reset")
+    window.resetButton:SetPoint("RIGHT", 0, 0)
+    window.tabs = bar
 end
 
 -- The sparks move only while the window is open and the player wants them.
@@ -2011,17 +2283,38 @@ local function SavePosition()
     ns.global.window = { point = point, relativePoint = relativePoint, x = x, y = y }
 end
 
+-- The dark ground of head and sidebar is drawn on the window itself, so
+-- that the grain lies over it as over the content. left, top, right,
+-- bottom: from the window's top left corner.
+local function Ground(left, top, right, bottom)
+    local piece = window:CreateTexture(nil, "BACKGROUND", nil, 2)
+    piece:SetPoint("TOPLEFT", window, "TOPLEFT", left, -top)
+    piece:SetPoint("BOTTOMRIGHT", window, "TOPLEFT", right, -bottom)
+    UI.Paint(piece, "sidebar")
+    return piece
+end
+
+-- A rounded corner of that ground: a quarter of circle.tga.
+local function GroundCorner(point, x, y, l, r, t, b)
+    local corner = RADIUS - UI.Pixel(window)
+    local round = window:CreateTexture(nil, "BACKGROUND", nil, 2)
+    round:SetTexture(UI.media.circle)
+    round:SetTexCoord(l, r, t, b)
+    round:SetSize(corner, corner)
+    round:SetPoint(point, window, point, x, y)
+    UI.Tint(round, "sidebar")
+    return round
+end
+
 local function BuildSidebar()
     local sidebar = CreateFrame("Frame", nil, window)
     sidebar:SetPoint("TOPLEFT")
     sidebar:SetPoint("BOTTOMLEFT")
     sidebar:SetWidth(SIDEBAR)
     local pixel = UI.Pixel(window)
-    UI.Round(sidebar, "sidebar", RADIUS - pixel, {
-        inset = pixel,
-        sublevel = 2,
-        square = { TOPRIGHT = true, BOTTOMRIGHT = true },
-    })
+    Ground(pixel, HEAD, RADIUS, HEIGHT - RADIUS)
+    Ground(RADIUS, HEAD, SIDEBAR - pixel, HEIGHT - pixel)
+    GroundCorner("BOTTOMLEFT", pixel, pixel, 0, 0.5, 0.5, 1)
     -- Below the head a line parts the sidebar from the content; the head
     -- itself runs on to the right on the same ground.
     local edge = UI.VLine(sidebar, "cardBorder")
@@ -2029,17 +2322,14 @@ local function BuildSidebar()
     edge:SetPoint("BOTTOMRIGHT")
 
     -- A soft glow in the accent colour behind the logo. It is one round
-    -- spot, much larger than the corner it sits in; two pieces show the part
-    -- inside the sidebar and leave out the window's rounded corner. In the
-    -- head, which runs on across the window, a third piece on the window's
-    -- own ground lets it fade out instead of ending at the sidebar's edge.
+    -- spot, much larger than the corner it sits in; the pieces leave out the
+    -- window's rounded corner. In the head it fades out across the window.
     local SPOT = { left = -116, top = -136, width = 400, height = 360 }
-    local function Haze(left, top, right, bottom, parent)
-        parent = parent or sidebar
-        local piece = parent:CreateTexture(nil, "BACKGROUND", nil, 3)
+    local function Haze(left, top, right, bottom)
+        local piece = window:CreateTexture(nil, "BACKGROUND", nil, 3)
         piece:SetTexture(UI.media.shadow)
-        piece:SetPoint("TOPLEFT", parent, "TOPLEFT", left, -top)
-        piece:SetPoint("BOTTOMRIGHT", parent, "TOPLEFT", right, -bottom)
+        piece:SetPoint("TOPLEFT", window, "TOPLEFT", left, -top)
+        piece:SetPoint("BOTTOMRIGHT", window, "TOPLEFT", right, -bottom)
         piece:SetTexCoord(
             (left - SPOT.left) / SPOT.width,
             (right - SPOT.left) / SPOT.width,
@@ -2047,14 +2337,15 @@ local function BuildSidebar()
             (bottom - SPOT.top) / SPOT.height
         )
         UI.Tint(piece, "accentHaze")
+        return piece
     end
     local hazeBottom = SPOT.top + SPOT.height
-    Haze(RADIUS, pixel, SIDEBAR - pixel, hazeBottom)
-    Haze(pixel, RADIUS, RADIUS, hazeBottom)
-    Haze(SIDEBAR - pixel, pixel, SPOT.left + SPOT.width, HEAD, window)
+    Haze(RADIUS, pixel, SPOT.left + SPOT.width, HEAD)
+    Haze(pixel, RADIUS, RADIUS, HEAD)
+    Haze(RADIUS, HEAD, SIDEBAR - pixel, hazeBottom)
+    Haze(pixel, HEAD, RADIUS, hazeBottom)
 
-    -- Grain across the top and a few sparks that rise behind the entries.
-    UI.Grain(sidebar, 4, 4, pixel, HEIGHT - GRAIN_BAND, SIDEBAR, HEIGHT, true)
+    -- A few sparks that rise behind the entries.
     embers[#embers + 1] = UI.Embers(sidebar, 7, 0, SIDEBAR, HEIGHT, 11)
 
     -- The corner itself: a quarter circle in the glow's strength at that
@@ -2066,34 +2357,31 @@ local function BuildSidebar()
         local distance = math.max(0, math.sqrt(dx * dx + dy * dy) - 4)
         return (1 - math.min(1, distance / 28)) ^ 2.2
     end
-    local corner = sidebar:CreateTexture(nil, "BACKGROUND", nil, 3)
+    local corner = window:CreateTexture(nil, "BACKGROUND", nil, 3)
     corner:SetTexture(UI.media.circle)
     corner:SetTexCoord(0, 0.5, 0, 0.5)
     corner:SetSize(RADIUS - pixel, RADIUS - pixel)
-    corner:SetPoint("TOPLEFT", sidebar, "TOPLEFT", pixel, -pixel)
+    corner:SetPoint("TOPLEFT", window, "TOPLEFT", pixel, -pixel)
     UI.Tint(corner, "accentHaze", SpotAlpha(RADIUS * 0.6, RADIUS * 0.6))
 
     -- Logo: the flame, free on the head's left end. It is a picture with
     -- its own colours and glow and looks the same in every scheme.
-    local logo = CreateFrame("Frame", nil, sidebar)
+    local logo = CreateFrame("Frame", nil, window)
     logo:SetSize(40, 40)
     logo:SetPoint("TOPLEFT", 15, -(HEAD - 40) / 2)
     local picture = logo:CreateTexture(nil, "ARTWORK")
     picture:SetTexture(UI.media.logo)
     picture:SetAllPoints(logo)
 
-    local wordmark = UI.Text(sidebar, 16, "text", "semibold")
+    local wordmark = UI.Text(logo, 16, "text", "semibold")
     wordmark:SetPoint("TOPLEFT", logo, "TOPRIGHT", 8, -4)
     wordmark:SetText("Famulus")
 
-    window.tagline = UI.Text(sidebar, 11, "textMuted")
+    window.tagline = UI.Text(logo, 11, "textMuted")
     window.tagline:SetPoint("TOPLEFT", wordmark, "BOTTOMLEFT", 0, -3)
 
-    -- The head's line runs on below the logo.
-    local headLine = UI.Line(sidebar, "cardBorder")
-    headLine:SetPoint("TOPLEFT", pixel, -HEAD)
-    headLine:SetPoint("TOPRIGHT", 0, -HEAD)
-
+    -- The search at the top; below it the main features, the addon's own
+    -- pages at the bottom.
     window.search = UI.SearchBox(sidebar, function(text)
         text = strtrim(text)
         if text ~= searchText then
@@ -2104,84 +2392,52 @@ local function BuildSidebar()
     window.search:SetPoint("TOPLEFT", 16, -HEAD - 16)
     window.search:SetPoint("TOPRIGHT", -16, -HEAD - 16)
 
-    -- The chosen page: its name with the master switch of its category,
-    -- what it is for, and below that its tabs.
-    local area = CreateFrame("Frame", nil, sidebar)
-    area:SetPoint("TOPLEFT", 0, -HEAD - 68)
-    area:SetPoint("TOPRIGHT", 0, -HEAD - 68)
-    area:SetHeight(28)
-    area.name = UI.Text(area, 15, "text", "semibold")
-    area.name:SetPoint("LEFT", 24, 0)
-    area.name:SetJustifyV("MIDDLE")
-    area.desc = UI.Text(area, 11, "textMuted")
-    area.desc:SetPoint("TOPLEFT", area, "BOTTOMLEFT", 24, -4)
-    area.desc:SetWidth(SIDEBAR - 48)
-    area.desc:SetSpacing(2)
-    window.area = area
-
-    local master = CreateFrame("Button", nil, area)
-    master:SetHeight(28)
-    master:SetPoint("RIGHT", -18, 0)
-    master.toggle = UI.Toggle(master)
-    master.toggle:SetPoint("RIGHT")
-    master.caption = UI.Text(master, 11, "textDim", "semibold")
-    master.caption:SetPoint("RIGHT", master.toggle, "LEFT", -10, 0)
-    master.caption:SetJustifyV("MIDDLE")
-    master:SetScript("OnEnter", function(self)
-        UI.Ink(self.caption, "text")
-    end)
-    master:SetScript("OnLeave", function(self)
-        UI.Ink(self.caption, "textDim")
-    end)
-    master:SetScript("OnClick", function()
-        local category = CurrentTab().category
-        ns:SetOption("categories", category, not ns:IsCategoryEnabled(category))
-    end)
-    window.master = master
-
-    window.tabs = CreateTabList(sidebar)
-
+    local top, bottom = HEAD + 64, 12
+    for index = #pageOrder, 1, -1 do
+        local page = pages[pageOrder[index]]
+        local button = CreateNavButton(sidebar, page)
+        if page.bottom then
+            button:SetPoint("BOTTOMLEFT", 12, bottom)
+            bottom = bottom + NAV_ROW + 2
+        end
+    end
+    for _, id in ipairs(pageOrder) do
+        if not pages[id].bottom then
+            navButtons[id]:SetPoint("TOPLEFT", 12, -top)
+            top = top + NAV_ROW + 2
+        end
+    end
     local line = UI.Line(sidebar, "cardBorder")
-    line:SetPoint("BOTTOMLEFT", 20, 42)
-    line:SetPoint("BOTTOMRIGHT", -20, 42)
-
-    local dot = UI.Icon(sidebar, "circle", 6, "accent")
-    dot:SetPoint("BOTTOMLEFT", 24, 21)
-    UI.Halo(sidebar, dot, 18, "accentGlow")
-    window.status = UI.Text(sidebar, 11, "textMuted", "medium")
-    window.status:SetPoint("LEFT", dot, "RIGHT", 8, 0)
-    window.status:SetJustifyV("MIDDLE")
+    line:SetPoint("BOTTOMLEFT", 20, bottom + 6)
+    line:SetPoint("BOTTOMRIGHT", -20, bottom + 6)
     window.sidebar = sidebar
 end
 
--- The head right of the logo: the pages as tabs on the sidebar's dark
--- ground, and the close button. The ground is drawn on the window itself, so
+-- The head right of the logo: the chosen page's name and what it is for, on
+-- the sidebar's dark ground, and the close button. The ground is drawn on the window itself, so
 -- that the grain lies over it as over the content.
 local function BuildHead()
     local pixel = UI.Pixel(window)
-    local corner = RADIUS - pixel
-    local function Ground(left, top, right, bottom)
-        local piece = window:CreateTexture(nil, "BACKGROUND", nil, 2)
-        piece:SetPoint("TOPLEFT", window, "TOPLEFT", left, -top)
-        piece:SetPoint("BOTTOMRIGHT", window, "TOPRIGHT", -right, -bottom)
-        UI.Paint(piece, "sidebar")
-    end
-    Ground(SIDEBAR - pixel, pixel, RADIUS, HEAD) -- from where the sidebar's ground ends
-    Ground(WIDTH - RADIUS, RADIUS, pixel, HEAD)
-    local round = window:CreateTexture(nil, "BACKGROUND", nil, 2)
-    round:SetTexture(UI.media.circle)
-    round:SetTexCoord(0.5, 1, 0, 0.5)
-    round:SetSize(corner, corner)
-    round:SetPoint("TOPRIGHT", window, "TOPRIGHT", -pixel, -pixel)
-    UI.Tint(round, "sidebar")
+    Ground(RADIUS, pixel, WIDTH - RADIUS, HEAD)
+    Ground(pixel, RADIUS, RADIUS, HEAD)
+    Ground(WIDTH - RADIUS, RADIUS, WIDTH - pixel, HEAD)
+    GroundCorner("TOPLEFT", pixel, -pixel, 0, 0.5, 0, 0.5)
+    GroundCorner("TOPRIGHT", -pixel, -pixel, 0.5, 1, 0, 0.5)
 
     local line = UI.Line(window, "cardBorder")
-    line:SetPoint("TOPLEFT", SIDEBAR, -HEAD)
+    line:SetPoint("TOPLEFT", pixel, -HEAD)
     line:SetPoint("TOPRIGHT", -pixel, -HEAD)
 
-    for _, id in ipairs(pageOrder) do
-        CreateNavButton(window, pages[id])
-    end
+    local area = CreateFrame("Frame", nil, window)
+    area:SetPoint("TOPLEFT", SIDEBAR + PAD, -20)
+    area:SetSize(CONTENT_W - 60, 40)
+    area.name = UI.Text(area, 17, "text", "semibold")
+    area.name:SetPoint("TOPLEFT")
+    area.desc = UI.Text(area, 12, "textMuted")
+    area.desc:SetPoint("TOPLEFT", area.name, "BOTTOMLEFT", 0, -6)
+    area.desc:SetWidth(CONTENT_W - 60)
+    area.desc:SetWordWrap(false)
+    window.area = area
 
     local close = UI.IconButton(window, "close", function()
         window:Hide()
@@ -2190,17 +2446,21 @@ local function BuildHead()
     window.closeButton = close
 end
 
--- Title and description of what the content shows, reset on the right.
-local function BuildHeader()
-    window.title = UI.Text(window, 20, "text", "semibold")
-    window.title:SetPoint("TOPLEFT", SIDEBAR + PAD, -HEAD - 22)
-
-    window.subtitle = UI.Text(window, 12, "textMuted")
-    window.subtitle:SetPoint("TOPLEFT", window.title, "BOTTOMLEFT", 0, -7)
-    window.subtitle:SetWidth(CONTENT_W - 220)
-
-    window.resetButton = UI.Button(window, ResetClicked, "ghost", "reset")
-    window.resetButton:SetPoint("TOPRIGHT", -PAD, -HEAD - 20)
+-- Shown instead of the content while the page's main feature is off.
+local function BuildNotice()
+    local notice = CreateFrame("Frame", nil, window)
+    notice:SetSize(CONTENT_W, 90)
+    notice:SetPoint("TOP", window, "TOPLEFT", SIDEBAR + PAD + CONTENT_W / 2, -HEAD - HEADER - 60)
+    notice.text = UI.Text(notice, 14, "textDim", "medium")
+    notice.text:SetPoint("TOP")
+    notice.text:SetJustifyH("CENTER")
+    notice.button = UI.Button(notice, function()
+        selectedTabs.general = "general"
+        SelectPage("general")
+    end, "primary")
+    notice.button:SetPoint("TOP", notice.text, "BOTTOM", 0, -18)
+    notice:Hide()
+    window.offNotice = notice
 end
 
 local function Build()
@@ -2236,7 +2496,7 @@ local function Build()
     dusk:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR, -HEIGHT * 0.45)
     dusk:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -4, 4)
     UI.Shade(dusk, "VERTICAL", "clear", "dusk")
-    UI.Grain(window, SIDEBAR, 4, 4, HEIGHT - GRAIN_BAND, WIDTH, HEIGHT, true)
+    UI.Grain(window, 4, 4, 4, HEIGHT - GRAIN_BAND, WIDTH, HEIGHT, true)
     embers[#embers + 1] = UI.Embers(window, 12, SIDEBAR, WIDTH - SIDEBAR, HEIGHT, 23)
 
     local saved = ns.global.window
@@ -2254,12 +2514,10 @@ local function Build()
 
     BuildSidebar()
     BuildHead()
-    BuildHeader()
+    CreateContentTabs()
+    BuildNotice()
 
     window.scroll = UI.Scroll(window)
-    window.scroll.content:SetWidth(CONTENT_W)
-    window.scroll:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -HEAD - HEADER)
-    window.scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -PAD, 18)
 
     window:SetScript("OnShow", function(self)
         PlayEmbers()
@@ -2273,7 +2531,7 @@ local function Build()
         UI.CloseMenu()
         PlayEmbers(false)
         DisarmReset()
-        renderedKey, railKey, chronicleWho = nil, nil, nil
+        renderedKey, railKey, chronicleWho, fellowStory = nil, nil, nil, nil
         window.search.edit:ClearFocus()
         if aliasEditor then
             aliasEditor:ClearFocus()
@@ -2347,7 +2605,7 @@ ns:On("OPTION_CHANGED", function(section, key)
         PlayEmbers()
     end
     -- Switching a feature folds or unfolds its options, which moves rows;
-    -- the category's master switch changes the actions next to the tabs.
+    -- a main feature's switch swaps its page for a notice.
     local feature = ns.features[section]
     if (key == "enabled" and feature and #feature.options > 0) or section == "categories" then
         RequestRefresh("layout")

@@ -59,6 +59,9 @@ local PICTURES = {
     ability = { icon = "sparkle", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "sparkle" },
     death = { icon = "skull", fill = "deathGround", border = "deathLine", ink = "deathInk", mark = "skull", title = "deathInk" },
     boss = { icon = "swords", fill = "bossGround", border = "bossLine", ink = "bossInk", mark = "swords" },
+    -- The story of a fellow traveller: time together, and the bond's milestones.
+    fellow = { icon = "people", fill = "control", border = "controlBorder", ink = "textDim", mark = "people" },
+    bond = { icon = "people", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "people" },
 }
 
 ---------------------------------------------------------------------------

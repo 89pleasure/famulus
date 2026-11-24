@@ -86,6 +86,10 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   Standardbibliothek und lief dort mit einem vorhandenen Python 3.12. Im Spiel noch nicht gesehen.
 - **Weggefährten (2026-11-23, nur gegen den Mock geprüft, noch nicht im Spiel):** eigener Bereich,
   siehe „Weggefährten“ unten.
+- **Neuer Rahmen und Weggefährten-Übersicht (2026-11-24, nur gegen den Mock geprüft, noch nicht im
+  Spiel):** siehe „Das Fenster“ und „Weggefährten“. Offen im Spiel: Ring ums Wappen (`/fam test`,
+  Gruppe `media`, Prüfung `ring`), Klassensymbole (Prüfung `class icons`), die Seite ohne
+  Seitenleiste, der durchgehende Grund von Kopf und Seitenleiste.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster),
   im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values, Taint).
 - **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
@@ -203,17 +207,26 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
 
 - **Aufbau (seit 2026-11-23, Wunsch des Auftraggebers nach dem Vorbild von OneForAll, an einem
   HTML-Mockup bestätigt):** Die Funktionen stehen oben, ihre Unterbereiche links.
+  - **Neuer Aufbau (2026-11-24, Wunsch des Auftraggebers nach dem ersten Blick auf die Weggefährten
+    ohne Seitenleiste):** Die Navigation steht wieder in der Seitenleiste, auf allen Seiten gleich.
+    Dazwischen gab es am selben Tag kurz einen Kopf mit Reitern, Suche und Symbolen und eine Seite
+    ohne Seitenleiste (`page.sidebar = false`); beides ist wieder entfernt.
   - **Kopf** (76 hoch, über die ganze Breite, dunkler Grund wie die Seitenleiste): links Logo, Name
-    und Untertitel; daneben die Bereiche als Reiter mit Symbol und Zähler aktiv/gesamt („Aliase“,
-    „Chronik“); rechts außen „Einstellungen“ und „Über“, ganz rechts Schließen. Der gewählte
-    Reiter trägt den Strich mit Verlauf und Schein auf der Linie unter dem Kopf.
-  - **Seitenleiste:** Suche, darunter Name und Beschreibung des gewählten Bereichs mit dem
-    Hauptschalter rechts neben dem Namen, dann seine Unterbereiche als Liste (gewählter Eintrag:
-    auslaufender Verlauf, leuchtender Balken); unten „x von y aktiv“. Eine Seite mit nur einem
-    Unterbereich („Über“) listet sich selbst. Während der Suche zeigt die Seitenleiste weder Name
-    noch Liste noch Hauptschalter.
-  - **Inhalt:** Titel und Beschreibung des Unterbereichs, rechts daneben „Zurücksetzen“, dann
-    Karten mit Zeilen. Keine Fußzeile.
+    und Untertitel; daneben Name und Beschreibung der gewählten Seite (`window.area`, während der
+    Suche „Suche“ und die Zahl der Treffer); rechts nur Schließen.
+  - **Seitenleiste:** oben die Suche, darunter die Hauptfunktionen als Einträge mit Symbol
+    (`navButtons`; eine abgeschaltete ausgegraut mit „AUS“; gewählter Eintrag: auslaufender Verlauf, leuchtender
+    Balken), unten nach einer Linie „Einstellungen“ und „Über“. Die frühere Zeile „x von y aktiv“
+    ist entfernt, ebenso die Zeile „Aktiv“ unter „Über“ (Entscheidung des Auftraggebers,
+    2026-11-24: stammt aus der Zeit der vielen QoL-Funktionen). Auch die Zähler aktiv/gesamt an den
+    Einträgen sind entfernt.
+  - **Inhalt:** ganz oben die Unterbereiche der Seite als Tabs (`window.tabs`, 48 hoch, Strich mit
+    Verlauf unter dem gewählten), „Zurücksetzen“ rechts daneben. Eine Seite mit nur einem
+    Unterbereich („Über“) zeigt keine Tabs; während der Suche gibt es keine. Titel und
+    Beschreibung des Unterbereichs stehen nicht mehr über dem Inhalt (`ui_tab_*_desc` wird
+    derzeit nicht angezeigt). Der Grund von Kopf und Seitenleiste liegt auf dem Fenster selbst
+    (`Ground` in `UI/Options.lua`), damit die Körnung als ein Band darüber läuft.
+    Entscheidungen des Assistenten im Einzelnen, im Spiel noch nicht gesehen.
   - Im Code heißen die Bereiche weiter „Seiten“ (`pages`, Knöpfe `navButtons`) und die
     Unterbereiche „Reiter“ (`page.tabs`, `window.tabs`, Texte `ui_tab_<id>`); wo diese Datei
     „Reiter“ eines Bereichs sagt, sind die Einträge der Seitenleiste gemeint. Die Reiterzeile im
@@ -221,8 +234,8 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   - Fenster 1180 × 730 wie das Einstellungsfenster von FlareUI (Wunsch des Auftraggebers,
     2026-11-23; vorher 880 × 590).
   - Vom Auftraggeber im Spiel gesehen und bestätigt (2026-11-23, „sieht super aus“), samt der
-    Entscheidungen des Assistenten: Hauptschalter in der Seitenleiste, „Über“ als eigener Reiter,
-    Kopf und Seitenleiste auf demselben Grund.
+    Entscheidungen des Assistenten: „Über“ als eigener Reiter, Kopf und Seitenleiste auf demselben
+    Grund. Der Hauptschalter in der Seitenleiste ist seit 2026-11-24 in die Einstellungen gewandert.
 - **Bereiche (`ns.areas`, `Core/Features.lua`):** Jede Kategorie gehört zu genau einem Bereich (der
   Test prüft das). Jeder Bereich hat einen eigenen Aufbau (`layouts.<bereich>` in
   `UI/Options.lua`). `aliases`: Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
@@ -230,16 +243,22 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   `chronicle`: siehe „Chronik“. `fellows`: siehe „Weggefährten“. Die Einstellungen haben die Reiter „Allgemein“ (Sprache,
   Rückmeldung im Chat, Minikartensymbol, Charakterprofil) und „Darstellung“ (Farbwelt, Funken,
   Fenstergröße). Die erste Seite beim Öffnen ist die Aliase.
-- **Hauptschalter** einer Kategorie: in der Seitenleiste rechts neben dem Namen des Bereichs,
-  beschriftet nur mit „AN“/„AUS“. Die Unterbereiche einer abgeschalteten Kategorie sind in der
-  Liste ausgegraut; sind alle Kategorien eines Bereichs aus, ist sein Reiter im Kopf ausgegraut
-  und trägt „AUS“.
+- **Hauptschalter** (seit 2026-11-24, Entscheidung des Auftraggebers: „Nur die Hauptschalter“):
+  die drei Kategorien als erste Karte „Funktionen“ unter Einstellungen › Allgemein
+  (`CategoryItem`, Texte `area_<id>` und `area_<id>_desc`). Die Schalter der einzelnen Features
+  bleiben auf ihren Reitern. Ist eine Kategorie aus, ist ihr Eintrag in der Seitenleiste ausgegraut und trägt
+  „AUS“, ihre Tabs sind ausgegraut, und ihre Seite zeigt statt des Inhalts
+  einen Hinweis mit dem Knopf „In den Einstellungen einschalten“ (`window.offNotice`), der
+  Einstellungen › Allgemein öffnet.
 - **Zurücksetzen** wirkt auf den Reiter (Features ganzer Abschnitt, Addon-Optionen nur ihr
-  Schlüssel, dazu der Hauptschalter). Erster Klick fragt („Wirklich zurücksetzen?“, rot), zweiter
-  innerhalb von vier Sekunden führt aus; auf Standardwerten ausgegraut; ohne Einstellungen (Liste
-  der Aliase, „Über“) nicht vorhanden.
-- **Suche:** über alle Seiten und Reiter, Treffer gruppiert je Reiter in Karten („Aliase ·
-  Einstellungen“); keine Reiter und kein Hauptschalter in der Ergebnisansicht.
+  Schlüssel; auf Einstellungen › Allgemein auch die drei Hauptschalter). Erster Klick fragt
+  („Wirklich zurücksetzen?“, rot), zweiter innerhalb von vier Sekunden führt aus; auf
+  Standardwerten ausgegraut; ohne Einstellungen (Liste der Aliase, „Über“) und auf einer
+  abgeschalteten Seite nicht vorhanden.
+- **Suche:** im Kopf, über alle Seiten und Reiter, Treffer gruppiert je Reiter in Karten („Aliase ·
+  Einstellungen“); keine Reiter in der Ergebnisansicht. Den Inhalt einer abgeschalteten Funktion
+  lässt sie aus, ihren Hauptschalter findet sie. Auf einer Seite ohne Seitenleiste nehmen die
+  Treffer die ganze Breite.
 - **Farben (überarbeitet 2026-11-18, Abend):** Der Auftraggeber fand den ersten Stand (neutrale
   Grautöne, Akzent nur als Fläche) zu beliebig. Vorbilder für Farbkonzept, Akzente und Effekte:
   Polestar Guide und Mastercraft, ohne sie zu kopieren. An einem HTML-Mockup hat er das Konzept
@@ -491,7 +510,10 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     sich in `skill`, `rank`, `ability` oder `item`.
 - **Beispieleinträge (2026-11-19):** `/fam chronicle demo` schreibt 21 erfundene Einträge über drei
   Tage (eigene und von zwei erfundenen Gefährten, jede Art mindestens einmal; seit 2026-11-23 dazu
-  drei Tode hintereinander und zwei Stufen eines Gefährten, damit das Bündeln zu sehen ist), `/fam chronicle demo clear`
+  drei Tode hintereinander und zwei Stufen eines Gefährten, damit das Bündeln zu sehen ist; seit
+  2026-11-24 auf Wunsch des Auftraggebers dazu eine dritte Gefährtin, Lysa, und Steckbriefe mit
+  Stufe und Statistiken für Mira, Borin und Lysa, damit der Reiter „Gefährten“ etwas zeigt; ein
+  echter Steckbrief gleichen Namens wird nicht überschrieben), `/fam chronicle demo clear`
   entfernt sie wieder (`ChronicleService.Demo`, `ClearDemo`). Sie tragen `demo = true` und
   verlassen den Client nie: Weder der Live-Versand noch das Nachreichen noch das Weiterreichen
   schickt sie. Gedacht zum Ansehen des Buchs und für Screenshots.
@@ -735,7 +757,7 @@ sich, mit wem der Spieler in einer Gruppe war. Begründung: Forever hat „Zulet
 nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
 
 - **Entscheidungen des Auftraggebers (2026-11-23):** eigener Bereich (nicht als
-  Unterbereich von Aliasen oder Chronik; im neuen Fenster ein Reiter im Kopf). Erste Version: die Liste (wer, wann, wo, wie oft, wie lange)
+  Unterbereich von Aliasen oder Chronik; ein Eintrag in der Seitenleiste). Erste Version: die Liste (wer, wann, wo, wie oft, wie lange)
   und Boss-Einträge der Chronik, die nennen, wer dabei war. **Nicht** gewählt: Notizen zu Personen,
   Hinweis im Tooltip, Knopf „Freund hinzufügen“. Nicht einbauen, ohne zu fragen.
 - **Aufbau:** Kategorie und Bereich `fellows`, ein Feature `rememberFellows`
@@ -765,15 +787,56 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   Schlachtzug erkennt der Dienst an der GUID, nicht an `UnitIsUnit` (dessen Vergleich ist auf
   gesperrten Karten geheim). `C_FriendList.AddFriend` trägt `HasRestrictions = true`; ob ein Addon
   es aufrufen darf, ist ungeprüft.
-- **Fenster:** Reiter „Zuletzt“ (wer gerade in der Gruppe ist zuerst, dann nach letztem Mal) und
-  „Am häufigsten“ (nach gemeinsamer Zeit), je höchstens 60 Zeilen (`FELLOW_ROWS`) mit einer Zeile
-  „N weitere“; die Suche durchsucht über `tab.search` alle, aber nur auf „Zuletzt“, damit niemand
-  doppelt erscheint. Dritter Reiter „Einstellungen“ mit dem Schalter. Eine Zeile ist eine
-  Personenzeile wie bei den Aliasen (`PERSON_ROWS` in `UI/Options.lua`: Avatar mit Anfangsbuchstabe,
-  Kreuz rechts): Ein Klick öffnet die Alias-Eingabe mit dem Namen, das Kreuz vergisst die Person
-  (eine Chat-Zeile sagt es). Unter einem Alias steht der Name in der zweiten Zeile, wie in der
-  Chronik. Die Klasse kommt aus `LOCALIZED_CLASS_NAMES_MALE`, also in der Sprache des Clients.
-  Symbol im Kopf: zwei Figuren (`people.tga`).
+- **Fenster (Neugestaltung 2026-11-24):** Der Auftraggeber fand die zwei Listen „boring“ neben der
+  Chronik. Aus vier Entwürfen (Steckbrief, Album, Begegnungsbuch, Verbundenheit; Canvas
+  „Weggefährten – Entwürfe“) hat er eine Mischung gewählt; Beschreibung und Plan:
+  `docs/superpowers/specs/2026-11-24-fellows-redesign-design.md` und
+  `docs/superpowers/plans/2026-11-24-fellows-redesign.md`. Nur gegen den Mock geprüft.
+  - Tabs „Übersicht“ und „Einstellungen“. Symbol: zwei Figuren (`people.tga`).
+  - **Übersicht** (`FellowModel` in `UI/Options.lua`, gezeichnet von `UI.FellowOverview` in
+    `UI/Fellows.lua`): links „Engste Gefährten“, die drei mit der meisten gemeinsamen Zeit als
+    Kacheln (Rang I–III, Wappen mit Ring, Name in der Buchschrift, Stufe und Klasse, Abzeichen der
+    Stufe, Zahlen, Fuß „In deiner Gruppe“ oder „Zuletzt … in …“). Darunter „Alle weiteren · N“
+    mit Auswahl „Zuletzt gesehen“ / „Meiste gemeinsame Zeit“ (sortiert nur die Liste) und die
+    Liste mit Spaltenköpfen, höchstens 60 Zeilen (`FELLOW_ROWS`) plus „N weitere“. Bis drei
+    Personen gibt es keine Liste; ohne Personen den Hinweis, wie man anfängt.
+  - Ein Klick auf Kachel oder Zeile öffnet die Geschichte der Person (Entscheidung des
+    Auftraggebers, 2026-11-24: mit Seitenleiste wäre ein Steckbrief neben der Übersicht zu eng).
+    Die Sortierung gilt für die Sitzung.
+  - **Eure Geschichte** (`FellowStory`): links fest der **Steckbrief** (320 breit): Wappen, Name,
+    Stufe und Klasse, Online-Zeile, Stufenleiter mit „Noch … gemeinsam bis …“, drei Zahlen,
+    „Kennengelernt …“, „Zuletzt …“, Knöpfe „Alias festlegen“ (`ns:EditAlias`) und „Vergessen“
+    (das Kreuz an den Zeilen ist entfallen; eine Chat-Zeile sagt es). Rechts daneben scrollt ein
+    Buch (`UI.Book`, 560 breit; Wunsch des Auftraggebers nach dem ersten Blick ins Spiel: Person
+    links, Buch rechts statt eines breiten Kopfes über einem zu breiten Buch) mit einem Kapitel je Tag im
+    Tagesprotokoll, das neueste zuerst: Gebiet des Tages, „N Std. zusammen“; Ereignisse
+    „Gemeinsam unterwegs“ (von bis, Dauer), Bosse aus der Chronik mit der Person in `with`,
+    Einträge der Person selbst („aus <Name>s Chronik“), „Ihr seid jetzt <Stufe>“ am Tag eines
+    Aufstiegs und „Kennengelernt“ (auf Stufe N). Fehlt der erste Tag im Protokoll, bekommt das
+    Kennenlernen ein eigenes letztes Kapitel. Namen werden über den Alias-Schlüssel verglichen
+    (Leerzeichen und Bindestrich gleich); ein Boss, den beide aufgezeichnet haben, steht nur einmal
+    da (aus der eigenen Chronik). Statt der Tabs steht „Alle Weggefährten“
+    oben; ein anderer Reiter, eine andere Seite oder Schließen schließt die Geschichte.
+  - Die Suche findet weiter jede Person als einfache Personenzeile (`FellowItem`, `tab.search`).
+    Unter einem Alias steht der Name in der zweiten Zeile. Die Klasse kommt aus
+    `LOCALIZED_CLASS_NAMES_MALE`, also in der Sprache des Clients.
+- **Verbundenheit (Entscheidung des Auftraggebers am Mockup, 2026-11-24):** Stufen nach gemeinsamer
+  Zeit, `FellowService.TIERS`: Begegnung unter 1 Std., Bekannt ab 1, Vertraut ab 10, Unzertrennlich
+  ab 40 (enUS: Encounter, Acquainted, Trusted, Inseparable; die englischen Namen hat der Assistent
+  gewählt). `FellowService.Tier(sekunden)` liefert Stufe, Fortschritt und Rest. Angezeigt als Ring
+  ums Wappen (`UI.Crest`), Abzeichen (`UI.TierBadge`, Akzent ab Vertraut) und Leiter
+  (`UI.TierLadder`). Der Ring ist ein angehaltener `Cooldown`-Swipe mit `ring.tga` (ohne
+  `OnUpdate`; die höchste Stufe steht knapp vor dem Ende, weil ein abgelaufener Cooldown nichts
+  zeichnet; `noCooldownCount` hält OmniCC und Ähnliche fern); fehlt `Cooldown:Pause`, ein voller
+  Ring ohne Fortschritt. Das Klassensymbol kommt
+  aus `UI-Classes-Circles` mit `CLASS_ICON_TCOORDS`, sonst der Anfangsbuchstabe. Beides prüft
+  `/fam test` (Gruppe `media`).
+- **Tagesprotokoll (seit 2026-11-24):** je Person `days = { [JJJJMMTT] = { s, z, b, f, l } }`
+  (Sekunden, Gebiet zuletzt an dem Tag, Bosse, erster und letzter Moment) und `firstLevel` (die
+  Stufe des Spielers beim Kennenlernen). Höchstens 30 Tage, der älteste fällt zuerst. Eine
+  Strecke über Mitternacht zählt für den Tag, an dem sie endet. Aufstiegstage werden beim Aufbau
+  berechnet (`FellowService.Milestones`), ab der Zeit vor dem Protokoll (`seconds − Σ s`), damit
+  frühere Zeit keine Meilensteine erfindet. Beim Laden fallen kaputte Tage heraus.
 - **In der Chronik:** Fällt ein Boss in einer Gruppe, trägt der Eintrag `with` (die Namen, in einer
   Gruppe bis vier) oder `others` (nur die Zahl, im Schlachtzug, damit 39 Namen je Boss die Daten
   nicht aufblähen). Die Zeile darunter lautet „in Uldaman  ·  mit Mira und Tom“ (Alias, sonst
@@ -783,7 +846,8 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
 - **Beispieldaten (2026-11-24, Wunsch des Auftraggebers):** `/fam fellows demo` trägt sechs
   erfundene Weggefährten ein (Klassen, Stufen, Gebiete, Zeiten von 25 Minuten bis 31 Stunden; Mira
   und Borin wie in der Chronik), `/fam fellows demo clear` entfernt nur sie
-  (`FellowService.Demo`, `ClearDemo`). Sie tragen `demo = true` und GUIDs `Player-0-FAMDEMO..`.
+  (`FellowService.Demo`, `ClearDemo`). Sie tragen `demo = true` und GUIDs `Player-0-FAMDEMO..`;
+  seit 2026-11-24 auch Tage und `firstLevel`, sodass Mira und Borin einen Aufstieg erzählen.
 - **Im Spiel ungeprüft:** alles. Besonders: ob `UnitName` für `party1`… Vor- und Nachname liefert
   wie für `player`, ob `GROUP_ROSTER_UPDATE` nach dem Login von selbst kommt (sonst fängt
   `PLAYER_ENTERING_WORLD` es auf), ob `IsInInstance` in Forever `pvp` meldet und ob `BOSS_KILL` in
@@ -886,7 +950,7 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   in `OnEnable`/`OnDisable` selbst an- und abmelden muss. In der `.toc` steht ein Service vor den
   Features, die ihn nutzen.
 - **Kategorie-Hauptschalter:** Jede Kategorie hat einen Hauptschalter (Option `categories.<id>`,
-  Standard an, Schalter in der Seitenleiste neben dem Namen des Bereichs). Ist er aus, läuft kein Feature der Kategorie, egal wie es
+  Standard an, Schalter unter Einstellungen › Allgemein). Ist er aus, läuft kein Feature der Kategorie, egal wie es
   selbst eingestellt ist: keine Events, keine Timer, Hooks bleiben stumm. Die Einzelauswahl bleibt
   gespeichert. Die Prüfung sitzt in `ns:SyncFeature`; ein Feature muss dafür nichts tun.
 - **`requires`:** Jede benötigte Client-API als Pfad angeben (`"C_FriendList.GetNumFriends"`).

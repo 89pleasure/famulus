@@ -88,6 +88,11 @@ PEN = 2.6  # icons are drawn at 32 px for about 16 px on screen
 
 # White shapes; the addon tints them at runtime.
 write_tga("circle.tga", 64, lambda x, y: white(coverage(math.hypot(x - 32, y - 32) - 31)))
+# The bond ring around a crest: an annulus, inner radius 0.82 of the outer.
+write_tga("ring.tga", 128, lambda x, y: white(min(
+    coverage(math.hypot(x - 64, y - 64) - 63),
+    coverage(63 * 0.82 - math.hypot(x - 64, y - 64)),
+)))
 
 CHEVRON = [(9, 12.5), (16, 19.5), (23, 12.5)]
 write_tga("chevron.tga", 32, lambda x, y: white(coverage(polyline_distance(x, y, CHEVRON) - 1.5)))

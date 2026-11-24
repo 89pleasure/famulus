@@ -214,6 +214,22 @@ function Widget:GetUnit()
     local unit = mock.state.tooltipUnit
     return unit and mock.state.units[unit].name, unit
 end
+-- Cooldown frames: the swipe the crest's ring is drawn with.
+for _, name in ipairs({ "SetSwipeTexture", "SetSwipeColor", "SetDrawEdge", "SetDrawBling", "SetHideCountdownNumbers", "SetReverse" }) do
+    Widget[name] = function() end
+end
+function Widget:SetCooldown(start, duration)
+    self.cooldown, self.paused = { start, duration }, false
+end
+function Widget:Pause()
+    self.paused = true
+end
+function Widget:Clear()
+    self.cooldown, self.paused = nil, false
+end
+function Widget:GetParent()
+    return self.parent
+end
 function Widget:GetEditBox()
     return self.editBoxWidget
 end
@@ -775,6 +791,10 @@ function UnitIsConnected(unit)
     return not (member and member.offline)
 end
 UNKNOWNOBJECT = "Unknown"
+CLASS_ICON_TCOORDS = {
+    WARRIOR = { 0, 0.25, 0, 0.25 }, MAGE = { 0.25, 0.49609375, 0, 0.25 }, ROGUE = { 0.49609375, 0.7421875, 0, 0.25 },
+    DRUID = { 0.7421875, 0.98828125, 0, 0.25 }, HUNTER = { 0, 0.25, 0.25, 0.5 }, PRIEST = { 0.49609375, 0.7421875, 0.25, 0.5 },
+}
 LOCALIZED_CLASS_NAMES_MALE = { MAGE = "Mage", PRIEST = "Priest", WARRIOR = "Warrior", ROGUE = "Rogue" }
 
 -- Units: mock.state.units = { target = { name = "Jaina", surname = "Proudmoore", isPlayer = true } }

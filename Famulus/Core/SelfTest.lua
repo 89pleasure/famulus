@@ -68,6 +68,7 @@ end
 
 local report
 local probeFrame
+local probeCooldown -- a Cooldown frame in it, for the crest's ring
 
 local function Add(group, name, status, detail)
     local checks = report.checks
@@ -187,6 +188,21 @@ local function CheckMedia()
         else
             Add("media", "icon " .. kinds[i], "warn", "the client has no " .. ns.UI.gameIcons[kinds[i]] .. "; the chronicle's picture stays empty")
         end
+    end
+    -- The crest of a fellow traveller: the game's class icons, and the ring
+    -- drawn as a paused Cooldown swipe.
+    local classes = probeFrame:CreateTexture()
+    if classes:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles") and type(CLASS_ICON_TCOORDS) == "table" then
+        Add("media", "class icons", "ok", "loaded")
+    else
+        Add("media", "class icons", "warn", "no class icons or CLASS_ICON_TCOORDS; crests show the initial")
+    end
+    probeCooldown = probeCooldown or CreateFrame("Cooldown", nil, probeFrame)
+    local cooldown = probeCooldown
+    if cooldown.Pause and cooldown.SetSwipeTexture and cooldown.Clear then
+        Add("media", "ring", "ok", "Cooldown can hold a swipe")
+    else
+        Add("media", "ring", "warn", "Cooldown lacks Pause, SetSwipeTexture or Clear; the ring shows no progress")
     end
 end
 

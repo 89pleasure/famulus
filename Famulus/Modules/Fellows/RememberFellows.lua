@@ -25,7 +25,7 @@ local function Zone()
 end
 
 function rememberFellows:Scan()
-    Fellows.Sync(ns.GroupService.Members(self:Get("raids")), time(), Zone())
+    Fellows.Sync(ns.GroupService.Members(self:Get("raids")), time(), Zone(), UnitLevel and UnitLevel("player"))
 end
 
 function rememberFellows:OnEnable()

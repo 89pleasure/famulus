@@ -30,6 +30,7 @@ UI.gameIcons = {
 
 UI.media = {
     circle = MEDIA .. "circle.tga",
+    ring = MEDIA .. "ring.tga",
     chevron = MEDIA .. "chevron.tga",
     close = MEDIA .. "close.tga",
     check = MEDIA .. "check.tga",
@@ -244,6 +245,8 @@ local function Apply(region, entry)
         region:SetColorTexture(r, g, b, a)
     elseif entry.mode == "tint" then
         region:SetVertexColor(r, g, b, a)
+    elseif entry.mode == "swipe" then
+        region:SetSwipeColor(r, g, b, a)
     else
         region:SetTextColor(r, g, b, a)
     end
@@ -270,6 +273,11 @@ end
 
 function UI.Tint(texture, token, alpha)
     Paint("tint", texture, token, alpha)
+end
+
+-- The swipe of a Cooldown frame, which has no vertex colour of its own.
+function UI.Swipe(cooldown, token, alpha)
+    Paint("swipe", cooldown, token, alpha)
 end
 
 function UI.Ink(fontString, token, alpha)

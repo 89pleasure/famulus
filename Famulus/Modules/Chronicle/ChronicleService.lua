@@ -766,6 +766,13 @@ function ChronicleService.ClearDemo()
                 removed = removed + 1
             end
         end
+        if type(chronicle.profiles) == "table" then
+            for who, profile in pairs(chronicle.profiles) do
+                if type(profile) == "table" and profile.demo then
+                    chronicle.profiles[who] = nil
+                end
+            end
+        end
     end
     if removed > 0 then
         ns:Fire("CHRONICLE_CHANGED")
@@ -781,7 +788,7 @@ function ChronicleService.Demo()
     ChronicleService.ClearDemo()
     local locale = GetLocale and GetLocale() or "enUS"
     local zone, name = DEMO_ZONES[locale] or DEMO_ZONES.enUS, DEMO_NAMES[locale] or DEMO_NAMES.enUS
-    local mira, borin = "Mira Sturmfeder", "Borin Eisenbart"
+    local mira, borin, lysa = "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau"
     local hour, day = 3600, 86400
     -- { seconds before now, kind, values }
     local samples = {
@@ -795,6 +802,9 @@ function ChronicleService.Demo()
         { 2 * day + 2.2 * hour, "level", { level = 39, zone = zone[3], who = mira } },
         { 2 * day + 2 * hour, "level", { level = 40, zone = zone[3], who = mira } },
         { 2 * day + 1 * hour, "achievement", { id = 1, name = name.challenge } },
+        { 2 * day + 0.5 * hour, "zone", { zone = zone[1], level = 38, who = lysa } },
+        { day + 8 * hour, "profession", { skill = 186, name = name.mining, who = lysa } },
+        { day + 7 * hour, "level", { level = 32, zone = zone[3], who = borin } },
         { day + 6 * hour, "skill", { skill = 186, name = name.mining, rank = 225 } },
         { day + 5 * hour, "boss", { id = 1, name = name.boss, zone = zone[2], with = { mira, borin } } },
         { day + 4.5 * hour, "level", { level = 39, zone = zone[2] } },
@@ -807,6 +817,7 @@ function ChronicleService.Demo()
         { 1.5 * hour, "item", { item = 211527, name = name.bag, level = 40, zone = zone[4] } },
         { 1 * hour, "boss", { id = 2, name = name.boss, zone = zone[2], who = borin } },
         { 0.5 * hour, "item", { item = 211527, name = name.bag, zone = zone[3], who = mira } },
+        { 0.2 * hour, "achievement", { id = 1, name = name.challenge, who = lysa } },
     }
     local now = time()
     for _, sample in ipairs(samples) do
@@ -822,6 +833,20 @@ function ChronicleService.Demo()
             index = index - 1
         end
         table.insert(entries, index, entry)
+    end
+    -- The companions' profiles (level and the shared statistics), as the
+    -- rail of the companions' tab shows them. Received data only; never sent.
+    chronicle.profiles = type(chronicle.profiles) == "table" and chronicle.profiles or {}
+    local profiles = {
+        [mira] = { level = 40, stats = { [60] = 14, [107] = 5230, [98] = 212, [932] = 31 } },
+        [borin] = { level = 32, stats = { [60] = 22, [107] = 3815, [98] = 167, [932] = 19 } },
+        [lysa] = { level = 39, stats = { [60] = 6, [107] = 4470, [98] = 238, [932] = 24 } },
+    }
+    for who, profile in pairs(profiles) do
+        if not chronicle.profiles[who] then
+            profile.t, profile.demo = now, true
+            chronicle.profiles[who] = profile
+        end
     end
     ns:Fire("CHRONICLE_CHANGED")
     return #samples

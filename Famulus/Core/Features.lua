@@ -336,10 +336,7 @@ SLASH_FAMULUS2 = "/fam"
 
 SlashCmdList.FAMULUS = function(input)
     local command = string.lower(strtrim(input or ""))
-    if command == "status" then
-        local active, total = ns:CountActiveFeatures()
-        ns:Print(L.msg_status:format(active, total, ns:CountRegisteredEvents()))
-    elseif command == "test" then
+    if command == "test" then
         ns:RunSelfTest()
     elseif command == "dev" then
         ns:SetDevMode(not ns:IsDevMode())
