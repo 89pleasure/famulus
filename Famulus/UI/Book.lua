@@ -6,9 +6,11 @@
 --   local height = book:SetChapters(chapters, footer)
 --
 --   chapters = { {
---       small = "Today",                -- left of the heading, or nil
---       title = "Redridge Mountains",
+--       small = "19:58 – 23:20",        -- left of the heading, or nil
+--       title = "This evening",
 --       sub = "Level 20 to 24  ·  5 events", -- right of the heading
+--       route = { "Redridge Mountains", "Duskwood" }, -- optional: below the
+--                                       -- heading, the zones in the order of time
 --       events = { {
 --           kind = "level",             -- see PICTURES
 --           title = "Reached level 24", detail = "in Lakeshire" or nil,
@@ -44,6 +46,9 @@ local HEAD_GAP = 16 -- between the place and the words beside it
 local CHAPTER_GAP = 16 -- below a chapter's last card
 local CHIP_H, CHIP_GAP, CHIP_PAD = 18, 4, 6 -- the times of a bundle
 local MAX_TIMES = 10 -- plates for times; more are counted on the last one
+local ROUTE_GAP, ROUTE_H, ROUTE_PAD = 8, 22, 9 -- the route below a heading
+local ROUTE_ARROW = 10 -- the arrow between two zones of the route
+local ROUTE_STEP = 6 -- between a plate and an arrow
 
 -- Per kind: the picture's icon (none: the number), its colours, and the
 -- icon on the line.
@@ -68,8 +73,9 @@ local PICTURES = {
 -- Chapter heading
 ---------------------------------------------------------------------------
 
--- One line: the day, the place in the game's book font, and what happened,
--- between two lines that fade out towards the edges.
+-- One line: when, the title in the game's book font, and what happened,
+-- between two lines that fade out towards the edges; below it, if the
+-- chapter has one, the route through the zones.
 local function CreateHead(book)
     local head = CreateFrame("Frame", nil, book)
     head:SetWidth(book.width)
@@ -95,7 +101,86 @@ local function CreateHead(book)
     head.right = head:CreateTexture(nil, "BORDER")
     head.right:SetHeight(UI.Pixel(head))
     UI.Shade(head.right, "HORIZONTAL", "accentLine", "accentNone")
+    head.plates, head.arrows = {}, {} -- the route
     return head
+end
+
+-- The zones of a route as plates with arrows between them, centred in a
+-- row `top` below the heading's top. Returns the row's width; hides the
+-- plates and arrows it does not need.
+local function LayRoute(head, names, top)
+    local width = 0
+    for index, name in ipairs(names) do
+        local plate = head.plates[index]
+        if not plate then
+            plate = CreateFrame("Frame", nil, head)
+            plate:SetHeight(ROUTE_H)
+            UI.Card(plate, "field", "cardBorder", 6)
+            plate.text = UI.Text(plate, 11, "textDim", "medium")
+            plate.text:SetPoint("CENTER")
+            plate.text:SetJustifyH("CENTER")
+            plate.text:SetJustifyV("MIDDLE")
+            plate.text:SetWordWrap(false)
+            head.plates[index] = plate
+        end
+        plate.text:SetText(name)
+        plate:SetWidth(math.floor(plate.text:GetStringWidth() + ROUTE_PAD * 2 + 0.5))
+        width = width + plate:GetWidth() + (index > 1 and ROUTE_ARROW + ROUTE_STEP * 2 or 0)
+    end
+    local x = math.floor((head.width - width) / 2 + 0.5)
+    for index = 1, #names do
+        local plate = head.plates[index]
+        if index > 1 then
+            local arrow = head.arrows[index]
+            if not arrow then
+                arrow = UI.Icon(head, "chevron", ROUTE_ARROW, "accentLine")
+                arrow:SetTexCoord(0, 0, 1, 0, 0, 1, 1, 1) -- the chevron turned to point right
+                head.arrows[index] = arrow
+            end
+            arrow:ClearAllPoints()
+            arrow:SetPoint("TOPLEFT", head, "TOPLEFT", x + ROUTE_STEP, -(top + (ROUTE_H - ROUTE_ARROW) / 2))
+            arrow:Show()
+            x = x + ROUTE_ARROW + ROUTE_STEP * 2
+        end
+        plate:ClearAllPoints()
+        plate:SetPoint("TOPLEFT", head, "TOPLEFT", x, -top)
+        plate:Show()
+        x = x + plate:GetWidth()
+    end
+    for index = #names + 1, #head.plates do
+        head.plates[index]:Hide()
+    end
+    for index = math.max(2, #names + 1), #head.arrows do
+        if head.arrows[index] then
+            head.arrows[index]:Hide()
+        end
+    end
+    return width
+end
+
+-- The route below the heading, `top` below its top; the oldest zones give
+-- way to "…" where the row would be wider than the book. Returns the height
+-- it takes, nothing without a route.
+local function HeadRoute(head, route, top)
+    local names = route or {}
+    local first = 1
+    local function From(index)
+        local shown = {}
+        if index > 1 then
+            shown[1] = "…"
+        end
+        for each = index, #names do
+            shown[#shown + 1] = names[each]
+        end
+        return shown
+    end
+    local width = LayRoute(head, From(first), top)
+    while width > head.width and first < #names do
+        first = first + 1
+        width = LayRoute(head, From(first), top)
+    end
+    head.routeShown = #names > 0 and #From(first) or 0
+    return #names > 0 and ROUTE_GAP + ROUTE_H or 0
 end
 
 -- A line from the edge to the words beside the place; none where there is
@@ -124,7 +209,9 @@ local function HeadSet(head, chapter)
     local right = chapter.sub and head.sub:GetStringWidth() + 12 or 0
     HeadLine(head.left, chapter.small, chapter.small and head.small or head.title, "LEFT", head.half - taken - left)
     HeadLine(head.right, chapter.sub, chapter.sub and head.sub or head.title, "RIGHT", head.half - taken - right)
-    head.height = math.floor(HEAD_TOP + head.title:GetStringHeight() + HEAD_BOTTOM + 0.5)
+    local titleBottom = math.floor(HEAD_TOP + head.title:GetStringHeight() + 0.5)
+    local route = HeadRoute(head, chapter.route, titleBottom + ROUTE_GAP)
+    head.height = titleBottom + route + HEAD_BOTTOM
     head:SetHeight(head.height)
 end
 

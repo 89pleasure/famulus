@@ -1426,9 +1426,25 @@ local events, heads = bookFrames("story"), bookFrames("chapter")
 check(#visibleRows() == 0 and #events == 6 and events[1].story.title == "Reached level 20"
     and events[1].story.fullTitle == "Jaina Proudmoore reaches level 20",
     "everyone: all entries as events of a book, newest first (got " .. #events .. ")")
-check(#heads == 1 and heads[1].chapter.title == "Westfall" and heads[1].chapter.small == "Today"
-    and heads[1].chapter.sub:find("6 events", 1, true) ~= nil and heads[1].title:GetText() == "Westfall",
-    "a day is a chapter, named after the place most of it happened in: " .. tostring(heads[1] and heads[1].chapter.sub))
+-- The part of the day a session that began at `timestamp` is named after.
+local function partOfDay(timestamp)
+    local hour = tonumber(date("%H", timestamp))
+    return hour < 5 and "night" or hour < 11 and "morning" or hour < 14 and "midday"
+        or hour < 18 and "afternoon" or hour < 23 and "evening" or "night"
+end
+local oldestEntry = math.huge
+for _, entry in ipairs(Chronicle.Entries()) do
+    oldestEntry = math.min(oldestEntry, entry.t)
+end
+check(#heads == 1 and heads[1].chapter.title == ns.L["c_when_today_" .. partOfDay(oldestEntry)]
+    and heads[1].title:GetText() == heads[1].chapter.title and heads[1].chapter.small:find("^%d%d:%d%d") ~= nil
+    and heads[1].chapter.sub:find("6 events", 1, true) ~= nil,
+    "a session of play is a chapter, named after the part of the day it began in, with its time: "
+        .. tostring(heads[1] and heads[1].chapter.title) .. " / " .. tostring(heads[1] and heads[1].chapter.small))
+check(table.concat(heads[1].chapter.route or {}, ", ") == "Elwynn Forest, Westfall" and heads[1].routeShown == 2
+    and heads[1].plates[1].text:GetText() == "Elwynn Forest" and heads[1].plates[2].text:GetText() == "Westfall"
+    and heads[1].arrows[2]:IsShown(),
+    "below the heading, the route through the player's zones: " .. table.concat(heads[1].chapter.route or {}, ", "))
 check(events[1].onLeft and not events[2].onLeft and events[3].onLeft, "the cards alternate left and right of the line")
 check(events[2].top > events[1].top and events[2].top < events[1].top + events[1].cardHeight
     and events[3].top >= events[1].top + events[1].cardHeight
@@ -1449,7 +1465,7 @@ check(events[4].story.kind == "death" and events[4].photo:IsShown() and not even
 check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 40,
     "the page is as long as its book")
 check(heads[1].small:IsShown() and heads[1].sub:IsShown() and heads[1].left:IsShown() and heads[1].right:IsShown()
-    and heads[1].height < 50, "a chapter's heading is one line: day, place and numbers between two lines")
+    and heads[1].height < 80, "a chapter's heading is one line between two lines, and the route below it")
 -- Beside the book a rail that stays put: the week in numbers and the companions.
 local rail = window.rail
 local function railCard(kind)
@@ -1567,6 +1583,58 @@ do -- what repeats right away shares a card
     end
     mock.Click(tabButton("My journey"))
     mock.Click(tabButton("Everyone"))
+end
+do -- a pause of two hours begins a new chapter; a night past midnight stays one
+    local base = os.date("*t", time() - 5 * 3600) -- the day the night belongs to
+    local function at(daysBack, hour, minute)
+        return os.time({ year = base.year, month = base.month, day = base.day - daysBack, hour = hour, min = minute, sec = 0 })
+    end
+    local function add(kind, entry, t)
+        entry.t, entry.sessionTest = t, true
+        Chronicle.Add(kind, entry)
+    end
+    -- Yesterday evening, through three zones; a friend somewhere else.
+    add("death", { zone = "Duskwood", level = 14 }, at(1, 20, 0))
+    add("level", { zone = "Duskwood", level = 15 }, at(1, 20, 10))
+    add("level", { who = "Jaina Proudmoore", zone = "Ashenvale", level = 22 }, at(1, 20, 20))
+    add("zone", { zone = "Redridge Mountains", level = 15 }, at(1, 20, 40))
+    add("death", { zone = "Duskwood", level = 15 }, at(1, 21, 0))
+    -- A night two days ago that ran past midnight.
+    add("death", { zone = "Westfall", level = 13 }, at(2, 23, 15))
+    add("zone", { zone = "Duskwood", level = 13 }, at(1, 0, 40))
+    -- A long afternoon three days ago through many zones.
+    for index = 1, 14 do
+        add("zone", { zone = string.format("Zone Number %02d", index), level = 12 }, at(3, 12, index * 5))
+    end
+    mock.Click(tabButton("My journey"))
+    mock.Click(tabButton("Everyone"))
+    local chapters = bookFrames("chapter")
+    check(#chapters == 4, "four sessions of play, four chapters (got " .. #chapters .. ")")
+    local evening, night, long = chapters[2] and chapters[2].chapter, chapters[3] and chapters[3].chapter, chapters[4]
+    check(evening and evening.title == "Yesterday evening" and evening.small == "20:00 – 21:00"
+        and evening.sub == "Level 14 to 15  ·  5 events",
+        "yesterday's session: its part of the day, from when to when, levels and events: "
+            .. tostring(evening and evening.title) .. " / " .. tostring(evening and evening.small) .. " / " .. tostring(evening and evening.sub))
+    check(evening and table.concat(evening.route, ", ") == "Duskwood, Redridge Mountains, Duskwood",
+        "the route follows the player in the order of time, a zone again where they went back; a friend's zone is not part of it")
+    local nightDay = at(2, 23, 15) - 5 * 3600
+    check(night and night.title == ns.L.c_when_day_night:format(ns.L["c_weekday_" .. date("%w", nightDay)])
+        and night.small == date("%Y-%m-%d", nightDay) and night.sub:find("2 events", 1, true) ~= nil,
+        "a night past midnight is one chapter, named after the evening it began: "
+            .. tostring(night and night.title) .. " / " .. tostring(night and night.small))
+    check(long and long.routeShown < 15 and long.plates[1].text:GetText() == "…"
+        and long.plates[long.routeShown].text:GetText() == "Zone Number 14" and long.arrows[2]:IsShown()
+        and not long.plates[long.routeShown + 1]:IsShown(),
+        "a route too long for the book gives up its oldest zones: " .. tostring(long and long.routeShown))
+    local entries = Chronicle.Entries()
+    for index = #entries, 1, -1 do
+        if entries[index].sessionTest then
+            table.remove(entries, index)
+        end
+    end
+    mock.Click(tabButton("My journey"))
+    mock.Click(tabButton("Everyone"))
+    check(#bookFrames("chapter") == 1 and not chapters[2]:IsVisible(), "the chapters no longer needed are hidden")
 end
 do -- my journey: the week and the professions
     mock.state.professions = { { name = "Tailoring", rank = 92, id = 197 } }
