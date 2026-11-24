@@ -5,9 +5,10 @@
 -- group); every value is still checked before it is used. Battlegrounds and
 -- arenas do not count: their groups are strangers thrown together.
 --
---   GroupService.Members(withRaid) -> { { guid, name, level, class }, ... }
+--   GroupService.Members(withRaid) -> { { guid, name, level, class, unit }, ... }
 --
--- name is "First Last", class the game's file name of the class ("MAGE").
+-- name is "First Last", class the game's file name of the class ("MAGE"),
+-- unit the unit token ("party2") at the moment of asking.
 -- Members who are offline, or whose name the client does not know yet, are
 -- left out; the next change of the group brings them.
 
@@ -57,7 +58,7 @@ local function Member(unit, own)
         local _, file = UnitClass(unit)
         class = IsPlainText(file) and file or nil
     end
-    return { guid = guid, name = name, level = level, class = class }
+    return { guid = guid, name = name, level = level, class = class, unit = unit }
 end
 
 -- Everyone else in the group, or an empty list outside a group, in PvP, and

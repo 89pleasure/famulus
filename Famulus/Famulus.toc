@@ -25,6 +25,7 @@ Core\Database.lua
 Core\Features.lua
 Core\ChatService.lua
 Core\GroupService.lua
+Core\SocialService.lua
 Core\SelfTest.lua
 
 Modules\Aliases\AliasService.lua

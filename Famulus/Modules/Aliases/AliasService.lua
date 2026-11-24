@@ -287,54 +287,25 @@ end
 -- Battle.net friends list
 ---------------------------------------------------------------------------
 
-local function HasFriendsApi()
-    return BNGetNumFriends and C_BattleNet and C_BattleNet.GetFriendAccountInfo and true or false
-end
-
 -- Calls visit(battleTag, characterName) for every character of this game a
 -- Battle.net friend is online on; one friend if index is given, else all.
--- visit may return true to stop.
+-- visit may return true to stop. The list itself is read by SocialService.
 local function EachFriendCharacter(index, visit)
-    if not HasFriendsApi() then
-        return
-    end
-    local first, last = index, index
-    if not index then
-        local total = BNGetNumFriends()
-        if ns.IsSecret(total) or type(total) ~= "number" then
-            return
-        end
-        first, last = 1, total
-    end
     local project = WOW_PROJECT_ID
-    local function Visit(tag, game)
-        if type(game) ~= "table" then
+    ns.SocialService.EachBattleNetFriend(function(battleTag, games)
+        local tag = AliasService.BattleTag(battleTag)
+        if not tag then
             return false
         end
-        local theirs = game.wowProjectID
-        if ns.IsSecret(theirs) or (project ~= nil and theirs ~= project) then
-            return false
-        end
-        return IsPlainText(game.characterName) and visit(tag, game.characterName) == true
-    end
-    for i = first, last do
-        local info = C_BattleNet.GetFriendAccountInfo(i)
-        local tag = type(info) == "table" and AliasService.BattleTag(info.battleTag)
-        if tag then
-            if Visit(tag, info.gameAccountInfo) then
-                return
-            end
-            -- A friend can be online on several licences at once.
-            local games = C_BattleNet.GetFriendNumGameAccounts and C_BattleNet.GetFriendNumGameAccounts(i)
-            if C_BattleNet.GetFriendGameAccountInfo and not ns.IsSecret(games) and type(games) == "number" then
-                for g = 1, games do
-                    if Visit(tag, C_BattleNet.GetFriendGameAccountInfo(i, g)) then
-                        return
-                    end
-                end
+        for _, game in ipairs(games) do
+            local theirs = game.wowProjectID
+            if not ns.IsSecret(theirs) and (project == nil or theirs == project)
+                and IsPlainText(game.characterName) and visit(tag, game.characterName) == true then
+                return true
             end
         end
-    end
+        return false
+    end, index)
 end
 
 -- Reads the Battle.net friends list and remembers the characters of every

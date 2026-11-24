@@ -21,10 +21,9 @@ function companions:OnEnable()
 end
 
 function companions:FRIENDLIST_UPDATE()
-    for i = 1, C_FriendList.GetNumFriends() or 0 do
-        local info = C_FriendList.GetFriendInfoByIndex(i)
+    ns.SocialService.EachFriend(function(info)
         -- An offline friend comes with level 0; that is not a change.
-        if info and info.connected and not ns.IsSecret(info.level) and (tonumber(info.level) or 0) > 0 then
+        if not ns.IsSecret(info.connected) and info.connected and not ns.IsSecret(info.level) and (tonumber(info.level) or 0) > 0 then
             local known = Chronicle.FriendLevel(info.guid)
             if known and info.level > known then
                 -- The class for the picture beside their name; the list names it in the client's language.
@@ -35,5 +34,5 @@ function companions:FRIENDLIST_UPDATE()
                 Chronicle.FriendLevel(info.guid, info.level)
             end
         end
-    end
+    end)
 end

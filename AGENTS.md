@@ -104,6 +104,8 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   gesehen.
 - **Weggefährten (2026-11-23, nur gegen den Mock geprüft, noch nicht im Spiel):** eigener Bereich,
   siehe „Weggefährten“ unten.
+- **Weggefährten nur mit Freunden und Gilde, Aufräumen (2026-11-24, nur gegen den Mock geprüft,
+  noch nicht im Spiel):** siehe „Nur Freunde und Gilde, Aufräumen“ unter „Weggefährten“.
 - **Neuer Rahmen und Weggefährten-Übersicht (2026-11-24, nur gegen den Mock geprüft, noch nicht im
   Spiel):** siehe „Das Fenster“ und „Weggefährten“. Offen im Spiel: Ring ums Wappen (`/fam test`,
   Gruppe `media`, Prüfung `ring`), Klassensymbole (Prüfung `class icons`), die Seite ohne
@@ -839,7 +841,7 @@ Am 2026-11-24 hat der Auftraggeber gefragt, ob es Sinn ergibt, beide getrennt zu
 des Assistenten: getrennt lassen, denn sie unterscheiden sich in der Grundlage. Die Chronik lebt
 von eigenen Ereignissen und dem, was Freunde mit Famulus schicken (Freundesliste und Gilde,
 teilt Daten); die Weggefährten von der Gruppenliste (jeder aus einer Gruppe, auch Fremde, nichts
-wird verschickt, bis 500 Personen). Sie waren aber an vier Stellen ineinander gewachsen: dasselbe
+wird verschickt, bis 500 Personen; seit 2026-11-24 auf Wunsch nur Freunde und Gilde). Sie waren aber an vier Stellen ineinander gewachsen: dasselbe
 Wort „Gefährten“ für zwei Personenkreise, zwei „Steckbriefe“, zwei Bücher je Person mit teils
 denselben Karten, und die Bossnamen der Weggefährten kamen aus der Chronik. Von drei Varianten
 (klare Kante; Weggefährten als einziger Ort für Personen; zusammenlegen) hat der Auftraggeber
@@ -882,8 +884,9 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   über `ns.FellowService` (`Modules/Fellows/FellowService.lua`). Wer gerade in der Gruppe ist, liefert
   `ns.GroupService` (`Core/GroupService.lua`), den auch die Chronik nutzt.
 - **Daten:** `FamulusDB.fellows = { [guid] = { name, level, class, first, firstZone, last, zone,
-  times, seconds, bosses } }`, accountweit, außerhalb der Profile, nach GUID (ein Name kann sich
-  ändern). Nichts davon wird verschickt. Höchstens 500 Personen; darüber fällt heraus, wer am
+  times, seconds, bosses, tag } }`, accountweit, außerhalb der Profile, nach GUID (ein Name kann sich
+  ändern). `tag` ist der BattleTag, wenn die Person in der Gruppe als Battle.net-Freund erkannt
+  wurde (seit 2026-11-24, siehe unten). Nichts davon wird verschickt. Höchstens 500 Personen; darüber fällt heraus, wer am
   längsten nicht mehr dabei war (nie jemand aus der aktuellen Gruppe).
 - **Zählen (Entscheidungen des Assistenten):**
   - Ereignisse: `GROUP_ROSTER_UPDATE` und `PLAYER_ENTERING_WORLD` gleichen die Liste mit der Gruppe
@@ -897,6 +900,86 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
     kennt (`UNKNOWNOBJECT`), Schlachtfelder und Arenen (`IsInInstance` liefert `pvp`/`arena`).
     Schlachtzüge zählen mit; Option `raids` (Standard an) schaltet sie ab.
   - „Wo“ ist das Gebiet des Spielers (`GetRealZoneText`), nicht das des Mitglieds.
+- **Nur Freunde und Gilde, Aufräumen (Wunsch des Auftraggebers, 2026-11-24):** Anlass: Die Chronik
+  hört nur von Freunden und Gildenmitgliedern, die Weggefährten merkten sich jeden aus einer Gruppe.
+  Gewünscht waren eine Option dafür und ein Aufräumen für ehemalige Freunde und Gildenmitglieder.
+  Umsetzung und Texte sind Entscheidungen des Assistenten.
+  - **Option `friendsOnly`** („Nur Freunde und Gilde“, Standard aus, damit sich am bisherigen
+    Verhalten nichts ändert): Aus der Gruppe zählt dann nur, wer auf der Freundesliste steht,
+    Battle.net-Freund ist oder in der Gilde ist (`SocialService.Unit`: `C_FriendList.IsFriend(guid)`,
+    `C_BattleNet.GetAccountInfoByGUID(guid)`, `UnitIsInMyGuild(unit)`; alle drei laut API-Doku des
+    Branches `forever` vorhanden und nicht geheim; die beiden ersten laufen über `pcall`, weil
+    `IsFriend` die geladene Freundesliste verlangt). Solange die Option an ist, hört das Feature
+    zusätzlich auf `FRIENDLIST_UPDATE`, `PLAYER_GUILD_UPDATE`, `BN_FRIEND_LIST_SIZE_CHANGED` und
+    `BN_CONNECTED` (alle vier registriert auch Blizzards Freundesfenster im Forever-Quellcode,
+    `Blizzard_FriendsFrame/Camelot`): Wer in der Gruppe zum Freund oder Battle.net-Freund wird,
+    zählt ab da, wer es nicht mehr ist, ab da nicht mehr. Wer schon in der Liste steht, bleibt dort.
+    Nicht auf `BN_FRIEND_INFO_CHANGED`, das bei jeder Statusänderung eines Freundes kommt. Ohne die
+    Option fragt der Abgleich nur den BattleTag ab (`SocialService.BattleTag`), nicht, wer Freund
+    ist.
+  - **Battle.net-Freunde zählen als Freunde** (Entscheidung des Assistenten): Die Freundesliste des
+    Spiels zeigt sie mit, und der Auftraggeber hat Battle.net-Freunde (siehe Account-Aliase). Die
+    Chronik kann mit ihnen nicht sprechen, sie flüstert nur Charakternamen an. Als Battle.net-Freund
+    gilt nur, wen der Client ausdrücklich so nennt (`isFriend` oder `isBattleTagFriend` wahr; laut
+    API-Doku des Branches `forever` sind beide nie nil). Im Zweifel ist jemand kein Freund, und sein
+    BattleTag wird nicht gemerkt.
+  - **Aufräumen** (Reiter „Einstellungen“, eigene Karte unter dem Feature): entfernt alle, die
+    gerade weder auf der Freundesliste noch Battle.net-Freund noch in der Gilde sind, also auch
+    Fremde aus der Zeit ohne die Option. Entscheidung des Assistenten: „ehemalig“ lässt sich für
+    ältere Einträge nicht feststellen, weil nie gemerkt wurde, wer damals Freund war, und wer nur
+    Freunde will, will die Fremden auch nicht. Wer gerade in der Gruppe ist, bleibt, auch ein
+    Fremder, den die Option gerade nicht mitzählt (`GroupService.Members`, nicht nur die gezählten);
+    die Beispiel-Weggefährten gehen mit (sie sind niemandes Freund). Die Zeile heißt deshalb „Alle
+    außer Freunden und Gilde entfernen“ / „Remove everyone but friends and guild“; die erste
+    Fassung („Ehemalige Freunde und Gildenmitglieder entfernen“) versprach weniger, als der Knopf
+    tut (Review 2026-11-24, vom Auftraggeber zum Beheben freigegeben). Soll das Aufräumen doch nur
+    ehemalige Freunde treffen, müsste Famulus sich ab jetzt merken, wer Freund war; nachfragen.
+    Die Zeile nennt bis zu fünf Namen
+    (Alias, sonst Name) und zählt den Rest; der Knopf „Entfernen“ fragt wie „Zurücksetzen“ erst
+    („Wirklich entfernen?“, vier Sekunden). Der erste Klick merkt sich, wen die Zeile gezählt hat;
+    der zweite entfernt nur diese, und nur, wenn sie beim frischen Nachsehen noch immer fremd sind.
+    Wer dazwischen in die Liste kommt, bleibt. Geht auch bei ausgeschaltetem Feature, weil es nur
+    gespeicherte Daten betrifft. Eine Chat-Zeile sagt, wie viele es waren. Die Suche findet die
+    Zeile über ihren Namen, nicht über die Namen darin. Die Listen werden erst gelesen, wenn die
+    Zeile gezeigt wird, nicht schon beim Aufbau der Reiter (das tut die Suche bei jeder Taste für
+    alle Reiter). Technik: Zeilenart `action` in
+    `UI/Options.lua` (Knopf rechts; `item.button`, `confirm`, `armed`, `usable`, `click`, dazu
+    `item.find` für die Suche), `FellowService.Outsiders` und `RemoveOutsiders`.
+  - **Abgleich** (`SocialService.Circle`): ein Blick auf Freundesliste, Gildenliste
+    (`GetGuildRosterInfo`, 17. Wert GUID) und Battle.net-Freunde; erkannt wird nach GUID, nach Name
+    (jede Schreibweise, ohne Realm) und nach BattleTag. Offline sind Battle.net-Freunde nur am
+    BattleTag zu erkennen (der Client nennt ihren Charakter nur, solange sie online sind). Deshalb
+    merkt sich die Liste den BattleTag (`tag`), sobald jemand in der Gruppe als Battle.net-Freund
+    erkannt wird, unabhängig von der Option. Ein alter `tag` bleibt stehen und passt dann einfach
+    nicht mehr. Grenze: Wer seit dieser Version nicht mehr in der Gruppe war, hat keinen `tag`; ist so
+    jemand nur Battle.net-Freund und gerade offline, hielte das Aufräumen ihn für fremd. Die Namen in
+    der Zeile zeigen das vor dem Klick. Das widerspricht nicht der Regel, keine Battle.net-Freunde zu
+    sammeln (siehe Aliase): Gemerkt wird der BattleTag nur bei Personen, die ohnehin in der Liste
+    stehen.
+  - **Eine Liste fehlt noch** (Review 2026-11-24: vorher wartete das Aufräumen nur auf die
+    Gildenliste, eine leere Freundesliste oder ein getrenntes Battle.net hätte alle Freunde zu
+    Fremden gemacht): `SocialService.Circle` liefert dann `ready = false` und als dritten Wert,
+    worauf es wartet. Das Aufräumen zeigt den Grund statt der Namen, der Knopf ist aus:
+    - `friends`: Die Freundesliste ist leer und seit dem Login kam noch kein `FRIENDLIST_UPDATE`
+      („Deine Freundesliste wird noch geladen.“). Angefragt mit `C_FriendList.ShowFriends`. Eine
+      leere Liste gilt erst als echt, wenn der Client sie geschickt hat; hat sie Einträge, gilt sie
+      sofort.
+    - `guild`: in einer Gilde, aber `GetNumGuildMembers()` liefert 0 („Deine Gildenliste wird noch
+      geladen.“). Angefragt mit `C_GuildInfo.GuildRoster`.
+    - `battlenet`: `BNConnected()` liefert falsch; ohne Verbindung kennt der Client keine
+      Battle.net-Freunde („Battle.net ist gerade nicht verbunden …“). Gewartet wird auf
+      `BN_CONNECTED`, anfragen lässt sich nichts.
+    Angefragt wird höchstens alle 15 Sekunden; das Ereignis bleibt angemeldet, bis es kommt, dann
+    baut sich das Fenster neu (`SOCIAL_CHANGED`). Der zweite Klick sieht noch einmal frisch nach:
+    Fehlt dann eine Liste (etwa Battle.net in der Zwischenzeit weg), geht niemand, und die Zeile
+    nennt den Grund.
+  - **Im Spiel ungeprüft:** alles. Vor allem, ob die Gildenliste in Forever auch Mitglieder führt,
+    die offline sind, und mit GUID (sonst hielte das Aufräumen sie für fremd). Das meldet
+    `/fam test` (Gruppe `names`, „guild roster“ und „friends list“, nur Zahlen, keine Namen; dazu
+    Gruppe `api`). Außerdem, ob `C_BattleNet.GetAccountInfoByGUID` für Battle.net-Freunde in der
+    Gruppe antwortet (sonst zählt mit der Option kein reiner Battle.net-Freund), ob
+    `C_FriendList.ShowFriends` auch bei leerer Freundesliste ein `FRIENDLIST_UPDATE` auslöst (sonst
+    bliebe das Aufräumen bei „wird noch geladen“) und ob `BNConnected` in Forever antwortet.
 - **Secret Values (recherchiert 2026-11-23 in der API-Doku des Branches `forever`):** `UnitName`,
   `UnitGUID` und `UnitClass` sind nur geheim, wenn die Einheit nicht spielergesteuert oder nicht in
   der Gruppe ist (`SecretWhenUnitIdentityRestricted`); für Gruppenmitglieder also auch im Kampf
@@ -1264,7 +1347,14 @@ Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
   `ns.<Name>Service`, kein Feature darin (der Test prüft das). So ist an jedem Aufruf erkennbar,
   ob etwas ein Service (`ns.AliasService.Get`), ein Feature (`ns.features.chatAliases`) oder eine
   einfache Hilfsfunktion (`ns.IsSecret` in `Core/Init.lua`) ist. Für alle
-  Kategorien liegt ein Service unter `Core/` (`ChatService`: Klartext prüfen, Chat-Sperre prüfen),
+  Kategorien liegt ein Service unter `Core/` (`ChatService`: Klartext prüfen, Chat-Sperre prüfen;
+  `GroupService`: wer in der Gruppe ist; `SocialService`: wer Freund, Battle.net-Freund oder in der
+  Gilde ist, wer davon online ist, und Namen aus Listen in einer Schreibweise. Wer Freundesliste,
+  Gildenliste oder Battle.net-Freunde liest, tut es über `SocialService.EachFriend`,
+  `EachGuildMember` und `EachBattleNetFriend` (seit dem Review vom 2026-11-24 auch Chronik,
+  Teilen und Account-Aliase); nur der Selbsttest liest den Client absichtlich direkt. Einen Namen
+  in jeder Schreibweise vergleicht `SocialService.Key`; `AliasService.Key` bleibt der Schlüssel,
+  unter dem Aliase gespeichert sind),
   für eine Kategorie in deren Ordner (`Modules/Aliases/AliasService.lua`,
   `Modules/Chronicle/ChronicleService.lua`). Ein Service hängt sich über
   das interne Signal `FEATURE_STATE` an den Zustand seiner Features, statt dass jedes Feature ihn

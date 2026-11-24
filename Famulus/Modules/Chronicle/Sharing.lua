@@ -84,19 +84,9 @@ local queue, queueHead = {}, 1
 local registered = false
 local greetedGuild = false
 
--- A name without the realm the client may add: "First Last-Realm" becomes
--- "First Last" (the spellings as Guildy reads them).
-local function Plain(name)
-    if string.find(name, " ", 1, true) then
-        name = string.match(name, "^[^%-]*")
-    end
-    return (string.gsub(string.gsub(name, "^%s+", ""), "%s+$", ""))
-end
-
--- One spelling for a name however the client writes it.
-local function Key(name)
-    return (string.lower((string.gsub(Plain(name), "[%s%-]+", "-"))))
-end
+-- A name without the realm the client may add, and one spelling for it
+-- however the client writes it.
+local Plain, Key = ns.SocialService.Plain, ns.SocialService.Key
 
 -- The name of someone whose news may be passed on to the player, or nil:
 -- a guild member, or someone whose addon answered directly not long ago.
@@ -466,29 +456,25 @@ end
 
 function sharing:FRIENDLIST_UPDATE()
     friends = {}
-    for i = 1, C_FriendList.GetNumFriends() or 0 do
-        local info = C_FriendList.GetFriendInfoByIndex(i)
-        if info and info.connected and IsPlainText(info.name) then
+    ns.SocialService.EachFriend(function(info)
+        if not ns.IsSecret(info.connected) and info.connected and IsPlainText(info.name) then
             friends[Key(info.name)] = Plain(info.name)
         end
-    end
+    end)
     Refresh()
 end
 
 function sharing:GUILD_ROSTER_UPDATE()
     guild, guildOnline = {}, {}
-    if IsInGuild and IsInGuild() and GetNumGuildMembers and GetGuildRosterInfo then
-        for i = 1, GetNumGuildMembers() or 0 do
-            local name, _, _, _, _, _, _, _, isOnline, _, _, _, _, isMobile = GetGuildRosterInfo(i)
-            if IsPlainText(name) then
-                local key = Key(name)
-                guild[key] = Plain(name)
-                if not ns.IsSecret(isOnline) and not ns.IsSecret(isMobile) and isOnline and not isMobile then
-                    guildOnline[key] = guild[key]
-                end
+    ns.SocialService.EachGuildMember(function(name, isOnline, isMobile)
+        if name then
+            local key = Key(name)
+            guild[key] = Plain(name)
+            if isOnline and not isMobile then
+                guildOnline[key] = guild[key]
             end
         end
-    end
+    end)
     Refresh()
     -- Greet the guild once its roster is known: the answers come by whisper
     -- and are taken only from members.

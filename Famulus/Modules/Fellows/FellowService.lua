@@ -12,6 +12,7 @@
 --           seconds = <n>,                        -- time spent together
 --           bosses = <n>,                         -- bosses defeated together
 --           firstLevel = <n>,                     -- the player's level when you met
+--           tag = "Name#1234",                    -- their BattleTag, if seen as a Battle.net friend
 --           days = { [YYYYMMDD] = { s = <seconds>, z = "<zone>", b = <bosses>,
 --                                   f = <first time>, l = <last time>,
 --                                   k = { { t = <time>, n = "<boss>", z = "<zone>" }, ... } } },
@@ -21,6 +22,11 @@
 -- `k` names the bosses defeated together in a party, at most MAX_KILLS a
 -- day; a raid only counts them in `b`, so that forty people do not each
 -- keep every boss of the evening.
+--
+-- `tag` lets the list know a Battle.net friend again while they are offline
+-- (the client names their character only while they are online), so that
+-- tidying up does not take them for a stranger. It is kept when someone
+-- stops being a friend; then it simply no longer matches.
 --
 -- Modules/Fellows/RememberFellows.lua does the counting; the window reads.
 -- Changes are announced with the internal message FELLOWS_CHANGED. None of
@@ -176,6 +182,7 @@ function FellowService.Sync(members, now, zone, level)
         person.name = member.name
         person.level = member.level or person.level
         person.class = member.class or person.class
+        person.tag = member.tag or person.tag
     end
     for guid in pairs(together) do
         if not present[guid] then
@@ -242,7 +249,7 @@ end
 -- ("First Last", "First-Last"), or nil. Of two with the same name, the one
 -- seen last. The chronicle links a friend to your story with them this way.
 function FellowService.Find(name)
-    local Key = ns.AliasService.Key
+    local Key = ns.SocialService.Key
     local key = IsPlainText(name) and Key(name)
     local fellows = Store()
     if not key or not fellows then
@@ -255,6 +262,46 @@ function FellowService.Find(name)
         end
     end
     return found
+end
+
+-- Everyone on the list whom check (see SocialService.Circle) does not know:
+-- no friend and not in the guild, or not any more. As { guid, person }, by
+-- name. Whoever is in the group right now is left out, also someone the
+-- option "only friends and guild" does not count.
+function FellowService.Outsiders(check)
+    local list = {}
+    local fellows = Store()
+    if fellows then
+        local present = {}
+        for _, member in ipairs(ns.GroupService.Members(true)) do
+            present[member.guid] = true
+        end
+        for guid, person in pairs(fellows) do
+            if not together[guid] and not present[guid] and not check(guid, person.name, person.tag) then
+                list[#list + 1] = { guid = guid, person = person }
+            end
+        end
+    end
+    table.sort(list, function(a, b)
+        return (a.person.name .. a.guid) < (b.person.name .. b.guid)
+    end)
+    return list
+end
+
+-- Removes the outsiders; returns how many went. only: a set of GUIDs (the
+-- ones the player was shown); whoever is not in it stays.
+function FellowService.RemoveOutsiders(check, only)
+    local fellows, removed = Store(), 0
+    for _, each in ipairs(FellowService.Outsiders(check)) do
+        if not only or only[each.guid] then
+            fellows[each.guid] = nil
+            removed = removed + 1
+        end
+    end
+    if removed > 0 then
+        ns:Fire("FELLOWS_CHANGED")
+    end
+    return removed
 end
 
 -- True while the person is in the player's group.
@@ -437,6 +484,9 @@ ns:On("DATABASE_READY", function()
         else
             if type(person.firstLevel) ~= "number" then
                 person.firstLevel = nil
+            end
+            if person.tag ~= nil and not IsPlainText(person.tag) then
+                person.tag = nil
             end
             local days = person.days
             if type(days) == "table" then

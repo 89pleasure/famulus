@@ -47,6 +47,13 @@ local EXPECT_PRESENT = {
     "UnitClass",
     "UNKNOWNOBJECT",
     "LOCALIZED_CLASS_NAMES_MALE",
+    -- What Core/SocialService.lua asks to tell friends and guild members.
+    "C_FriendList.IsFriend",
+    "UnitIsInMyGuild",
+    "C_BattleNet.GetAccountInfoByGUID",
+    "C_GuildInfo.GuildRoster",
+    "C_FriendList.ShowFriends",
+    "BNConnected",
 }
 
 local EXPECT_ABSENT = {
@@ -277,6 +284,44 @@ local function CheckNames()
             Describe(total), inGame, Describe(WOW_PROJECT_ID), #seen > 0 and table.concat(seen, ", ") or "none seen"))
     else
         Add("names", "Battle.net friends", "warn", "BNGetNumFriends or C_BattleNet.GetFriendAccountInfo is missing")
+    end
+    -- Tidying up the fellow travellers compares with the friends list and the
+    -- guild roster, also for people who are offline: whether both list them,
+    -- and with GUIDs. Counts only, no names.
+    local IsPlainText = ns.ChatService.IsPlainText
+    if C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetFriendInfoByIndex then
+        local total = C_FriendList.GetNumFriends()
+        local withGuid = 0
+        if not ns.IsSecret(total) and type(total) == "number" then
+            for i = 1, total do
+                local info = C_FriendList.GetFriendInfoByIndex(i)
+                if not ns.IsSecret(info) and type(info) == "table" and IsPlainText(info.guid) then
+                    withGuid = withGuid + 1
+                end
+            end
+        end
+        Add("names", "friends list", "ok", string.format("%s friends, %d with a GUID", Describe(total), withGuid))
+    end
+    if IsInGuild and GetNumGuildMembers and GetGuildRosterInfo then
+        local inGuild = IsInGuild()
+        if ns.IsSecret(inGuild) or not inGuild then
+            Add("names", "guild roster", "ok", "not in a guild")
+        else
+            local total, online = GetNumGuildMembers()
+            local usable = not ns.IsSecret(total) and type(total) == "number"
+            local offline, withGuid = 0, 0
+            for i = 1, usable and total or 0 do
+                local _, _, _, _, _, _, _, _, isOnline, _, _, _, _, _, _, _, guid = GetGuildRosterInfo(i)
+                if IsPlainText(guid) then
+                    withGuid = withGuid + 1
+                end
+                if not ns.IsSecret(isOnline) and not isOnline then
+                    offline = offline + 1
+                end
+            end
+            Add("names", "guild roster", usable and total > 0 and "ok" or "warn", string.format(
+                "%s members (%s online), %d listed as offline, %d with a GUID", Describe(total), Describe(online), offline, withGuid))
+        end
     end
     local menu = ns.features.aliasMenu
     if menu and Menu and Menu.GetOpenMenuTags then

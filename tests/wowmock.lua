@@ -539,11 +539,21 @@ C_FriendList = {
     ShowFriends = function()
         record("C_FriendList.ShowFriends")
     end,
+    IsFriend = function(guid)
+        record("C_FriendList.IsFriend")
+        for _, friend in ipairs(mock.state.friends or {}) do
+            if friend.guid == guid then
+                return true
+            end
+        end
+        return false
+    end,
 }
 -- Battle.net friends:
--- mock.state.bnFriends = { { battleTag = "Anna#1234", games = { { characterName = "Jaina Proudmoore" } } }, ... }
+-- mock.state.bnFriends = { { battleTag = "Anna#1234", games = { { characterName = "Jaina Proudmoore",
+-- playerGuid = "Player-1-JAINA" } } }, ... }
 -- A game without wowProjectID counts as this game; the first one is what the
--- friends list shows.
+-- friends list shows. A friend without games is offline.
 WOW_PROJECT_ID = 99
 local function bnGame(friend, index)
     local game = friend and friend.games and friend.games[index]
@@ -552,6 +562,7 @@ local function bnGame(friend, index)
     end
     return {
         characterName = game.characterName,
+        playerGuid = game.playerGuid,
         wowProjectID = game.wowProjectID or WOW_PROJECT_ID,
         isOnline = true,
     }
@@ -559,6 +570,10 @@ end
 function BNGetNumFriends()
     record("BNGetNumFriends")
     return #(mock.state.bnFriends or {})
+end
+-- mock.state.bnOffline = true: Battle.net is not connected.
+function BNConnected()
+    return not mock.state.bnOffline
 end
 C_BattleNet = {
     GetFriendAccountInfo = function(index)
@@ -574,6 +589,19 @@ C_BattleNet = {
     end,
     GetFriendGameAccountInfo = function(index, gameIndex)
         return bnGame((mock.state.bnFriends or {})[index], gameIndex)
+    end,
+    -- The account of the friend who plays that character right now; with
+    -- stranger = true one the client knows, but not as a friend's.
+    GetAccountInfoByGUID = function(guid)
+        for index, friend in ipairs(mock.state.bnFriends or {}) do
+            for gameIndex, game in ipairs(friend.games or {}) do
+                if game.playerGuid == guid then
+                    return { battleTag = friend.battleTag, isFriend = not friend.stranger, isBattleTagFriend = not friend.stranger,
+                        gameAccountInfo = bnGame(friend, gameIndex) }
+                end
+            end
+        end
+        return nil
     end,
 }
 -- Addon messages: what was sent is collected in mock.sent.
@@ -654,6 +682,15 @@ C_GuildInfo = {
         record("C_GuildInfo.GuildRoster")
     end,
 }
+function UnitIsInMyGuild(unit)
+    local guid = UnitGUID(unit)
+    for _, member in ipairs(mock.state.guild or {}) do
+        if guid and member.guid == guid then
+            return true
+        end
+    end
+    return false
+end
 
 -- Tooltips
 TooltipDataProcessor = {

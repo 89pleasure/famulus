@@ -464,7 +464,7 @@ end
 -- spelling ("First Last", "First-Last"), or nil if the chronicle has no
 -- entry of theirs. The fellow travellers link a person to their events.
 function ChronicleService.Who(name)
-    local Key = ns.AliasService.Key
+    local Key = ns.SocialService.Key
     local key = IsPlainText(name) and Key(name)
     if not key then
         return nil
@@ -742,71 +742,13 @@ local LINK_SPELL = {
     [186] = 2656, -- Mining
 }
 
-local function NameKey(name)
-    return (string.lower((string.gsub(name, "[%s%-]+", "-"))))
-end
-
--- The GUID of a companion who is online, from the friends list or the guild
--- roster, or nil. The roster may write "First Last-Realm".
-local function OnlineGUID(name)
-    if not IsPlainText(name) then
-        return nil
-    end
-    local key = NameKey(name)
-    if C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetFriendInfoByIndex then
-        for i = 1, C_FriendList.GetNumFriends() or 0 do
-            local info = C_FriendList.GetFriendInfoByIndex(i)
-            if info and info.connected and IsPlainText(info.name) and IsPlainText(info.guid) and NameKey(info.name) == key then
-                return info.guid
-            end
-        end
-    end
-    if IsInGuild and IsInGuild() and GetNumGuildMembers and GetGuildRosterInfo then
-        for i = 1, GetNumGuildMembers() or 0 do
-            local member, _, _, _, _, _, _, _, isOnline, _, _, _, _, _, _, _, guid = GetGuildRosterInfo(i)
-            if isOnline and IsPlainText(member) and IsPlainText(guid) then
-                local memberKey = NameKey(member)
-                if memberKey == key or memberKey:sub(1, #key + 1) == key .. "-" then
-                    return guid
-                end
-            end
-        end
-    end
-    return nil
-end
-
--- Who is online now, from one look at the friends list and the guild roster:
--- a function that answers for a character name. For the window, which asks
--- for many companions at once.
+-- Who is online now, from one look at the friends list and the guild roster
+-- (SocialService.Online): a function that answers for a character name. For
+-- the window, which asks for many companions at once.
 function ChronicleService.OnlineCheck()
-    local keys = {}
-    if C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetFriendInfoByIndex then
-        for i = 1, C_FriendList.GetNumFriends() or 0 do
-            local info = C_FriendList.GetFriendInfoByIndex(i)
-            if info and info.connected and IsPlainText(info.name) then
-                keys[#keys + 1] = NameKey(info.name)
-            end
-        end
-    end
-    if IsInGuild and IsInGuild() and GetNumGuildMembers and GetGuildRosterInfo then
-        for i = 1, GetNumGuildMembers() or 0 do
-            local member, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
-            if isOnline and IsPlainText(member) then
-                keys[#keys + 1] = NameKey(member)
-            end
-        end
-    end
+    local find = ns.SocialService.Online()
     return function(name)
-        if not IsPlainText(name) then
-            return false
-        end
-        local key = NameKey(name)
-        for _, each in ipairs(keys) do
-            if each == key or each:sub(1, #key + 1) == key .. "-" then
-                return true
-            end
-        end
-        return false
+        return find(name) ~= nil
     end
 end
 
@@ -818,8 +760,9 @@ end
 -- The link that opens a companion's recipe book, or nil while they are not
 -- online on the friends list or in the guild.
 function ChronicleService.BookLink(name, skillLine)
-    local spell, guid = LINK_SPELL[tonumber(skillLine) or 0], OnlineGUID(name)
-    if not spell or not guid then
+    local spell = LINK_SPELL[tonumber(skillLine) or 0]
+    local guid = spell and ns.SocialService.Online()(name)
+    if type(guid) ~= "string" then
         return nil
     end
     return string.format("trade:%s:%d:%d", guid, spell, skillLine)
