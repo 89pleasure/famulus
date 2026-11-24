@@ -1772,7 +1772,7 @@ end
 mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
 check(#visibleRows() == 16 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
-    and not window.railScroll:IsShown() and visibleRows()[1].width == 900,
+    and not window.railScroll:IsShown() and visibleRows()[1]:GetWidth() == 900,
     "recording: the four switches, the feed's eleven options and how people are named; no book, no rail (got " .. #visibleRows() .. ")")
 check(visibleRows()[16].item.key == "chronicleNames" and visibleRows()[16].toggle ~= nil and visibleRows()[16].item.get() == true,
     "the character name behind an alias is a switch of its own, on from the start")

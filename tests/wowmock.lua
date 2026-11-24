@@ -125,8 +125,11 @@ function Widget:GetStringWidth()
     return #(self.text or "") * 6.5
 end
 Widget.GetUnboundedStringWidth = Widget.GetStringWidth
+-- The size lives in fields of the mock's own. In the client, SetWidth sets no
+-- field "width" on the frame; a mock that did would hide code reading
+-- frame.width without ever setting it (Book.lua did, 2026-11-24).
 function Widget:GetStringHeight()
-    local width = self.width or 0
+    local width = self.mockWidth or 0
     local lines = 1
     if width > 0 then
         lines = math.max(1, math.ceil(self:GetStringWidth() / width))
@@ -134,22 +137,22 @@ function Widget:GetStringHeight()
     return lines * 14
 end
 function Widget:SetWidth(width)
-    self.width = width
+    self.mockWidth = width
 end
 function Widget:SetHeight(height)
-    self.height = height
+    self.mockHeight = height
 end
 function Widget:SetSize(width, height)
-    self.width, self.height = width, height
+    self.mockWidth, self.mockHeight = width, height
     if self.scripts.OnSizeChanged then
         self.scripts.OnSizeChanged(self, width, height)
     end
 end
 function Widget:GetWidth()
-    return self.width or 100
+    return self.mockWidth or 100
 end
 function Widget:GetHeight()
-    return self.height or 100
+    return self.mockHeight or 100
 end
 function Widget:GetCenter()
     return 500, 400
