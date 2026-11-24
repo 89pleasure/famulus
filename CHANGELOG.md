@@ -3,7 +3,7 @@
 Every release has a section `## <version>` (the tag without the `v`, for example `## 0.2.0-beta.1`).
 That section becomes the changelog of the file on CurseForge.
 
-## 0.1.0
+## 0.1.0-alpha.1
 
 The first public alpha. Famulus is young: much of it has only been tested against a mock of the game
 client so far, so expect rough edges, and please tell us on CurseForge what you run into.

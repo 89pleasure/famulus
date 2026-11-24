@@ -1176,12 +1176,17 @@ Entscheidung des Assistenten. Hochgeladen ist noch nichts.
   --screenshot="<abs. Pfad>\logo.png" "file:///<abs. Pfad>/logo.svg"`.
   Eine Entscheidung des Assistenten, vom Auftraggeber noch nicht gesehen.
 - **Projekt angelegt** (vom Auftraggeber, 2026-11-24): CurseForge-Projekt-ID 1828785, steht als
-  `## X-Curse-Project-ID` in der `.toc`.
+  `## X-Curse-Project-ID` in der `.toc`. Probelauf auf GitHub am 2026-11-24 grün: Spielversion
+  1.60.1 (Forever) erkannt, 60 Dateien (Addon plus `LICENSE`), Zip `Famulus-<version>-forever.zip`
+  (der Packager hängt „-forever“ an, auch an die Bezeichnung auf CurseForge).
+- **Erste Datei als Alpha (Entscheidung des Auftraggebers, 2026-11-24):** Tag `v0.1.0-alpha.1`,
+  „damit sie nicht als Release rausgeht, wir sind ja noch nicht so weit“. Verworfen ist damit die
+  Empfehlung des Assistenten (`v0.1.0` als Release, damit Famulus in der App erscheint). Folge:
+  Solange es keine Release-Datei gibt, steht Famulus nur auf der Website von CurseForge, nicht in
+  der App. Der Abschnitt in `CHANGELOG.md` heißt deshalb `## 0.1.0-alpha.1`.
+- **Token:** Das Repository-Secret `CF_API_KEY` hat der Auftraggeber selbst hinterlegt
+  (2026-11-24); der Token ging nicht durch den Assistenten.
 - **Offen:**
-  - API-Token als Repository-Secret `CF_API_KEY`; setzt der Auftraggeber selbst, der Token geht
-    nicht durch den Assistenten.
-  - Dateityp der ersten Datei. Empfehlung des Assistenten: `v0.1.0` als Release mit „Alpha“ in
-    Beschreibung und Changelog, damit Famulus in der App erscheint.
   - Projektseite: Summary vom Auftraggeber gewählt („Your companion for playing together: Famulus
     helps you stay close to the friends and fellow adventurers who make your journey so
     special.“); die Beschreibung liegt als Entwurf des Assistenten in
