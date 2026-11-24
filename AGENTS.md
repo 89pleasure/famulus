@@ -37,7 +37,10 @@ weiter nicht fertig und haben Vorrang vor Release-Arbeit. Entscheidungen deshalb
 Versionierung, keine Annahmen über die eigene Addon-Sammlung, Verhalten neben anderen Addons im Blick.
 
 Arbeitsweise: Er schreibt Deutsch und möchte Antworten auf Deutsch. Code, Kommentare und
-Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
+Commit-Nachrichten sind Englisch, diese Datei Deutsch. Die README ist seit 2026-11-24 auf Wunsch
+des Auftraggebers Englisch und knapp gehalten (vorher Deutsch und ausführlich); Einzelheiten
+gehören hierher, nicht dorthin. Was Famulus von OneForAll, FlareUI und Polestar gelernt hat, steht
+nicht mehr darin („da wir uns nun ganz woanders bewegen thematisch“); die Tabelle unten bleibt.
 
 ## Stand der Prüfung
 
@@ -1214,8 +1217,8 @@ nicht bestätigt.
   Fund, widersprüchliche Beispieldaten (Mira war schon gestern 40; die Stufe in der Einblendung
   hat jetzt Kaelric), der Grundsatz „Fehler bleiben klein“ (nur ein Fehler beim Einschalten
   schaltet eine Funktion ab) und Schritt 2 der Installation (Neustart statt `/reload`, weil ein
-  neuer Addon-Ordner sonst womöglich nicht gefunden wird; im Spiel ungeprüft, die README sagt
-  weiter `/reload`). Dazu: Einblendungen und Funken laufen nur, wenn sie zu sehen sind; „weniger
+  neuer Addon-Ordner sonst womöglich nicht gefunden wird; im Spiel ungeprüft, die README sagt es
+  seit 2026-11-24 ebenso). Dazu: Einblendungen und Funken laufen nur, wenn sie zu sehen sind; „weniger
   Bewegung“ wirkt auch, wenn es erst während des Besuchs eingeschaltet wird; Tabs mit
   Pfeiltasten; Fokus bleibt beim Löschen eines Alias und bei „Alle zeigen“; der Platz der
   Einblendung lässt sich mit den Pfeiltasten verschieben; ausgelöste Einblendungen werden
@@ -1290,7 +1293,8 @@ nicht bestätigt.
 
 Wunsch des Auftraggebers (2026-11-24): eine erste Alpha auf CurseForge, mit automatischem Upload.
 Eingerichtet am 2026-11-24 nach dem Vorbild von FlareUI und Guildy; der Aufbau im Einzelnen ist eine
-Entscheidung des Assistenten. Hochgeladen ist noch nichts.
+Entscheidung des Assistenten. Erste Datei: `v0.1.0-alpha.1` als Alpha, hochgeladen am 2026-11-24
+(Workflow grün, CurseForge antwortete „Success!“), danach in der Moderation von CurseForge.
 
 - **Werkzeug:** der BigWigs-Packager (`BigWigsMods/packager@v2`) als GitHub Action in
   `.github/workflows/release.yml`. Er bildet `## Interface: 16001` auf die CurseForge-Spielversion
@@ -1365,8 +1369,9 @@ Entscheidung des Assistenten. Hochgeladen ist noch nichts.
     mit dem Fork geht). Kategorien: Der Assistent rät von „Companions“ ab (auf CurseForge
     Haustiere und Reittiere) und empfiehlt „Chat & Communication“ mit „Guild“.
   - Nicht eingerichtet: Wago, GitHub-Releases, eine Freigabe-Umgebung für die Secrets.
-- Auf GitHub ist der Workflow noch nie gelaufen; geprüft sind nur der lokale Probelauf des
-  Packagers und `release_check.sh` mit gültigen und ungültigen Tags.
+- Auf GitHub gelaufen (2026-11-24): der Test-Workflow, ein Probelauf ohne Upload und der Upload
+  von `v0.1.0-alpha.1` („Uploading Famulus-v0.1.0-alpha.1-forever.zip (1.60.1 alpha) … Success!“).
+  Ein Tag ohne Upload (Freigabe, Wago, GitHub-Releases) ist nicht eingerichtet.
 
 ## Regeln für neuen Code
 
@@ -1467,8 +1472,8 @@ Unter Windows gibt es kein `zip`; dort baut das mitgelieferte `tar` dasselbe Arc
 rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.1.0.zip Famulus
 ```
 
-- Bei einer neuen Version: Abschnitt in `CHANGELOG.md`, Versionsangaben in `README.md` und auf
-  der Website (`fact_version`), dann den Tag setzen (siehe „Veröffentlichung auf CurseForge“). Die
+- Bei einer neuen Version: Abschnitt in `CHANGELOG.md`, Versionsangabe auf der Website
+  (`fact_version`; die README nennt seit 2026-11-24 keine Version mehr), dann den Tag setzen (siehe „Veröffentlichung auf CurseForge“). Die
   `.toc` bekommt die Version vom Packager; ein von Hand gebautes Zip (oben) trägt `dev`.
 - Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
   dort fehlt. Er zählt außerdem die Features (`total == 10`); die Zahl bei einem neuen Feature
