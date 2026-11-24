@@ -108,7 +108,7 @@ window.FAMULUS_I18N = {
     fact_game: 'WoW Forever 1.60',
     fact_lang: 'Deutsch und Englisch',
     fact_libs: 'Keine Bibliotheken',
-    tagline: 'Dein Gehilfe in Azeroth',
+    tagline: 'Gemeinsam durch Azeroth',
 
     // 01 Aliases
     al_eyebrow: 'Aliase',

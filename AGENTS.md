@@ -70,8 +70,9 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   (Rollenspiel-Addon), „Lantern“ (Lantern – QoL Core). Für „Famulus“ fand eine Websuche kein
   gleichnamiges Addon; vor der Veröffentlichung direkt auf CurseForge und Wago prüfen. Umbenannt
   sind Ordner, `.toc`, gespeicherte Variablen (`FamulusDB`, `FamulusCharDB`), Frame-Namen und die
-  Befehle (`/fam`, `/famulus`) und das GitHub-Repo (`89pleasure/famulus`). Der Untertitel im Fenster ist „Dein Gehilfe in Azeroth“ / „Your assistant in Azeroth“
-  (`ui_tagline`, Vorschlag des Assistenten, vom Auftraggeber ohne Änderung übernommen). Auf dem Mac muss der
+  Befehle (`/fam`, `/famulus`) und das GitHub-Repo (`89pleasure/famulus`). Der Untertitel im Fenster war zuerst „Dein Gehilfe in Azeroth“ / „Your assistant in Azeroth“
+  (`ui_tagline`), seit 2026-11-24 „Gemeinsam durch Azeroth“ / „Together through Azeroth“ (siehe
+  „Logo“). Auf dem Mac muss der
   Symlink im Addon-Ordner neu angelegt werden (`Famulus` statt `Schnitzel`), und die Einstellungen
   aus `SavedVariables/Schnitzel.lua` gehen nicht von selbst über.
 - **Logo (2026-11-19):** eine lodernde Flamme in drei Schichten mit Funken und weichem Schein, frei ohne Kachel
@@ -84,6 +85,18 @@ Commit-Nachrichten sind Englisch, README und diese Datei Deutsch.
   `tools/make_media.py`. Das Logo hat feste Farben und folgt der Farbwelt nicht. Auf dem
   Windows-Rechner ist kein eigenes Python installiert; `make_media.py` braucht nur die
   Standardbibliothek und lief dort mit einem vorhandenen Python 3.12. Im Spiel noch nicht gesehen.
+  **Bestätigt nach der Wende zum gemeinsamen Spielen (2026-11-24):** Der Auftraggeber war unsicher,
+  ob die Flamme noch passt. Am Mockup „Famulus Logo – Varianten“ sah er zwei Weiterentwicklungen
+  (drei Flammenzungen aus einem gemeinsamen Feuer; die Flamme auf gekreuzten Scheiten als
+  Lagerfeuer) und behielt die Flamme. Gedeutet wird sie jetzt als Lagerfeuer, an dem sich die
+  Gefährten treffen (Vorschlag des Assistenten); das trägt der Text, nicht das Bild.
+  **Neuer Untertitel (2026-11-24, Wahl des Auftraggebers):** „Gemeinsam durch Azeroth“ / „Together
+  through Azeroth“ statt „Dein Gehilfe in Azeroth“ (klang nach den entfernten QoL-Funktionen), im
+  Fensterkopf (`ui_tagline`) und auf der Website (`tagline`). Er muss in eine Zeile passen: Im Kopf
+  hat er bei 11 px nur etwa 180 px bis zum Seitennamen (`SIDEBAR + PAD`). Ebenfalls vorgeschlagen
+  und nicht gewählt: „Eure Reise, gemeinsam erzählt“ sowie „Das Lagerfeuer für deine Gefährten“ und
+  „Für alle, mit denen du unterwegs bist“ (beide zu lang für diesen Platz). Im Spiel noch nicht
+  gesehen.
 - **Weggefährten (2026-11-23, nur gegen den Mock geprüft, noch nicht im Spiel):** eigener Bereich,
   siehe „Weggefährten“ unten.
 - **Neuer Rahmen und Weggefährten-Übersicht (2026-11-24, nur gegen den Mock geprüft, noch nicht im
