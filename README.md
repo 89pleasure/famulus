@@ -122,6 +122,18 @@ Größere Funktionen bekommen einen eigenen Eintrag in der Seitenleiste: Kategor
 `Locales/xxXX.lua` nach dem Muster von `deDE.lua` anlegen, in der `.toc` eintragen und den
 Anzeigenamen in `LANGUAGE_NAMES` (`UI/Options.lua`) ergänzen.
 
+## Website
+
+Unter `website/` liegt die Seite zum Addon: statisch, ohne Build-Schritt und ohne Bibliotheken,
+Deutsch und Englisch. Die Landschaft im Hintergrund zeichnet `scene.js` selbst; die Demos bauen
+Fenster, Bilderbuch und Einblendung nach. Ansehen:
+
+```bash
+python3 -m http.server 4173 --directory website
+```
+
+Danach `http://localhost:4173` öffnen.
+
 ## Tests
 
 ```bash

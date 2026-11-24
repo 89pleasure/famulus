@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Famulus – an addon for playing together in WoW Forever</title>
+  <meta name="description" content="Famulus is an addon for World of Warcraft: Forever. It gives your friends the names you know them by and records your shared journey as a picture book.">
+  <meta name="theme-color" content="#0a0f10">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="preload" href="assets/fonts/Inter-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="assets/fonts/Inter-SemiBold.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Before the first paint: mark that scripts run (so content hidden for its
+    // entrance still shows without them) and restore the chosen colour scheme.
+    (function () {
+      var root = document.documentElement;
+      root.classList.add('js');
+      try {
+        var scheme = localStorage.getItem('famulus-scheme');
+        if (scheme && scheme !== 'lemon') root.dataset.scheme = scheme;
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip" href="#aliases" data-i18n="skip">Skip to content</a>
+
+  <!-- Icons: the addon's own drawings (tools/make_media.py), as outlines. -->
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-tag" viewBox="0 0 32 32"><path d="M5.5 5.5h10L27 17 17 27 5.5 15.5z"/><circle cx="11.2" cy="11.2" r="1.6"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 32 32"><path d="M9 5.5V27M9 7l15 4.5-15 5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 32 32"><circle cx="16" cy="16" r="6.85" stroke-width="5.3"/><path stroke-width="5" stroke-linecap="butt" d="M16 2.8v5M16 24.2v5M2.8 16h5M24.2 16h5M6.67 6.67l3.54 3.54M21.8 21.8l3.54 3.54M6.67 25.33l3.54-3.54M21.8 10.2l3.54-3.54"/></symbol>
+    <symbol id="i-info" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12"/><path d="M16 15v7.5M16 10.2v.2"/></symbol>
+    <symbol id="i-search" viewBox="0 0 32 32"><circle cx="14" cy="14" r="8"/><path d="M19.5 19.5 26 26"/></symbol>
+    <symbol id="i-close" viewBox="0 0 32 32"><path d="M10 10l12 12M22 10 10 22"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 32 32"><path d="M9 12.5l7 7 7-7"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 32 32"><path d="M16 6v19M8.5 17.5 16 25l7.5-7.5"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 32 32"><path fill="currentColor" stroke="none" d="M13 6.5Q13 18 24.5 18 13 18 13 29.5 13 18 1.5 18 13 18 13 6.5ZM24.5 1.5Q24.5 7.5 30.5 7.5 24.5 7.5 24.5 13.5 24.5 7.5 18.5 7.5 24.5 7.5 24.5 1.5Z"/></symbol>
+    <symbol id="i-skull" viewBox="0 0 32 32"><path d="M8.2 18.5A9 9 0 1 1 23.8 18.5L21.5 21v4h-11v-4zM14 25v-2M18 25v-2"/><circle cx="12.5" cy="14.5" r="2"/><circle cx="19.5" cy="14.5" r="2"/></symbol>
+    <symbol id="i-swords" viewBox="0 0 32 32"><path d="M7 7l14 14M25 7 11 21M5 21l6 6M27 21l-6 6M9 25l-3 3M23 25l3 3"/></symbol>
+    <symbol id="i-peaks" viewBox="0 0 32 32"><path d="M4 24l7-11 5 7 3-4 9 8z"/><circle cx="22" cy="8.5" r="2.5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 32 32"><path d="M16 6l2.59 6.94 7.4.32-5.81 4.6 1.99 7.13L16 20.9l-6.17 4.09 1.99-7.13-5.81-4.6 7.4-.32z"/></symbol>
+    <symbol id="i-hammer" viewBox="0 0 32 32"><path d="M7 25l10.7-10.7M27.2 14.7l-4.5 4.5-9.9-9.9 4.5-4.5z"/></symbol>
+    <symbol id="i-chest" viewBox="0 0 32 32"><path d="M6 11.5h20V25H6zM6 11.5l3-5h14l3 5M6 17h7.5M18.5 17H26"/><circle cx="16" cy="17" r="2.2"/></symbol>
+    <symbol id="i-horseshoe" viewBox="0 0 32 32"><path d="M12 23.1A9.5 9.5 0 1 1 20 23.1"/><circle cx="8.6" cy="12" r="1.1"/><circle cx="23.4" cy="12" r="1.1"/></symbol>
+  </svg>
+
+  <nav class="nav" id="nav" aria-label="Main">
+    <a class="nav__brand" href="#top" aria-label="Famulus">
+      <img src="assets/logo.svg" width="30" height="30" alt="">
+      <span>Famulus</span>
+    </a>
+    <div class="nav__links">
+      <a href="#aliases" data-i18n="nav_aliases">Aliases</a>
+      <a href="#chronicle" data-i18n="nav_chronicle">Chronicle</a>
+      <a href="#feed" data-i18n="nav_feed">Live feed</a>
+      <a href="#craft" data-i18n="nav_craft">Under the hood</a>
+    </div>
+    <div class="nav__end">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="de" lang="de" aria-label="Deutsch">DE</button>
+        <button type="button" data-lang="en" lang="en" aria-label="English">EN</button>
+      </div>
+      <a class="btn btn--small btn--primary" href="#install" data-i18n="nav_install">Install</a>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="scene" id="scene" aria-hidden="true">
+      <div class="scene__glow layer" data-depth="0.1"></div>
+      <svg class="scene__stars layer" data-depth="0.03" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMin slice"></svg>
+      <div class="scene__moons layer" data-depth="0.06"><i class="moon"></i><i class="moon moon--small"></i></div>
+      <!-- scene.js adds the ridges here -->
+      <div class="scene__embers layer" data-depth="1"></div>
+    </div>
+    <div class="hero__shade" aria-hidden="true"></div>
+
+    <div class="hero__inner wrap">
+      <div class="hero__copy">
+        <p class="eyebrow reveal" style="--i:0"><span class="eyebrow__mark"></span><span data-i18n="hero_eyebrow">An addon for World of Warcraft: Forever</span></p>
+        <h1 class="reveal" style="--i:1" data-i18n="hero_title">For everyone you <em>play with.</em></h1>
+        <p class="lead reveal" style="--i:2" data-i18n="hero_lead">Famulus gives your friends the names you know them by and records your shared journey as a picture book.</p>
+        <div class="hero__cta reveal" style="--i:3">
+          <a class="btn btn--primary" href="#aliases"><span data-i18n="hero_cta">See what it does</span><svg class="icon" width="18" height="18"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--ghost" href="#install" data-i18n="hero_cta2">Installation</a>
+        </div>
+        <ul class="hero__facts reveal" style="--i:4">
+          <li data-i18n="fact_version">Version 0.1.0</li>
+          <li data-i18n="fact_game">WoW Forever 1.60</li>
+          <li data-i18n="fact_lang">English and German</li>
+          <li data-i18n="fact_libs">No libraries</li>
+        </ul>
+      </div>
+      <div class="hero__feed layer" data-depth="1.25" aria-hidden="true">
+        <div class="toasts" id="hero-toasts"></div>
+      </div>
+    </div>
+
+    <a class="hero__scroll" href="#aliases" aria-label="Scroll down" data-i18n-attr="aria-label:scroll_down">
+      <svg class="icon" width="20" height="20"><use href="#i-chevron"/></svg>
+    </a>
+  </header>
+
+  <main>
+    <!-- 01 Aliases ---------------------------------------------------------->
+    <section class="section" id="aliases">
+      <div class="glow glow--right" data-parallax="-0.18" aria-hidden="true"></div>
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">01</span><span data-i18n="al_eyebrow">Aliases</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="al_title">Call them by the names you know.</h2>
+          <p class="lead reveal" style="--i:2" data-i18n="al_lead">Behind every character name is someone you call something else. Give players an alias and Famulus shows it in chat and in tooltips. Only you see it; whispers, invites and links still reach the character.</p>
+        </header>
+
+        <div class="duo reveal">
+          <!-- The addon's window, rebuilt: it works. -->
+          <div class="fwin" id="alias-demo">
+            <aside class="fwin__side" aria-hidden="true">
+              <div class="fwin__brand">
+                <span class="fwin__logo"><img src="assets/logo.svg" width="34" height="34" alt=""></span>
+                <div><strong>Famulus</strong><span data-i18n="tagline">Your assistant in Azeroth</span></div>
+              </div>
+              <div class="fwin__search"><svg class="icon" width="14" height="14"><use href="#i-search"/></svg><span data-i18n="w_search">Search settings</span></div>
+              <div class="fwin__label" data-i18n="w_features">Features</div>
+              <div class="fwin__nav is-active"><svg class="icon" width="15" height="15"><use href="#i-tag"/></svg><span data-i18n="w_aliases">Aliases</span><b id="alias-count">5/5</b></div>
+              <div class="fwin__nav"><svg class="icon" width="15" height="15"><use href="#i-flag"/></svg><span data-i18n="w_chronicle">Chronicle</span><b>1/4</b></div>
+              <div class="fwin__spacer"></div>
+              <div class="fwin__nav"><svg class="icon" width="15" height="15"><use href="#i-gear"/></svg><span data-i18n="w_settings">Settings</span></div>
+              <div class="fwin__nav"><svg class="icon" width="15" height="15"><use href="#i-info"/></svg><span data-i18n="w_about">About</span></div>
+              <div class="fwin__count"><i></i><span id="active-count">6 of 9 active</span></div>
+            </aside>
+
+            <div class="fwin__main">
+              <header class="fwin__head">
+                <div>
+                  <h3 data-i18n="w_aliases">Aliases</h3>
+                  <p data-i18n="w_aliases_d">Your own names for other players. Only you see them.</p>
+                </div>
+                <span class="fwin__close" aria-hidden="true"><svg class="icon" width="14" height="14"><use href="#i-close"/></svg></span>
+              </header>
+
+              <div class="fwin__tabs" role="tablist">
+                <button type="button" role="tab" aria-selected="true" data-tab="names" data-i18n="w_tab_names">Names</button>
+                <button type="button" role="tab" aria-selected="false" data-tab="display" data-i18n="w_tab_display">Display</button>
+              </div>
+
+              <div class="fwin__bar">
+                <p id="alias-tabdesc"></p>
+                <button type="button" class="switch switch--labelled" role="switch" aria-checked="true" data-switch="master" aria-label="Aliases" data-i18n-attr="aria-label:w_aliases">
+                  <span class="switch__label"></span><span class="switch__track"><span class="switch__knob"></span></span>
+                </button>
+              </div>
+
+              <div class="fwin__pane" data-pane="names">
+                <section class="fcard">
+                  <h4 data-i18n="w_new">New alias</h4>
+                  <form class="aliasform" id="alias-form" autocomplete="off">
+                    <input type="text" id="alias-name" maxlength="40" placeholder="Character or BattleTag#1234" aria-label="Character or BattleTag#1234" data-i18n-attr="placeholder:w_name_ph;aria-label:w_name_ph">
+                    <input type="text" id="alias-alias" maxlength="24" placeholder="Alias" aria-label="Alias">
+                    <button type="submit" class="btn btn--small btn--primary" data-i18n="w_save">Save</button>
+                  </form>
+                </section>
+                <section class="fcard">
+                  <h4 data-i18n="w_list">Your aliases</h4>
+                  <ul class="aliaslist" id="alias-list"></ul>
+                </section>
+              </div>
+
+              <div class="fwin__pane" data-pane="display" hidden>
+                <section class="fcard fcard--feature" data-feature="chat">
+                  <div class="fcard__row">
+                    <div><h4 data-i18n="f_chat">Aliases in chat</h4><p data-i18n="f_chat_d">Shows the alias instead of the character name in front of chat messages. Whispers and invites still go to the character.</p></div>
+                    <button type="button" class="switch" role="switch" aria-checked="true" data-switch="chat" aria-label="Aliases in chat" data-i18n-attr="aria-label:f_chat"><span class="switch__track"><span class="switch__knob"></span></span></button>
+                  </div>
+                  <div class="fcard__child">
+                    <i></i><label for="alias-style" data-i18n="o_style">Display</label>
+                    <select id="alias-style">
+                      <option value="alias" data-i18n="o_style_alias">Alias</option>
+                      <option value="both" data-i18n="o_style_both">Alias (name)</option>
+                    </select>
+                  </div>
+                </section>
+                <section class="fcard fcard--feature" data-feature="tooltip">
+                  <div class="fcard__row">
+                    <div><h4 data-i18n="f_tooltip">Alias in the tooltip</h4><p data-i18n="f_tooltip_d">Adds a line with the alias to the tooltip of a player.</p></div>
+                    <button type="button" class="switch" role="switch" aria-checked="true" data-switch="tooltip" aria-label="Alias in the tooltip" data-i18n-attr="aria-label:f_tooltip"><span class="switch__track"><span class="switch__knob"></span></span></button>
+                  </div>
+                </section>
+                <section class="fcard fcard--feature" data-feature="menu">
+                  <div class="fcard__row">
+                    <div><h4 data-i18n="f_menu">Alias in the context menu</h4><p data-i18n="f_menu_d">Right-clicking a player or Battle.net friend offers to set, change or remove their alias.</p></div>
+                    <button type="button" class="switch" role="switch" aria-checked="true" data-switch="menu" aria-label="Alias in the context menu" data-i18n-attr="aria-label:f_menu"><span class="switch__track"><span class="switch__knob"></span></span></button>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+
+          <!-- What the game shows -->
+          <div class="view" id="alias-view">
+            <div class="view__scene" data-parallax="0.06" aria-hidden="true"><div class="scene scene--mini" id="scene-alias"><i class="moon"></i></div></div>
+            <span class="view__label" data-i18n="view_label">In the game</span>
+
+            <div class="tip" id="tip"></div>
+
+            <div class="chat">
+              <div class="chat__tabs" aria-hidden="true"><span class="is-active" data-i18n="chat_tab">General</span><span data-i18n="chat_tab2">Combat log</span></div>
+              <div class="chat__lines" id="chat"></div>
+            </div>
+          </div>
+        </div>
+        <p class="hint reveal" data-i18n="al_hint">Try it: give Yorick Talwind an alias, change one, or switch the display on the second tab.</p>
+
+        <ul class="points">
+          <li class="reveal" style="--i:0"><h3 data-i18n="al_p1_t">One alias for the whole account</h3><p data-i18n="al_p1_d">Enter a friend's BattleTag and the alias covers all of their characters. Famulus remembers each one they come online with.</p></li>
+          <li class="reveal" style="--i:1"><h3 data-i18n="al_p2_t">A right-click is enough</h3><p data-i18n="al_p2_d">“Set alias” is in the context menu of players and Battle.net friends. No list to open, no name to type.</p></li>
+          <li class="reveal" style="--i:2"><h3 data-i18n="al_p3_t">Nothing gets overwritten</h3><p data-i18n="al_p3_d">The alias only changes what you read. Links keep the real name, and Blizzard's interface stays untouched.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 02 Chronicle -------------------------------------------------------->
+    <section class="section section--tinted" id="chronicle">
+      <div class="glow glow--left" data-parallax="-0.14" aria-hidden="true"></div>
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">02</span><span data-i18n="ch_eyebrow">Chronicle</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="ch_title">Your journey, told like a picture book.</h2>
+          <p class="lead reveal" style="--i:2" data-i18n="ch_lead">Level-ups, deaths, defeated bosses, new zones, professions and special finds: the chronicle records what you and your companions go through, one chapter per day.</p>
+        </header>
+
+        <div class="booktabs reveal" role="tablist" id="book-tabs">
+          <button type="button" role="tab" aria-selected="true" data-book="all" data-i18n="ch_tab_all">Everyone</button>
+          <button type="button" role="tab" aria-selected="false" data-book="mine" data-i18n="ch_tab_mine">My journey</button>
+          <button type="button" role="tab" aria-selected="false" data-book="theirs" data-i18n="ch_tab_theirs">Companions</button>
+        </div>
+        <div class="book" id="book"></div>
+
+        <ul class="points">
+          <li class="reveal" style="--i:0"><h3 data-i18n="ch_p1_t">Famulus talks to Famulus</h3><p data-i18n="ch_p1_d">Friends who use the addon share their milestones with you, wherever in the world they are. Only with people on your friends list or in your guild.</p></li>
+          <li class="reveal" style="--i:1"><h3 data-i18n="ch_p2_t">Offline, but not left out</h3><p data-i18n="ch_p2_d">If you were not online, a mutual companion passes on what you missed.</p></li>
+          <li class="reveal" style="--i:2"><h3 data-i18n="ch_p3_t">You decide what is written</h3><p data-i18n="ch_p3_d">Recording and sharing are off until you switch them on. Companions appear under the alias you gave them.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 03 Live feed -------------------------------------------------------->
+    <section class="section" id="feed">
+      <div class="glow glow--right" data-parallax="-0.16" aria-hidden="true"></div>
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">03</span><span data-i18n="fd_eyebrow">Live feed</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="fd_title">Be there when it happens.</h2>
+          <p class="lead reveal" style="--i:2" data-i18n="fd_lead">When a companion defeats a boss or learns to ride, a card appears on your screen for a few seconds. Where it sits, how long it stays and which events it shows is up to you.</p>
+        </header>
+
+        <div class="view view--wide reveal" id="feed-view">
+          <div class="view__scene" data-parallax="0.08" aria-hidden="true"><div class="scene scene--mini scene--dusk" id="scene-feed"></div></div>
+          <span class="view__label" data-i18n="view_label">In the game</span>
+          <!-- A screen without anyone's interface: plain shapes where bars and map would be. -->
+          <div class="hud" aria-hidden="true">
+            <i class="hud__unit"></i><i class="hud__map"></i>
+            <div class="hud__bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="feedspot" id="feed-spot">
+            <div class="feedspot__mover" id="feed-mover" hidden><span data-i18n="fd_mover">Events appear here. Drag to move.</span></div>
+            <div class="toasts" id="feed-toasts" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="chips reveal" id="feed-chips">
+          <span class="chips__label" data-i18n="fd_try">Trigger an event:</span>
+          <button type="button" class="chip" data-feed="level" data-i18n="fd_c_level">Level</button>
+          <button type="button" class="chip" data-feed="boss" data-i18n="fd_c_boss">Boss</button>
+          <button type="button" class="chip" data-feed="death" data-i18n="fd_c_death">Death</button>
+          <button type="button" class="chip" data-feed="ability" data-i18n="fd_c_ability">Riding</button>
+          <button type="button" class="chip" data-feed="skill" data-i18n="fd_c_skill">Profession</button>
+          <button type="button" class="chip" data-feed="item" data-i18n="fd_c_item">Find</button>
+          <button type="button" class="chip chip--ghost" id="feed-move" aria-pressed="false" data-i18n="fd_move">Move the spot</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 Under the hood --------------------------------------------------->
+    <section class="section section--tinted" id="craft">
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">04</span><span data-i18n="cr_eyebrow">Under the hood</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="cr_title">Quiet until you need it.</h2>
+          <p class="lead reveal" style="--i:2" data-i18n="cr_lead">Famulus is built to stay out of the way. What is switched off does not even listen to the game, so it costs nothing.</p>
+        </header>
+
+        <ul class="stats">
+          <li class="reveal" style="--i:0"><b>0</b><p data-i18n="cr_s1">game events Famulus listens to after login with default settings</p></li>
+          <li class="reveal" style="--i:1"><b>0</b><p data-i18n="cr_s2">lines that run per frame while idle: no OnUpdate, no timer</p></li>
+          <li class="reveal" style="--i:2"><b>0</b><p data-i18n="cr_s3">libraries and dependencies; the window is only built when you open it</p></li>
+          <li class="reveal" style="--i:3"><b>2</b><p data-i18n="cr_s4">languages built in, English and German, switchable without a reload</p></li>
+        </ul>
+
+        <div class="craft">
+          <ul class="tenets">
+            <li class="reveal" style="--i:0"><h3 data-i18n="cr_t1_t">Everything applies at once</h3><p data-i18n="cr_t1_d">Every option, the language and the character profile take effect immediately. No /reload.</p></li>
+            <li class="reveal" style="--i:1"><h3 data-i18n="cr_t2_t">Nothing is replaced</h3><p data-i18n="cr_t2_d">Famulus only hooks in. It never overwrites functions of the game or of other addons, which keeps it compatible.</p></li>
+            <li class="reveal" style="--i:2"><h3 data-i18n="cr_t3_t">Errors stay small</h3><p data-i18n="cr_t3_d">An error switches off only the feature it happened in. If the game lacks something, the feature shows as unavailable.</p></li>
+            <li class="reveal" style="--i:3"><h3 data-i18n="cr_t4_t">Your data stays with you</h3><p data-i18n="cr_t4_d">Nobody but you sees your aliases. Only what you switch on is shared, and only with friends and guild.</p></li>
+          </ul>
+
+          <div class="schemes reveal">
+            <h3 data-i18n="cr_schemes_t">Five colour schemes</h3>
+            <p data-i18n="cr_schemes_d">A colour scheme tints the whole window: surfaces, switches and highlights. Pick one, and this page follows.</p>
+            <div class="schemes__row" id="schemes" role="group" aria-label="Colour scheme" data-i18n-attr="aria-label:cr_schemes_label">
+              <button type="button" data-scheme="lemon" style="--c1:#f2d640;--c2:#fff29a;--g:hsl(190 19% 12%)"><i></i><span data-i18n="scheme_lemon">Lemon</span></button>
+              <button type="button" data-scheme="mint" style="--c1:#35d3bf;--c2:#92f0a8;--g:hsl(226 30% 12%)"><i></i><span data-i18n="scheme_mint">Mint</span></button>
+              <button type="button" data-scheme="rose" style="--c1:#f0567c;--c2:#ff9d8c;--g:hsl(330 13% 12%)"><i></i><span data-i18n="scheme_rose">Rose</span></button>
+              <button type="button" data-scheme="lilac" style="--c1:#8f7cff;--c2:#e08cff;--g:hsl(240 19% 12%)"><i></i><span data-i18n="scheme_lilac">Lilac</span></button>
+              <button type="button" data-scheme="amber" style="--c1:#f2a93b;--c2:#ffd670;--g:hsl(257 13% 12%)"><i></i><span data-i18n="scheme_amber">Amber</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 Install ---------------------------------------------------------->
+    <section class="section section--last" id="install">
+      <div class="scene scene--foot" id="scene-foot" aria-hidden="true">
+        <div class="scene__glow"></div>
+        <div class="scene__embers"></div>
+      </div>
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">05</span><span data-i18n="in_eyebrow">Installation</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="in_title">Ready in a minute.</h2>
+        </header>
+
+        <ol class="steps">
+          <li class="reveal" style="--i:0"><span class="steps__num">1</span><h3 data-i18n="in_s1_t">Copy the folder</h3><p data-i18n="in_s1_d">Put the folder <code>Famulus</code> into <code>World of Warcraft/_forever_/Interface/AddOns/</code>.</p></li>
+          <li class="reveal" style="--i:1"><span class="steps__num">2</span><h3 data-i18n="in_s2_t">Start the game</h3><p data-i18n="in_s2_d">If it is already running, type <code>/reload</code> into the chat.</p></li>
+          <li class="reveal" style="--i:2"><span class="steps__num">3</span><h3 data-i18n="in_s3_t">Open the window</h3><p data-i18n="in_s3_d"><code>/fam</code> opens Famulus. The flame at the minimap does the same.</p></li>
+        </ol>
+
+        <div class="release reveal">
+          <img src="assets/logo.svg" width="56" height="56" alt="">
+          <div>
+            <h3 data-i18n="in_rel_t">Famulus is still being built.</h3>
+            <p data-i18n="in_rel_d">Version 0.1.0 is an early state. The download follows with the first public release.</p>
+          </div>
+          <span class="btn btn--primary is-disabled" aria-disabled="true" data-i18n="in_rel_btn">Download coming soon</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <div class="footer__brand">
+        <img src="assets/logo.svg" width="26" height="26" alt="">
+        <strong>Famulus</strong>
+        <span data-i18n="tagline">Your assistant in Azeroth</span>
+      </div>
+      <p class="footer__legal" data-i18n="ft_legal">Famulus is a fan project and is not affiliated with Blizzard Entertainment. World of Warcraft is a trademark of Blizzard Entertainment, Inc. Typeface: Inter, SIL Open Font License 1.1.</p>
+    </div>
+  </footer>
+
+  <script src="i18n.js"></script>
+  <script src="scene.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

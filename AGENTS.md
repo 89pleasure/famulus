@@ -723,6 +723,55 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   `PLAYER_ENTERING_WORLD` es auf), ob `IsInInstance` in Forever `pvp` meldet und ob `BOSS_KILL` in
   Forever-Dungeons feuert. `/fam test` prüft die benutzten Funktionen (Gruppe `api`).
 
+## Website
+
+Wunsch des Auftraggebers (2026-11-23): eine Website für das Addon, modern, minimalistisch, aber
+stylisch, dunkel mit heller Schrift, die Funktionen bestmöglich gezeigt, mit modernen Effekten wie
+Parallax; als Hintergrund Artwork von WoW oder generiertes. Der erste Stand (2026-11-24) liegt in
+`website/`. Aufbau, Texte und Optik sind Entscheidungen des Assistenten und vom Auftraggeber noch
+nicht bestätigt.
+
+- **Technik:** statische Seite ohne Build-Schritt und ohne Bibliotheken: `index.html`,
+  `styles.css`, `i18n.js` (Texte), `scene.js` (Landschaft, Parallax), `main.js` (Sprache,
+  Farbwelt, Demos), `assets/` (Logo als SVG aus den Umrissen von `tools/make_media.py`; Inter aus
+  `Famulus/Media/Fonts` kopiert, samt Lizenz). Die Seite fragt keinen fremden Server an (keine
+  Webfonts, kein Tracking). Vorschau: `python3 -m http.server 4173 --directory website`
+  (als `website` in `.claude/launch.json`).
+- **Optik folgt dem Addon:** die Helligkeitsleiter und die fünf Farbwelten aus `UI/Theme.lua` als
+  CSS-Variablen (`--h`, `--s`, `--accent`, `--accent2`), Akzent und Glühen nur für „aktiv / hier“,
+  Körnung, Funken. Die Farbwelt lässt sich auf der Seite umschalten und färbt alles mit, auch die
+  Landschaft. Die Seite merkt sich Farbwelt und Sprache im Browser (`localStorage`).
+- **Das Artwork ist generiert, nicht von Blizzard** (Entscheidung des Assistenten): `scene.js`
+  zeichnet eine Nachtlandschaft aus Bergketten, Kiefern, zwei Monden und Glut als SVG-Ebenen, aus
+  festem Zufall, also bei jedem Besuch gleich. Gründe: Blizzards Artwork ist urheberrechtlich
+  geschützt, und eine eigene Landschaft folgt der Farbwelt. Parallax: Ebenen mit `data-depth`
+  folgen Scrollen und Mauszeiger (gezeichnet wird nur bei Änderung und nur, solange der Kopf
+  sichtbar ist), Elemente mit `data-parallax` driften beim Scrollen. Die Funken sind
+  CSS-Animationen. `prefers-reduced-motion` schaltet alle Bewegung ab.
+- **Aufbau:** Kopf (Landschaft, rechts laufen Einblendungen mit) → 01 Aliase (das Fenster
+  nachgebaut und bedienbar, daneben Chat und Tooltip „im Spiel“) → 02 Chronik (das Bilderbuch mit
+  den Reitern Alle, Meine Reise, Gefährten) → 03 Live-Einblendung (auslösbar, Platz verschiebbar)
+  → 04 Unter der Haube (Zahlen, Grundsätze, Farbwelten) → 05 Installation → Fuß mit Hinweis auf
+  Blizzards Marke. Die Demos zeigen erfundene Personen und die Beispiele aus
+  `/fam chronicle demo`, mit den eigenen Zeichnungen statt Spielsymbolen. Ein Alias aus der
+  ersten Demo erscheint auch im Bilderbuch und in den Einblendungen.
+- **Sprachen:** Englisch steht im HTML (`data-i18n="schlüssel"`), Deutsch in `i18n.js`; was
+  Skripte zusammensetzen, steht dort in beiden Sprachen. Die Sprache folgt dem Browser, ist
+  umschaltbar und lässt sich mit `?lang=de` erzwingen. Fehlt einer Sprache ein Schlüssel, warnt
+  die Konsole.
+- **Bewusst noch nicht enthalten:** ein Download (die Veröffentlichung ist offen; der Knopf sagt
+  „Download folgt“), Guildy (erst wenn der PR dort angenommen ist), die Kategorie `fellows` (noch
+  in Arbeit), Screenshots aus dem Spiel, Impressum und Datenschutzerklärung (vor dem
+  Veröffentlichen nötig), Hosting und Domain (offen), ein Vorschaubild für geteilte Links,
+  WOFF2-Schriften (geladen werden die TTF aus dem Addon, je ~100 KB).
+- **Geprüft** im eingebauten Browser der App (Chromium): bei 1440 und 375 px Breite alle
+  Abschnitte, bei 1024 und 680 px stichprobenartig; Deutsch und Englisch; die Farbwelten Zitrone,
+  Minze, Rose und Flieder; die drei Demos bedient; keine Meldungen in der Konsole. Nicht geprüft:
+  Safari, Firefox, echte Mobilgeräte, die Einstellung für weniger Bewegung.
+- **Bei Änderungen am Addon mitziehen:** Versionsnummer (`fact_version`, `in_rel_d`), die Zähler
+  im nachgebauten Fenster (`renderWindow` in `main.js`: 5 Alias-Features, 9 insgesamt), neue
+  Hauptfunktionen als eigener Abschnitt.
+
 ## Regeln für neuen Code
 
 Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
