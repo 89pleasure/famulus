@@ -34,7 +34,7 @@ L.g_accent_desc = "Tints the whole window: surfaces, switches and highlights."
 L.g_embers = "Sparks in the background"
 L.g_embers_desc = "Small points of light rise in the window. Switch off if motion bothers you."
 L.g_chronicleNames = "Character name behind the alias"
-L.g_chronicleNames_desc = "The chronicle shows the character name in brackets behind an alias you gave someone, such as \"Papa (Borin Eisenbart)\". Switched off, it shows the alias alone."
+L.g_chronicleNames_desc = "The chronicle shows the character name in brackets behind an alias you gave someone, such as \"Dad (Borin Ironbeard)\". Switched off, it shows the alias alone."
 L.g_charProfile = "Settings for this character only"
 L.g_charProfile_desc = "Keep a separate set of settings for this character. It starts as a copy of your account-wide settings."
 

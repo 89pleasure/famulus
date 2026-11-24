@@ -8,7 +8,7 @@ local locales = {}
 ns.locales = locales
 
 local BASE = "enUS"
-local active
+local active, activeCode
 
 function ns:NewLocale(code)
     local strings = locales[code]
@@ -44,12 +44,21 @@ function ns:SetLocale(code)
     if code == "enGB" then
         code = "enUS"
     end
-    local strings = locales[code] or locales[BASE]
+    if not locales[code] then
+        code = BASE
+    end
+    local strings = locales[code]
     if strings == active then
         return
     end
-    active = strings
+    active, activeCode = strings, code
     ns:Fire("LOCALE_CHANGED")
+end
+
+-- The locale code the addon speaks right now ("enUS", "deDE"), which can
+-- differ from the client's: the language option overrides GetLocale().
+function ns:GetLocaleCode()
+    return activeCode or BASE
 end
 
 -- Locale codes that ship with the addon, reference locale first.
