@@ -408,20 +408,47 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Unter der Zeile stehen alle Uhrzeiten als kleine Plaketten (höchstens zehn, die letzte zählt
     den Rest). Eigene Stufenaufstiege bleiben einzeln, sie sind die Meilensteine. Die Zahl der
     Ereignisse im Kapitelkopf zählt weiter jeden Eintrag.
-  - **Kapitelkopf in einer Zeile:** Tag links, Gebiet in der Buchschrift (22 px) in der Mitte,
-    Stufen und Zahl der Ereignisse rechts, außen je eine Linie, die zum Rand hin ausläuft. Etwa
-    36 px hoch statt über 100. Die Zierde mit dem Funken ist entfallen.
+  - **Kapitelkopf in einer Zeile:** links die Zeit (bis 2026-11-24 der Tag), Mitte der Titel in
+    der Buchschrift (22 px; bis 2026-11-24 das Gebiet), Stufen und Zahl der Ereignisse rechts,
+    außen je eine Linie, die zum Rand hin ausläuft. Etwa 36 px hoch statt über 100, mit der Route
+    darunter 30 px mehr. Die Zierde mit dem Funken ist entfallen.
+- **Ein Kapitel ist ein Spielabend (Entscheidung des Auftraggebers, 2026-11-24, an der Leinwand
+  „Famulus Chronik – Kapitel“, claude.ai-Artifact `Sp9tF6ba6wfgKroNqejVoT`: Variante C):** Anlass:
+  Ein Kapitel je Tag hieß nach dem Gebiet, das die meisten Einträge nannten („Heute · Feralas“),
+  dabei zieht man beim Spielen durch mehrere Gebiete. Gezählt wurden auch die Gebiete der
+  Freunde, und Mitternacht teilte einen Spielabend. Verworfen: A (Tag mit Route), B (Wegmarken
+  auf der Linie; „der Ort ist weniger wichtig als die Ereignisse selbst“), D (der wichtigste
+  Moment als Titel), E (Stufen als Kapitel). Nur gegen den Mock geprüft, im Spiel nicht gesehen.
+  - Ein neues Kapitel beginnt nach einer Pause von zwei Stunden zwischen zwei gezeigten Einträgen
+    (`SESSION_GAP` in `UI/Options.lua`). Gezählt wird, was der Reiter zeigt, im gefilterten Buch
+    also nur die Einträge der Person. Eine Abfrage von Login und Logout gibt es nicht; eine
+    lange Pause teilt den Abend.
+  - **Titel** nach der Tageszeit, zu der die Sitzung begann (`SessionTitle`): Morgen ab 5, Mittag
+    ab 11, Nachmittag ab 14, Abend ab 18, Nacht ab 23 Uhr. Bis 5 Uhr früh zählt die Nacht zum Tag
+    davor (`NIGHT_SHIFT`), damit ein Abend bis 2 Uhr „Gestern Nacht“ bleibt und nicht „Heute
+    Nacht“ heißt. „Heute Abend“, „Gestern Nachmittag“; ältere heißen nach dem Wochentag
+    („Sonntagnacht“, enUS „Sunday night“) und tragen links das Datum statt der Zeit. Texte
+    `c_when_<today|yesterday|day>_<teil>`, `c_weekday_0` bis `_6` (eigene Wochentage, weil
+    unklar ist, ob Forever `CALENDAR_WEEKDAY_NAMES` kennt).
+  - Links von–bis (`c_ch_span`), bei nur einer Uhrzeit diese allein.
+  - **Route** unter dem Kopf: die Gebiete der eigenen Einträge in zeitlicher Reihenfolge, als
+    Plaketten mit Pfeilen (`chevron.tga`, gedreht); ein Gebiet steht wieder, wenn man
+    zurückkehrt. Gebiete der Freunde zählen nicht. Ist die Zeile breiter als das Buch, weichen die
+    ältesten Gebiete einem „…“. Die Route kennt nur Gebiete, in denen etwas festgehalten wurde
+    (wer nur durchreitet, taucht nicht auf); jeden Gebietswechsel mitzuschreiben wäre möglich,
+    ist aber nicht beauftragt.
+  - Offen: „Eure Geschichte“ bei den Weggefährten hat weiter ein Kapitel je Tag, benannt nach
+    dem Gebiet des Tages, und die Website zeigt noch den alten Kapitelkopf.
 - **Bilderbuch (2026-11-19):** Der Auftraggeber fand den HTML-Entwurf „schon ganz cool“ und ließ
   ihn so umsetzen. Die drei Erzähl-Reiter zeigen keine Zeilen mehr, sondern ein Buch
   (`UI.Book`, `UI/Book.lua`; ein Reiter liefert es über `tab.book`, `Render` legt es unter die
-  Karten): je Tag ein Kapitel mit Überschrift, darunter eine Linie in der Mitte, an der die
-  Ereignisse abwechselnd links und rechts als Karten hängen, mit Bild, Punkt auf der Linie und
+  Karten): je Tag (seit 2026-11-24 je Spielabend) ein Kapitel mit Überschrift, darunter eine
+  Linie in der Mitte, an der die Ereignisse abwechselnd links und rechts als Karten hängen, mit Bild, Punkt auf der Linie und
   Uhrzeit auf der Gegenseite. Entscheidungen des Assistenten, noch nicht im Spiel gesehen:
-  - Ein Kapitel heißt nach dem Gebiet, in dem die meisten seiner Ereignisse spielen; daneben der
-    Tag und die erreichten Stufen mit der Zahl der Ereignisse (seit 2026-11-23 in einer Zeile,
-    siehe oben; vorher darüber und darunter). Ohne Gebiet heißt es nach dem
-    Tag. Eine Kapitelnummer wie im Entwurf gibt es nicht (gezeigt werden nur die letzten 50
-    Ereignisse, eine Zählung wäre nicht stabil).
+  - Ein Kapitel hieß nach dem Gebiet, in dem die meisten seiner Ereignisse spielen; seit
+    2026-11-24 ist es ein Spielabend mit eigenem Titel (siehe oben). Eine Kapitelnummer wie im
+    Entwurf gibt es nicht (gezeigt werden nur die letzten 50 Ereignisse, eine Zählung wäre nicht
+    stabil).
   - Bilder sind eigene Symbole (`skull.tga`, `swords.tga`, `peaks.tga`, `star.tga`, 64 px) oder
     bei Stufen die Zahl; Tod und Boss haben feste eigene Farbtöne, der Rest folgt der Farbwelt.
     Der eigene Stufenaufstieg ist der Meilenstein: größere Karte, Akzentrand, Akzentmarke links

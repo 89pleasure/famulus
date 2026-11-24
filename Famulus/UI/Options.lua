@@ -660,31 +660,57 @@ local function ChronicleRun(run)
     return event
 end
 
--- Heading of a chapter: the place most of its events happened in, above it
--- the day, below it the levels gained and the number of events.
-local function TitleChapter(chapter)
-    local counts, best, bestCount = {}, nil, 0
+-- A chapter is a session of play: a pause this long begins the next one.
+local SESSION_GAP = 2 * 3600
+-- Until five in the morning it is still the night of the day before.
+local NIGHT_SHIFT = 5 * 3600
+
+-- What a session that began at `timestamp` is called: "This evening",
+-- "Yesterday afternoon", or for an older one "Sunday night" and its date.
+local function SessionTitle(timestamp, now)
+    local hour = tonumber(date("%H", timestamp)) or 12
+    local part = hour < 5 and "night" or hour < 11 and "morning" or hour < 14 and "midday"
+        or hour < 18 and "afternoon" or hour < 23 and "evening" or "night"
+    local day = timestamp - NIGHT_SHIFT
+    local key = DayKey(day)
+    if key == DayKey(now - NIGHT_SHIFT) then
+        return L["c_when_today_" .. part]
+    elseif key == DayKey(now - NIGHT_SHIFT - 86400) then
+        return L["c_when_yesterday_" .. part]
+    end
+    return L["c_when_day_" .. part]:format(L["c_weekday_" .. date("%w", day)]), DayTitle(key)
+end
+
+-- Heading of a chapter: when the session was and from when to when, the
+-- levels gained and the number of events, and below it the player's route
+-- through the zones, in the order of time.
+local function TitleChapter(chapter, now)
+    local entries = chapter.entries -- the newest first
     local low, high
+    local route = {}
     -- Sample entries do not name a chapter that has real ones.
     local real = false
-    for _, entry in ipairs(chapter.entries) do
+    for _, entry in ipairs(entries) do
         real = real or not entry.demo
     end
-    for _, entry in ipairs(chapter.entries) do
-        local zone = not (real and entry.demo) and entry.zone
-        if type(zone) == "string" and zone ~= "" then
-            counts[zone] = (counts[zone] or 0) + 1
-            if counts[zone] > bestCount then
-                best, bestCount = zone, counts[zone]
+    for index = #entries, 1, -1 do
+        local entry = entries[index]
+        if not (real and entry.demo) and ns.ChronicleService.IsOwn(entry) then
+            local zone = entry.zone
+            if type(zone) == "string" and zone ~= "" and route[#route] ~= zone then
+                route[#route + 1] = zone
+            end
+            local level = tonumber(entry.level)
+            if level then
+                low, high = math.min(low or level, level), math.max(high or level, level)
             end
         end
-        local level = not (real and entry.demo) and ns.ChronicleService.IsOwn(entry) and tonumber(entry.level)
-        if level then
-            low, high = math.min(low or level, level), math.max(high or level, level)
-        end
     end
-    chapter.small = best and chapter.day or nil
-    chapter.title = best or chapter.day
+    local first, last = date("%H:%M", entries[#entries].t), date("%H:%M", entries[1].t)
+    local title, day = SessionTitle(entries[#entries].t, now)
+    chapter.title = title
+    chapter.small = day or (first == last and first or L.c_ch_span:format(first, last))
+    chapter.route = #route > 0 and route or nil
     local parts = {}
     if low and low ~= high then
         parts[#parts + 1] = L.c_ch_levels:format(low, high)
@@ -697,16 +723,16 @@ local function TitleChapter(chapter)
     chapter.entries = nil
 end
 
--- One chapter per day, the newest event first; what repeats right away
--- shares a card (SameRun). wanted(entry): which entries; a companion chosen
--- in the rail narrows them further. Returns nil if there is nothing to tell,
--- else the chapters and a closing line if older events were left out.
+-- One chapter per session of play (SESSION_GAP), the newest event first;
+-- what repeats right away shares a card (SameRun). wanted(entry): which
+-- entries; a companion chosen in the rail narrows them further. Returns nil
+-- if there is nothing to tell, else the chapters and a closing line if older
+-- events were left out.
 local function ChronicleBook(wanted)
     local Chronicle = ns.ChronicleService
     local entries = Chronicle.Entries()
     local now = time()
-    local today, yesterday = DayKey(now), DayKey(now - 86400)
-    local chapters, chapter, chapterKey, shown, more = {}, nil, nil, 0, false
+    local chapters, chapter, shown, more = {}, nil, 0, false
     local run
     for i = #entries, 1, -1 do
         local entry = entries[i]
@@ -716,11 +742,10 @@ local function ChronicleBook(wanted)
                 break
             end
             shown = shown + 1
-            local key = DayKey(entry.t)
-            if key ~= chapterKey then
-                chapter = { day = DayTitle(key, today, yesterday), runs = {}, entries = {} }
+            local previous = chapter and chapter.entries[#chapter.entries]
+            if not previous or previous.t - entry.t >= SESSION_GAP then
+                chapter = { runs = {}, entries = {} }
                 chapters[#chapters + 1] = chapter
-                chapterKey = key
                 run = nil
             end
             if run and SameRun(run[#run], entry) then
@@ -741,7 +766,7 @@ local function ChronicleBook(wanted)
             each.events[index] = ChronicleRun(eachRun)
         end
         each.runs = nil
-        TitleChapter(each)
+        TitleChapter(each, now)
     end
     return chapters, more and L.c_more or nil
 end
