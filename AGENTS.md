@@ -14,8 +14,12 @@ Folgendes konzentrieren und beschränken:
 1. **Modernes, übersichtliches Layout.** Polestar gefällt ihm bisher am besten.
 2. **Gemeinsames Spielen im Mittelpunkt (Entscheidung des Auftraggebers, 2026-11-23).** Famulus
    soll das Spielen unter Freunden und in der Community verbessern, erleichtern oder erweitern.
-   Die Funktionen sind die **Aliase**, die **Chronik** und die **Weggefährten** (seit 2026-11-23).
+   Die Funktionen sind die **Chronik**, die **Weggefährten** und die **Aliase** (seit 2026-11-23).
    Keine Unitframes, Aktionsleisten, Guides, Schadensanzeigen oder Ähnliches.
+   - **Reihenfolge (Entscheidung des Auftraggebers, 2026-11-24):** Die Aliase stehen überall als
+     letzte der drei, im Addon (Seitenleiste, Hauptschalter) wie auf der Website (Navigation,
+     Abschnitte, Texte) und in README und Projektbeschreibung. Vorher standen sie überall vorn.
+     Die Begründung im Code („sie dienen den anderen beiden“) ist eine Deutung des Assistenten.
    - **Quality of Life entfernt (2026-11-23):** „Das machen unzählige andere Addons schon.“
      Entfernt sind die 16 QoL-Features (Händler, Quests, Beute, Soziales, Tooltips, Interface),
      das Tagebuch (es führte nur Buch über diese Automatiken), die Pausentaste, der Baustein
@@ -264,12 +268,14 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
     Entscheidungen des Assistenten: „Über“ als eigener Reiter, Kopf und Seitenleiste auf demselben
     Grund. Der Hauptschalter in der Seitenleiste ist seit 2026-11-24 in die Einstellungen gewandert.
 - **Bereiche (`ns.areas`, `Core/Features.lua`):** Jede Kategorie gehört zu genau einem Bereich (der
-  Test prüft das). Jeder Bereich hat einen eigenen Aufbau (`layouts.<bereich>` in
+  Test prüft das). Reihenfolge seit 2026-11-24: Chronik, Weggefährten, Aliase (siehe „Vorgaben“);
+  `ns.categories` folgt ihr, damit die Hauptschalter in derselben Reihenfolge stehen. Jeder Bereich hat einen eigenen Aufbau (`layouts.<bereich>` in
   `UI/Options.lua`). `aliases`: Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
   „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Einstellungen“ (bis 2026-11-23 „Anzeige“) mit den Alias-Features.
   `chronicle`: siehe „Chronik“. `fellows`: siehe „Weggefährten“. Die Einstellungen haben die Reiter „Allgemein“ (Sprache,
   Rückmeldung im Chat, Minikartensymbol, Charakterprofil) und „Darstellung“ (Farbwelt, Funken,
-  Fenstergröße). Die erste Seite beim Öffnen ist die Aliase.
+  Fenstergröße). Die erste Seite beim Öffnen ist die erste der Seitenleiste, seit 2026-11-24 also
+  die Chronik (vorher die Aliase).
 - **Hauptschalter** (seit 2026-11-24, Entscheidung des Auftraggebers: „Nur die Hauptschalter“):
   die drei Kategorien als erste Karte „Funktionen“ unter Einstellungen › Allgemein
   (`CategoryItem`, Texte `area_<id>` und `area_<id>_desc`). Die Schalter der einzelnen Features
@@ -1032,13 +1038,15 @@ nicht bestätigt.
   folgen Scrollen und Mauszeiger (gezeichnet wird nur bei Änderung und nur, solange der Kopf
   sichtbar ist), Elemente mit `data-parallax` driften beim Scrollen. Die Funken sind
   CSS-Animationen. `prefers-reduced-motion` schaltet alle Bewegung ab.
-- **Aufbau:** Kopf (Landschaft, rechts laufen Einblendungen mit) → 01 Aliase (das Fenster
-  nachgebaut und bedienbar, darunter Chat und Tooltip „im Spiel“) → 02 Chronik (das Bilderbuch mit
-  den Reitern Alle, Meine Reise, Gefährten) → 03 Weggefährten (seit 2026-11-24) → 04
-  Live-Einblendung (auslösbar, Platz verschiebbar) → 05 Installation → Fuß mit Hinweis auf
-  Blizzards Marke. Die Demos zeigen erfundene
+- **Aufbau (seit 2026-11-24, Aliase zuletzt, siehe „Vorgaben“):** Kopf (Landschaft, rechts laufen
+  Einblendungen mit) → 01 Chronik (das Bilderbuch mit den Reitern Alle, Meine Reise, Gefährten) →
+  02 Weggefährten → 03 Live-Einblendung (auslösbar, Platz verschiebbar) → 04 Aliase (das Fenster
+  nachgebaut und bedienbar, darunter Chat und Tooltip „im Spiel“) → 05 Installation → Fuß mit
+  Hinweis auf Blizzards Marke. Getönter Grund (`section--tinted`) und Schein wechseln weiter von
+  Abschnitt zu Abschnitt. Sprunglink, „Was es kann“ und der Pfeil im Kopf führen zur Chronik.
+  Vorher: 01 Aliase, 02 Chronik, 03 Weggefährten, 04 Live-Einblendung. Die Demos zeigen erfundene
   Personen und die Beispiele aus `/fam chronicle demo`, mit den eigenen Zeichnungen statt
-  Spielsymbolen. Ein Alias aus der ersten Demo erscheint auch im Bilderbuch, in den
+  Spielsymbolen. Ein Alias aus der Demo der Aliase erscheint auch im Bilderbuch, in den
   Einblendungen und bei den Weggefährten.
 - **Weggefährten (2026-11-24, Wunsch des Auftraggebers; Aufbau, Texte und Daten hat der
   Assistent entschieden, vom Auftraggeber noch nicht gesehen):** Wie die Übersicht im Addon
@@ -1057,8 +1065,8 @@ nicht bestätigt.
   unter dem Namen und noch einmal unten).
 - **An den neuen Fensteraufbau angepasst (2026-11-24, Wunsch des Auftraggebers; die Umsetzung im
   Einzelnen hat der Assistent entschieden, vom Auftraggeber noch nicht gesehen):**
-  - **Fenster:** wie im Addon Kopf mit Logo, den drei Bereichen als Reiter mit Zähler (Aliase,
-    Chronik, Weggefährten; nur Aliase bedienbar), „Einstellungen“ und „Über“ rechts; Seitenleiste
+  - **Fenster:** wie im Addon Kopf mit Logo, den drei Bereichen als Reiter mit Zähler (Chronik,
+    Weggefährten, Aliase; nur Aliase bedienbar), „Einstellungen“ und „Über“ rechts; Seitenleiste
     mit Suche, Name und Beschreibung der Aliase, Hauptschalter, den Unterbereichen „Namen“ und
     „Einstellungen“ und „x von 10 aktiv“; im Inhalt Titel des Unterbereichs und „Zurücksetzen“ mit
     Nachfrage (nur auf „Einstellungen“). Weil der Kopf Breite braucht, steht das Fenster über die

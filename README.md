@@ -1,8 +1,8 @@
 # Famulus
 
 Addon für das gemeinsame Spielen unter Freunden in **World of Warcraft: Forever** (Interface 16001):
-Aliase für andere Spieler, eine Chronik eurer gemeinsamen Reise und deine Weggefährten, also alle,
-mit denen du in einer Gruppe warst. Englisch und Deutsch, keine Bibliotheken, keine Abhängigkeiten.
+eine Chronik eurer gemeinsamen Reise, deine Weggefährten, also alle, mit denen du in einer Gruppe
+warst, und Aliase für andere Spieler. Englisch und Deutsch, keine Bibliotheken, keine Abhängigkeiten.
 
 ## Installation
 
@@ -16,19 +16,19 @@ mit denen du in einer Gruppe warst. Englisch und Deutsch, keine Bibliotheken, ke
 
 | Seite | Funktion | Standard |
 |---|---|---|
-| Aliase | Alias statt Charaktername im Chat (wahlweise „Alias (Name)“) | **an** |
-| Aliase | Alias als Zeile im Tooltip eines Spielers | **an** |
-| Aliase | „Alias festlegen“ im Kontextmenü von Spielern und Battle.net-Freunden | **an** |
-| Aliase | Charaktere von Battle.net-Freunden mit Alias merken (lauscht nur, solange es einen solchen Alias gibt) | **an** |
-| Aliase | Alias statt Charaktername im Addon Guildy (nur sichtbar, wenn Guildy geladen ist) | **an** |
 | Chronik | Eigene Reise aufzeichnen (Stufen, Tode, Bosse, Herausforderungen, Gebiete, Berufe, Fähigkeiten, Gegenstände) | aus |
 | Chronik | Stufenaufstiege der Freundesliste festhalten | aus |
 | Chronik | Mit Freunden und Gilde teilen (Addon-Nachrichten zwischen Famulus-Nutzern) | aus |
 | Chronik | Ereignisse von Freunden live als Karte am Bildschirm einblenden, auf Wunsch auch eigene | **an** |
 | Weggefährten | Merken, mit wem du in einer Gruppe warst: wann, wo, wie oft, wie lange, gemeinsame Bosse (wahlweise ohne Schlachtzüge) | aus |
+| Aliase | Alias statt Charaktername im Chat (wahlweise „Alias (Name)“) | **an** |
+| Aliase | Alias als Zeile im Tooltip eines Spielers | **an** |
+| Aliase | „Alias festlegen“ im Kontextmenü von Spielern und Battle.net-Freunden | **an** |
+| Aliase | Charaktere von Battle.net-Freunden mit Alias merken (lauscht nur, solange es einen solchen Alias gibt) | **an** |
+| Aliase | Alias statt Charaktername im Addon Guildy (nur sichtbar, wenn Guildy geladen ist) | **an** |
 
-**Das Fenster** (`/fam`): Links die Suche, darunter die Hauptfunktionen **Aliase**, **Chronik** und
-**Weggefährten**, unten **Einstellungen** und **Über**; die Unterbereiche der gewählten Funktion
+**Das Fenster** (`/fam`): Links die Suche, darunter die Hauptfunktionen **Chronik**, **Weggefährten**
+und **Aliase**, unten **Einstellungen** und **Über**; die Unterbereiche der gewählten Funktion
 stehen als Tabs oben im Inhalt.
 Die **Chronik erzählt, was passiert ist**, die **Weggefährten zeigen, mit wem du spielst**.
 Die Chronik erzählt die Reise deiner Charaktere und deiner Freunde als Bilderbuch und tauscht sie
@@ -36,13 +36,13 @@ auf Wunsch mit Freunden und Gildenmitgliedern aus, die Famulus ebenfalls nutzen,
 gemeinsame Freunde, wenn jemand offline ist. Besiegt ihr einen Boss als Gruppe, nennt die Chronik,
 wer dabei war. Neben dem Buch zeigt eine Spalte deine Woche in Zahlen, deine Berufe und deine
 Freunde mit Stufe, Online-Stand und ihrer Bilanz; ein Klick auf eine Person zeigt nur ihre
-Ereignisse. Die Aliase haben ihre Namensliste und einen Unterbereich „Einstellungen“. Die
-Weggefährten zeigen deine drei engsten Gefährten als Kacheln und alle weiteren in einer Liste (nach
-dem letzten Mal oder nach der gemeinsamen Zeit), jeweils mit ihrer **Verbundenheit**: Begegnung,
+Ereignisse. Die Weggefährten zeigen deine drei engsten Gefährten als Kacheln und alle weiteren in
+einer Liste (nach dem letzten Mal oder nach der gemeinsamen Zeit), jeweils mit ihrer **Verbundenheit**: Begegnung,
 Bekannt (ab 1 Std.), Vertraut (ab 10 Std.), Unzertrennlich (ab 40 Std.). Ein Klick zeigt die Person
 und „Eure Geschichte“: eure gemeinsamen Tage und Bosse als Bilderbuch. Kennt auch die Chronik die
 Person, führt ein Knopf zu ihren Ereignissen dort, und von dort zurück. Diese Daten bleiben auf
-deinem Rechner, nichts davon wird verschickt. Fünf Farbwelten, die Funken im Hintergrund und die Fenstergröße stehen unter
+deinem Rechner, nichts davon wird verschickt. Die Aliase haben ihre Namensliste und einen
+Unterbereich „Einstellungen“. Fünf Farbwelten, die Funken im Hintergrund und die Fenstergröße stehen unter
 Einstellungen › Darstellung. Die Suche oben findet Einstellungen, Aliase und Weggefährten auf allen
 Seiten.
 
@@ -126,7 +126,7 @@ Einstellungsfenster entsteht von selbst.
 Größere Funktionen bekommen einen eigenen Eintrag in der Seitenleiste: Kategorie in
 `ns.categories` und einen Bereich in `ns.areas` (`Core/Features.lua`) eintragen, dazu
 `L.area_<id>` und `L.area_<id>_desc`. Der Aufbau der Seite ist eine Funktion in `layouts`
-(`UI/Options.lua`), die die Unterbereiche (Tabs oben im Inhalt) liefert, wie bei Aliasen und Chronik. Das Symbol steht in
+(`UI/Options.lua`), die die Unterbereiche (Tabs oben im Inhalt) liefert, wie bei Chronik und Aliasen. Das Symbol steht in
 `AREA_ICONS`.
 
 ### Eine Sprache hinzufügen

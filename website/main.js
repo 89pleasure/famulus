@@ -1,5 +1,5 @@
 // What moves and answers on the page: language, navigation, and the demos
-// (aliases, chronicle, fellow travellers, live feed). The demos rebuild
+// (chronicle, fellow travellers, live feed, aliases). The demos rebuild
 // what the addon shows, with made-up people; nothing is sent anywhere.
 (() => {
   'use strict';
@@ -1211,7 +1211,7 @@
     if (top < 0) scrollBy({ top: top - 90, behavior: motion.matches ? 'auto' : 'smooth' });
   }
 
-  // "Set alias": the window above, with the name filled in (ns:EditAlias).
+  // "Set alias": the window further down, with the name filled in (ns:EditAlias).
   function editAlias(who) {
     state.tab = 'names';
     state.editing = aliases.find(entry => entry.name && keyOf(entry.name) === keyOf(who)) || null;
