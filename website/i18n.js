@@ -129,7 +129,7 @@ window.FAMULUS_I18N = {
 
   de: {
     meta_title: 'Famulus – ein Addon fürs gemeinsame Spielen in WoW Forever',
-    meta_desc: 'Famulus ist ein Addon für World of Warcraft: Forever. Es gibt deinen Freunden die Namen, unter denen du sie kennst, hält eure gemeinsame Reise als Bilderbuch fest und merkt sich, mit wem du unterwegs warst.',
+    meta_desc: 'Famulus ist ein Addon für World of Warcraft: Forever. Es hält eure gemeinsame Reise als Bilderbuch fest, merkt sich, mit wem du unterwegs warst, und gibt deinen Freunden die Namen, unter denen du sie kennst.',
     skip: 'Zum Inhalt springen',
     scroll_down: 'Nach unten',
 
@@ -142,7 +142,7 @@ window.FAMULUS_I18N = {
 
     hero_eyebrow: 'Addon für World of Warcraft: Forever',
     hero_title: 'Für alle, mit denen du <em>spielst.</em>',
-    hero_lead: 'Famulus gibt deinen Freunden die Namen, unter denen du sie kennst, hält eure gemeinsame Reise als Bilderbuch fest und merkt sich, mit wem du unterwegs warst.',
+    hero_lead: 'Famulus hält eure gemeinsame Reise als Bilderbuch fest, merkt sich, mit wem du unterwegs warst, und gibt deinen Freunden die Namen, unter denen du sie kennst.',
     hero_cta: 'Funktionen ansehen',
     hero_cta2: 'Installation',
     fact_version: 'Version 0.1.0',

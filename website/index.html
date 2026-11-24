@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Famulus – an addon for playing together in WoW Forever</title>
-  <meta name="description" content="Famulus is an addon for World of Warcraft: Forever. It gives your friends the names you know them by, records your shared journey as a picture book and remembers who you travelled with.">
+  <meta name="description" content="Famulus is an addon for World of Warcraft: Forever. It records your shared journey as a picture book, remembers who you travelled with and gives your friends the names you know them by.">
   <meta name="theme-color" content="#0a0f10">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="preload" href="assets/fonts/Inter-Regular.ttf" as="font" type="font/ttf" crossorigin>
@@ -17,7 +17,7 @@
   </script>
 </head>
 <body>
-  <a class="skip" href="#aliases" data-i18n="skip">Skip to content</a>
+  <a class="skip" href="#chronicle" data-i18n="skip">Skip to content</a>
 
   <!-- Icons: the addon's own drawings (tools/make_media.py), as outlines. -->
   <svg class="sprite" aria-hidden="true" focusable="false">
@@ -46,10 +46,10 @@
       <span>Famulus</span>
     </a>
     <div class="nav__links">
-      <a href="#aliases" data-i18n="nav_aliases">Aliases</a>
       <a href="#chronicle" data-i18n="nav_chronicle">Chronicle</a>
       <a href="#fellows" data-i18n="nav_fellows">Fellow travellers</a>
       <a href="#feed" data-i18n="nav_feed">Live feed</a>
+      <a href="#aliases" data-i18n="nav_aliases">Aliases</a>
     </div>
     <div class="nav__end">
       <div class="lang" role="group" aria-label="Language" data-i18n-attr="aria-label:nav_lang">
@@ -73,9 +73,9 @@
       <div class="hero__copy">
         <p class="eyebrow reveal" style="--i:0"><span class="eyebrow__mark"></span><span data-i18n="hero_eyebrow">An addon for World of Warcraft: Forever</span></p>
         <h1 class="reveal" style="--i:1" data-i18n="hero_title">For everyone you <em>play with.</em></h1>
-        <p class="lead reveal" style="--i:2" data-i18n="hero_lead">Famulus gives your friends the names you know them by, records your shared journey as a picture book and remembers who you travelled with.</p>
+        <p class="lead reveal" style="--i:2" data-i18n="hero_lead">Famulus records your shared journey as a picture book, remembers who you travelled with and gives your friends the names you know them by.</p>
         <div class="hero__cta reveal" style="--i:3">
-          <a class="btn btn--primary" href="#aliases"><span data-i18n="hero_cta">See what it does</span><svg class="icon" width="18" height="18"><use href="#i-arrow"/></svg></a>
+          <a class="btn btn--primary" href="#chronicle"><span data-i18n="hero_cta">See what it does</span><svg class="icon" width="18" height="18"><use href="#i-arrow"/></svg></a>
           <a class="btn btn--ghost" href="#install" data-i18n="hero_cta2">Installation</a>
         </div>
         <ul class="hero__facts reveal" style="--i:4">
@@ -90,18 +90,115 @@
       </div>
     </div>
 
-    <a class="hero__scroll" href="#aliases" aria-label="Scroll down" data-i18n-attr="aria-label:scroll_down">
+    <a class="hero__scroll" href="#chronicle" aria-label="Scroll down" data-i18n-attr="aria-label:scroll_down">
       <svg class="icon" width="20" height="20"><use href="#i-chevron"/></svg>
     </a>
   </header>
 
   <main>
-    <!-- 01 Aliases ---------------------------------------------------------->
-    <section class="section" id="aliases">
-      <div class="glow glow--right" data-parallax="-0.18" aria-hidden="true"></div>
+    <!-- 01 Chronicle -------------------------------------------------------->
+    <section class="section" id="chronicle">
+      <div class="glow glow--right" data-parallax="-0.14" aria-hidden="true"></div>
       <div class="wrap">
         <header class="section__head">
-          <p class="eyebrow reveal"><span class="eyebrow__num">01</span><span data-i18n="al_eyebrow">Aliases</span></p>
+          <p class="eyebrow reveal"><span class="eyebrow__num">01</span><span data-i18n="ch_eyebrow">Chronicle</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="ch_title">Your journey, told like a picture book.</h2>
+          <p class="lead reveal" style="--i:2" data-i18n="ch_lead">Level-ups, deaths, defeated bosses, new zones, professions and special finds: the chronicle records what you and your companions go through, one chapter per day.</p>
+        </header>
+
+        <!-- As in the addon: the book, and beside it a rail with the week in
+             numbers and the companions. A click on one shows only their events. -->
+        <div class="journal">
+          <div class="journal__book">
+            <div class="booktabs reveal" role="tablist" id="book-tabs" aria-label="Whose events" data-i18n-attr="aria-label:ch_tabs">
+              <button type="button" role="tab" id="book-tab-all" aria-controls="book" aria-selected="true" data-book="all" data-i18n="ch_tab_all">Everyone</button>
+              <button type="button" role="tab" id="book-tab-mine" aria-controls="book" aria-selected="false" tabindex="-1" data-book="mine" data-i18n="ch_tab_mine">My journey</button>
+              <button type="button" role="tab" id="book-tab-theirs" aria-controls="book" aria-selected="false" tabindex="-1" data-book="theirs" data-i18n="ch_tab_theirs">Companions</button>
+            </div>
+            <div class="bookfilter" id="book-filter" hidden>
+              <span id="book-filter-text"></span>
+              <button type="button" class="btn btn--small btn--ghost" id="book-filter-clear" data-i18n="c_show_all">Show all</button>
+            </div>
+            <div class="book" id="book" role="tabpanel" aria-labelledby="book-tab-all"></div>
+          </div>
+          <aside class="rail reveal" id="rail" aria-label="This week and your companions" data-i18n-attr="aria-label:ch_rail"></aside>
+        </div>
+
+        <ul class="points">
+          <li class="reveal" style="--i:0"><h3 data-i18n="ch_p1_t">Famulus talks to Famulus</h3><p data-i18n="ch_p1_d">Friends who use the addon share their milestones with you, wherever in the world they are. Only with people on your friends list or in your guild.</p></li>
+          <li class="reveal" style="--i:1"><h3 data-i18n="ch_p2_t">Offline, but not left out</h3><p data-i18n="ch_p2_d">If you were not online, a mutual companion passes on what you missed.</p></li>
+          <li class="reveal" style="--i:2"><h3 data-i18n="ch_p3_t">You decide what is written</h3><p data-i18n="ch_p3_d">Recording and sharing are off until you switch them on. Companions appear under the alias you gave them.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 02 Fellow travellers ------------------------------------------------>
+    <section class="section section--tinted" id="fellows">
+      <div class="glow glow--left" data-parallax="-0.16" aria-hidden="true"></div>
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">02</span><span data-i18n="fw_eyebrow">Fellow travellers</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="fw_title">Remember who was there.</h2>
+          <p class="lead reveal" style="--i:2" data-i18n="fw_lead">Famulus remembers who you were in a group with: when and where you met, how often and how long you travelled together, and which bosses fell along the way. The others don't need Famulus for it.</p>
+        </header>
+
+        <!-- As in the addon: the three closest as tiles, everyone else in a
+             list; a click opens your story with that person. -->
+        <div class="fellows reveal" id="fellows-demo"></div>
+        <p class="hint reveal" data-i18n="fw_hint">Try it: a click on a tile or a name opens your story with that person.</p>
+
+        <ul class="points">
+          <li class="reveal" style="--i:0"><h3 data-i18n="fw_p1_t">A bond that grows</h3><p data-i18n="fw_p1_d">From Encounter to Inseparable: four tiers by the time you spent together. The ring around the crest shows how far it is to the next.</p></li>
+          <li class="reveal" style="--i:1"><h3 data-i18n="fw_p2_t">Your story, day by day</h3><p data-i18n="fw_p2_d">Every person has a book of your days together: where you were, for how long, which bosses fell and when you met.</p></li>
+          <li class="reveal" style="--i:2"><h3 data-i18n="fw_p3_t">It stays with you</h3><p data-i18n="fw_p3_d">Famulus only starts remembering once you switch it on, and sends none of it anywhere. Battlegrounds and arenas never count.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 03 Live feed -------------------------------------------------------->
+    <section class="section" id="feed">
+      <div class="glow glow--right" data-parallax="-0.16" aria-hidden="true"></div>
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">03</span><span data-i18n="fd_eyebrow">Live feed</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="fd_title">Be there when it happens.</h2>
+          <p class="lead reveal" style="--i:2" data-i18n="fd_lead">When a companion defeats a boss or learns to ride, a card appears on your screen for a few seconds. Where it sits, how long it stays and which events it shows, your own too if you like, is up to you.</p>
+        </header>
+
+        <div class="view view--wide reveal" id="feed-view">
+          <div class="view__scene" data-parallax="0.08" aria-hidden="true"><div class="scene scene--mini scene--dusk" id="scene-feed"></div></div>
+          <span class="view__label" data-i18n="view_label">In the game</span>
+          <!-- A screen without anyone's interface: plain shapes where bars and map would be. -->
+          <div class="hud" aria-hidden="true">
+            <i class="hud__unit"></i><i class="hud__map"></i>
+            <div class="hud__bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="feedspot" id="feed-spot">
+            <div class="feedspot__mover" id="feed-mover" role="button" tabindex="0" aria-describedby="feed-mover-keys" hidden><span data-i18n="fd_mover">Events appear here. Drag to move.</span><span class="sr-only" id="feed-mover-keys" data-i18n="fd_mover_keys">The arrow keys move it too.</span></div>
+            <div class="toasts" id="feed-toasts" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="chips reveal" id="feed-chips">
+          <span class="chips__label" data-i18n="fd_try">Trigger an event:</span>
+          <button type="button" class="chip" data-feed="level" data-i18n="fd_c_level">Level</button>
+          <button type="button" class="chip" data-feed="boss" data-i18n="fd_c_boss">Boss</button>
+          <button type="button" class="chip" data-feed="death" data-i18n="fd_c_death">Death</button>
+          <button type="button" class="chip" data-feed="ability" data-i18n="fd_c_ability">Riding</button>
+          <button type="button" class="chip" data-feed="skill" data-i18n="fd_c_skill">Profession</button>
+          <button type="button" class="chip" data-feed="item" data-i18n="fd_c_item">Find</button>
+          <button type="button" class="chip chip--ghost" id="feed-move" aria-pressed="false" data-i18n="fd_move">Move the spot</button>
+          <p class="sr-only" id="feed-said" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 Aliases ---------------------------------------------------------->
+    <section class="section section--tinted" id="aliases">
+      <div class="glow glow--left" data-parallax="-0.18" aria-hidden="true"></div>
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">04</span><span data-i18n="al_eyebrow">Aliases</span></p>
           <h2 class="reveal" style="--i:1" data-i18n="al_title">Call them by the names you know.</h2>
           <p class="lead reveal" style="--i:2" data-i18n="al_lead">Behind every character name is someone you call something else. Give players an alias and Famulus shows it in chat and in tooltips. Only you see it; whispers, invites and links still reach the character.</p>
         </header>
@@ -115,9 +212,9 @@
               <div><strong>Famulus</strong><span data-i18n="tagline">Together through Azeroth</span></div>
             </div>
             <div class="fwin__top" aria-hidden="true">
-              <span class="fwin__area is-active"><svg class="icon" width="16" height="16"><use href="#i-tag"/></svg><span data-i18n="w_aliases">Aliases</span><b id="alias-count">5/5</b></span>
               <span class="fwin__area"><svg class="icon" width="16" height="16"><use href="#i-flag"/></svg><span data-i18n="w_chronicle">Chronicle</span><b>1/4</b></span>
               <span class="fwin__area"><svg class="icon" width="16" height="16"><use href="#i-people"/></svg><span data-i18n="w_fellows">Fellow travellers</span><b>0/1</b></span>
+              <span class="fwin__area is-active"><svg class="icon" width="16" height="16"><use href="#i-tag"/></svg><span data-i18n="w_aliases">Aliases</span><b id="alias-count">5/5</b></span>
               <span class="fwin__area fwin__area--page"><svg class="icon" width="16" height="16"><use href="#i-gear"/></svg><span data-i18n="w_settings">Settings</span></span>
               <span class="fwin__area fwin__area--page"><svg class="icon" width="16" height="16"><use href="#i-info"/></svg><span data-i18n="w_about">About</span></span>
               <span class="fwin__close"><svg class="icon" width="14" height="14"><use href="#i-close"/></svg></span>
@@ -216,103 +313,6 @@
           <li class="reveal" style="--i:1"><h3 data-i18n="al_p2_t">A right-click is enough</h3><p data-i18n="al_p2_d">“Set alias” is in the context menu of players and Battle.net friends. No list to open, no name to type.</p></li>
           <li class="reveal" style="--i:2"><h3 data-i18n="al_p3_t">Nothing gets overwritten</h3><p data-i18n="al_p3_d">The alias only changes what you read. Links keep the real name, and Blizzard's interface stays untouched.</p></li>
         </ul>
-      </div>
-    </section>
-
-    <!-- 02 Chronicle -------------------------------------------------------->
-    <section class="section section--tinted" id="chronicle">
-      <div class="glow glow--left" data-parallax="-0.14" aria-hidden="true"></div>
-      <div class="wrap">
-        <header class="section__head">
-          <p class="eyebrow reveal"><span class="eyebrow__num">02</span><span data-i18n="ch_eyebrow">Chronicle</span></p>
-          <h2 class="reveal" style="--i:1" data-i18n="ch_title">Your journey, told like a picture book.</h2>
-          <p class="lead reveal" style="--i:2" data-i18n="ch_lead">Level-ups, deaths, defeated bosses, new zones, professions and special finds: the chronicle records what you and your companions go through, one chapter per day.</p>
-        </header>
-
-        <!-- As in the addon: the book, and beside it a rail with the week in
-             numbers and the companions. A click on one shows only their events. -->
-        <div class="journal">
-          <div class="journal__book">
-            <div class="booktabs reveal" role="tablist" id="book-tabs" aria-label="Whose events" data-i18n-attr="aria-label:ch_tabs">
-              <button type="button" role="tab" id="book-tab-all" aria-controls="book" aria-selected="true" data-book="all" data-i18n="ch_tab_all">Everyone</button>
-              <button type="button" role="tab" id="book-tab-mine" aria-controls="book" aria-selected="false" tabindex="-1" data-book="mine" data-i18n="ch_tab_mine">My journey</button>
-              <button type="button" role="tab" id="book-tab-theirs" aria-controls="book" aria-selected="false" tabindex="-1" data-book="theirs" data-i18n="ch_tab_theirs">Companions</button>
-            </div>
-            <div class="bookfilter" id="book-filter" hidden>
-              <span id="book-filter-text"></span>
-              <button type="button" class="btn btn--small btn--ghost" id="book-filter-clear" data-i18n="c_show_all">Show all</button>
-            </div>
-            <div class="book" id="book" role="tabpanel" aria-labelledby="book-tab-all"></div>
-          </div>
-          <aside class="rail reveal" id="rail" aria-label="This week and your companions" data-i18n-attr="aria-label:ch_rail"></aside>
-        </div>
-
-        <ul class="points">
-          <li class="reveal" style="--i:0"><h3 data-i18n="ch_p1_t">Famulus talks to Famulus</h3><p data-i18n="ch_p1_d">Friends who use the addon share their milestones with you, wherever in the world they are. Only with people on your friends list or in your guild.</p></li>
-          <li class="reveal" style="--i:1"><h3 data-i18n="ch_p2_t">Offline, but not left out</h3><p data-i18n="ch_p2_d">If you were not online, a mutual companion passes on what you missed.</p></li>
-          <li class="reveal" style="--i:2"><h3 data-i18n="ch_p3_t">You decide what is written</h3><p data-i18n="ch_p3_d">Recording and sharing are off until you switch them on. Companions appear under the alias you gave them.</p></li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- 03 Fellow travellers ------------------------------------------------>
-    <section class="section" id="fellows">
-      <div class="glow glow--right" data-parallax="-0.16" aria-hidden="true"></div>
-      <div class="wrap">
-        <header class="section__head">
-          <p class="eyebrow reveal"><span class="eyebrow__num">03</span><span data-i18n="fw_eyebrow">Fellow travellers</span></p>
-          <h2 class="reveal" style="--i:1" data-i18n="fw_title">Remember who was there.</h2>
-          <p class="lead reveal" style="--i:2" data-i18n="fw_lead">Famulus remembers who you were in a group with: when and where you met, how often and how long you travelled together, and which bosses fell along the way. The others don't need Famulus for it.</p>
-        </header>
-
-        <!-- As in the addon: the three closest as tiles, everyone else in a
-             list; a click opens your story with that person. -->
-        <div class="fellows reveal" id="fellows-demo"></div>
-        <p class="hint reveal" data-i18n="fw_hint">Try it: a click on a tile or a name opens your story with that person.</p>
-
-        <ul class="points">
-          <li class="reveal" style="--i:0"><h3 data-i18n="fw_p1_t">A bond that grows</h3><p data-i18n="fw_p1_d">From Encounter to Inseparable: four tiers by the time you spent together. The ring around the crest shows how far it is to the next.</p></li>
-          <li class="reveal" style="--i:1"><h3 data-i18n="fw_p2_t">Your story, day by day</h3><p data-i18n="fw_p2_d">Every person has a book of your days together: where you were, for how long, which bosses fell and when you met.</p></li>
-          <li class="reveal" style="--i:2"><h3 data-i18n="fw_p3_t">It stays with you</h3><p data-i18n="fw_p3_d">Famulus only starts remembering once you switch it on, and sends none of it anywhere. Battlegrounds and arenas never count.</p></li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- 04 Live feed -------------------------------------------------------->
-    <section class="section section--tinted" id="feed">
-      <div class="glow glow--left" data-parallax="-0.16" aria-hidden="true"></div>
-      <div class="wrap">
-        <header class="section__head">
-          <p class="eyebrow reveal"><span class="eyebrow__num">04</span><span data-i18n="fd_eyebrow">Live feed</span></p>
-          <h2 class="reveal" style="--i:1" data-i18n="fd_title">Be there when it happens.</h2>
-          <p class="lead reveal" style="--i:2" data-i18n="fd_lead">When a companion defeats a boss or learns to ride, a card appears on your screen for a few seconds. Where it sits, how long it stays and which events it shows, your own too if you like, is up to you.</p>
-        </header>
-
-        <div class="view view--wide reveal" id="feed-view">
-          <div class="view__scene" data-parallax="0.08" aria-hidden="true"><div class="scene scene--mini scene--dusk" id="scene-feed"></div></div>
-          <span class="view__label" data-i18n="view_label">In the game</span>
-          <!-- A screen without anyone's interface: plain shapes where bars and map would be. -->
-          <div class="hud" aria-hidden="true">
-            <i class="hud__unit"></i><i class="hud__map"></i>
-            <div class="hud__bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          </div>
-          <div class="feedspot" id="feed-spot">
-            <div class="feedspot__mover" id="feed-mover" role="button" tabindex="0" aria-describedby="feed-mover-keys" hidden><span data-i18n="fd_mover">Events appear here. Drag to move.</span><span class="sr-only" id="feed-mover-keys" data-i18n="fd_mover_keys">The arrow keys move it too.</span></div>
-            <div class="toasts" id="feed-toasts" aria-hidden="true"></div>
-          </div>
-        </div>
-
-        <div class="chips reveal" id="feed-chips">
-          <span class="chips__label" data-i18n="fd_try">Trigger an event:</span>
-          <button type="button" class="chip" data-feed="level" data-i18n="fd_c_level">Level</button>
-          <button type="button" class="chip" data-feed="boss" data-i18n="fd_c_boss">Boss</button>
-          <button type="button" class="chip" data-feed="death" data-i18n="fd_c_death">Death</button>
-          <button type="button" class="chip" data-feed="ability" data-i18n="fd_c_ability">Riding</button>
-          <button type="button" class="chip" data-feed="skill" data-i18n="fd_c_skill">Profession</button>
-          <button type="button" class="chip" data-feed="item" data-i18n="fd_c_item">Find</button>
-          <button type="button" class="chip chip--ghost" id="feed-move" aria-pressed="false" data-i18n="fd_move">Move the spot</button>
-          <p class="sr-only" id="feed-said" aria-live="polite"></p>
-        </div>
       </div>
     </section>
 
