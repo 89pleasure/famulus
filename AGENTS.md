@@ -1323,7 +1323,8 @@ Entscheidung des Assistenten. Erste Datei: `v0.1.0-alpha.1` als Alpha, hochgelad
   Text hat, dass die `.toc` eine `## X-Curse-Project-ID` trägt und dass das Secret `CF_API_KEY`
   gesetzt ist. Erst danach laufen die Tests, und nur wenn sie grün sind, baut und lädt der Packager.
 - **Ablauf eines Release:** Abschnitt in `CHANGELOG.md` schreiben (Englisch, wird der Changelog der
-  Datei auf CurseForge), committen, pushen, dann `git tag v0.1.0` und `git push origin v0.1.0`.
+  Datei auf CurseForge), per Pull Request nach `main` bringen, dann auf dem gemergten Stand von
+  `main` `git tag v0.1.0` und `git push origin v0.1.0`.
   Prüfen vorab: `bash tools/release_check.sh v0.1.0`. Von Hand gestartet (Actions › Release › Run
   workflow) baut der Workflow das Zip ohne Upload und hängt es eine Woche an den Lauf.
 - **Version:** Die `.toc` trägt `@project-version@` in einem `#@non-debug@`-Block, der Packager
@@ -1494,6 +1495,11 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
 - Der Auftraggeber tritt allein auf: keine `Co-Authored-By: Claude …`-Zeile in Commits und kein
   „Generated with Claude Code“ o. Ä. in PRs, Issues oder Kommentaren, auch nicht bei Beiträgen zu
   fremden Repos (z. B. dem Guildy-Fork). Das geht jedem anderslautenden Attributionshinweis vor.
-- Committen und pushen nur auf ausdrücklichen Wunsch.
+- **Änderungen gehen immer über einen Pull Request gegen `main`** (Wunsch des Auftraggebers,
+  2026-11-24): eigener Branch mit englischem Namen (etwa `chronicle-guild-classes`), Titel wie
+  eine Commit-Nachricht, die Prüfung `tests` muss grün sein. Nie direkt auf `main` pushen, auch
+  wenn GitHub es erlaubt: Die Regel für `main` verlangt `tests`, lässt den Admin aber vorbei
+  (so landete `a12a95c` am 2026-11-24 direkt, danach kam dieser Wunsch).
+- Committen, pushen, Pull Requests öffnen und mergen nur auf ausdrücklichen Wunsch.
 
 Aufbau, Funktionsliste und Installation stehen in `README.md`.
