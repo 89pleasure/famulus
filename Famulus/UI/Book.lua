@@ -79,6 +79,7 @@ local PICTURES = {
 local function CreateHead(book)
     local head = CreateFrame("Frame", nil, book)
     head:SetWidth(book.width)
+    head.width = book.width -- SetWidth sets no field of that name
     head.half = book.width / 2
 
     head.title = head:CreateFontString(nil, "OVERLAY")

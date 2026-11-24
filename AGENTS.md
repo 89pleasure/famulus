@@ -51,6 +51,18 @@ nicht mehr darin („da wir uns nun ganz woanders bewegen thematisch“); die Ta
 - Secret Values im Mock: `mock.SECRET` verweigert Index, Rechnen, Vergleich und Verketten.
   Eine Wahr/Falsch-Prüfung (`not x`) lässt sich in Lua nicht abfangen; deshalb prüft der Test im
   Quelltext, dass `ns.IsSecret(x)` vor jedem Test von `x` steht.
+- Größen im Mock: `SetWidth`/`SetHeight`/`SetSize` legen ihren Wert in `mockWidth`/`mockHeight`
+  ab, nicht in `width`/`height`. Im Client setzt `SetWidth` kein Feld am Frame; wer eine Breite als
+  Feld liest, muss sie selbst setzen (`book.width`). Vorher hat der Mock einen solchen Fehler
+  verdeckt (siehe „Fehler 2026-11-24“). Tests lesen die Größe über `GetWidth()`.
+- **Fehler 2026-11-24 (im Spiel gefunden und behoben, Behebung im Spiel bestätigt):** Das
+  Fenster öffnete sich ohne Inhalt und fast ohne Text; nach einem Klick auf „Weggefährten“ kam
+  alles zurück, ein Klick auf „Chronik“ ließ die Weggefährten markiert und schnitt sie bei 600 px
+  ab. Ursache: Der Kapitelkopf mit Route (`LayRoute` in `UI/Book.lua`) rechnete mit `head.width`,
+  das nur der Mock kannte. Der Fehler brach `Render` ab, nachdem der Inhaltsbereich schon auf
+  Buchbreite gesetzt war und bevor Seitenleiste, Kopf und Reiter beschriftet wurden. Gefunden
+  über die Fehleranzeige des Spiels (siehe „Test im Spiel“). Nach der Behebung hat der
+  Auftraggeber das Fenster im Spiel geöffnet: „Funktioniert“.
 - **Erster Selbsttest im Spiel am 2026-11-16** (Client 1.60.1, Build 70938, deDE): 54 Prüfungen ok,
   1 Warnung, 0 fehlgeschlagen; keine blockierten Aktionen, keine Lua-Warnungen. Bestätigt:
   - Das Addon lädt, das Fenster öffnet sich, Einstellungen und Fensterposition werden gespeichert.
@@ -174,6 +186,10 @@ unter `D:\Games\World of Warcraft\_forever_`, das Repo unter `E:\Develop\wow\fam
 - Lua-Fehler schreibt Blizzards Fehlerbehandlung über `C_Log.LogErrorMessage` in die Client-Logs
   unter `_forever_/Logs/`; in welche Datei, ist noch unbestätigt. `AddLuaErrorHandler` ist nur für
   sicheren Code (`assert(issecure())`), `seterrorhandler` ersetzen wir nicht.
+- **Lua-Fehler sieht man im Spiel nur mit `/console scriptErrors 1`** (danach `/reload`). Auf dem
+  Windows-Rechner war die Anzeige aus (kein `scriptErrors` in `WTF/Config.wtf`), und der Fehler vom
+  2026-11-24 stand in keiner Datei unter `Logs/`. Sieht das Fenster halb aufgebaut aus, zuerst
+  danach fragen; Meldung mit Stack und Zeile kommt dann als Fenster im Spiel.
 - Screenshots des Spiels liegen in `_forever_/Screenshots/` und sind die Grundlage für
   Layout-Arbeit.
 - Was der Selbsttest nicht abdeckt: ob die Chronik die richtigen Ereignisse festhält und ob das
@@ -440,6 +456,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     ältesten Gebiete einem „…“. Die Route kennt nur Gebiete, in denen etwas festgehalten wurde
     (wer nur durchreitet, taucht nicht auf); jeden Gebietswechsel mitzuschreiben wäre möglich,
     ist aber nicht beauftragt.
+  - Im Spiel lief die Route beim ersten Mal auf einen Fehler (`head.width`, siehe „Fehler
+    2026-11-24“); behoben, danach lief die Chronik im Spiel („Funktioniert“).
   - Offen: „Eure Geschichte“ bei den Weggefährten hat weiter ein Kapitel je Tag, benannt nach
     dem Gebiet des Tages, und die Website zeigt noch den alten Kapitelkopf.
 - **Bilderbuch (2026-11-19):** Der Auftraggeber fand den HTML-Entwurf „schon ganz cool“ und ließ
