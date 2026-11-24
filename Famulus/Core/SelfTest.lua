@@ -52,6 +52,8 @@ local EXPECT_PRESENT = {
     "UnitIsInMyGuild",
     "C_BattleNet.GetAccountInfoByGUID",
     "C_GuildInfo.GuildRoster",
+    "C_FriendList.ShowFriends",
+    "BNConnected",
 }
 
 local EXPECT_ABSENT = {

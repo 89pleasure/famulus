@@ -33,10 +33,16 @@ function rememberFellows:Scan()
     local members = {}
     for _, member in ipairs(ns.GroupService.Members(self:Get("raids"))) do
         -- A Battle.net friend's BattleTag is kept either way: tidying up
-        -- needs it to know them again while they are offline.
-        local known, tag = ns.SocialService.Unit(member.unit, member.guid)
-        member.tag = tag
-        if known or not friendsOnly then
+        -- needs it to know them again while they are offline. Whether
+        -- someone is a friend at all is only asked with the option.
+        if friendsOnly then
+            local known, tag = ns.SocialService.Unit(member.unit, member.guid)
+            member.tag = tag
+            if known then
+                members[#members + 1] = member
+            end
+        else
+            member.tag = ns.SocialService.BattleTag(member.guid)
             members[#members + 1] = member
         end
     end
@@ -45,14 +51,19 @@ end
 
 -- Only friends: someone who becomes a friend while in the group counts
 -- from then on, not only from the next change of the group; the same when
--- the player joins or leaves a guild.
+-- the player joins or leaves a guild, gains or loses a Battle.net friend,
+-- or Battle.net connects again. All four come rarely (unlike
+-- BN_FRIEND_INFO_CHANGED, which every status change of a friend sends).
+local FRIEND_EVENTS = { "FRIENDLIST_UPDATE", "PLAYER_GUILD_UPDATE", "BN_FRIEND_LIST_SIZE_CHANGED", "BN_CONNECTED" }
+
 function rememberFellows:ListenToFriends()
-    if self:Get("friendsOnly") then
-        self:RegisterEvent("FRIENDLIST_UPDATE", "Scan")
-        self:RegisterEvent("PLAYER_GUILD_UPDATE", "Scan")
-    else
-        self:UnregisterEvent("FRIENDLIST_UPDATE")
-        self:UnregisterEvent("PLAYER_GUILD_UPDATE")
+    local listen = self:Get("friendsOnly")
+    for _, event in ipairs(FRIEND_EVENTS) do
+        if listen then
+            self:RegisterEvent(event, "Scan")
+        else
+            self:UnregisterEvent(event)
+        end
     end
 end
 

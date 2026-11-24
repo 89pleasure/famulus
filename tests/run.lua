@@ -1772,15 +1772,19 @@ mock.state.friends = { { name = "Mira Sturmfeder", guid = "Player-1-MIRA", conne
 mock.state.guild = { { name = "Tom Hartwig", guid = "Player-1-TOM", online = true } }
 mock.state.bnFriends = { { battleTag = "Kael#1234", games = { { characterName = "Kael Dorn", playerGuid = "Player-1-KAEL" } } } }
 mock.state.group = { members = { tom, mira, ena, kael } }
+mock.reset()
 mock.Fire("GROUP_ROSTER_UPDATE")
 check(Fellows.IsTogether("Player-1-ENA") and FamulusDB.fellows["Player-1-KAEL"].tag == "Kael#1234"
     and FamulusDB.fellows["Player-1-MIRA"].tag == nil, "by default everyone counts; a Battle.net friend's BattleTag is kept")
+check(mock.count("C_FriendList.IsFriend") == 0, "without the option it asks only for BattleTags, not who is a friend")
 mock.state.group = { members = { tom, mira } }
 mock.Fire("GROUP_ROSTER_UPDATE")
 FamulusDB.fellows["Player-1-ENA"], FamulusDB.fellows["Player-1-KAEL"] = nil, nil
 check(not fellows.events.FRIENDLIST_UPDATE, "the friends list does not matter while everyone counts")
 ns:SetOption("rememberFellows", "friendsOnly", true)
-check(fellows.events.FRIENDLIST_UPDATE and fellows.events.PLAYER_GUILD_UPDATE, "only friends: it listens to the friends list and the guild as well")
+check(fellows.events.FRIENDLIST_UPDATE and fellows.events.PLAYER_GUILD_UPDATE and fellows.events.BN_FRIEND_LIST_SIZE_CHANGED
+    and fellows.events.BN_CONNECTED and not fellows.events.BN_FRIEND_INFO_CHANGED,
+    "only friends: it listens to the friends list, the guild and Battle.net as well, but not to every status change")
 mock.state.group = { members = { tom, mira, ena, kael } }
 mock.Fire("GROUP_ROSTER_UPDATE")
 check(Fellows.IsTogether("Player-1-MIRA") and Fellows.IsTogether("Player-1-TOM") and Fellows.IsTogether("Player-1-KAEL")
@@ -1792,11 +1796,45 @@ mock.state.friends[2] = nil
 mock.Fire("FRIENDLIST_UPDATE")
 check(not Fellows.IsTogether("Player-1-ENA") and FamulusDB.fellows["Player-1-ENA"] ~= nil,
     "who is no friend any more stops counting, but stays on the list")
+mock.state.bnFriends[2] = { battleTag = "Ena#2222", games = { { characterName = "Ena Fremd", playerGuid = "Player-1-ENA" } } }
+mock.Fire("BN_FRIEND_LIST_SIZE_CHANGED")
+check(Fellows.IsTogether("Player-1-ENA") and FamulusDB.fellows["Player-1-ENA"].tag == "Ena#2222",
+    "who becomes a Battle.net friend in the group counts from then on")
+mock.state.bnFriends[2] = { battleTag = "Ena#2222", stranger = true, games = { { characterName = "Ena Fremd", playerGuid = "Player-1-ENA" } } }
+check(ns.SocialService.BattleTag("Player-1-ENA") == nil and not ns.SocialService.Unit(nil, "Player-1-ENA"),
+    "an account the client does not plainly call a friend's is no friend")
+mock.state.bnFriends[2] = nil
+mock.Fire("BN_FRIEND_LIST_SIZE_CHANGED")
+check(not Fellows.IsTogether("Player-1-ENA"), "and who is no Battle.net friend any more stops counting")
 
 -- The circle at one look, for tidying up: by GUID, by name in any spelling,
 -- by BattleTag while the Battle.net friend is offline.
 mock.state.group = { members = { tom } }
 mock.Fire("GROUP_ROSTER_UPDATE")
+-- A missing list must not make friends look like strangers: a friends list
+-- that has not come since the login, or Battle.net away.
+do
+    local friendsBefore = mock.state.friends
+    mock.state.friends = nil
+    local eventsBefore = ns:CountRegisteredEvents()
+    mock.reset()
+    local _, ready, waiting = ns.SocialService.Circle()
+    check(not ready and waiting == "friends" and mock.count("C_FriendList.ShowFriends") == 1,
+        "an empty friends list is not trusted before the client has sent it; it is asked for")
+    ns.SocialService.Circle()
+    check(mock.count("C_FriendList.ShowFriends") == 1, "and asked for once, not on every look")
+    mock.Fire("FRIENDLIST_UPDATE")
+    _, ready = ns.SocialService.Circle()
+    check(ready and ns:CountRegisteredEvents() == eventsBefore, "once it has come, an empty friends list counts, and nobody waits any more")
+    mock.state.bnOffline = true
+    _, ready, waiting = ns.SocialService.Circle()
+    check(not ready and waiting == "battlenet", "without Battle.net its friends cannot be told")
+    mock.state.bnOffline = nil
+    mock.Fire("BN_CONNECTED")
+    _, ready = ns.SocialService.Circle()
+    check(ready and ns:CountRegisteredEvents() == eventsBefore, "once Battle.net is back, it counts again")
+    mock.state.friends = friendsBefore
+end
 mock.state.friends = { { name = "Mira Sturmfeder", guid = "Player-1-MIRA", connected = false } }
 mock.state.guild = { { name = "Ena Fremd-Realm" } }
 mock.state.bnFriends = { { battleTag = "Kael#1234", games = {} } }
@@ -1804,20 +1842,29 @@ local inCircle, circleReady = ns.SocialService.Circle()
 check(circleReady and inCircle("Player-1-MIRA") and inCircle("Player-1-X", "Ena-Fremd") and inCircle("Player-1-X", nil, "kael#1234")
     and not inCircle("Player-1-KAEL", "Kael Dorn") and not inCircle(mock.SECRET, mock.SECRET, mock.SECRET),
     "the circle knows friends by GUID, guild members by name, Battle.net friends by BattleTag")
-local outsiders = Fellows.Outsiders(function(guid)
+local function onlyMira(guid)
     return guid == "Player-1-MIRA"
-end)
+end
+mock.state.group = { members = { tom, ena } }
+mock.Fire("GROUP_ROSTER_UPDATE")
+local inGroup = Fellows.Outsiders(onlyMira)
+check(not Fellows.IsTogether("Player-1-ENA") and #inGroup == 1 and inGroup[1].guid == "Player-1-KAEL",
+    "with only friends, a stranger in the group is not counted, nor tidied away while there")
+mock.state.group = { members = { tom } }
+mock.Fire("GROUP_ROSTER_UPDATE")
+local outsiders = Fellows.Outsiders(onlyMira)
 check(#outsiders == 2 and outsiders[1].guid == "Player-1-ENA" and outsiders[2].guid == "Player-1-KAEL",
     "outsiders: whoever the circle does not know, by name; Tom is in the group and stays")
 check(Fellows.RemoveOutsiders(inCircle) == 0 and FamulusDB.fellows["Player-1-ENA"] and FamulusDB.fellows["Player-1-KAEL"],
     "nobody goes while the circle knows them all")
 mock.state.bnFriends = nil
-check(Fellows.RemoveOutsiders(ns.SocialService.Circle()) == 1 and FamulusDB.fellows["Player-1-KAEL"] == nil
+check(Fellows.RemoveOutsiders((ns.SocialService.Circle())) == 1 and FamulusDB.fellows["Player-1-KAEL"] == nil
     and FamulusDB.fellows["Player-1-ENA"] and FamulusDB.fellows["Player-1-MIRA"], "a former Battle.net friend goes")
 FamulusDB.fellows["Player-1-ENA"] = nil
 mock.state.friends, mock.state.guild = nil, nil
 ns:SetOption("rememberFellows", "friendsOnly", false)
-check(not fellows.events.FRIENDLIST_UPDATE and not fellows.events.PLAYER_GUILD_UPDATE, "back to everyone, it stops listening to the friends list and the guild")
+check(not fellows.events.FRIENDLIST_UPDATE and not fellows.events.PLAYER_GUILD_UPDATE and not fellows.events.BN_FRIEND_LIST_SIZE_CHANGED
+    and not fellows.events.BN_CONNECTED, "back to everyone, it stops listening to the friends list, the guild and Battle.net")
 
 -- The page.
 SlashCmdList.FAMULUS("")
@@ -1885,7 +1932,7 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
         return visibleRows()[4]
     end
     local row = tidy()
-    check(row.label:GetText() == "Remove former friends and guild members" and row.action:IsShown() and not row.action.disabled
+    check(row.label:GetText() == "Remove everyone but friends and guild" and row.action:IsShown() and not row.action.disabled
         and row.desc:GetText() == "One person is neither on your friends list nor in your guild: Mira Sturmfeder."
         and row.action.label:GetText() == "Remove", "tidy up names who would go; Tom is in the group and stays: " .. row.desc:GetText())
     mock.state.friends = { { name = "Mira Sturmfeder", guid = "Player-1-MIRA", connected = false } }
@@ -1913,7 +1960,19 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
     check(row.action.label:GetText() == "Really remove?" and FamulusDB.fellows["Player-1-MIRA"] ~= nil, "the first click asks")
     mock.Advance(5)
     check(row.action.label:GetText() == "Remove", "and after a few seconds it stops asking")
-    window.search.edit:SetText("guild members")
+    -- Battle.net gone between showing the names and the second click.
+    mock.Click(row.action)
+    mock.state.bnOffline = true
+    mock.Click(row.action)
+    row = tidy()
+    check(FamulusDB.fellows["Player-1-MIRA"] ~= nil and row.action.disabled
+        and row.desc:GetText() == "Battle.net is not connected right now, so your Battle.net friends cannot be checked.",
+        "if Battle.net went away before the second click, nobody goes, and the row says why: " .. row.desc:GetText())
+    mock.state.bnOffline = nil
+    mock.Fire("BN_CONNECTED")
+    row = tidy()
+    check(not row.action.disabled and row.desc:GetText():find("^One person") ~= nil, "once Battle.net is back, it counts again")
+    window.search.edit:SetText("everyone but")
     check(#visibleRows() == 1 and visibleRows()[1].item.kind == "action", "the search finds tidying up")
     window.search.edit:SetText("mira sturmfeder")
     local tidyHit = false
@@ -1924,11 +1983,15 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
     window.search.edit:SetText("")
     row = tidy()
     mock.Click(row.action)
+    -- Someone who comes onto the list after the row was read is not removed with the others.
+    FamulusDB.fellows["Player-1-NEW"] = { name = "Neu Ling", first = time(), last = time(), times = 1, seconds = 60, bosses = 0 }
     mock.Click(row.action)
     row = tidy()
-    check(FamulusDB.fellows["Player-1-MIRA"] == nil and FamulusDB.fellows["Player-1-TOM"] ~= nil and row.action.disabled
+    check(FamulusDB.fellows["Player-1-MIRA"] == nil and FamulusDB.fellows["Player-1-TOM"] ~= nil
+        and FamulusDB.fellows["Player-1-NEW"] ~= nil and row.desc:GetText():find("Neu Ling", 1, true) ~= nil
         and lastChat():find("removed 1 who are neither friends nor in your guild", 1, true),
-        "the second click removes them and says how many: " .. lastChat())
+        "the second click removes whom the row counted, says how many, and leaves who came later: " .. lastChat())
+    FamulusDB.fellows["Player-1-NEW"] = nil
     FamulusDB.fellows["Player-1-MIRA"] = miraData
     mock.state.guild = nil
     ns:Fire("FELLOWS_CHANGED")

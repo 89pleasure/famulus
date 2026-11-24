@@ -3,7 +3,15 @@
 Every release has a section `## <version>` (the tag without the `v`, for example `## 0.2.0-beta.1`).
 That section becomes the changelog of the file on CurseForge.
 
-## 0.1.0
+## 0.1.0-alpha.2
+
+### Fellow travellers
+- Optionally only friends (Battle.net friends too) and guild members, like the chronicle.
+- Tidy up removes everyone from the list who is neither on your friends list nor in your guild.
+  It names them first, asks before it removes, and waits while your friends list or guild roster
+  is still loading or Battle.net is not connected.
+
+## 0.1.0-alpha.1
 
 The first public alpha. Famulus is young: much of it has only been tested against a mock of the game
 client so far, so expect rough edges, and please tell us on CurseForge what you run into.
@@ -25,9 +33,6 @@ client so far, so expect rough edges, and please tell us on CurseForge what you 
 ### Fellow travellers
 - Remembers who you grouped with: when, where, how often, for how long, and which bosses you beat
   together. This stays on your computer and is never sent anywhere.
-- Optionally only friends (Battle.net friends too) and guild members, like the chronicle.
-- Tidy up removes everyone from the list who is neither on your friends list nor in your guild
-  (any more).
 
 ### Window
 - `/fam` opens it: search across everything, five colour themes, English and German.

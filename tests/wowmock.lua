@@ -540,6 +540,7 @@ C_FriendList = {
         record("C_FriendList.ShowFriends")
     end,
     IsFriend = function(guid)
+        record("C_FriendList.IsFriend")
         for _, friend in ipairs(mock.state.friends or {}) do
             if friend.guid == guid then
                 return true
@@ -570,6 +571,10 @@ function BNGetNumFriends()
     record("BNGetNumFriends")
     return #(mock.state.bnFriends or {})
 end
+-- mock.state.bnOffline = true: Battle.net is not connected.
+function BNConnected()
+    return not mock.state.bnOffline
+end
 C_BattleNet = {
     GetFriendAccountInfo = function(index)
         local friend = (mock.state.bnFriends or {})[index]
@@ -585,12 +590,13 @@ C_BattleNet = {
     GetFriendGameAccountInfo = function(index, gameIndex)
         return bnGame((mock.state.bnFriends or {})[index], gameIndex)
     end,
-    -- The account of the friend who plays that character right now.
+    -- The account of the friend who plays that character right now; with
+    -- stranger = true one the client knows, but not as a friend's.
     GetAccountInfoByGUID = function(guid)
         for index, friend in ipairs(mock.state.bnFriends or {}) do
             for gameIndex, game in ipairs(friend.games or {}) do
                 if game.playerGuid == guid then
-                    return { battleTag = friend.battleTag, isFriend = true, isBattleTagFriend = true,
+                    return { battleTag = friend.battleTag, isFriend = not friend.stranger, isBattleTagFriend = not friend.stranger,
                         gameAccountInfo = bnGame(friend, gameIndex) }
                 end
             end

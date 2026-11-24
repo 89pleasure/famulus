@@ -1355,9 +1355,15 @@ end
 -- or no longer, goes in one go. The row names them; like reset, the button
 -- asks first.
 local TIDY_NAMES = 5 -- names the row lists; the others it counts
+local tidyShown -- the GUIDs the row counted when its button was armed
 
-local function TidyClicked()
+-- shown: the outsiders the row counts right now.
+local function TidyClicked(shown)
     if not tidyArmed then
+        tidyShown = {}
+        for _, each in ipairs(shown) do
+            tidyShown[each.guid] = true
+        end
         tidyArmed = true
         tidyToken = tidyToken + 1
         local token = tidyToken
@@ -1371,26 +1377,52 @@ local function TidyClicked()
         return
     end
     tidyArmed = false
-    -- A fresh look: the list on screen may be a while old.
+    -- A fresh look: the list on screen may be a while old. If a list has
+    -- gone missing since (Battle.net lost, say), nobody goes, and the row
+    -- says what it waits for. Otherwise only who was counted when asking
+    -- goes, and only if still no friend: never someone the row did not
+    -- count.
     local check, ready = ns.SocialService.Circle()
-    local removed = ready and ns.FellowService.RemoveOutsiders(check) or 0
+    if not ready then
+        Render()
+        return
+    end
+    local removed = ns.FellowService.RemoveOutsiders(check, tidyShown or {})
     if removed > 0 then
         ns:Notify(L.msg_fellow_tidied:format(removed))
     end
     RefreshState(false)
 end
 
+-- What the row says while a list it compares with is not there yet.
+local TIDY_WAIT = {
+    friends = "ui_fellow_tidy_wait_friends",
+    guild = "ui_fellow_tidy_wait_guild",
+    battlenet = "ui_fellow_tidy_wait_battlenet",
+}
+
 local function TidyItem()
-    local check, ready = ns.SocialService.Circle()
-    local outsiders = ready and ns.FellowService.Outsiders(check) or {}
+    -- Worked out once, when the row is shown: building the tab's blocks
+    -- (the search does that for every tab, on every key) stays cheap and
+    -- asks the client for no list.
+    local ready, waiting, outsiders
+    local function Look()
+        if outsiders == nil then
+            local check
+            check, ready, waiting = ns.SocialService.Circle()
+            outsiders = ready and ns.FellowService.Outsiders(check) or {}
+        end
+        return outsiders
+    end
     return {
         kind = "action",
         label = function()
             return L.ui_fellow_tidy
         end,
         desc = function()
+            Look()
             if not ready then
-                return L.ui_fellow_tidy_wait
+                return L[TIDY_WAIT[waiting]]
             elseif #outsiders == 0 then
                 return L.ui_fellow_tidy_none
             end
@@ -1422,9 +1454,11 @@ local function TidyItem()
             return tidyArmed
         end,
         usable = function()
-            return ready and #outsiders > 0
+            return #Look() > 0
         end,
-        click = TidyClicked,
+        click = function()
+            TidyClicked(Look())
+        end,
     }
 end
 

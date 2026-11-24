@@ -249,7 +249,7 @@ end
 -- ("First Last", "First-Last"), or nil. Of two with the same name, the one
 -- seen last. The chronicle links a friend to your story with them this way.
 function FellowService.Find(name)
-    local Key = ns.AliasService.Key
+    local Key = ns.SocialService.Key
     local key = IsPlainText(name) and Key(name)
     local fellows = Store()
     if not key or not fellows then
@@ -266,13 +266,18 @@ end
 
 -- Everyone on the list whom check (see SocialService.Circle) does not know:
 -- no friend and not in the guild, or not any more. As { guid, person }, by
--- name. Whoever is in the group right now is left out.
+-- name. Whoever is in the group right now is left out, also someone the
+-- option "only friends and guild" does not count.
 function FellowService.Outsiders(check)
     local list = {}
     local fellows = Store()
     if fellows then
+        local present = {}
+        for _, member in ipairs(ns.GroupService.Members(true)) do
+            present[member.guid] = true
+        end
         for guid, person in pairs(fellows) do
-            if not together[guid] and not check(guid, person.name, person.tag) then
+            if not together[guid] and not present[guid] and not check(guid, person.name, person.tag) then
                 list[#list + 1] = { guid = guid, person = person }
             end
         end
@@ -283,17 +288,20 @@ function FellowService.Outsiders(check)
     return list
 end
 
--- Removes the outsiders; returns how many went.
-function FellowService.RemoveOutsiders(check)
-    local list = FellowService.Outsiders(check)
-    local fellows = Store()
-    for _, each in ipairs(list) do
-        fellows[each.guid] = nil
+-- Removes the outsiders; returns how many went. only: a set of GUIDs (the
+-- ones the player was shown); whoever is not in it stays.
+function FellowService.RemoveOutsiders(check, only)
+    local fellows, removed = Store(), 0
+    for _, each in ipairs(FellowService.Outsiders(check)) do
+        if not only or only[each.guid] then
+            fellows[each.guid] = nil
+            removed = removed + 1
+        end
     end
-    if #list > 0 then
+    if removed > 0 then
         ns:Fire("FELLOWS_CHANGED")
     end
-    return #list
+    return removed
 end
 
 -- True while the person is in the player's group.
