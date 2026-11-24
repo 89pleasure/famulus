@@ -1396,14 +1396,38 @@
   // The landscapes. Ridges from far to near; see scene.js for the fields.
   // -------------------------------------------------------------------------
 
-  const FIRE = 900; // where the glow sits on the ground of the hero
+  // The hero: friends at a fire on a hill, dark against the large moon, an
+  // old tree with an owl beside them, forest all round. See scene.js for
+  // the figures.
+  const MOON = {
+    x: 1150, y: 540, r: 165, depth: 0.1,
+    small: { x: 1440, y: 150, r: 17 },
+    bats: [[1035, 420, 0.9], [1072, 398, 0.7], [1010, 392, 0.6]],
+  };
+
+  const CAMP = {
+    fire: 1150,
+    size: 1,
+    // A group of four with the hunter's wolf; the tent, the tree and the
+    // horse stand farther back.
+    cast: [
+      { figure: 'oak', at: 18.5, back: true, facing: 1, rim: false },
+      { figure: 'horse', at: 25, back: true, facing: 1, rim: false, scale: 1.15 },
+      { figure: 'tent', at: -22, back: true },
+      { figure: 'mage', at: -15.5 },
+      { figure: 'wolf', at: -11.2, scale: 0.9 },
+      { figure: 'warrior', at: -6.4 },
+      { figure: 'rogue', at: 11.5 },
+      { figure: 'hunter', at: 6 },
+    ],
+  };
 
   const HERO = [
-    { seed: 11, base: 650, amp: 330, scale: 520, sharp: true, tone: 1, depth: 0.16, haze: 50, valley: { at: 0.62, width: 0.2, depth: 0.5 } },
-    { seed: 23, base: 725, amp: 290, scale: 400, sharp: true, tone: 2, depth: 0.3, haze: 50, valley: { at: 0.58, width: 0.22, depth: 0.55 } },
-    { seed: 37, base: 775, amp: 150, scale: 520, octaves: 3, tone: 3, depth: 0.48, trees: { gap: [10, 26], height: [10, 26], clump: 140 } },
-    { seed: 41, base: 835, amp: 120, scale: 440, octaves: 3, tone: 4, depth: 0.7, trees: { gap: [9, 22], height: [22, 54] } },
-    { seed: 59, base: 878, amp: 56, scale: 380, octaves: 2, tone: 5, depth: 1, fire: FIRE, trees: { gap: [22, 60], height: [30, 330], frame: [0.3, 1] } },
+    { seed: 11, base: 650, amp: 330, scale: 520, sharp: true, tone: 1, depth: 0.16, haze: 50, valley: { at: 0.72, width: 0.2, depth: 1 } },
+    { seed: 23, base: 725, amp: 290, scale: 400, sharp: true, tone: 2, depth: 0.3, haze: 50, valley: { at: 0.72, width: 0.2, depth: 1 } },
+    { seed: 37, base: 750, amp: 110, scale: 520, octaves: 3, tone: 3, depth: 0.48, valley: { at: 0.72, width: 0.12, depth: 0.9 }, trees: { gap: [9, 24], height: [12, 34], clump: 140, broad: 0.45, clear: [930, 1420] } },
+    { seed: 43, base: 770, amp: 70, scale: 420, octaves: 3, tone: 4, depth: 0.7, plateau: { from: 890, to: 1475, y: 640, edge: 170 }, grass: { gap: [5, 14], height: [4, 11] }, bushes: [[905, 20], [1530, 22]], cast: [{ figure: 'deer', x: 1482, scale: 0.55, facing: -1 }], camp: CAMP, flies: { from: 860, to: 1540, count: 14, seed: 3 } },
+    { seed: 59, base: 886, amp: 40, scale: 380, octaves: 2, tone: 5, depth: 1, grass: { gap: [6, 18], height: [6, 20] }, trees: { gap: [22, 60], height: [30, 330], frame: [0.35, 1], broad: 0.35, bushes: 0.15, clear: [900, 1400] }, flies: { from: 1250, to: 1600, count: 6, seed: 9, height: 120 } },
   ];
 
   const glimpse = seed => [
@@ -1422,22 +1446,31 @@
 
   const hero = $('#top');
   const heroScene = $('#scene');
+  Scene.moon(heroScene, MOON);
   const heroLayers = Scene.build(heroScene, HERO);
+  const heroCamp = heroLayers.find(layer => layer.camp);
   Scene.stars($('.scene__stars', heroScene), 170, 5);
   Scene.build($('#scene-alias'), glimpse(100));
   Scene.build($('#scene-feed'), glimpse(200));
   const footScene = $('#scene-foot');
   const footLayers = Scene.build(footScene, FOOT);
 
-  // Sparks rise from where the glow is; that place depends on how the
-  // drawing is cut to the window, so it is found again after a resize.
-  // (Whoever asks for less motion does not see them; the CSS hides them.)
+  // In one column the camp stands below the text, and the drawing pans so
+  // that it is in view, from the tent to the horse (the CSS makes it smaller).
+  const heroInColumn = matchMedia('(max-width: 980px)');
+  const CAMP_MIDDLE = 1200;
+
+  // Sparks rise from the fires; where they are depends on how the drawing
+  // is cut to the window, so it is found again after a resize. (Whoever
+  // asks for less motion does not see them; the CSS hides them.)
   function kindle() {
+    if (heroInColumn.matches) Scene.pan(heroScene, CAMP_MIDDLE);
+    else for (const name of ['--pan-left', '--pan-width']) heroScene.style.removeProperty(name);
     const few = innerWidth < 760;
-    for (const [scene, layers, x, count] of [[heroScene, heroLayers, FIRE, few ? 16 : 34], [footScene, footLayers, 800, few ? 10 : 20]]) {
-      const ground = layers[layers.length - 1];
-      const focus = Scene.place(ground.svg, x, Scene.heightAt(ground.points, x));
-      Scene.embers($('.scene__embers', scene), count, focus);
+    const fires = [[heroScene, heroCamp, heroCamp.camp.x, few ? 16 : 34], [footScene, footLayers[footLayers.length - 1], 800, few ? 10 : 20]];
+    for (const [scene, ground, x, count] of fires) {
+      const host = $('.scene__embers', scene);
+      Scene.embers(host, count, Scene.place(ground.svg, x, Scene.heightAt(ground.points, x), host));
     }
   }
   // Only a new width calls for new sparks. On phones the address bar comes

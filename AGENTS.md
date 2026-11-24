@@ -895,8 +895,9 @@ nicht bestätigt.
   der Farbwelt braucht die Seite nicht (Auftraggeber, 2026-11-24). Zum Nachschlagen:
   Git-Verlauf bis Commit `a750f8d`. Nicht wieder einbauen, ohne zu fragen.
 - **Das Artwork ist generiert, nicht von Blizzard** (Entscheidung des Assistenten): `scene.js`
-  zeichnet eine Nachtlandschaft aus Bergketten, Kiefern, zwei Monden und Glut als SVG-Ebenen, aus
-  festem Zufall, also bei jedem Besuch gleich. Gründe: Blizzards Artwork ist urheberrechtlich
+  zeichnet eine Nachtlandschaft aus Bergketten, Wäldern, zwei Monden und einem Lager am Feuer
+  (siehe „Lagerfeuer im Kopf“) als SVG-Ebenen, aus festem Zufall, also bei jedem Besuch gleich.
+  Gründe: Blizzards Artwork ist urheberrechtlich
   geschützt, und eine eigene Landschaft folgt der Farbwelt. Parallax: Ebenen mit `data-depth`
   folgen Scrollen und Mauszeiger (gezeichnet wird nur bei Änderung und nur, solange der Kopf
   sichtbar ist), Elemente mit `data-parallax` driften beim Scrollen. Die Funken sind
@@ -958,6 +959,44 @@ nicht bestätigt.
   Einblendung lässt sich mit den Pfeiltasten verschieben; ausgelöste Einblendungen werden
   vorgelesen (`#feed-said`); `color-scheme: dark`. Offen geblieben (Geschmack, nicht geändert):
   336 px Abstand zwischen zwei Abschnitten.
+- **Lagerfeuer im Kopf (2026-11-24, Wunsch des Auftraggebers):** Forever hat ein neues
+  Spielelement: Man setzt sich gemeinsam ans Lagerfeuer und bekommt Buffs. Das ist jetzt das
+  Motiv der Kopfgrafik, im bisherigen Stil (gezeichnet, kein Screenshot). Aus vier Varianten
+  („Ferne Glut“, „Am Feuer“, „Vor dem Mond“, „Am See“) hat der Auftraggeber **„Vor dem Mond“**
+  gewählt: eine Gruppe auf einer Kuppe als Schattenriss vor einem großen Mond. Die anderen drei
+  und die Umschaltleiste sind wieder entfernt (nie committet). Seine Kritik am ersten Stand: zu
+  wenig WoW-Charakter, zu wenig Flora und Fauna, die Figuren sahen aus wie Gliederpuppen
+  (sie waren aus Gelenken mit gleich dicken Strichen gebaut). Überarbeitet; die Umsetzung im
+  Einzelnen hat der Assistent entschieden, der Auftraggeber hat sie gesehen und committen lassen
+  (2026-11-24):
+  - **Figuren** sind gezeichnete Silhouetten aus Teilen (`FIGURES` in `scene.js`: glatte
+    Umrisse, sich verjüngende Glieder, Köpfe im Profil): eine Gruppe von vier mit Haustier,
+    erkennbar an der Ausrüstung, nicht am Volk, damit keine Fraktion außen vor bleibt (Horde und
+    Allianz spielen in Forever nicht zusammen). Magier (Spitzhut, Bart, Stab mit leuchtendem
+    Kristall, steht), Krieger (Hörnerhelm, Schulterplatte mit Dornen, Bart, Krug zum Feuer,
+    Axt im Boden), Jägerin (lange Ohren, Haar, Bogen und Köcher auf dem Rücken) mit Wolf,
+    Schurke (Kapuze, Umhang). Dazu Zelt mit Licht innen und ein gesatteltes Pferd (Forever hat
+    nur Bodenreittiere).
+  - **Ebener Lagerplatz (Kritik des Auftraggebers):** Zelt und Pferd standen schräg am Hang, und
+    das Pferd sah aus wie ein Esel. Die Kuppe ist jetzt zwischen `plateau.from` und `plateau.to`
+    genau eben und rundet sich erst danach ab (`edge`). Alles, was dort steht, muss in diesem
+    Bereich bleiben. Das Pferd hat jetzt einen gebogenen Hals, einen langen Kopf, kleine Ohren,
+    eine Mähne, einen langen Schweif und einen Zügel, aber keine Satteldecke mehr.
+  - **Flora und Fauna:** ein alter Laubbaum neben dem Mond, auf dessen Ast eine Eule mit
+    leuchtenden Augen sitzt; Laubbäume zwischen den Kiefern (`trees.broad`), Büsche (`bushes`),
+    Grasbüschel (`grass`), ein Hirsch, Fledermäuse, die über den Mond fliegen, Glühwürmchen.
+    Zwei Monde, ein großer weißer und ein kleiner blauer, wie bei Azeroth.
+  - **Feuer:** die Flamme des Logos, flackert per CSS; Lichtkante der Figuren zum Feuer hin.
+    Bewegung nur per CSS (Flamme, Fledermäuse, Glühwürmchen, Funken), `prefers-reduced-motion`
+    hält alles an.
+  - **Schmale Bildschirme** (eine Spalte, bis 980 px): Die Zeichnung wird kleiner, steht unter
+    dem Text (eigener Platz, `padding-bottom` am Kopf) und wird so verschoben, dass das Lager
+    mittig ist (`FamulusScene.pan`). Sonst lag es rechts außerhalb und der Mond hinter den Knöpfen.
+  - Die Einblendungen rechts stehen höher (`margin-top: -26vh`), über dem Mond. Bei 1280 × 720
+    ragt die zweite noch etwas in die Baumkrone.
+  - Geprüft im eingebauten Browser und mit Chrome ohne Fenster bei 375, 768, 1280, 1440 und
+    1920 px Breite, Deutsch und Englisch; keine Meldungen in der Konsole. Nicht geprüft: Safari,
+    Firefox, echte Mobilgeräte.
 - **Sprachen:** Englisch steht im HTML (`data-i18n="schlüssel"`), Deutsch in `i18n.js`; was
   Skripte zusammensetzen, steht dort in beiden Sprachen. Die Sprache folgt dem Browser, ist
   umschaltbar und lässt sich mit `?lang=de` erzwingen. Fehlt einer Sprache ein Schlüssel, warnt
