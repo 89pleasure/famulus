@@ -286,7 +286,8 @@ window.FamulusScene = (() => {
   // behind while the page scrolls, near ones follow the pointer more. Draws
   // only when something changed and only while the hero is on screen.
   function parallax(hero) {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Asked for whenever it matters: the setting can change while the page is open.
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
     const layers = [...hero.querySelectorAll('[data-depth]')].map(element => ({
       element,
       depth: parseFloat(element.dataset.depth),
@@ -303,6 +304,13 @@ window.FamulusScene = (() => {
 
     function draw() {
       frame = 0;
+      if (motion.matches) {
+        // Still: everything where the page puts it.
+        for (const { element } of layers) element.style.transform = '';
+        if (copy) copy.style.transform = copy.style.opacity = '';
+        now.x = now.y = 0;
+        return;
+      }
       if (!visible) return;
       now.x += (target.x - now.x) * 0.07;
       now.y += (target.y - now.y) * 0.07;
@@ -332,8 +340,9 @@ window.FamulusScene = (() => {
         request();
       });
     }
+    motion.addEventListener('change', request);
     new IntersectionObserver(entries => {
-      visible = entries[0].isIntersecting;
+      visible = entries[entries.length - 1].isIntersecting; // the latest
       hero.classList.toggle('is-away', !visible); // pauses sparks and stars
       if (visible) request();
     }).observe(hero);

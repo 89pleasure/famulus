@@ -876,15 +876,23 @@ nicht bestätigt.
 
 - **Technik:** statische Seite ohne Build-Schritt und ohne Bibliotheken: `index.html`,
   `styles.css`, `i18n.js` (Texte), `scene.js` (Landschaft, Parallax), `main.js` (Sprache,
-  Farbwelt, Demos), `assets/` (Logo als SVG aus den Umrissen von `tools/make_media.py`; Inter aus
+  Demos), `assets/` (Logo als SVG aus den Umrissen von `tools/make_media.py`; Inter aus
   `Famulus/Media/Fonts` kopiert, samt Lizenz). Die Seite fragt keinen fremden Server an (keine
   Webfonts, kein Tracking). Vorschau: `python3 -m http.server 4173 --directory website`
   (als `website` in `.claude/launch.json`). Auf dem Windows-Rechner gibt es kein `python3`; dort
-  lief die Vorschau über einen kleinen Node-Server, der nicht im Repo liegt.
-- **Optik folgt dem Addon:** die Helligkeitsleiter und die fünf Farbwelten aus `UI/Theme.lua` als
-  CSS-Variablen (`--h`, `--s`, `--accent`, `--accent2`), Akzent und Glühen nur für „aktiv / hier“,
-  Körnung, Funken. Die Farbwelt lässt sich auf der Seite umschalten und färbt alles mit, auch die
-  Landschaft. Die Seite merkt sich Farbwelt und Sprache im Browser (`localStorage`).
+  startet `website-node` in derselben Datei einen kleinen Node-Server ohne Pakete (seit
+  2026-11-24).
+- **Optik folgt dem Addon:** die Helligkeitsleiter und die Farbwelt „Zitrone“ aus `UI/Theme.lua`
+  als CSS-Variablen (`--h`, `--s`, `--accent`, `--accent2`), Akzent und Glühen nur für „aktiv /
+  hier“, Körnung, Funken. Alle Farben, auch die der Landschaft, hängen an diesen Variablen. Die
+  Seite merkt sich die Sprache im Browser (`localStorage`).
+- **„Unter der Haube“ entfernt (2026-11-24, Entscheidung des Auftraggebers: „Erstmal
+  unwichtig“):** der Abschnitt mit den Zahlen (0 Spielereignisse, 0 Zeilen pro Frame, 0
+  Bibliotheken, 2 Sprachen), den vier Grundsätzen und der Auswahl der fünf Farbwelten, samt
+  Eintrag in der Navigation. Mit ihm sind die anderen vier Farbwelten von der Seite
+  verschwunden (`:root[data-scheme]` in `styles.css`, `setScheme` in `main.js`); eine Auswahl
+  der Farbwelt braucht die Seite nicht (Auftraggeber, 2026-11-24). Zum Nachschlagen:
+  Git-Verlauf bis Commit `a750f8d`. Nicht wieder einbauen, ohne zu fragen.
 - **Das Artwork ist generiert, nicht von Blizzard** (Entscheidung des Assistenten): `scene.js`
   zeichnet eine Nachtlandschaft aus Bergketten, Kiefern, zwei Monden und Glut als SVG-Ebenen, aus
   festem Zufall, also bei jedem Besuch gleich. Gründe: Blizzards Artwork ist urheberrechtlich
@@ -894,11 +902,27 @@ nicht bestätigt.
   CSS-Animationen. `prefers-reduced-motion` schaltet alle Bewegung ab.
 - **Aufbau:** Kopf (Landschaft, rechts laufen Einblendungen mit) → 01 Aliase (das Fenster
   nachgebaut und bedienbar, darunter Chat und Tooltip „im Spiel“) → 02 Chronik (das Bilderbuch mit
-  den Reitern Alle, Meine Reise, Gefährten) → 03 Live-Einblendung (auslösbar, Platz verschiebbar)
-  → 04 Unter der Haube (Zahlen, Grundsätze, Farbwelten) → 05 Installation → Fuß mit Hinweis auf
-  Blizzards Marke. Die Demos zeigen erfundene Personen und die Beispiele aus
-  `/fam chronicle demo`, mit den eigenen Zeichnungen statt Spielsymbolen. Ein Alias aus der
-  ersten Demo erscheint auch im Bilderbuch und in den Einblendungen.
+  den Reitern Alle, Meine Reise, Gefährten) → 03 Weggefährten (seit 2026-11-24) → 04
+  Live-Einblendung (auslösbar, Platz verschiebbar) → 05 Installation → Fuß mit Hinweis auf
+  Blizzards Marke. Die Demos zeigen erfundene
+  Personen und die Beispiele aus `/fam chronicle demo`, mit den eigenen Zeichnungen statt
+  Spielsymbolen. Ein Alias aus der ersten Demo erscheint auch im Bilderbuch, in den
+  Einblendungen und bei den Weggefährten.
+- **Weggefährten (2026-11-24, Wunsch des Auftraggebers; Aufbau, Texte und Daten hat der
+  Assistent entschieden, vom Auftraggeber noch nicht gesehen):** Wie die Übersicht im Addon
+  (`UI/Fellows.lua`), aber ohne Fensterrahmen, damit der Abschnitt nicht vom nachgebauten
+  Fenster abhängt: drei Kacheln „Engste Gefährten“ (Rang, Wappen mit Ring, Name in der
+  Buchschrift, Verbundenheit, Zahlen, Fuß), darunter „Alle weiteren“ mit Auswahl der
+  Reihenfolge und Liste. Ein Klick öffnet „Eure Geschichte“: links der Steckbrief mit Leiter
+  der Verbundenheit, rechts das Buch der gemeinsamen Tage (Gemeinsam unterwegs, Bosse, „Ihr
+  seid jetzt …“, Kennengelernt). Stufen und Meilensteine rechnet `main.js` wie
+  `FellowService.Tier` und `Milestones`. Das Wappen zeigt den Anfangsbuchstaben in der
+  Klassenfarbe statt eines Klassensymbols (keine Grafiken von Blizzard). „Alias festlegen“
+  füllt das Fenster der Aliase aus, „In der Chronik“ (nur bei Mira und Borin, die Einträge
+  haben) filtert das Buch der Chronik. Die Personen: Mira, Borin, Kaelric (Papa) und Yorick
+  von der Seite, dazu Lysa und Ena aus `/fam fellows demo`; Zeiten und Tage passen zur Chronik
+  der Seite. Abweichung vom Addon: Die Karte nennt „zuletzt …“ nur einmal (im Addon steht es
+  unter dem Namen und noch einmal unten).
 - **An den neuen Fensteraufbau angepasst (2026-11-24, Wunsch des Auftraggebers; die Umsetzung im
   Einzelnen hat der Assistent entschieden, vom Auftraggeber noch nicht gesehen):**
   - **Fenster:** wie im Addon Kopf mit Logo, den drei Bereichen als Reiter mit Zähler (Aliase,
@@ -907,21 +931,38 @@ nicht bestätigt.
     „Einstellungen“ und „x von 10 aktiv“; im Inhalt Titel des Unterbereichs und „Zurücksetzen“ mit
     Nachfrage (nur auf „Einstellungen“). Weil der Kopf Breite braucht, steht das Fenster über die
     ganze Seitenbreite und die Spielansicht (Chat links, Tooltip rechts) als Band darunter, nicht
-    mehr daneben. Schmaler: unter 1080 px nur Symbole für „Einstellungen“ und „Über“, unter 860 px
-    eine Spalte (Seitenleiste als Streifen unter dem Kopf), unter 560 px nur der gewählte Bereich
-    mit Namen.
+    mehr daneben. Schmaler: unter 1080 px nur Symbole für „Einstellungen“ und „Über“, unter 900 px
+    eine Spalte (Seitenleiste als Streifen unter dem Kopf), unter 680 px nur der gewählte Bereich
+    mit Namen. Die Grenzen 900 und 680 sind so gewählt, dass der Kopf auf Englisch und Deutsch
+    ins Fenster passt (gemessen 2026-11-24).
+  - **Das Fenster hinkt dem Addon hinterher (Stand 2026-11-24):** Es zeigt noch den Zwischenstand
+    mit Reitern im Kopf, Hauptschalter in der Seitenleiste und „x von 10 aktiv“. Entscheidung des
+    Auftraggebers: erst nachziehen, wenn sich das Fenster im Addon gesetzt hat („die Fenster
+    werden sich ohnehin noch viel verändern“).
   - **Chronik:** Kapitelkopf in einer Zeile, Wiederholungen gebündelt (die Beispieldaten von
     gestern haben dafür drei Tode in Uldaman und zwei Stufen von Borin), daneben die Randspalte wie
     im Addon (Alle: Woche und Gefährten; Meine Reise: Woche und Berufe; Gefährten: Steckbriefe). Ein
     Klick auf einen Gefährten filtert das Buch. Unter 980 px steht die Randspalte zwischen den
-    Reitern und dem Buch.
+    Reitern und dem Buch. Der Kapitelkopf entsteht wie im Addon (`TitleChapter`) aus den gezeigten
+    Ereignissen (`chapterHead` in `main.js`): Gebiet der meisten, Stufen nur aus eigenen.
+- **Review 2026-11-24** (Durchsicht im Browser und im Code, vom Auftraggeber zum Abarbeiten
+  freigegeben): behoben sind die Kapitelköpfe beim Filtern, zwei Formulierungen für denselben
+  Fund, widersprüchliche Beispieldaten (Mira war schon gestern 40; die Stufe in der Einblendung
+  hat jetzt Kaelric), der Grundsatz „Fehler bleiben klein“ (nur ein Fehler beim Einschalten
+  schaltet eine Funktion ab) und Schritt 2 der Installation (Neustart statt `/reload`, weil ein
+  neuer Addon-Ordner sonst womöglich nicht gefunden wird; im Spiel ungeprüft, die README sagt
+  weiter `/reload`). Dazu: Einblendungen und Funken laufen nur, wenn sie zu sehen sind; „weniger
+  Bewegung“ wirkt auch, wenn es erst während des Besuchs eingeschaltet wird; Tabs mit
+  Pfeiltasten; Fokus bleibt beim Löschen eines Alias und bei „Alle zeigen“; der Platz der
+  Einblendung lässt sich mit den Pfeiltasten verschieben; ausgelöste Einblendungen werden
+  vorgelesen (`#feed-said`); `color-scheme: dark`. Offen geblieben (Geschmack, nicht geändert):
+  336 px Abstand zwischen zwei Abschnitten.
 - **Sprachen:** Englisch steht im HTML (`data-i18n="schlüssel"`), Deutsch in `i18n.js`; was
   Skripte zusammensetzen, steht dort in beiden Sprachen. Die Sprache folgt dem Browser, ist
   umschaltbar und lässt sich mit `?lang=de` erzwingen. Fehlt einer Sprache ein Schlüssel, warnt
   die Konsole.
 - **Bewusst noch nicht enthalten:** ein Download (die Veröffentlichung ist offen; der Knopf sagt
-  „Download folgt“), Guildy (erst wenn der PR dort angenommen ist), ein eigener Abschnitt für die
-  Weggefährten (sie stehen bisher nur als Reiter im nachgebauten Fenster), Screenshots aus dem Spiel, Impressum und Datenschutzerklärung (vor dem
+  „Download folgt“), Guildy (erst wenn der PR dort angenommen ist), Screenshots aus dem Spiel, Impressum und Datenschutzerklärung (vor dem
   Veröffentlichen nötig), Hosting und Domain (offen), ein Vorschaubild für geteilte Links,
   WOFF2-Schriften (geladen werden die TTF aus dem Addon, je ~100 KB).
 - **Geprüft** im eingebauten Browser der App (Chromium): bei 1440 und 375 px Breite alle
@@ -930,11 +971,18 @@ nicht bestätigt.
   Safari, Firefox, echte Mobilgeräte, die Einstellung für weniger Bewegung. Nach der Anpassung an
   den neuen Fensteraufbau (2026-11-24) erneut bei 1440, 1024, 768 und 375 px: Fenster und Chronik
   bedient (Unterbereich, Schalter, Zurücksetzen, Hauptschalter aus, Reiter der Chronik, Filter),
-  Deutsch und Englisch, keine Meldungen in der Konsole; Farbwelten diesmal nicht.
+  Deutsch und Englisch, keine Meldungen in der Konsole; Farbwelten diesmal nicht. Nach dem
+  Review (2026-11-24): Fensterkopf bei 375 bis 1081 px in beiden Sprachen nachgemessen, Tabs per
+  Tastatur, Fokus, Vorlesen und Verschieben per Skript geprüft. „Weniger Bewegung“ ließ sich im
+  Browser der App nicht einschalten und ist weiter ungeprüft. Die Weggefährten (2026-11-24) bei
+  1440, 1024, 768 und 375 px in beiden Sprachen: Kacheln, Liste, Reihenfolge, Geschichte öffnen
+  und schließen (Fokus kehrt zurück), „Alias festlegen“, „In der Chronik“; keine Meldungen in der
+  Konsole, kein seitliches Scrollen.
 - **Bei Änderungen am Addon mitziehen:** Versionsnummer (`fact_version`, `in_rel_d`), die Zähler
   im nachgebauten Fenster (`renderWindow` in `main.js`: 5 Alias-Features, 10 insgesamt; im HTML
   Chronik 1/4 und Weggefährten 0/1), neue Hauptfunktionen als Reiter im Kopf und als eigener
-  Abschnitt.
+  Abschnitt mit Eintrag in der Navigation; die Stufen der Verbundenheit (`TIERS` in `main.js`)
+  wie `FellowService.TIERS`.
 
 ## Regeln für neuen Code
 
