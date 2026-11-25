@@ -1211,21 +1211,42 @@ do -- the live feed: what was just written down appears on screen for a while
             end
         end
     end
+    -- The sounds played so far, and the last one.
+    local function sounds()
+        local last
+        for _, call in ipairs(mock.calls) do
+            if call[1] == "PlaySoundFile" then
+                last = call
+            end
+        end
+        return mock.count("PlaySoundFile"), last
+    end
     Feed.Clear()
     check(ns.features.liveFeed.enabled and ns:GetOption("liveFeed", "zone") == false and ns:GetOption("liveFeed", "level") == true
-        and ns:GetOption("liveFeed", "own") == false,
-        "the feed is on from the start; arrivals in a zone and the player's own events are not shown")
+        and ns:GetOption("liveFeed", "own") == false and ns:GetOption("liveFeed", "sound") == true,
+        "the feed is on from the start, with its sound; arrivals in a zone and the player's own events are not shown")
+    mock.Advance(3) -- (a sound shortly before would hold back the next)
+    local heard = sounds()
     -- (Two events of a kind within a second count as one; hence the times.)
     Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 18, probe = true })
     check(#Feed.Shown() == 0, "from the start the feed is about companions: the player's own events stay off screen")
     ns:SetOption("liveFeed", "own", true)
     Chronicle.Add("level", { level = 14, t = time() - 19, probe = true })
     check(#Feed.Shown() == 0, "the player's own level-up is not shown: the game announces it itself")
+    check(sounds() == heard, "no card, no sound")
     Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 20, probe = true })
     local card = Feed.Shown()[1]
     check(#Feed.Shown() == 1 and card:IsShown() and card.title:GetText() == "Learned to ride"
         and card.photo:IsShown() and not card.icon:IsShown() and not card.number:IsShown(),
         "asked for, an event of the player's own appears as a card with an icon of the game")
+    local count, sound = sounds()
+    check(count == heard + 1 and sound[2] == ns.features.liveFeed.SOUND and sound[3] == "SFX",
+        "a card comes with a sound, on the game's sound effects channel")
+    local file = io.open("Famulus/" .. ns.features.liveFeed.SOUND:match("\\Famulus\\(.+)$"):gsub("\\", "/"), "rb")
+    check(file ~= nil and file:read(4) == "OggS", "the sound is an Ogg file in the addon folder")
+    if file then
+        file:close()
+    end
     check(card.crest:GetHeight() < card:GetHeight() and card.crest:GetWidth() < card:GetWidth()
         and card:GetWidth() >= 230 and card.mark:IsShown() and card.grain ~= nil,
         "the picture is a crest inside its band; a milestone carries the mark of an active card")
@@ -1241,6 +1262,7 @@ do -- the live feed: what was just written down appears on screen for a while
         and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
     check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and not Feed.Shown()[1].mark:IsShown(),
         "a band is as wide as its text needs; a companion's event is no milestone")
+    check(sounds() == heard + 1, "cards that come together bring one sound")
     for skill = 1, 3 do
         Chronicle.Add("skill", { skill = skill, name = "Craft " .. skill, rank = 75, probe = true })
     end
@@ -1253,6 +1275,13 @@ do -- the live feed: what was just written down appears on screen for a while
     Chronicle.Add("level", { level = 15, who = "Jaina Proudmoore", t = time() - 23, probe = true })
     check(#Feed.Shown() == 1 and Feed.Shown()[1].number:IsShown() and Feed.Shown()[1].number:GetText() == "15",
         "a companion's level-up appears with its number")
+    check(sounds() == heard + 2, "a card some time later brings its own sound")
+    Feed.Clear()
+    mock.Advance(3)
+    ns:SetOption("liveFeed", "sound", false)
+    Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 26, probe = true })
+    check(#Feed.Shown() == 1 and sounds() == heard + 2, "with the sound switched off, the card comes silently")
+    ns:SetOption("liveFeed", "sound", true)
     Feed.Clear()
     ns:SetOption("liveFeed", "level", false)
     Chronicle.Add("level", { level = 16, who = "Jaina Proudmoore", t = time() - 24, probe = true })
@@ -1277,8 +1306,11 @@ do -- the live feed: what was just written down appears on screen for a while
     SlashCmdList.FAMULUS("feed reset")
     check(not Feed.IsMoving() and FamulusDB.feed == nil, "/fam feed fixes it again, /fam feed reset puts it back")
     Feed.Clear()
+    mock.Advance(3)
+    heard = sounds()
     SlashCmdList.FAMULUS("feed test")
-    check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13", "/fam feed test shows a sample card")
+    check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13" and sounds() == heard + 1,
+        "/fam feed test shows a sample card, with its sound")
     Feed.Clear()
     forget()
 end
@@ -2434,7 +2466,7 @@ do
         "recording: the four switches and how people are named, as entries; no book, no rail (got " .. #recording .. ")")
     check(recording[5].entry.item.key == "chronicleNames" and recording[5].toggle.on and recording[5].entry.title == "Display",
         "the character name behind an alias is a switch of its own under a heading, on from the start")
-    -- The live feed in full: its two options as rows, the kinds of events as chips.
+    -- The live feed in full: its three options as rows, the kinds of events as chips.
     mock.Click(recording[4])
     local detail = window.detail
     local function chips()
@@ -2447,9 +2479,9 @@ do
         return list
     end
     local kinds = chips()
-    check(recording[4].sub:GetText() == "On  ·  12 options" and #visibleRows() == 2 and #kinds == 10
+    check(recording[4].sub:GetText() == "On  ·  13 options" and #visibleRows() == 3 and #kinds == 10
         and detail.chipsTitle:GetText() == "Kinds of events" and detail.chipsCount:GetText() == "9 of 10 on",
-        "the live feed: duration and own events as rows, ten kinds as chips, nine of them on")
+        "the live feed: duration, sound and own events as rows, ten kinds as chips, nine of them on")
     check(kinds[2].label:GetText() == "Deaths" and kinds[2].on and kinds[2].option.icon == "skull" and ns.UI.media.skull
         and kinds[9].label:GetText() == "New zones" and not kinds[9].on and not kinds[9].lit.parts[1]:IsShown() and kinds[10].label:GetText() == "Reactions" and kinds[10].option.icon == "cheer",
         "each chip with its kind's icon, lit while on")
