@@ -125,16 +125,20 @@ local WHITE, BLACK = { 1, 1, 1, 1 }, { 0, 0, 0, 1 }
 
 -- Lightness of each ground and text level, and how much of the scheme's
 -- saturation it takes ({ lightness, share }).
+-- Lines and borders are a little darker than the darker of the two grounds
+-- they part, never lighter: they read like a soft groove, not a bright edge.
 local ladder = {
     sidebar = { 0.070, 1 },
     window = { 0.092, 1 },
+    windowBorder = { 0.054, 1 }, -- outline and the lines of head and sidebar
     card = { 0.125, 1 },
-    cardBorder = { 0.185, 0.9 },
+    cardBorder = { 0.074, 1 }, -- a card on the window; the line below the tabs
     control = { 0.150, 1 },
-    controlBorder = { 0.230, 0.9 },
+    controlBorder = { 0.105, 1 }, -- a button or picture on a card
     field = { 0.055, 1 },
+    fieldBorder = { 0.045, 1 },
     inset = { 0.055, 1 },
-    divider = { 0.160, 0.9 },
+    divider = { 0.090, 1 }, -- lines inside a card
     track = { 0.240, 0.9 },
     text = { 0.945, 0.9 },
     textDim = { 0.740, 0.5 },

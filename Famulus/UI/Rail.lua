@@ -61,7 +61,7 @@ local function CreateCard(rail)
     card.text = UI.Text(card, 12, "textMuted")
     card.text:SetWidth(rail.width - PAD * 2)
     card.text:SetSpacing(2)
-    card.hintLine = UI.Line(card, "cardBorder")
+    card.hintLine = UI.Line(card, "divider")
     card.cells, card.rows, card.bars, card.crests = {}, {}, {}, {}
     return card
 end
@@ -106,7 +106,7 @@ local function Row(card, index)
     row = CreateFrame("Button", nil, card)
     row:SetHeight(ROW)
     local pixel = UI.Pixel(row)
-    row.divider = UI.Line(row, "cardBorder")
+    row.divider = UI.Line(row, "divider")
     row.divider:SetPoint("TOPLEFT")
     row.divider:SetPoint("TOPRIGHT")
     -- The chosen one: the accent fading out to the right, a bar on the left.

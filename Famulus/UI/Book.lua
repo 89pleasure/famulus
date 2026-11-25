@@ -132,7 +132,7 @@ local function LayRoute(head, names, top)
         if not plate then
             plate = CreateFrame("Frame", nil, head)
             plate:SetHeight(ROUTE_H)
-            UI.Card(plate, "field", "cardBorder", 6)
+            UI.Card(plate, "field", "fieldBorder", 6)
             plate.text = UI.Text(plate, 11, "textDim", "medium")
             plate.text:SetPoint("CENTER")
             plate.text:SetJustifyH("CENTER")

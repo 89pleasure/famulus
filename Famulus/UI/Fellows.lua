@@ -521,7 +521,7 @@ local function LayPeople(part, people, width)
         if not plate then
             plate = CreateFrame("Frame", nil, part)
             plate:SetHeight(PERSON_H)
-            UI.Card(plate, "field", "cardBorder", PERSON_H / 2)
+            UI.Card(plate, "field", "fieldBorder", PERSON_H / 2)
             plate.disc = UI.Icon(plate, "circle", PERSON_ICON, "chip")
             plate.disc:SetPoint("LEFT", 3, 0)
             plate.initial = UI.Text(plate, 9, "textDim", "semibold")
