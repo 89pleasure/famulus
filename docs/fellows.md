@@ -304,8 +304,8 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
 Picked by the owner on 2026-11-25 from a list of new ideas by the assistant ("Wer ist in der
 Nähe"), because it is of use without Famulus on the other side. Shows who of the player's friends
 and guild is in the same zone or at a similar level. It reads the friends list, the Battle.net
-friends who play this game and the guild roster; nothing is sent and nothing is stored. Checked
-against the mock only, not yet seen in game; the website does not show it yet.
+friends who play this game and the guild roster; nothing is sent and nothing is stored. The
+website does not show it yet.
 
 - **The owner's decisions (2026-11-25, on the canvas "In der Nähe – Entwürfe", claude.ai artifact
   `Ste3CibFuPCTWcoBaWXxaY`):** the card in form B, people's crests (class icon, ring of the bond)
@@ -353,7 +353,7 @@ against the mock only, not yet seen in game; the website does not show it yet.
   that opens a whisper. A click on a fellow traveller's row opens "Your story". Beside it "Where
   your people are": the zones, the player's first, then the fullest, with the levels there.
   Switched off, the tab says how to switch it on. The search finds nothing here.
-- **Not checked in game:** everything. In particular whether `FRIENDLIST_UPDATE` comes when a
+- **Open in game:** whether `FRIENDLIST_UPDATE` comes when a
   friend changes zones (otherwise the ticker catches it within a minute), whether the guild roster
   is refreshed every minute when asked, whether Battle.net's `areaName`, `characterLevel` and
   `className` are filled for Forever, and whether `PLAYER_CONTROL_GAINED` comes on landing.

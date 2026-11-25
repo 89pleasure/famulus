@@ -60,12 +60,6 @@ the index there says which file it is in.
   `/fam feed test` shows it (it lights up, the card closes, nothing is sent). Tried in game
   (2026-11-25): works. Not yet seen in game: the card closing after a reaction, and clicking it
   in combat.
-- **Nearby (2026-11-25, checked against the mock only, not yet in game):** see "Nearby" in
-  `docs/fellows.md`. Open in game: whether a card comes when a friend or guild member enters the
-  zone (with the guild roster up to a minute late), whether the two crests on a card look clean,
-  whether the tab's list and the zones beside it fill, whether the whisper button opens the chat
-  with the right name, and what `/fam test` says about `BNET_CLIENT_WOW`, `IsResting` and
-  `ChatFrameUtil.SendTell`.
 - **Sound of the live feed (2026-11-25, checked against the mock only, not yet in game):** see
   "Sound" under "Live feed". Open in game: whether `click.ogg` plays after a `/reload`
   (`/fam feed test`), whether it is too loud or too quiet next to the game's sounds.
