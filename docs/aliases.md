@@ -49,8 +49,10 @@ Custom names for other players, modelled on the addon CustomNames
   `89pleasure/Guildy`): `GuildyAPI.RegisterNameFormatter(owner, fn)`,
   `UnregisterNameFormatter`, `Refresh`; Guildy asks the formatter in `W.ClassName`, links keep
   the real name. The feature registers a formatter there (option `style` as in the chat) and calls
-  `Refresh` on `ALIASES_CHANGED`. The owner's decision (2026-11-18): the PR is only
-  submitted when Famulus is to be published; until then the fork is used.
+  `Refresh` on `ALIASES_CHANGED`. At first the PR was to wait until Famulus is published
+  (the owner's decision, 2026-11-18). Submitted on 2026-11-25 at the owner's request as
+  `svengabr/Guildy#2`, after a rebase onto Guildy 1.16.0 (tests 858/0).
+  Until it is merged, the integration still works only with the fork.
   The Guildy installed in the game folder is a clone of the branch (remotes `fork` and `upstream`).
   Keeping it current: there `git fetch upstream && git rebase upstream/main`, tests (`luajit
   tests/run.lua`), then `git push --force-with-lease fork name-formatter-api`. With the regular
