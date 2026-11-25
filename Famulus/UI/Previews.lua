@@ -1033,6 +1033,82 @@ SCENES.lang = {
     end,
 }
 
+-- Time and date format: every format on a card with an example, two to a
+-- row, the one in effect in the accent (as for the language).
+local FORMAT_W, FORMAT_GAP = 220, 20
+
+local function FormatCards(scene, width, count, height, top)
+    scene.cards = {}
+    for index = 1, count do
+        local column, row = (index - 1) % 2, math.floor((index - 1) / 2)
+        local card = Panel(scene, "card", "cardBorder", 10)
+        card:SetSize(FORMAT_W, height)
+        card:SetPoint("TOPLEFT", width / 2 - FORMAT_W - FORMAT_GAP / 2 + column * (FORMAT_W + FORMAT_GAP), -(top + row * (height + 10)))
+        card.small = UI.Text(card, 11, "textMuted", "medium")
+        card.small:SetPoint("TOPLEFT", 14, -12)
+        card.example = UI.Text(card, 15, "text", "semibold")
+        card.example:SetPoint("TOPLEFT", card.small, "BOTTOMLEFT", 0, -7)
+        card.example:SetWidth(FORMAT_W - 28)
+        card.example:SetWordWrap(false)
+        scene.cards[index] = card
+    end
+    scene.caption = Caption(scene)
+    scene.caption:SetPoint("BOTTOM", 0, 14)
+end
+
+local function MarkFormat(card, chosen)
+    UI.Ink(card.small, chosen and "accent" or "textMuted")
+    card.shape.border:SetColor(chosen and "accentLine" or "cardBorder")
+end
+
+-- An evening of play today, from 19:05 to 21:40.
+local function Evening(hour, minute)
+    local today = date("*t")
+    return time({ year = today.year, month = today.month, day = today.day, hour = hour, min = minute })
+end
+
+SCENES.time = {
+    Build = function(scene, width, height)
+        Ground(scene, width, height)
+        FormatCards(scene, width, #ns.TIME_FORMATS, 74, 40)
+    end,
+
+    Fill = function(scene)
+        local twelve = ns:GetOption("general", "timeFormat") == "12h"
+        local from, to = Evening(19, 5), Evening(21, 40)
+        for index, format in ipairs(ns.TIME_FORMATS) do
+            local card = scene.cards[index]
+            card.small:SetText(L["ui_preview_time_" .. format])
+            card.example:SetText(L.c_ch_span:format(ns.FormatTime(from, format), ns.FormatTime(to, format)))
+            MarkFormat(card, (format == "12h") == twelve)
+        end
+        scene.caption:Set(L.ui_preview_dates_where)
+    end,
+}
+
+SCENES.date = {
+    Build = function(scene, width, height)
+        Ground(scene, width, height)
+        FormatCards(scene, width, #ns.DATE_FORMATS, 56, 22)
+    end,
+
+    Fill = function(scene)
+        local auto = ns:GetOption("general", "dateFormat") == "auto"
+        local shown = ns.DatePattern()
+        local year, month, day = string.match(date("%Y-%m-%d"), "^(%d+)-(%d+)-(%d+)$")
+        local letters = { y = L.ui_preview_date_y, m = L.ui_preview_date_m, d = L.ui_preview_date_d }
+        for index, pattern in ipairs(ns.DATE_FORMATS) do
+            local card = scene.cards[index]
+            local chosen = pattern == shown
+            local order = string.gsub(pattern, "{(%a)}", letters)
+            card.small:SetText(chosen and auto and (order .. "  ·  " .. L.ui_preview_date_auto) or order)
+            card.example:SetText(ns.FormatDate(year, month, day, pattern))
+            MarkFormat(card, chosen)
+        end
+        scene.caption:Set(L.ui_preview_dates_where)
+    end,
+}
+
 -- Feedback in chat: the addon's own line among the chat, as it writes it.
 SCENES.chatfam = {
     Build = function(scene, width, height)

@@ -49,7 +49,8 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   `UI/Options.lua`). `aliases`: tab "Names" with the card "New alias" and the card
   "Your aliases" (avatar with initial), tab "Settings" (until 2026-11-23 "Display") with the alias
   features. `chronicle`: see "Chronicle". `fellows`: see "Fellow travellers". The settings have the
-  tabs "General" (language, feedback in chat, minimap icon, character profile) and "Appearance"
+  tabs "General" (language, time format, date format, feedback in chat, minimap icon, character
+  profile; see "Time and date format") and "Appearance"
   (colour scheme, embers, window size). The first page on opening is the first in the sidebar,
   so since 2026-11-24 the chronicle (before that the aliases).
 - **Master switch** (since 2026-11-24, the owner's decision: "Only the master switches"):
@@ -68,6 +69,21 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   Settings"); no tabs in the results view. It leaves out the content of a switched-off feature,
   but finds its master switch. On a page without a sidebar the
   hits take the full width.
+- **Time and date format (since 2026-11-26):** Settings › General, below the language.
+  `general.timeFormat`: `"24h"` (default, 21:40) or `"12h"` (9:40 PM; midnight 12 AM, noon
+  12 PM; `g_timeFormat_am`/`_pm`). `general.dateFormat`: `"auto"` (default, the language's order,
+  `c_date`: enUS 2026-11-19, deDE 19.11.2026) or one of `ns.DATE_FORMATS` (`{y}-{m}-{d}`,
+  `{d}.{m}.{y}`, `{m}/{d}/{y}`, `{d}/{m}/{y}`); an unknown saved value falls back to the language.
+  The dropdowns name each choice by an example (today at 21:40, today's date). Every time and
+  date the window writes (chronicle, fellow travellers) goes through `ns.FormatTime(t)` and
+  `ns.FormatDate(year, month, day)` in `Core/Locale.lua`; never `date("%H:%M")` in the UI. Only the
+  logs keep ISO with seconds (self-test, `devLog`, the sharing trace). A change redraws the open
+  window (`RequestRefresh("layout")`). Why the clock has no "automatic": the game's clock has a
+  24-hour switch (CVar `timeMgrUseMilitaryTime`, read by `GameTime_GetFormattedTime` in
+  `Blizzard_FrameXMLUtil/GameTimeUtil.lua` on the `forever` branch), but its default in Forever is
+  unknown; following it could switch players who never touched it to 12 hours. Checked against the
+  mock only, not yet in game; open: whether "7:05 PM – 9:40 PM" fits the card's foot beside a long
+  zone name (the foot is cut off with "...", the chapter's lines make room by themselves).
 - **Colours (reworked 2026-11-18, evening):** The owner found the first version (neutral
   greys, accent only as a fill) too arbitrary. Role models for colour concept, accents and effects:
   Polestar Guide and Mastercraft, without copying them. On an HTML mockup the owner chose the concept
@@ -207,7 +223,10 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
       (the entry `AliasMenu` adds), `bnet` (a Battle.net friend under the alias, with three
       characters), `guildy` (Guildy's list). Switched off, the alias is missing.
     - **Settings:** `areas` (the sidebar's three entries, a switched-off one with "OFF"), `lang`
-      (the tagline in both languages, the one shown chosen), `chatfam` (the addon's own chat line
+      (the tagline in both languages, the one shown chosen), `time` (both clocks on an evening of
+      play, 19:05 to 21:40, the chosen one in the accent), `date` (the four orders with today's
+      date, each named in the language's letters, "YYYY-MM-DD" or "TT.MM.JJJJ"; while it follows
+      the language, the language's order says so), `chatfam` (the addon's own chat line
       among others), `minimap` (the button at the saved angle, drawn as `UI/MinimapButton.lua`
       draws it), `profile` (all characters or this one), `accent` (every scheme as a small window;
       tokens `scheme*_<id>` for all schemes at once), `embers` (`UI.Embers`), `scale` (the window
@@ -225,7 +244,9 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     globe (language), compass (minimap), person (character profile), drop (colour scheme), resize.
     The Windows machine has no Python; the TGAs were written by a temporary port of the drawing to
     LuaJIT (not in the repo), which redraws `tag`, `people` and `reset` byte for byte as the
-    Python script wrote them. Shapes and choice of icons: the assistant's decisions.
+    Python script wrote them. Shapes and choice of icons: the assistant's decisions. Since
+    2026-11-26 also clock (time format) and calendar (date format), written by a temporary port
+    to Node of `stroke` and `write_tga` that redraws `globe` and `compass` byte for byte.
   - Unchanged: the search (rows in cards, grouped per tab), reset per tab, the notice of a
     switched-off area, the tabs without settings.
   - The assistant's decisions within variant B: sizes, the wording of pills and of the line below

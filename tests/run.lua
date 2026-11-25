@@ -913,14 +913,15 @@ mock.Click(navButton("Settings"))
 mock.Click(tabButton("General"))
 check(tabButton("General").selected and tabButton("Appearance"), "the settings page has a general and an appearance tab")
 local generalRows = visibleEntries()
-check(#generalRows == 7, "the three main features, language, chat feedback, minimap button and character profile (got " .. #generalRows .. ")")
+check(#generalRows == 9, "the three main features, language, time and date format, chat feedback, minimap button and character profile (got "
+    .. #generalRows .. ")")
 check(generalRows[4].value:IsShown() and generalRows[4].value:GetText() == ns.L.lang_auto and not generalRows[4].toggle:IsShown(),
     "a choice shows its value in the entry instead of a switch")
 local generalIcons = {}
 for index, entry in ipairs(generalRows) do
     generalIcons[index] = entry.entry.item.icon
 end
-check(table.concat(generalIcons, " ") == "flag people tag globe chat compass person" and generalRows[4].tile.token == "control",
+check(table.concat(generalIcons, " ") == "flag people tag globe clock calendar chat compass person" and generalRows[4].tile.token == "control",
     "the addon's own settings have icons as well; only a running switch lights its tile: " .. table.concat(generalIcons, " "))
 mock.Click(generalRows[4]) -- language
 check(detail.title:GetText() == "Language" and detail.dropdown:IsShown() and not detail.toggle:IsShown()
@@ -941,13 +942,67 @@ mock.Advance(0.1)
 check(not window.resetButton.disabled, "a changed setting makes the tab resettable")
 ns:SetOption("general", "language", "auto")
 
+-- Time and date format: the clock and the order of a date, each shown by an example.
+do
+    local function at(hour, minute)
+        return ns.FormatTime(time({ year = 2026, month = 11, day = 19, hour = hour, min = minute }))
+    end
+    local function pickValue(value)
+        mock.Click(detail.dropdown.open)
+        mock.Advance(0.05)
+        for _, frame in ipairs(mock.frames) do
+            if frame.value == value and frame.check and frame:IsVisible() then
+                mock.Click(frame)
+                mock.Advance(0.1)
+                return true
+            end
+        end
+        return false
+    end
+    check(generalRows[5].value:GetText() == "21:40" and generalRows[6].value:GetText() == ns.L.g_dateFormat_auto,
+        "the time format shows its example, the date format follows the language")
+    check(at(21, 40) == "21:40" and at(0, 5) == "00:05" and ns.FormatDate("2026", "11", "19") == "2026-11-19",
+        "by default the 24-hour clock and the language's order")
+    mock.Click(generalRows[5])
+    check(detail.title:GetText() == "Time format" and detail.dropdown:IsShown() and detail.pills[1].text:GetText() == "Default: 21:40",
+        "chosen, the time format offers its clocks and names the default by its example")
+    check(pickValue("12h") and ns:GetOption("general", "timeFormat") == "12h", "the dropdown switches to the 12-hour clock")
+    check(at(21, 40) == "9:40 PM" and at(9, 7) == "9:07 AM" and at(0, 5) == "12:05 AM" and at(12, 0) == "12:00 PM"
+        and at(23, 59) == "11:59 PM", "on the 12-hour clock, with AM and PM; midnight is 12 AM, noon 12 PM")
+    check(visibleEntries()[5].value:GetText() == "9:40 PM" and not window.resetButton.disabled, "the entry shows the new example")
+    mock.Click(visibleEntries()[6])
+    check(detail.title:GetText() == "Date format" and detail.pills[1].text:GetText() == "Default: " .. ns.L.g_dateFormat_auto,
+        "the date format names its default")
+    ns:SetOption("general", "language", "deDE")
+    check(ns.FormatDate("2026", "11", "19") == "19.11.2026" and at(21, 40) == "9:40 PM",
+        "as the language, the date follows it; the clock stays as chosen")
+    ns:SetOption("general", "language", "auto")
+    mock.Advance(0.1) -- the window speaks anew before the dropdown opens
+    check(pickValue("{m}/{d}/{y}") and ns.FormatDate("2026", "11", "19") == "11/19/2026", "a chosen order of the date")
+    ns:SetOption("general", "language", "deDE")
+    check(ns.FormatDate("2026", "11", "19") == "11/19/2026", "holds in every language")
+    ns:SetOption("general", "language", "auto")
+    ns:SetOption("general", "dateFormat", "%d nonsense")
+    check(ns.FormatDate("2026", "11", "19") == "2026-11-19", "an order the addon does not know falls back to the language's")
+    local orders = {}
+    for _, pattern in ipairs(ns.DATE_FORMATS) do
+        orders[#orders + 1] = ns.FormatDate("2026", "11", "19", pattern)
+    end
+    check(table.concat(orders, " ") == "2026-11-19 19.11.2026 11/19/2026 19/11/2026", "four orders to choose from: " .. table.concat(orders, " "))
+    mock.Click(window.resetButton)
+    mock.Click(window.resetButton)
+    mock.Advance(4.1)
+    check(ns:GetOption("general", "timeFormat") == "24h" and ns:GetOption("general", "dateFormat") == "auto", "reset brings back 24 hours and the language's order")
+    mock.Click(visibleEntries()[1])
+end
+
 -- Character profile.
 enable("tooltipAliases", false)
-mock.Click(generalRows[7].switch)
+mock.Click(generalRows[9].switch)
 mock.Advance(0.1)
 check(ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "character profile starts as a copy")
 enable("tooltipAliases")
-mock.Click(generalRows[7].switch)
+mock.Click(generalRows[9].switch)
 mock.Advance(0.1)
 check(not ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "switching back restores the account settings")
 enable("tooltipAliases")
@@ -2235,6 +2290,16 @@ check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[
     and events[5].story.title == "Discovered a new zone" and events[1].footer:GetText():match("^%d%d:%d%d  ·  Duskwood$") ~= nil
     and not events[1].detail:IsShown() and events[2].footer:GetText():match("^%d%d:%d%d$") ~= nil,
     "other events show an icon of the game; the foot always tells the time and the place, the text never the place")
+do
+    ns:SetOption("general", "timeFormat", "12h")
+    mock.Advance(0.1)
+    local twelve, head = bookFrames("story"), bookFrames("chapter")[1]
+    check(twelve[4].footer:GetText():match("^%d%d?:%d%d [AP]M  ·  Westfall$") ~= nil and head.chapter.small:find("^%d%d?:%d%d [AP]M") ~= nil,
+        "on the 12-hour clock the book writes its times with AM and PM: " .. twelve[4].footer:GetText() .. " / " .. head.chapter.small)
+    ns:SetOption("general", "timeFormat", "24h")
+    mock.Advance(0.1)
+    check(bookFrames("story")[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil, "and back on 24 hours")
+end
 check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 40,
     "the page is as long as its book")
 check(heads[1].small:IsShown() and heads[1].sub:IsShown() and heads[1].left:IsShown() and heads[1].right:IsShown()
@@ -3233,6 +3298,15 @@ end
 check(sessionTitles[storyChapters[1].chapter.title] and storyChapters[2].chapter.small:match("^%d%d%d%d%-%d%d%-%d%d$"),
     "the chapters are named by the time of day, an older one with its date: "
         .. tostring(storyChapters[1].chapter.title) .. " / " .. tostring(storyChapters[2].chapter.small))
+do
+    local year, month, day = storyChapters[2].chapter.small:match("^(%d+)%-(%d+)%-(%d+)$")
+    ns:SetOption("general", "dateFormat", "{d}/{m}/{y}")
+    mock.Advance(0.1)
+    local small = bookFrames("chapter")[2].chapter.small
+    check(small == day .. "/" .. month .. "/" .. year, "an older day in the chosen order: " .. small)
+    ns:SetOption("general", "dateFormat", "auto")
+    mock.Advance(0.1)
+end
 local found = {}
 for _, event in ipairs(bookFrames("story")) do
     found[event.story.title] = event.story
@@ -3955,6 +4029,26 @@ mock.Advance(0.1)
     set("categories", "fellows", false)
     check(areas.panel.rows[2].badge:IsShown() and areas.panel.rows[2].badge.text:GetText() == "OFF", "a switched-off one marked OFF")
     set("categories", "fellows", true)
+    local clock = choose("cat_general", "ui_tab_general", ns.L.g_timeFormat)
+    check(stage.current == "time" and clock.cards[1].example:GetText() == "19:05 – 21:40" and clock.cards[2].example:GetText() == "7:05 PM – 9:40 PM"
+        and clock.cards[1].shape.border.token == "accentLine" and clock.cards[2].shape.border.token == "cardBorder",
+        "both clocks on an evening of play, the one chosen in the accent")
+    set("general", "timeFormat", "12h")
+    check(clock.cards[2].shape.border.token == "accentLine" and clock.cards[1].shape.border.token == "cardBorder", "the 12-hour clock chosen")
+    set("general", "timeFormat", "24h")
+    local dates = choose("cat_general", "ui_tab_general", ns.L.g_dateFormat)
+    local today = date("%Y-%m-%d")
+    check(stage.current == "date" and #dates.cards == 4 and dates.cards[1].example:GetText() == today
+        and dates.cards[1].small:GetText() == "YYYY-MM-DD  ·  " .. ns.L.ui_preview_date_auto and dates.cards[1].shape.border.token == "accentLine"
+        and dates.cards[3].small:GetText() == "MM/DD/YYYY",
+        "every order with today's date, the language's one chosen: " .. dates.cards[1].small:GetText())
+    set("general", "dateFormat", "{d}.{m}.{y}")
+    check(dates.cards[2].shape.border.token == "accentLine" and dates.cards[2].small:GetText() == "DD.MM.YYYY"
+        and dates.cards[1].shape.border.token == "cardBorder", "a chosen order in the accent, without the note")
+    set("general", "language", "deDE")
+    check(dates.cards[2].small:GetText() == "TT.MM.JJJJ", "the order in letters of the language")
+    set("general", "language", "auto")
+    set("general", "dateFormat", "auto")
     local lang = choose("cat_general", "ui_tab_general", ns.L.g_language)
     check(stage.current == "lang" and lang.cards[1].tagline:GetText() == "Gemeinsam durch Azeroth"
         and lang.cards[2].tagline:GetText() == "Together through Azeroth" and lang.cards[2].shape.border.token == "accentLine",
