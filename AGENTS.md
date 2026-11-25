@@ -582,7 +582,13 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     (`SIDE`), das Bild steht linksbündig, und der Text hält immer denselben Abstand zum Bild
     (`TEXT_GAP`; drei Größen 40/48/56, linksbündig und fester Abstand auf Wunsch des
     Auftraggebers, 2026-11-25; eine Bildspalte in der Breite des größten Bildes ließ bei
-    leichten Karten zu viel Platz). Die Textkante wandert also mit der Bildgröße. Das Gewicht wirkt nur auf Bildgröße, Rand
+    leichten Karten zu viel Platz). Die Textkante wandert also mit der Bildgröße.
+  - **Breite nach Gewicht, vom Book festgelegt (Wunsch des Auftraggebers, 2026-11-25):** Das
+    Feature gibt nur `story.weight` mit; `UI.Book` macht daraus die Breite der Karte (`WIDTHS`
+    in `UI/Book.lua`: leicht 80 %, mittel 90 %, schwer 100 % ihrer Buchseite; die Anteile sind
+    eine Entscheidung des Assistenten). Eine schmalere Karte hängt an der Linie, damit der
+    Strich vom Punkt sie erreicht. Ohne Gewicht (Weggefährten) ist die Karte so breit wie
+    bisher. Der Inhalt bekommt die Breite übergeben und richtet sich danach. Das Gewicht wirkt nur auf Bildgröße, Rand
     oben und unten, Überschrift und Akzent. Entscheidungen des Assistenten im Einzelnen; im
     Spiel noch nicht gesehen. Der vertiefte Streifen mit dem Namen unter der Karte
     ist entfallen; die Weggefährten behalten ihren Streifen (`story.foot`).

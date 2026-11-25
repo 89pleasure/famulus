@@ -1759,6 +1759,10 @@ do
     check(same and not events[2].chipText:IsShown() and events[2].title.mockPoint[5] > events[1].title.mockPoint[5],
         "the text keeps the same distance from the picture on every card; without a name the card has no head line")
 end
+check(events[4].card:GetWidth() < events[2].card:GetWidth() and events[2].card:GetWidth() < events[6].card:GetWidth()
+    and events[6].card:GetWidth() == (window.book:GetWidth() - 44) / 2
+    and events[4].card.mockPoint[1] == (events[4].onLeft and "TOPRIGHT" or "TOPLEFT"),
+    "the book sets a card's width by its weight, and a narrower card keeps to the line")
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
     and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"
     and events[4].detail:GetText() == "at level 13" and events[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil

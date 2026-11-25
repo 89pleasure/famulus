@@ -15,6 +15,8 @@
 --           content = UI.ChronicleCard, -- builds what the card holds, see below
 --           kind = "level",             -- the icon on the line, see PICTURES
 --           icon = "horseshoe",         -- optional: an icon of its own (UI.media)
+--           weight = "low" or "medium" or "high", -- optional: how wide the card
+--                                       -- is, see WIDTHS; without, as wide as can be
 --           big = true,                 -- a milestone: accent border and mark
 --           onClick = function() end,   -- optional: what a click on the card does
 --           ...                         -- whatever its content reads
@@ -39,6 +41,9 @@ local GAP = 14 -- between two events
 local DOT = 22
 local PHOTO_INSET = 2 -- an icon of the game fills its frame but for a fine line
 local DOT_GAP = DOT + 12 -- between the dots of two events on the line
+-- How wide a card is, by its weight: a share of its side of the book. A
+-- narrower card keeps to the line.
+local WIDTHS = { low = 0.8, medium = 0.9, high = 1 }
 local HEAD_TOP, HEAD_BOTTOM = 6, 16 -- room above and below a chapter's heading
 local HEAD_GAP = 16 -- between the place and the words beside it
 local CHAPTER_GAP = 16 -- below a chapter's last card
@@ -378,7 +383,7 @@ local function EventSet(event, story, onLeft, width)
     event.story = story
     event.onLeft = onLeft
     local look = PICTURES[story.kind] or PICTURES.zone
-    local column = (width - AXIS) / 2
+    local column = math.floor((width - AXIS) / 2 * (WIDTHS[story.weight] or 1) + 0.5)
     local card = event.card
 
     -- What the card holds is the feature's: its builder fills a frame of
@@ -401,7 +406,12 @@ local function EventSet(event, story, onLeft, width)
 
     card:SetSize(column, cardHeight)
     card:ClearAllPoints()
-    card:SetPoint(onLeft and "TOPLEFT" or "TOPRIGHT", event, onLeft and "TOPLEFT" or "TOPRIGHT", 0, 0)
+    local side = (width - AXIS) / 2
+    if onLeft then
+        card:SetPoint("TOPRIGHT", event, "TOPLEFT", side, 0)
+    else
+        card:SetPoint("TOPLEFT", event, "TOPRIGHT", -side, 0)
+    end
     local big = story.big and true or false
     event.borderColor = big and "cardActive" or "cardBorder"
     event.shape.border:SetColor(event.borderColor)
