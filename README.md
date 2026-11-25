@@ -21,7 +21,8 @@ other players. English and German, no libraries, no dependencies.
   card on screen. A click on a friend's card celebrates it with them, or mourns a death.
 - **Fellow travellers:** remembers who you grouped with: when, where, how often, for how long, and
   which bosses you beat together. Your closest companions and your bond with them, from Encounter to
-  Inseparable. Optionally friends and guild only. Nothing of this is sent anywhere.
+  Inseparable. Optionally friends and guild only. Shows who of your friends and guild is in your
+  zone or at your level, with a card when you meet up in a zone. Nothing of this is sent anywhere.
 - **Aliases:** names of your own for other players that only you see, in chat, in the tooltip and in
   the Guildy addon, set from the right-click menu. One alias for a Battle.net friend covers all of
   their characters. Whispers, invites and links keep using the real name.
@@ -33,6 +34,7 @@ other players. English and German, no libraries, no dependencies.
 | Chronicle | Share with friends (addon messages between Famulus users) | off |
 | Chronicle | Show events on screen | **on** |
 | Fellow travellers | Remember my fellow travellers | off |
+| Fellow travellers | Who is nearby (friends and guild in your zone) | off |
 | Aliases | In chat, in the tooltip, in the context menu | **on** |
 | Aliases | Characters of Battle.net friends | **on** |
 | Aliases | In Guildy (only when Guildy is loaded) | **on** |

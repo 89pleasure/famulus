@@ -56,7 +56,7 @@ in `docs/`; read the matching file before you work in that area, and only then.
 | [docs/window.md](docs/window.md) | The window: layout (header, sidebar, tabs), areas, master switches, reset, search, colours and colour schemes, no light mode, accents and effects, background (grain, embers), cards, shape, font (how the client loads Inter) | you work on the window, widgets, colours, effects or fonts |
 | [docs/chronicle.md](docs/chronicle.md) | Chronicle: book with rail, chapter as a play session (route), picture book, weighting and layout of the cards, pictures, `ownJourney` (zones, professions, abilities, special items), sample entries, `companions`, live feed (`liveFeed`), class and name, what the client offers | you work on the chronicle, the book (`UI.Book`) or the live feed |
 | [docs/sharing.md](docs/sharing.md) | Sharing between players: protocol, guild, relaying, statistics, queue and throttling, catching up in rounds, analysis "Many users" | you work on addon messages or `Sharing.lua` |
-| [docs/fellows.md](docs/fellows.md) | Fellow travellers: data, counting, friends and guild only, cleanup, secret values, window (overview, "Your story", profile card), groups, bond, daily log, sample data | you work on the fellow travellers |
+| [docs/fellows.md](docs/fellows.md) | Fellow travellers: data, counting, friends and guild only, cleanup, secret values, window (overview, "Your story", profile card), groups, bond, daily log, sample data, nearby (friends and guild in your zone) | you work on the fellow travellers |
 | [docs/aliases.md](docs/aliases.md) | Aliases: data, key, `chatAliases`, `tooltipAliases`, `aliasMenu`, other addons and `guildyAliases`, alias for a Battle.net account | you work on the aliases or on support for other addons |
 | [docs/testing.md](docs/testing.md) | Tests against the mock, state of checks in game (self-tests, bug 2026-11-24), testing in game (paths, `/fam test`, `/fam dev`, Lua errors, BugSack) | you test in game, hunt a bug from the game, work on the mock or want to know what is already confirmed in game |
 | [docs/branding.md](docs/branding.md) | Name, logo, tagline, rejected names and logos | you work on the name, logo or tagline |
@@ -163,7 +163,9 @@ chose **"clear line"**. The rule since then:
   and again) are in the tab "Groups" since 2026-11-24 (see "Fellow travellers"); shared dungeons
   per person are proposed, not commissioned. The groups keep to the rule as well: they show who
   was out with whom and when, not what happened (no deaths, no own levels, bosses only as a
-  number).
+  number). Since 2026-11-25 the fellow travellers also show who of the friends and guild is
+  nearby (tab "Nearby", see "Nearby" in docs/fellows.md): who you could play with right now,
+  read from the friends list, Battle.net and the guild roster, nothing sent.
 
 ## Rules for new code
 
@@ -278,7 +280,7 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
   README has named no version since 2026-11-24. The `.toc` gets the version from the packager; a zip built by hand (above) says
   `dev`.
 - Add new Lua files to the `.toc`; the test fails if a file in the addon folder is missing there.
-  It also counts the features (`total == 10`); adjust the number with a new feature.
+  It also counts the features (`total == 11`); adjust the number with a new feature.
 - Repository: `github.com/89pleasure/famulus` (public, as of 2026-11-24; until 2026-11-19
   `schnitzel`), branch `main`. Commits as `89pleasure <89pleasure@proton.me>`; `user.name` is set
   only locally in this repo.

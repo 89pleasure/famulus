@@ -176,7 +176,7 @@ check(type(FamulusDB) == "table" and type(FamulusDB.profile) == "table", "databa
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()
-check(total == 10, "10 features registered (got " .. total .. ")")
+check(total == 11, "11 features registered (got " .. total .. ")")
 check(active == 6, "6 features on by default (got " .. active .. ")")
 for _, feature in ipairs(ns.featureList) do
     local harmless = feature.id == "liveFeed" or feature.category == "aliases"
@@ -1240,9 +1240,9 @@ do -- the live feed: what was just written down appears on screen for a while
         and card.photo:IsShown() and not card.icon:IsShown() and not card.number:IsShown(),
         "asked for, an event of the player's own appears as a card with an icon of the game")
     local count, sound = sounds()
-    check(count == heard + 1 and sound[2] == ns.features.liveFeed.SOUND and sound[3] == "SFX",
+    check(count == heard + 1 and sound[2] == ns.UI.Feed.SOUND and sound[3] == "SFX",
         "a card comes with a sound, on the game's sound effects channel")
-    local file = io.open("Famulus/" .. ns.features.liveFeed.SOUND:match("\\Famulus\\(.+)$"):gsub("\\", "/"), "rb")
+    local file = io.open("Famulus/" .. ns.UI.Feed.SOUND:match("\\Famulus\\(.+)$"):gsub("\\", "/"), "rb")
     check(file ~= nil and file:read(4) == "OggS", "the sound is an Ogg file in the addon folder")
     if file then
         file:close()
@@ -2937,11 +2937,12 @@ mock.Click(window.tabs.back)
 mock.Click(pageTab("Settings"))
 mock.Advance(0.1)
 local fellowEntries = visibleEntries()
-check(#fellowEntries == 2 and fellowEntries[1].toggle:IsShown() and fellowEntries[1].sub:GetText():find("2 options", 1, true)
-    and #visibleRows() == 2 and fellowEntries[2].entry.item.kind == "action" and fellowEntries[2].entry.title == "Tidy up"
+check(#fellowEntries == 3 and fellowEntries[1].toggle:IsShown() and fellowEntries[1].sub:GetText():find("2 options", 1, true)
+    and #visibleRows() == 2 and fellowEntries[2].label:GetText() == "Who is nearby" and fellowEntries[2].sub:GetText() == "Off  ·  3 options"
+    and fellowEntries[3].entry.item.kind == "action" and fellowEntries[3].entry.title == "Tidy up"
     and pageTab("Settings").selected and window.resetButton:IsShown() and not overview:IsShown() and not overview.card:IsShown(),
-    "settings: the switch with its two options, then tidying up, with reset beside the tabs; no overview")
-mock.Click(fellowEntries[2])
+    "settings: the two switches with their options, then tidying up, with reset beside the tabs; no overview")
+mock.Click(fellowEntries[3])
 do -- tidying up: whoever is neither a friend nor in the guild goes, after asking
     -- The chosen entry in full: its name, what it would do, the button.
     local function tidy()
@@ -2950,7 +2951,7 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
         return { label = detail.title, desc = detail.desc, action = detail.action }
     end
     local row = tidy()
-    check(#visibleRows() == 0 and not fellowEntries[2].toggle:IsShown() and not window.detail.toggle:IsShown(),
+    check(#visibleRows() == 0 and not fellowEntries[3].toggle:IsShown() and not window.detail.toggle:IsShown(),
         "tidying up has a button instead of a switch")
     check(row.label:GetText() == "Remove everyone but friends and guild" and row.action:IsShown() and not row.action.disabled
         and row.desc:GetText() == "One person is neither on your friends list nor in your guild: Mira Sturmfeder."
@@ -3474,6 +3475,224 @@ SlashCmdList.FAMULUS("")
 FamulusDB.fellows = nil
 time = realTime
 setState(stateBeforeFellows)
+
+---------------------------------------------------------------------------
+section("Nearby")
+---------------------------------------------------------------------------
+
+do
+    local Nearby = ns.NearbyService
+    local nearby = ns.features.nearbyFriends
+    local Feed = ns.UI.Feed
+    local stateBefore = mock.state
+    local eventsBefore, timersBefore = ns:CountRegisteredEvents(), mock.ActiveTimers()
+    Feed.Clear()
+    setState({
+        zone = "Tanaris",
+        level = 40,
+        friends = {
+            { name = "Mira Sturmfeder", guid = "Player-1-MIRA", connected = true, level = 41, area = "Tanaris", className = "Mage" },
+            { name = "Lysa Morgentau", guid = "Player-1-LYSA", connected = true, level = 38, area = "Feralas", className = "Priest" },
+            { name = "Old Friend", guid = "Player-1-OLD", connected = false, level = 0 },
+        },
+        guild = {
+            { name = "Kael Dornhain-Realm", guid = "Player-1-KAEL", online = true, level = 42, zone = "Tanaris", class = "ROGUE" },
+            { name = "Mel Mobil", guid = "Player-1-MEL", online = true, mobile = true, level = 30, zone = "Tanaris" },
+            { name = "Me Myself", guid = "Player-1-SELF", online = true, level = 40, zone = "Tanaris" },
+            { name = "Hagen Steinfaust", guid = "Player-1-HAGEN", online = true, level = 60, zone = "Ironforge", class = "WARRIOR" },
+            { name = "Ena Silberquell", guid = "Player-1-ENA", online = true, level = 36, zone = "Desolace", class = "MAGE" },
+        },
+        bnFriends = {
+            { battleTag = "Bo#1", games = { { characterName = "Borin Eisenbart", playerGuid = "Player-1-BORIN", areaName = "Desolace",
+                characterLevel = 39, className = "Warrior" } } },
+            { battleTag = "Mi#2", games = { { characterName = "Mira Sturmfeder", playerGuid = "Player-1-MIRA", areaName = "Tanaris (DE)",
+                characterLevel = 41, className = "Mage" } } },
+            { battleTag = "Re#3", games = { { characterName = "Other Game", playerGuid = "Player-1-OTHER", areaName = "Tanaris", wowProjectID = 1 } } },
+        },
+    })
+
+    local function find(people, name)
+        for _, person in ipairs(people) do
+            if person.name == name then
+                return person
+            end
+        end
+    end
+    local people, here, level = Nearby.People(true)
+    check(#people == 6 and here == "Tanaris" and level == 40,
+        "online friends, guild and Battle.net friends in this game; the player's zone and level (got " .. #people .. ")")
+    check(not find(people, "Old Friend") and not find(people, "Mel Mobil") and not find(people, "Me Myself") and not find(people, "Other Game"),
+        "not: whoever is offline, on the mobile app, the player, someone in another game")
+    local mira, kael, borin = find(people, "Mira Sturmfeder"), find(people, "Kael Dornhain"), find(people, "Borin Eisenbart")
+    check(mira.from == "friend" and mira.zone == "Tanaris" and mira.level == 41 and mira.class == "MAGE",
+        "someone on two lists counts once; the zone in the player's language beats Battle.net's")
+    check(kael.from == "guild" and kael.full == "Kael Dornhain-Realm" and kael.class == "ROGUE" and kael.level == 42,
+        "a guild member: the name without the realm, the full one kept for a whisper")
+    check(borin.from == "battlenet" and borin.zone == "Desolace" and borin.class == "WARRIOR" and borin.level == 39,
+        "a Battle.net friend in this game: zone, level and class from Battle.net")
+    check(#Nearby.People(false) == 3 and not find(Nearby.People(false), "Kael Dornhain"), "without the guild only friends count")
+    mock.state.instanceType = "party"
+    check(Nearby.Quiet(true) == "instance", "in a dungeon nobody is told about")
+    mock.state.instanceType, mock.state.resting = nil, true
+    check(Nearby.Quiet(false) == "rest" and Nearby.Quiet(true) == nil, "nor in a city or an inn, unless asked for")
+    mock.state.resting = nil
+
+    -- Switched on: who is here already comes on one card.
+    check(not nearby.enabled and ns:CountRegisteredEvents() == eventsBefore, "off from the start: it listens to the game")
+    mock.reset()
+    enable("nearbyFriends")
+    check(nearby.enabled and nearby.events.FRIENDLIST_UPDATE and nearby.events.GUILD_ROSTER_UPDATE and nearby.events.BN_FRIEND_INFO_CHANGED
+        and nearby.events.ZONE_CHANGED_NEW_AREA and mock.ActiveTimers() > timersBefore, "switched on, it listens to the lists and the zone")
+    check(mock.count("C_FriendList.ShowFriends") == 1 and mock.count("C_GuildInfo.GuildRoster") == 1, "and asks for fresh lists")
+    check(#Feed.Shown() == 0, "the card waits a moment for the lists")
+    mock.Advance(3.5)
+    local card = Feed.Shown()[1]
+    check(#Feed.Shown() == 1 and card.title:GetText() == "Also in Tanaris: Kael and Mira" and card.detail:GetText() == "Level 42 and 41",
+        "whoever is here already comes on one card: " .. tostring(card and card.title:GetText()))
+    check(card.pair and card.pair[1]:IsShown() and card.pair[2]:IsShown() and not card.crest:IsShown() and not (card.solo and card.solo:IsShown()),
+        "two people, two crests instead of a picture")
+    check(mock.count("PlaySoundFile") == 1, "with the live feed's sound")
+    mock.Advance(10)
+    check(#Feed.Shown() == 0, "and it goes like the live feed's cards")
+
+    -- Someone arrives.
+    mock.state.friends[2].area = "Tanaris"
+    mock.Fire("FRIENDLIST_UPDATE")
+    mock.Advance(1.1)
+    check(#Feed.Shown() == 0, "someone who arrives comes after a moment, with whoever arrives with them")
+    mock.Advance(2)
+    card = Feed.Shown()[1]
+    check(card and card.title:GetText() == "Lysa is in Tanaris now too" and card.detail:GetText() == "Level 38  ·  Priest  ·  Friends list"
+        and card.solo:IsShown() and not card.pair[1]:IsShown() and not card.crest:IsShown(),
+        "someone arrives: a card of their own with one crest: " .. tostring(card and card.title:GetText()))
+    Feed.Clear()
+    mock.state.friends[2].area = "Feralas"
+    mock.Fire("FRIENDLIST_UPDATE")
+    mock.Advance(1.1)
+    mock.state.friends[2].area = "Tanaris"
+    mock.Fire("FRIENDLIST_UPDATE")
+    mock.Advance(3.5)
+    check(#Feed.Shown() == 0, "back again soon after: no second card for the same person in the same zone")
+
+    -- Cities and inns, and the group.
+    mock.state.resting = true
+    mock.state.bnFriends[1].games[1].areaName = "Tanaris"
+    mock.Fire("BN_FRIEND_INFO_CHANGED", 1)
+    mock.Advance(3.5)
+    check(#Feed.Shown() == 0, "in a city or an inn no card comes")
+    ns:SetOption("nearbyFriends", "cities", true)
+    mock.state.guild[4].zone = "Tanaris"
+    mock.Fire("GUILD_ROSTER_UPDATE")
+    mock.Advance(3.5)
+    card = Feed.Shown()[1]
+    check(card and card.title:GetText() == "Hagen is in Tanaris now too" and card.detail:GetText() == "Level 60  ·  Warrior  ·  Guild",
+        "asked for, cards come there too: " .. tostring(card and card.detail:GetText()))
+    ns:SetOption("nearbyFriends", "cities", false)
+    mock.state.resting = nil
+    Feed.Clear()
+    mock.state.group = { members = { { name = "Tom", surname = "Hartwig", guid = "Player-1-TOM", level = 40, class = "PRIEST" } } }
+    mock.state.friends[4] = { name = "Tom Hartwig", guid = "Player-1-TOM", connected = true, level = 40, area = "Tanaris", className = "Priest" }
+    mock.Fire("FRIENDLIST_UPDATE")
+    mock.Advance(3.5)
+    check(#Feed.Shown() == 0, "nobody in the player's group gets a card")
+    mock.state.group = nil
+    mock.Fire("FRIENDLIST_UPDATE")
+    mock.Advance(3.5)
+    check(#Feed.Shown() == 0, "nor when they leave it: they were here all along")
+
+    -- The player moves on, by foot and by air.
+    mock.state.zone = "Desolace"
+    mock.Fire("ZONE_CHANGED_NEW_AREA")
+    mock.Advance(3.5)
+    card = Feed.Shown()[1]
+    check(card and card.title:GetText() == "Also in Desolace: Ena" and card.detail:GetText() == "Level 36  ·  Mage  ·  Guild" and card.solo:IsShown(),
+        "the player arrives: whoever is there already: " .. tostring(card and card.title:GetText()))
+    Feed.Clear()
+    mock.state.friends[5] = { name = "Selina Abendrot", guid = "Player-1-SELINA", connected = true, level = 23, area = "Feralas", className = "Rogue" }
+    mock.state.onTaxi, mock.state.zone = true, "Feralas"
+    mock.Fire("ZONE_CHANGED_NEW_AREA")
+    mock.Advance(3.5)
+    check(#Feed.Shown() == 0, "in flight nothing is told")
+    mock.state.onTaxi = nil
+    mock.Fire("PLAYER_CONTROL_GAINED")
+    mock.Advance(4.5)
+    card = Feed.Shown()[1]
+    check(card and card.title:GetText() == "Also in Feralas: Selina", "landing is arriving: " .. tostring(card and card.title:GetText()))
+    Feed.Clear()
+    mock.Fire("PLAYER_CONTROL_GAINED")
+    mock.Advance(4.5)
+    check(#Feed.Shown() == 0, "control back after a stun is no landing")
+
+    -- After a /reload the lists are only taken note of.
+    mock.Fire("PLAYER_ENTERING_WORLD", false, true)
+    mock.state.friends[6] = { name = "Jorek Tannwind", guid = "Player-1-JOREK", connected = true, level = 24, area = "Feralas", className = "Warrior" }
+    mock.Fire("FRIENDLIST_UPDATE")
+    mock.Advance(3.5)
+    check(#Feed.Shown() == 0, "right after a /reload nobody is announced")
+
+    -- The tab.
+    setState({
+        zone = "Tanaris",
+        level = 40,
+        friends = {
+            { name = "Mira Sturmfeder", guid = "Player-1-MIRA", connected = true, level = 41, area = "Tanaris", className = "Mage" },
+            { name = "Lysa Morgentau", guid = "Player-1-LYSA", connected = true, level = 38, area = "Feralas", className = "Priest" },
+        },
+        guild = {
+            { name = "Kael Dornhain-Realm", guid = "Player-1-KAEL", online = true, level = 42, zone = "Tanaris", class = "ROGUE" },
+            { name = "Hagen Steinfaust", guid = "Player-1-HAGEN", online = true, level = 60, zone = "Ironforge", class = "WARRIOR" },
+        },
+        bnFriends = {
+            { battleTag = "Bo#1", games = { { characterName = "Borin Eisenbart", playerGuid = "Player-1-BORIN", areaName = "Desolace",
+                characterLevel = 39, className = "Warrior" } } },
+        },
+    })
+    FamulusDB.fellows = { ["Player-1-MIRA"] = { name = "Mira Sturmfeder", level = 41, class = "MAGE", first = time() - 86400, last = time() - 3600,
+        times = 4, seconds = 40000, bosses = 2 } }
+    Aliases.Set("Kael Dornhain", "Kiki")
+    SlashCmdList.FAMULUS("")
+    mock.Click(navButton("Fellow travellers"))
+    mock.Click(pageTab("Nearby"))
+    mock.Advance(0.1)
+    local list = window.nearby
+    check(list and list:IsShown() and window.railScroll:IsShown() and list:GetWidth() == 600,
+        "the tab: the list, the zones beside it")
+    local sections = list.sections
+    check(sections[1].title:GetText() == "Here in Tanaris  ·  2" and sections[2].title:GetText() == "Similar level  ·  2  ·  up to 5 levels apart"
+        and sections[3].title:GetText() == "Also online  ·  1", "here, then a similar level, then everyone else: " .. sections[1].title:GetText())
+    local rows = list.rows
+    check(rows[1].name:GetText() == "Mira Sturmfeder" and rows[1].sub:GetText() == "Mage  ·  Friends list" and rows[1].level:GetText() == "41"
+        and rows[1].diff:GetText() == "+1" and rows[1].place:GetText() == "Tanaris" and rows[1].badge:IsShown()
+        and rows[1].badge.text:GetText() == "Trusted", "a fellow traveller first, with the bond")
+    check(rows[2].name:GetText() == "Kiki" and rows[2].sub:GetText() == "Kael Dornhain  ·  Rogue  ·  Guild" and not rows[2].badge:IsShown(),
+        "under an alias the name stands below it; no bond without a group together")
+    check(rows[3].name:GetText() == "Borin Eisenbart" and rows[3].place:GetText() == "Desolace" and rows[4].name:GetText() == "Lysa Morgentau"
+        and rows[4].diff:GetText() == "−2" and rows[5].name:GetText() == "Hagen Steinfaust", "the nearest level first")
+    local places = window.rail.cards[1].places
+    check(window.rail.cards[1].note:GetText() == "5 online" and places[1].name:GetText() == "Tanaris" and places[1].count:GetText() == "2"
+        and places[1].line:GetText() == "Level 41–42" and places[2].count:GetText() == "1", "where your people are: the player's zone first")
+    mock.Click(rows[2].whisper)
+    check(mock.count("ChatFrameUtil.SendTell") == 1 and mock.calls[#mock.calls][2] == "Kael Dornhain-Realm",
+        "the button opens a whisper, with the realm")
+    mock.Click(rows[1])
+    mock.Advance(0.1)
+    check(window.fellows.card:IsShown() and window.fellows.card.name:GetText() == "Mira Sturmfeder",
+        "a click on a fellow traveller opens your story")
+    mock.Click(window.tabs.back)
+    mock.Click(pageTab("Nearby"))
+    enable("nearbyFriends", false)
+    mock.Advance(0.1)
+    check(not window.nearby:IsShown() and not window.railScroll:IsShown() and visibleRows()[1] and visibleRows()[1].item.kind == "info",
+        "switched off, the tab says how to switch it on")
+    check(ns:CountRegisteredEvents() == eventsBefore and mock.ActiveTimers() <= timersBefore + 1,
+        "switched off, it listens to nothing and its ticker stops")
+
+    SlashCmdList.FAMULUS("")
+    Aliases.Set("Kael Dornhain", nil)
+    FamulusDB.fellows = nil
+    Feed.Clear()
+    setState(stateBefore)
+end
 
 ---------------------------------------------------------------------------
 section("Self-test")

@@ -444,7 +444,8 @@ picture-book look are built and checked against the mock only.
     version at the companion's end) stays invisible. A new kind needs an entry in `KINDS` and its
     two texts.
   - **Sound (the owner's request, 2026-11-25: "a simple 2-click sound"):** A card comes with a
-    soft double click, `Media/click.ogg` (`feed:Chime` in `LiveFeed.lua`, also for
+    soft double click, `Media/click.ogg` (`UI.Feed.Chime` in `UI/Feed.lua`, which the fellow
+    travellers' cards use too; `feed:Chime` in `LiveFeed.lua` plays it if the option is on, also for
     `/fam feed test`). The owner chose a file of Famulus's own over the game's click played twice
     (the assistant's advice: a menu click as a notice sounds like "I clicked something", and the
     `SOUNDKIT` IDs are unchecked in Forever). Option `sound` ("Play a sound", default on, because

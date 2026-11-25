@@ -446,6 +446,12 @@ function FellowService.IsTogether(guid)
     return together[guid] ~= nil
 end
 
+-- The stored person with that GUID, or nil. Shared; callers must not change it.
+function FellowService.Person(guid)
+    local fellows = Store()
+    return fellows and IsPlainText(guid) and fellows[guid] or nil
+end
+
 -- Everyone on the list as { guid = ..., person = <stored table> }, in no
 -- particular order. The person tables are shared; callers must not change them.
 function FellowService.List()

@@ -1,8 +1,10 @@
 -- The live feed: cards that appear on screen for a few seconds when the
 -- chronicle writes something down, and fade out again. Nothing exists until
--- the first card is shown, and nothing runs while none is on screen.
+-- the first card is shown, and nothing runs while none is on screen. The
+-- fellow travellers show theirs here too (who is nearby).
 --
 --   UI.Feed.Show(story, seconds)   -- story: as for the book (UI/Book.lua)
+--   UI.Feed.Chime()                -- the cards' sound, once for cards that come together
 --   UI.Feed.SetMoving(true)        -- shows where the cards appear; drag to move
 --
 --   story.reaction = {             -- optional: a button at the band's right
@@ -11,18 +13,42 @@
 --       give = function() end,     -- reacts
 --   }
 --
--- Only that button catches the mouse; the rest of a card lets clicks through
--- to the world. While the mouse is on it the card stays, and goes a moment
--- after the mouse has left. A reaction closes the card shortly after; it is
--- taken back in the chronicle, not here. The place is saved account-wide in
+-- A story with `people = { { name, class, progress }, ... }` shows people
+-- instead of a picture: one crest, or two side by side, each with the ring
+-- of the bond (UI.Crest).
+--
+-- Only the button to react catches the mouse; the rest of a card lets clicks
+-- through to the world. While the mouse is on it the card stays, and goes a
+-- moment after the mouse has left. A reaction closes the card shortly after;
+-- it is taken back in the chronicle, not here. The place is saved account-wide in
 -- FamulusDB.feed, like the window's.
 
-local _, ns = ...
+local ADDON_NAME, ns = ...
 local UI = ns.UI
 local L = ns.L
 
 local Feed = {}
 UI.Feed = Feed
+
+-- A soft double click comes with a card (tools/make_sound.js), once for cards
+-- that come together. It plays on the game's sound effects channel, so it
+-- follows their volume and mute like the game's own notices. The game only
+-- finds a file that was in the addon folder at login or the last /reload.
+Feed.SOUND = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Media\\click.ogg"
+local QUIET = 2 -- seconds; cards within this of the last sound bring none
+local sounded
+
+function Feed.Chime()
+    if not PlaySoundFile then
+        return
+    end
+    local now = GetTime()
+    if sounded and now - sounded < QUIET then
+        return
+    end
+    sounded = now
+    PlaySoundFile(Feed.SOUND, "SFX")
+end
 
 -- A card is a crest on a band: the picture stands inside the band, a little
 -- in from its left end. The band is as wide as its text needs.
@@ -30,6 +56,7 @@ local WIDTH, HEIGHT = 320, 64 -- the band; WIDTH is that of the mark for moving
 local CREST = 48
 local CREST_LEFT = 14 -- band visible left of the crest
 local TEXT_LEFT = CREST_LEFT + CREST + 14
+local PAIR, PAIR_GAP = 40, 4 -- two people's crests side by side
 local TEXT_RIGHT = 22
 local MIN_WIDTH, MAX_WIDTH = 230, 460
 local GROUND_INSET = 3 -- keeps grain and dusk inside the rounded corners
@@ -233,9 +260,51 @@ local function TextWidth(text)
     return (text.GetUnboundedStringWidth or text.GetStringWidth)(text) or 0
 end
 
+-- People instead of a picture: one crest, or two side by side. Made when a
+-- card first needs them. Returns where the text begins.
+local function FillPeople(card, people)
+    local pair = people and #people > 1
+    local solo = people and #people == 1
+    if solo and not card.solo then
+        card.solo = UI.Crest(card, CREST)
+        card.solo:SetPoint("LEFT", CREST_LEFT, 0)
+        card.solo:SetFrameLevel(card:GetFrameLevel() + 2)
+    end
+    if pair and not card.pair then
+        card.pair = {}
+        for index = 1, 2 do
+            local crest = UI.Crest(card, PAIR)
+            crest:SetPoint("LEFT", CREST_LEFT + (index - 1) * (PAIR + PAIR_GAP), 0)
+            crest:SetFrameLevel(card:GetFrameLevel() + 2)
+            card.pair[index] = crest
+        end
+    end
+    card.crest:SetShown(not people or #people == 0)
+    if card.solo then
+        card.solo:SetShown(solo and true or false)
+    end
+    if card.pair then
+        for index, crest in ipairs(card.pair) do
+            crest:SetShown(pair and true or false)
+            if pair then
+                crest:SetPerson(people[index].name, people[index].class)
+                crest:SetProgress(people[index].progress)
+            end
+        end
+    end
+    if solo then
+        card.solo:SetPerson(people[1].name, people[1].class)
+        card.solo:SetProgress(people[1].progress)
+    elseif pair then
+        return CREST_LEFT + PAIR * 2 + PAIR_GAP + 14
+    end
+    return TEXT_LEFT
+end
+
 -- The crest follows the book's pictures: an icon, a number, or the game's
 -- own texture of an item. A milestone has an accent border and a mark.
 local function Fill(card, story)
+    local textLeft = FillPeople(card, story.people)
     local looks = UI.BookPictures
     local look = looks[story.kind] or looks.zone
     card.crestBorder:SetColor(look.border)
@@ -272,9 +341,9 @@ local function Fill(card, story)
     card.detail:SetText(detail or "")
     card.title:ClearAllPoints()
     if detail then
-        card.title:SetPoint("BOTTOMLEFT", card, "LEFT", TEXT_LEFT, 1)
+        card.title:SetPoint("BOTTOMLEFT", card, "LEFT", textLeft, 1)
     else
-        card.title:SetPoint("LEFT", card, "LEFT", TEXT_LEFT, 0)
+        card.title:SetPoint("LEFT", card, "LEFT", textLeft, 0)
     end
 
     -- A friend's event may bring the button to react, at the right end.
@@ -287,12 +356,12 @@ local function Fill(card, story)
     -- The band is as wide as its text needs; text beyond the widest band is
     -- cut off.
     local wanted = math.max(TextWidth(card.title), detail and TextWidth(card.detail) or 0)
-    local width = math.min(MAX_WIDTH, math.max(MIN_WIDTH, math.ceil(TEXT_LEFT + wanted + right)))
+    local width = math.min(MAX_WIDTH, math.max(MIN_WIDTH, math.ceil(textLeft + wanted + right)))
     card:SetWidth(width)
     -- The grain keeps one texel per pixel whatever the width.
     local tile = GRAIN_TEXELS * UI.Pixel(card)
     card.grain:SetTexCoord(0, (width - GROUND_INSET * 2) / tile, 0, (HEIGHT - GROUND_INSET * 2) / tile)
-    local room = width - TEXT_LEFT - right
+    local room = width - textLeft - right
     card.title:SetWidth(room)
     card.detail:SetWidth(room)
 end

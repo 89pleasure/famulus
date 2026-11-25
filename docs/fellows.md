@@ -296,3 +296,63 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
   for `party1`… as for `player`, whether `GROUP_ROSTER_UPDATE` comes by itself after login (otherwise
   `PLAYER_ENTERING_WORLD` catches it), whether `IsInInstance` reports `pvp` in Forever and whether
   `BOSS_KILL` fires in Forever dungeons. `/fam test` checks the functions used (group `api`).
+
+## Nearby (`nearbyFriends`)
+
+Picked by the owner on 2026-11-25 from a list of new ideas by the assistant ("Wer ist in der
+Nähe"), because it is of use without Famulus on the other side. Shows who of the player's friends
+and guild is in the same zone or at a similar level. It reads the friends list, the Battle.net
+friends who play this game and the guild roster; nothing is sent and nothing is stored. Checked
+against the mock only, not yet seen in game; the website does not show it yet.
+
+- **The owner's decisions (2026-11-25, on the canvas "In der Nähe – Entwürfe", claude.ai artifact
+  `Ste3CibFuPCTWcoBaWXxaY`):** the card in form B, people's crests (class icon, ring of the bond)
+  instead of a compass picture like the other live cards; a tab "In der Nähe" / "Nearby" with the
+  fellow travellers; guild members count from the start. Everything else was the assistant's
+  proposal, accepted without objection: no cards in cities and inns, the whisper button, the rail.
+- **Structure:** feature `nearbyFriends` (`Modules/Fellows/NearbyFriends.lua`, category
+  `fellows`, off by default because it listens to game events), the reading in
+  `ns.NearbyService` (`Modules/Fellows/NearbyService.lua`; the window reads it too). Options
+  `guild` (on), `cities` (off: in cities and inns many people are online at once) and `sound` (on).
+- **Who:** online friends (`connected`), guild members online and not on the mobile app, Battle.net
+  friends whose game is this one (`clientProgram == BNET_CLIENT_WOW`, `wowProjectID ==
+  WOW_PROJECT_ID`, as Blizzard's friends frame decides it in `Blizzard_FriendsFrame/Camelot`).
+  Not the player, and people in the player's group are left out of cards and list. Someone on
+  several lists counts once (by `SocialService.Key`): "from" is the friends list before
+  Battle.net before the guild; the zone from the friends list or guild roster beats Battle.net's,
+  because Battle.net names it in the friend's language (a friend who plays in English only matches
+  where the names are the same). The guild roster gives level and zone since this feature
+  (`SocialService.EachGuildMember`, values 4 and 6). A whisper uses the name as the list wrote it,
+  realm and all (`ChatFrameUtil.SendTell`, as Blizzard's friends frame does).
+- **Cards** (the assistant's rules): one when the player arrives in a zone (`ZONE_CHANGED_NEW_AREA`,
+  `PLAYER_ENTERING_WORLD`, switching on) for everyone there ("Also in Tanaris: Mira and Kael",
+  three names at most, then "and 2 more"), three seconds later so the lists can answer; one when
+  someone arrives in the player's zone or comes online there ("Lysa is in Tanaris now too"). Whoever
+  turns up within two seconds shares a card. None in cities and inns (`IsResting`, unless
+  `cities`), in instances, in flight; landing (`PLAYER_CONTROL_GAINED` after a look found the player
+  on a taxi) is arriving, control back after a stun is not. The same person in the same zone at most
+  once in 30 minutes (`REPEAT`). After a `/reload` the first ten seconds are only taken note of
+  (`HUSH`). Who was in the player's group is in the last look, so leaving the group brings no card.
+  The detail line of one person: level, class, then the bond's tier for a fellow traveller, else
+  where the player knows them from ("Friends list", "Guild", "Battle.net"); of several, their
+  levels. Crests: the closest bond first; one crest of 48 px or two of 40 side by side
+  (`story.people` in `UI/Feed.lua`). Place and duration are the live feed's; the sound is the same
+  file (`UI.Feed.Chime`), with an option of its own.
+- **Fresh lists:** friends list and Battle.net report changes themselves (`FRIENDLIST_UPDATE`,
+  `BN_FRIEND_INFO_CHANGED`); the guild roster only comes when asked. While the feature is on, a
+  ticker asks for both every 60 seconds (`POLL`; `NearbyService.Ask`, at most every ten seconds),
+  and so does arriving and opening the tab. List events within a second lead to one look.
+  `NEARBY_CHANGED` redraws the tab while it is open.
+- **Tab "Nearby"** (`FellowNearbyTab` in `UI/Options.lua`, list `UI.NearbyList` in
+  `UI/Fellows.lua`, rail card `places` in `UI/Rail.lua`): sections "Here in <zone>", "Similar
+  level" (up to 5 levels apart) and "Also online" (40 rows, the rest counted). A row: crest with the
+  bond's ring, the alias or name, below it the name under an alias, class and from where; level and
+  the difference to the player's; zone (the player's own in the accent); the bond's badge; a button
+  that opens a whisper. A click on a fellow traveller's row opens "Your story". Beside it "Where
+  your people are": the zones, the player's first, then the fullest, with the levels there.
+  Switched off, the tab says how to switch it on. The search finds nothing here.
+- **Not checked in game:** everything. In particular whether `FRIENDLIST_UPDATE` comes when a
+  friend changes zones (otherwise the ticker catches it within a minute), whether the guild roster
+  is refreshed every minute when asked, whether Battle.net's `areaName`, `characterLevel` and
+  `className` are filled for Forever, and whether `PLAYER_CONTROL_GAINED` comes on landing.
+  `/fam test` checks the functions used (group `api`).
