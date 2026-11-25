@@ -9,6 +9,7 @@ local journey = ns:NewFeature({
     id = "ownJourney",
     category = "chronicle",
     icon = "flag", -- its entry in the settings (UI.media)
+    preview = "book", -- its picture there (UI/Previews.lua)
     default = false,
     requires = { "GetRealZoneText", "UnitLevel" },
 })

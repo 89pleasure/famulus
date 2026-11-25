@@ -44,6 +44,17 @@ local GENERAL_ICONS = {
     windowScale = "resize",
     chronicleNames = "tag",
 }
+-- Their pictures (UI/Previews.lua; features: feature.preview).
+local GENERAL_PREVIEWS = {
+    language = "lang",
+    chatOutput = "chatfam",
+    minimapButton = "minimap",
+    charProfile = "profile",
+    accent = "accent",
+    embers = "embers",
+    windowScale = "scale",
+    chronicleNames = "names",
+}
 
 -- Rows that stand for a person: an avatar with an initial in front, a
 -- button to remove them behind. A click calls item.open, the button
@@ -85,10 +96,8 @@ local function FeatureItem(feature)
         section = feature.id,
         icon = feature.icon or AREA_ICONS[feature.category] or "sparkle",
         -- A picture of what the feature does, shown above it in its
-        -- settings tab: a texture path on the feature (feature.picture).
-        picture = function()
-            return feature.picture
-        end,
+        -- settings tab: the name of its scene (UI/Previews.lua).
+        preview = feature.preview,
         default = function()
             return ns:GetDefault(feature.id, "enabled")
         end,
@@ -129,9 +138,8 @@ local function OptionItem(feature, option)
         -- each with its icon, below a heading of their own.
         group = option.group,
         icon = option.icon,
-        picture = function()
-            return option.picture
-        end,
+        -- Pointed at, the feature's picture may show what this option does.
+        optionKey = option.key,
         default = function()
             return ns:GetDefault(feature.id, option.key)
         end,
@@ -180,6 +188,7 @@ local function GeneralItem(key, kind, values)
         id = "general." .. key,
         section = "general",
         icon = GENERAL_ICONS[key] or "gear",
+        preview = GENERAL_PREVIEWS[key],
         key = key,
         default = function()
             return ns:GetDefault("general", key)
@@ -207,6 +216,7 @@ local function CategoryItem(category)
         id = "categories." .. category,
         section = "categories",
         icon = AREA_ICONS[category] or "sparkle",
+        preview = "areas",
         key = category,
         default = function()
             return ns:GetDefault("categories", category)
@@ -858,6 +868,24 @@ local function TitleChapter(chapter, now)
     chapter.entries = nil
 end
 
+-- One chapter as the chronicle's book tells it, from entries (the newest
+-- first), each on a card of its own: the picture of the chronicle's
+-- settings (UI/Previews.lua). Its cards cannot be clicked and show no
+-- tooltip; the samples' people have their classes.
+function UI.ChronicleChapter(entries)
+    local chapter = { entries = entries, events = {} }
+    for index, entry in ipairs(entries) do
+        local story = ChronicleRun({ entry })
+        story.onClick, story.tooltip, story.onPicture, story.item, story.spell = nil, nil, nil, nil, nil
+        if story.chip and not story.chip.class and entry.who then
+            story.chip.class = ns.ChronicleService.SampleClass(entry.who)
+        end
+        chapter.events[index] = story
+    end
+    TitleChapter(chapter, time())
+    return chapter
+end
+
 -- One chapter per session of play (SESSION_GAP), the newest event first;
 -- what repeats right away shares a card (SameRun). wanted(entry): which
 -- entries; a companion chosen in the rail narrows them further. Returns nil
@@ -1317,6 +1345,12 @@ local function FellowPerson(guid, person, now)
         firstLevelText = first and tonumber(person.firstLevel) and L.ui_fellow_met_detail:format(tonumber(person.firstLevel)) or nil,
         sinceText =first and L.ui_fellow_since:format(DayTitle(DayKey(first))) or nil,
     }
+end
+
+-- A made-up person (FellowService.SamplePerson) as the overview shows them:
+-- the picture of the fellow travellers' settings (UI/Previews.lua).
+function UI.FellowSample(person)
+    return FellowPerson("sample:" .. person.name, person, time())
 end
 
 -- "10:40 to 12:50"
@@ -2365,6 +2399,7 @@ local function TidyItem()
         kind = "action",
         id = "tidy",
         icon = "trash",
+        preview = "tidy",
         label = function()
             return L.ui_fellow_tidy
         end,
@@ -3019,6 +3054,7 @@ do
             detail.action:SetDisabled(not item.usable())
         end
         DetailPills(detail)
+        UI.Previews.Refresh(detail.stage)
         local on, total = 0, 0
         for _, chip in ipairs(detail.chips) do
             if chip:IsShown() then
@@ -3032,16 +3068,18 @@ do
     end
 
     -- A chip switches its option; pointed at, the line below the chips
-    -- explains it.
+    -- explains it, and the picture may show it.
     local function NewChip(detail)
         local chip = UI.Chip(detail.scroll.content, function(self)
             self.option.set(not self.option.get())
         end)
         chip.onEnter = function(self)
             detail.hint:SetText(self.option.desc())
+            UI.Previews.Focus(detail.stage, self.option.optionKey)
         end
         chip.onLeave = function()
             detail.hint:SetText(detail.hintText or "")
+            UI.Previews.Focus(detail.stage, nil)
         end
         detail.chips[#detail.chips + 1] = chip
         return chip
@@ -3057,10 +3095,7 @@ do
         local width = DETAIL_W - 2 * DETAIL_PAD
         local y = DETAIL_PAD - 2
 
-        local picture = item.picture and item.picture()
-        detail.picture:SetShown(picture ~= nil)
-        if picture then
-            detail.picture:SetTexture(picture)
+        if UI.Previews.Show(detail.stage, item.preview) then
             y = DETAIL_PAD + PICTURE_H + 20
         end
 
@@ -3128,6 +3163,13 @@ do
                 local row = detailRows[index]
                 if not row then
                     row = CreateRow(detail.options)
+                    -- Pointed at, an option may show what it does in the picture.
+                    row:HookScript("OnEnter", function(self)
+                        UI.Previews.Focus(detail.stage, self.item and self.item.optionKey)
+                    end)
+                    row:HookScript("OnLeave", function()
+                        UI.Previews.Focus(detail.stage, nil)
+                    end)
                     detailRows[index] = row
                 end
                 RowSetItem(row, option, index, width)
@@ -3201,10 +3243,9 @@ do
         detail.scroll = scroll
         local body = scroll.content
 
-        detail.picture = body:CreateTexture(nil, "ARTWORK")
-        detail.picture:SetPoint("TOPLEFT", DETAIL_PAD, -DETAIL_PAD)
-        detail.picture:SetSize(DETAIL_W - 2 * DETAIL_PAD, PICTURE_H)
-        detail.picture:Hide()
+        -- The picture of what the chosen entry does, a scene drawn live.
+        detail.stage = UI.Previews.Stage(body, DETAIL_W - 2 * DETAIL_PAD, PICTURE_H)
+        detail.stage:SetPoint("TOPLEFT", DETAIL_PAD, -DETAIL_PAD)
 
         detail.crumb = UI.Text(body, 12, "textMuted")
         detail.crumb:SetWordWrap(false)

@@ -538,8 +538,48 @@ check(detail.pills[1].text:GetText() == "On" and detail.pills[2].text:GetText() 
     "the detail says whether it is on and what its default is")
 local rows = visibleRows()
 check(#rows == 1 and rows[1].item.id == "chatAliases.style" and rows[1].dropdown:IsShown() and rows[1].desc:IsShown()
-    and detail.optionsTitle:GetText() == "Options" and not detail.picture:IsShown() and not detail.chipsTitle:IsShown(),
-    "its option is a row with its help text below \"Options\"; no picture, no chips (got " .. #rows .. ")")
+    and detail.optionsTitle:GetText() == "Options" and not detail.chipsTitle:IsShown(),
+    "its option is a row with its help text below \"Options\"; no chips (got " .. #rows .. ")")
+-- Its picture: a few lines of chat, drawn live, one friend there under an alias.
+local previewsKnown = true
+for _, feature in ipairs(ns.featureList) do
+    previewsKnown = previewsKnown and (feature.preview == nil or ns.UI.Previews.Has(feature.preview))
+end
+check(previewsKnown, "every feature's picture names a scene the window has")
+local chatScene = detail.stage.scenes.chat
+local function chatLine(index)
+    local line = chatScene.lines[index]
+    return line[1]:GetText() .. line[2]:GetText() .. line[3]:GetText(), line.outline:IsShown()
+end
+check(detail.stage:IsShown() and detail.stage.current == "chat" and chatScene:IsVisible() and detail.crumb.mockPoint[5] < -200,
+    "above the name a picture of what it does")
+check(chatLine(1) == "[Guild] [Mira Stormfeather]: I'll bring torches." and not select(2, chatLine(1))
+    and chatLine(2) == "[Guild] [Dad]: Who's coming to Uldaman?" and select(2, chatLine(2))
+    and chatLine(3) == "[Party] [Lysa Morningdew]: I'm in, give me five minutes."
+    and chatLine(4) == "Dad has come online." and select(2, chatLine(4)),
+    "the chronicle's sample people chat; one of them under an alias, marked, also in the online notice: " .. chatLine(2))
+local nameAnchor = chatScene.lines[4][2].mockPoint
+check(nameAnchor[1] == "TOPLEFT" and nameAnchor[2] == chatScene.lines[4][1] and nameAnchor[3] == "TOPRIGHT",
+    "the parts of a line meet top to top, so a name at its start stays in its line")
+local twinkling = 0
+for _, group in ipairs(chatScene.animations) do
+    twinkling = twinkling + (group:IsPlaying() and 1 or 0)
+end
+check(twinkling > 0 and twinkling == #chatScene.animations, "behind it a night sky whose stars twinkle while it shows")
+ns:SetOption("chatAliases", "style", "both")
+mock.Advance(0.1)
+check(chatLine(2) == "[Guild] [Dad (Borin Ironbeard)]: Who's coming to Uldaman?" and chatLine(4) == "Dad (Borin Ironbeard) has come online.",
+    "the picture follows the option: " .. chatLine(2))
+ns:SetOption("chatAliases", "style", "alias")
+mock.Advance(0.1)
+check(chatLine(2) == "[Guild] [Dad]: Who's coming to Uldaman?", "and back")
+ns:SetOption("general", "language", "deDE")
+mock.Advance(0.1)
+check(chatLine(2) == "[Gilde] [Papa]: Wer kommt mit nach Uldaman?" and chatLine(1) == "[Gilde] [Mira Sturmfeder]: Ich bring Fackeln mit.",
+    "and the language: " .. chatLine(2))
+ns:SetOption("general", "language", "auto")
+mock.Advance(0.1)
+check(chatLine(2) == "[Guild] [Dad]: Who's coming to Uldaman?", "and back to English")
 check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
 mock.Click(window.resetButton)
 check(window.resetButton.label:GetText() == "Reset", "and a click on it does nothing")
@@ -563,6 +603,8 @@ check(detail.off:IsShown() and detail.off:GetText() == "Switch on \"Aliases in c
 check(entries[1].sub:GetText() == "Off  ·  1 option" and not entries[1].toggle.on and detail.pills[1].text:GetText() == "Off"
     and not detail.toggle.on and entries[1].tile.token == "control", "entry and detail show that it is off")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
+check(chatLine(2) == "[Guild] [Borin Ironbeard]: Who's coming to Uldaman?" and not select(2, chatLine(2))
+    and chatLine(4) == "Borin Ironbeard has come online.", "switched off, the picture's chat shows the name: " .. chatLine(2))
 check(not navButton("Aliases").pill:IsShown(), "the sidebar counts nothing")
 ns:SetOption("chatAliases", "style", "both")
 mock.Advance(0.3)
@@ -1248,8 +1290,9 @@ do -- the live feed: what was just written down appears on screen for a while
         file:close()
     end
     check(card.crest:GetHeight() < card:GetHeight() and card.crest:GetWidth() < card:GetWidth()
-        and card:GetWidth() >= 230 and card.mark:IsShown() and card.grain ~= nil,
-        "the picture is a crest inside its band; a milestone carries the mark of an active card")
+        and card:GetWidth() >= 230 and card.shape.border.token == "cardActive" and card.mark == nil and card.grain ~= nil,
+        "the picture is a crest inside its band; a milestone has the accent border, no mark at its left")
+    check(card.bar:IsShown() and card.barGroup:IsPlaying(), "a line along its foot runs out while it stays")
     Chronicle.Add("zone", { zone = "Nowhere", t = time() - 21, probe = true })
     Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 3600, probe = true })
     check(#Feed.Shown() == 1, "a kind that is switched off and old news stay off screen")
@@ -1262,7 +1305,7 @@ do -- the live feed: what was just written down appears on screen for a while
         and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
     check(not Feed.Shown()[1].react:IsShown() and not Feed.Shown()[2].react:IsShown() and not Feed.Shown()[1].mouseEnabled,
         "without sharing there is no button to react, and the cards let the mouse through")
-    check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and not Feed.Shown()[1].mark:IsShown(),
+    check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and Feed.Shown()[1].shape.border.token == "cardBorder",
         "a band is as wide as its text needs; a companion's event is no milestone")
     check(sounds() == heard + 1, "cards that come together bring one sound")
     for skill = 1, 3 do
@@ -1273,7 +1316,7 @@ do -- the live feed: what was just written down appears on screen for a while
     mock.Advance(6.5)
     check(#Feed.Shown() == 3, "a card stays for its time")
     mock.Advance(2)
-    check(#Feed.Shown() == 0 and not card:IsShown(), "then it fades out and is gone")
+    check(#Feed.Shown() == 0 and not card:IsShown() and not card.barGroup:IsPlaying(), "then it fades out and is gone")
     Chronicle.Add("level", { level = 15, who = "Jaina Proudmoore", t = time() - 23, probe = true })
     check(#Feed.Shown() == 1 and Feed.Shown()[1].number:IsShown() and Feed.Shown()[1].number:GetText() == "15",
         "a companion's level-up appears with its number")
@@ -2082,10 +2125,21 @@ check(not navButton("Chronicle").pill:IsShown(), "the chronicle's entry shows no
 -- The entries are told as a picture book: chapters, and events on a line.
 -- A card's content is a frame of its own (event.content); the tests read
 -- the card and its content as one.
+-- The pictures of the settings draw a book of their own; it is not the page's.
+local function inPicture(frame)
+    local stage = window.detail and window.detail.stage
+    while frame do
+        if frame == stage then
+            return true
+        end
+        frame = frame.parent
+    end
+    return false
+end
 local function bookFrames(field)
     local list = {}
     for _, frame in ipairs(mock.frames) do
-        if frame[field] and frame:IsVisible() then
+        if frame[field] and frame:IsVisible() and not inPicture(frame) then
             if field == "story" then
                 local event = frame
                 frame = setmetatable({}, { __index = function(_, key)
@@ -2617,14 +2671,54 @@ do
     mock.Advance(0.1)
     check(ns.features.liveFeed.enabled and not kinds[2].disabled and detail.scroll:GetVerticalScroll() == 30,
         "switching it off and on does not make the detail jump")
-    -- A picture of what it does, once a feature has one.
-    ns.features.liveFeed.picture = "Interface\\AddOns\\Famulus\\Media\\logo.tga"
-    mock.Click(recording[3])
-    mock.Click(recording[4])
-    check(detail.picture:IsShown() and detail.title.mockPoint[5] < -200, "a feature's picture stands above its name")
-    ns.features.liveFeed.picture = nil
+    -- Its picture: the feed's own cards with the chronicle's sample people.
+    local Sample = Chronicle.Sample
+    local feed = detail.stage.scenes.feed
+    local cards = feed.cards
+    check(detail.stage.current == "feed" and feed:IsVisible() and detail.title.mockPoint[5] < -200
+        and cards[1]:IsShown() and cards[2]:IsShown() and cards[1]:GetParent() == feed
+        and cards[1].title:GetText() == (Chronicle.Text(Sample("level"))) and cards[1].title:GetText():find("Mira Stormfeather", 1, true)
+        and cards[2].title:GetText() == (Chronicle.Text(Sample("boss"))) and cards[1].number:GetText() == "40",
+        "above the live feed its cards, as the feed draws them: Mira's level, Borin's boss: " .. cards[1].title:GetText())
+    check(feed.caption.text:GetText() == "Visible for 7 seconds" and cards[1].bar:IsShown() and feed.animations[1]:IsPlaying()
+        and cards[1]:GetAlpha() == 1, "how long a card stays, with a line that runs out")
+    check(#ns.UI.Feed.Shown() == 0, "the picture puts no card on the screen")
+    ns:SetOption("liveFeed", "duration", "long")
+    mock.Advance(0.1)
+    check(feed.caption.text:GetText() == "Visible for 12 seconds", "the picture follows the duration")
+    ns:SetOption("liveFeed", "duration", "normal")
+    mock.Advance(0.1)
+    -- Pointed at a kind: a card of that kind, faint while it is off.
+    kinds[2].scripts.OnEnter(kinds[2])
+    check(cards[1].title:GetText() == (Chronicle.Text(Sample("death"))) and not cards[2]:IsShown()
+        and feed.caption.text:GetText() == "Shown" and cards[1]:GetAlpha() == 1, "pointing at a chip shows its kind's card")
+    mock.Click(kinds[2])
+    mock.Advance(0.1)
+    check(cards[1]:GetAlpha() < 0.5 and not cards[1].bar:IsShown() and feed.caption.text:GetText() == "Not shown",
+        "a kind switched off is faint")
+    mock.Click(kinds[2])
+    mock.Advance(0.1)
+    kinds[2].scripts.OnLeave(kinds[2])
+    kinds[10].scripts.OnEnter(kinds[10])
+    check(cards[1].title:GetText() == ns.L.c_reacted_cheer:format("Mira Stormfeather"), "a reaction as the feed shows it")
+    kinds[10].scripts.OnLeave(kinds[10])
+    check(cards[2]:IsShown() and feed.caption.text:GetText() == "Visible for 7 seconds", "and back to the two cards")
+    mock.Click(detail.switch)
+    mock.Advance(0.1)
+    check(cards[1]:GetAlpha() < 0.5 and feed.caption.text:GetText() == "No cards while this is off", "switched off, the cards are faint")
+    mock.Click(detail.switch)
+    mock.Advance(0.1)
+    feed:Hide()
+    check(not feed.animations[1]:IsPlaying(), "what moves stops when the picture is hidden")
+    feed:Show()
+    check(feed.animations[1]:IsPlaying(), "and goes on when it is back")
+    local item = recording[1].entry.item
+    item.preview = nil
     mock.Click(recording[1])
-    check(not detail.picture:IsShown(), "without one there is no picture")
+    check(not detail.stage:IsShown() and detail.title.mockPoint[5] > -100, "an entry without a picture starts with its name")
+    item.preview = "book"
+    mock.Click(recording[1])
+    check(detail.stage:IsShown() and detail.stage.current == "book", "every entry has one, though")
 end
 Chronicle.Clear()
 mock.Advance(0.1)
@@ -3693,6 +3787,218 @@ do
     Feed.Clear()
     setState(stateBefore)
 end
+
+---------------------------------------------------------------------------
+section("Pictures of the settings")
+---------------------------------------------------------------------------
+
+if not window:IsShown() then
+    SlashCmdList.FAMULUS("")
+end
+mock.Advance(0.1)
+-- A function of its own: the main chunk has no room for more locals.
+;(function()
+    local stage = window.detail.stage
+    local PAGES = { "area_chronicle", "area_fellows", "area_aliases", "cat_general" }
+    -- Every entry of every settings tab, in both languages: its picture is
+    -- drawn, and nothing goes wrong on the way.
+    for _, language in ipairs({ "enUS", "deDE" }) do
+        ns:SetOption("general", "language", language)
+        mock.Advance(0.1)
+        local drawn, missing = 0, {}
+        for _, page in ipairs(PAGES) do
+            mock.Click(navButton(ns.L[page]))
+            mock.Advance(0.1)
+            for _, button in ipairs(window.tabs.buttons) do
+                if button:IsShown() then
+                    mock.Click(button)
+                    mock.Advance(0.1)
+                    if window.list and window.list:IsShown() then
+                        for _, entry in ipairs(visibleEntries()) do
+                            mock.Click(entry)
+                            mock.Advance(0.05)
+                            local name = entry.entry.item.preview
+                            if name and stage:IsShown() and stage.current == name and stage.scenes[name]:IsVisible() then
+                                drawn = drawn + 1
+                            else
+                                missing[#missing + 1] = entry.label:GetText()
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        check(#missing == 0 and drawn >= 20, "in " .. language .. " every entry of every settings tab has its picture (" .. drawn
+            .. " drawn; without: " .. table.concat(missing, ", ") .. ")")
+    end
+    ns:SetOption("general", "language", "auto")
+    mock.Advance(0.1)
+
+    -- Chooses an entry by its name; returns the scene of its picture.
+    local function choose(page, tab, label)
+        mock.Click(navButton(ns.L[page]))
+        mock.Advance(0.05)
+        mock.Click(tabButton(ns.L[tab]))
+        mock.Advance(0.05)
+        for _, entry in ipairs(visibleEntries()) do
+            if entry.label:GetText() == label then
+                mock.Click(entry)
+                mock.Advance(0.05)
+                return stage.scenes[stage.current], entry
+            end
+        end
+    end
+    local function pictureStories()
+        local list = {}
+        for _, frame in ipairs(mock.frames) do
+            if frame.story and frame:IsVisible() and inPicture(frame) then
+                list[#list + 1] = frame.story
+            end
+        end
+        return list
+    end
+    local function set(section, key, value)
+        ns:SetOption(section, key, value)
+        mock.Advance(0.1)
+    end
+
+    -- Chronicle: its own book with samples.
+    choose("area_chronicle", "ui_tab_record", ns.L.f_ownJourney)
+    local stories = pictureStories()
+    check(stage.current == "book" and #stories == 2 and stories[1].title == "Reached level 40" and stories[1].big
+        and stories[1].content == ns.UI.ChronicleCard and stories[1].onClick == nil,
+        "record my journey: the chronicle's own book, the player's level-up as its milestone, nothing to click")
+    choose("area_chronicle", "ui_tab_record", ns.L.f_companions)
+    stories = pictureStories()
+    check(stage.current == "friends" and #stories == 2 and stories[1].chip.text == "Mira Stormfeather" and stories[1].chip.class == "MAGE"
+        and stories[2].chip.class == "WARRIOR", "follow my friends: their level-ups, with their classes")
+    choose("area_chronicle", "ui_tab_record", ns.L.g_chronicleNames)
+    check(stage.current == "names" and pictureStories()[1].chip.text == "Dad (Borin Ironbeard)",
+        "a friend under an alias, the name behind it: " .. tostring(pictureStories()[1].chip.text))
+    set("general", "chronicleNames", false)
+    check(pictureStories()[1].chip.text == "Dad", "without the name")
+    set("general", "chronicleNames", true)
+    local share = choose("area_chronicle", "ui_tab_record", ns.L.f_sharing)
+    check(stage.current == "share" and not share.pills[1]:IsShown() and share.crests[1]:GetAlpha() < 1
+        and share.names[2]:GetText() == "Mira Stormfeather", "share with friends, while it is off: faint, nothing travels")
+    set("sharing", "enabled", true)
+    check(share.pills[1]:IsShown() and share.pills[1].text:GetText() == "Level 40" and share.pills[2].text:GetText() == "Challenge"
+        and share.caption.text:GetText() == "Only to friends and guild", "switched on, news goes both ways")
+    -- The live feed's cards with their button to react, as in the feed, while reactions are on.
+    local feed = choose("area_chronicle", "ui_tab_record", ns.L.f_liveFeed)
+    check(stage.current == "feed" and feed.cards[1].react:IsShown() and not feed.cards[1].react.mouseEnabled,
+        "with reactions on, a friend's card shows its button, which catches no mouse here")
+    set("sharing", "enabled", false)
+    check(not feed.cards[1].react:IsShown(), "without them, none")
+
+    -- Fellow travellers: the overview's tiles; their options as lists.
+    local fellows = choose("area_fellows", "ui_tab_record", ns.L.f_rememberFellows)
+    check(stage.current == "fellows" and fellows.tiles[1].name:GetText() == "Mira Stormfeather" and fellows.tiles[3].numeral:GetText() == "III"
+        and not fellows.list:IsShown(), "remember fellow travellers: the three closest as the overview's tiles")
+    local function optionRow(key)
+        for _, row in ipairs(visibleRows()) do
+            if row.item.optionKey == key then
+                return row
+            end
+        end
+    end
+    local raids = optionRow("raids")
+    raids.scripts.OnEnter(raids)
+    check(fellows.list:IsShown() and not fellows.holder:IsShown() and not fellows.list.rows[1].out and not fellows.list.rows[2].out
+        and fellows.list.rows[3].out, "pointed at, \"raids\" shows which groups count")
+    raids.scripts.OnLeave(raids)
+    check(fellows.holder:IsShown() and not fellows.list:IsShown(), "and the tiles come back")
+    set("rememberFellows", "friendsOnly", true)
+    local only = optionRow("friendsOnly")
+    only.scripts.OnEnter(only)
+    check(fellows.list.rows[4].out and fellows.list.rows[4].note:GetText() == "not remembered" and not fellows.list.rows[1].out,
+        "\"friends and guild only\": a stranger from a random group is not remembered")
+    only.scripts.OnLeave(only)
+    set("rememberFellows", "friendsOnly", false)
+    local tidy = choose("area_fellows", "ui_tab_record", ns.L.ui_fellow_tidy)
+    check(stage.current == "tidy" and not tidy.list.rows[1].out and tidy.list.rows[3].out and tidy.list.rows[4].out
+        and tidy.list.rows[3].strike:IsShown(), "tidying up: who goes is struck out")
+    -- Who is nearby: the feature's own cards on the feed's place.
+    local near = choose("area_fellows", "ui_tab_record", ns.L.f_nearbyFriends)
+    check(stage.current == "nearby" and near.cards[1].title:GetText() == "Also in Tanaris: Kael and Mira"
+        and near.cards[2].title:GetText() == ns.L.ui_near_came:format("Borin", "Tanaris") and near.cards[1]:GetAlpha() < 1,
+        "who is nearby, while it is off: its cards, faint: " .. near.cards[1].title:GetText())
+    set("nearbyFriends", "enabled", true)
+    set("nearbyFriends", "guild", false)
+    check(near.cards[1]:GetAlpha() == 1 and near.cards[1].title:GetText() == "Also in Tanaris: Mira",
+        "switched on, without the guild: only friends")
+    local cities = optionRow("cities")
+    cities.scripts.OnEnter(cities)
+    check(near.cards[1].title:GetText() == ns.L.ui_near_came:format("Mira", "Stormwind") and near.cards[1]:GetAlpha() < 1
+        and near.caption.text:GetText() == "Not in cities and inns", "pointed at \"cities\": a card in a city, faint while it would not come")
+    cities.scripts.OnLeave(cities)
+    set("nearbyFriends", "guild", true)
+    set("nearbyFriends", "enabled", false)
+
+    -- Aliases: the game's own places, with the alias where the feature puts it.
+    local tooltip = choose("area_aliases", "ui_tab_display", ns.L.f_tooltipAliases)
+    check(stage.current == "tooltip" and tooltip.tip.title:GetText() == "Borin Ironbeard" and tooltip.tip.alias:GetText() == "Dad"
+        and tooltip.tip.label:GetText() == ns.L.tt_alias and tooltip.tip.outline:IsShown(), "the tooltip with the alias line")
+    set("tooltipAliases", "enabled", false)
+    check(not tooltip.tip.alias:IsShown(), "switched off, without it")
+    set("tooltipAliases", "enabled", true)
+    local menu = choose("area_aliases", "ui_tab_display", ns.L.f_aliasMenu)
+    check(stage.current == "menu" and menu.menu.entries[3]:GetText() == ns.L.menu_alias_set and menu.menu.outline:IsShown(),
+        "the player menu with the feature's entry")
+    local bnet = choose("area_aliases", "ui_tab_display", ns.L.f_accountAliases)
+    check(stage.current == "bnet" and bnet.card.name:GetText() == "Dad" and bnet.card.note:GetText() == ns.L.ui_preview_bnet_note,
+        "a Battle.net friend under the alias")
+
+    -- Settings.
+    local areas = choose("cat_general", "ui_tab_general", ns.L.area_fellows)
+    check(stage.current == "areas" and not areas.panel.rows[2].badge:IsShown(), "the main features in the sidebar")
+    set("categories", "fellows", false)
+    check(areas.panel.rows[2].badge:IsShown() and areas.panel.rows[2].badge.text:GetText() == "OFF", "a switched-off one marked OFF")
+    set("categories", "fellows", true)
+    local lang = choose("cat_general", "ui_tab_general", ns.L.g_language)
+    check(stage.current == "lang" and lang.cards[1].tagline:GetText() == "Gemeinsam durch Azeroth"
+        and lang.cards[2].tagline:GetText() == "Together through Azeroth" and lang.cards[2].shape.border.token == "accentLine",
+        "the tagline in both languages, the one shown chosen")
+    local chatfam = choose("cat_general", "ui_tab_general", ns.L.g_chatOutput)
+    local function line(index)
+        local parts = chatfam.lines[index]
+        return parts[1]:GetText() .. parts[2]:GetText() .. parts[3]:GetText()
+    end
+    check(stage.current == "chatfam" and line(3) == "Famulus: Alias for Borin Ironbeard removed." and chatfam.lines[3].outline:IsShown(),
+        "the addon's own line in the chat, as it writes it: " .. line(3))
+    set("general", "chatOutput", false)
+    check(line(3) == "[Guild] [Borin Ironbeard]: Who's coming to Uldaman?" and not chatfam.lines[4][1]:IsShown(), "switched off, without it")
+    set("general", "chatOutput", true)
+    local minimap = choose("cat_general", "ui_tab_general", ns.L.g_minimapButton)
+    check(stage.current == "minimap" and minimap.button:IsShown() == (ns:GetOption("general", "minimapButton") == true),
+        "the minimap, with the button while it is on")
+    local profile = choose("cat_general", "ui_tab_general", ns.L.g_charProfile)
+    check(stage.current == "profile" and profile.boxes[1].pills[1]:IsShown() and profile.boxes[2].empty:IsShown(),
+        "settings for all characters, this one among them")
+    local accent = choose("cat_general", "ui_tab_appearance", ns.L.g_accent)
+    check(stage.current == "accent" and #accent.schemes == 5 and accent.schemes[1].shape.border.token == "schemeAccent_lemon"
+        and accent.schemes[2].shape.border.token == "cardBorder", "every colour scheme in small, the chosen one in its accent")
+    local embers = choose("cat_general", "ui_tab_appearance", ns.L.g_embers)
+    check(stage.current == "embers" and embers.embers.wanted and embers.embers.playing and not embers.caption:IsShown(), "the sparks rise")
+    set("general", "embers", false)
+    check(not embers.embers.playing and embers.caption.text:GetText() == "Off: nothing moves", "and stop")
+    set("general", "embers", true)
+    local scale = choose("cat_general", "ui_tab_appearance", ns.L.g_windowScale)
+    local chosen
+    for _, frame in ipairs(scale.frames) do
+        if frame:IsShown() and frame.outlineOn:IsShown() then
+            chosen = frame.label:GetText()
+        end
+    end
+    check(stage.current == "scale" and chosen == "100%", "the window at a few sizes, the chosen one marked")
+    local known = true
+    for _, token in ipairs({ "skyTop", "skyLow", "star", "moonRim", "moonBlue", "chatFamulus", "tooltipFill", "classWARRIOR",
+        "minimapRim", "schemeWindow_mint", "schemeAccent2_amber", "bnetBlue" }) do
+        known = known and ns.UI.colors[token] ~= nil
+    end
+    check(known, "the pictures' colours are in the theme")
+end)()
+mock.Click(navButton("Aliases"))
 
 ---------------------------------------------------------------------------
 section("Self-test")

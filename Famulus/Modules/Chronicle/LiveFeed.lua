@@ -43,6 +43,7 @@ local feed = ns:NewFeature({
     id = "liveFeed",
     category = "chronicle",
     icon = "bell", -- its entry in the settings (UI.media)
+    preview = "feed", -- its picture there (UI/Previews.lua)
     default = true,
     options = options,
 })
@@ -132,19 +133,24 @@ local function OnChronicleChanged(entry)
     end)
 end
 
--- A friend reacted to one of the player's events: who, and to what.
+-- The card of a friend's reaction to one of the player's events: who, and
+-- to what. Also the picture of the feed in its settings (UI/Previews.lua).
+function feed.ReactionStory(entry, who, reaction)
+    local Chronicle, L = ns.ChronicleService, ns.L
+    return {
+        kind = "reaction",
+        icon = reaction,
+        fullTitle = L["c_reacted_" .. reaction]:format(Chronicle.Label({ who = who })),
+        detail = (Chronicle.Text(entry)),
+    }
+end
+
 local function OnReaction(entry, who, reaction)
     if not feed.enabled or type(entry) ~= "table" or feed:Get("reaction") ~= true then
         return
     end
-    local Chronicle, L = ns.ChronicleService, ns.L
     Show("reaction", function()
-        return {
-            kind = "reaction",
-            icon = reaction,
-            fullTitle = L["c_reacted_" .. reaction]:format(Chronicle.Label({ who = who })),
-            detail = (Chronicle.Text(entry)),
-        }
+        return feed.ReactionStory(entry, who, reaction)
     end)
 end
 

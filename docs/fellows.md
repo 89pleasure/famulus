@@ -279,7 +279,9 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
   the daily log).
 - **Sample data (2026-11-24, the owner's request):** `/fam fellows demo` adds six
   made-up fellow travellers (classes, levels, zones; Mira and Borin as in the chronicle),
-  `/fam fellows demo clear` removes only them (`FellowService.Demo`, `ClearDemo`). They carry
+  `/fam fellows demo clear` removes only them (`FellowService.Demo`, `ClearDemo`;
+  `FellowService.SamplePerson(index)` gives one as a stored person, never stored, for the
+  pictures of the settings, see "Settings tabs" in `docs/window.md`). They carry
   `demo = true` and GUIDs `Player-0-FAMDEMO..`. Language as with the chronicle's samples (since
   2026-11-24 Famulus's); the three others are called in English Kael Thornwood, Tomas
   Greywind and Ena Silverbrook.

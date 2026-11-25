@@ -73,6 +73,7 @@ local sharing = ns:NewFeature({
     id = "sharing",
     category = "chronicle",
     icon = "share", -- its entry in the settings (UI.media)
+    preview = "share", -- its picture there (UI/Previews.lua)
     default = false,
     requires = {
         "C_ChatInfo.SendAddonMessage",

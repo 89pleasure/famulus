@@ -72,9 +72,10 @@ local function Party(entry)
 end
 
 -- A companion's name as the player knows them: the alias, if there is one.
+-- A sample (ChronicleService.Sample) may bring the alias it shows under.
 local function Companion(entry)
     local name = entry.who or L.c_someone
-    local alias = ns.AliasService and ns.AliasService.Get(name)
+    local alias = entry.sampleAlias or ns.AliasService and ns.AliasService.Get(name)
     if alias then
         return alias, name
     end
@@ -967,6 +968,55 @@ local DEMO_PEOPLE = {
     enUS = { "Mira Stormfeather", "Borin Ironbeard", "Lysa Morningdew" },
     deDE = { "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau" },
 }
+
+-- The samples' three people (Mira, Borin, Lysa) in the addon's language.
+function ChronicleService.SamplePeople()
+    return unpack(DEMO_PEOPLE[ns:GetLocaleCode()] or DEMO_PEOPLE.enUS)
+end
+
+-- Their classes, as the fellow travellers' samples have them.
+local DEMO_CLASSES = { "MAGE", "WARRIOR", "PRIEST" }
+
+-- The class of one of the samples' people, in any language, or nil.
+function ChronicleService.SampleClass(name)
+    for _, people in pairs(DEMO_PEOPLE) do
+        for index, person in ipairs(people) do
+            if person == name then
+                return DEMO_CLASSES[index]
+            end
+        end
+    end
+    return nil
+end
+
+-- One made-up entry of a kind, a friend's (own: the player's), with the
+-- samples' people, zones and names. Never stored: for the pictures of the
+-- settings (UI/Previews.lua). nil for a kind without a sample.
+function ChronicleService.Sample(kind, own)
+    local locale = ns:GetLocaleCode()
+    local zone, name = DEMO_ZONES[locale] or DEMO_ZONES.enUS, DEMO_NAMES[locale] or DEMO_NAMES.enUS
+    local mira, borin, lysa = ChronicleService.SamplePeople()
+    local samples = {
+        level = { level = 40, zone = zone[3], who = mira },
+        death = { zone = zone[1], level = 31, who = borin },
+        boss = { id = 1, name = name.boss, zone = zone[2], who = borin, with = { mira } },
+        achievement = { id = 1, name = name.challenge, who = lysa },
+        ability = { ability = "riding", level = 40, who = mira },
+        item = { item = 211527, name = name.bag, zone = zone[4], who = mira },
+        profession = { skill = 186, name = name.mining, who = lysa },
+        skill = { skill = 186, name = name.mining, rank = 225, who = lysa },
+        zone = { zone = zone[4], level = 39, who = lysa },
+    }
+    local entry = samples[kind]
+    if not entry then
+        return nil
+    end
+    entry.k, entry.t, entry.demo = kind, time(), true
+    if own then
+        entry.who, entry.with = nil, nil
+    end
+    return entry
+end
 
 function ChronicleService.ClearDemo()
     local chronicle = Store(false)

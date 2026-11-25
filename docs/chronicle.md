@@ -336,6 +336,10 @@ picture-book look are built and checked against the mock only.
   removes them again (`ChronicleService.Demo`, `ClearDemo`). They carry `demo = true` and
   never leave the client: neither the live sending nor the catch-up nor the relaying
   sends them. Meant for looking at the book and for screenshots.
+  `ChronicleService.Sample(kind, own)` gives one entry of a kind with the same people, zones and
+  names, never stored, for the pictures of the settings (see "Settings tabs" in
+  `docs/window.md`); `SampleClass(name)` their class, and a sample may carry `sampleAlias`, the
+  alias the chronicle then names the person by.
   **Language (2026-11-24, the owner's request, for English screenshots):** Zones, names
   and people of the samples follow Famulus's language (`ns:GetLocaleCode()` in
   `Core/Locale.lua`), no longer that of the client (`GetLocale()`). In English the people are
@@ -475,6 +479,13 @@ picture-book look are built and checked against the mock only.
     "Reacting from the live feed"). While the mouse is on it the card stays past its time, a
     card already fading comes back, and once the mouse has left it goes 1.5 seconds later
     (`LINGER`). After a reaction the card goes anyway (see there).
+  - **Running-out line (since 2026-11-25):** along the card's foot (2 px, 10 px in from its
+    ends, accent gradient) a line shrinks to the left over the duration plus the fade-out, so it
+    is gone when the card is (`card.bar`, a `Scale` animation of the client; hidden when it ends,
+    stopped when the card goes). A card the mouse holds on its reaction button stays past
+    its line. The picture of the feed in its settings loops it. With it the accent mark at a
+    milestone's left is gone; a milestone keeps the accent border (`cardActive`). Checked against
+    the mock only, not yet seen in game.
   - **Shape "crest on the banner" (chosen by the owner on the mockup, 2026-11-19, draft B1):**
     The picture is a square crest (72 px, corners 14, border two pixels in the colour of the kind)
     and sits centred on a banner (56 px tall), 14 px from the left end of the banner; it sticks
@@ -484,7 +495,7 @@ picture-book look are built and checked against the mock only.
     banner (picture centred above centred text), a crest that only sticks out upwards (B2), and
     the first crest with a 40 px tall banner without margin on the left. The banner is as wide as
     its text needs (230 to 460 px); the cards stand left-aligned one above the other (the owner's
-    requirement), not centred; milestones (`story.big`) carry an accent border and mark (see
+    requirement), not centred; milestones (`story.big`) carry an accent border (see
     below). The crest was seen in game (the owner then asked for left-aligned cards).
   - **Crest in the banner (the owner's decision, 2026-11-19, after looking in game):** The
     crest no longer sticks out beyond the banner but sits inside it (banner 64 px tall, crest
@@ -495,7 +506,8 @@ picture-book look are built and checked against the mock only.
     event in the book and the banner of the feed are built like the card of a feature in the
     window (`CreateCard` in `UI/Options.lua`): background `card` with hairline and highlight
     edge; what stands out (there a running feature, here a milestone) has the accent border
-    `cardActive` and the accent mark on the left. The glow behind milestones was dropped for it.
+    `cardActive` and the accent mark on the left (the feed's banner no longer has the mark, see
+    "Running-out line"). The glow behind milestones was dropped for it.
     In the book additionally: heading 13 px medium like the rows, the glow under the mouse
     (`hover`) on clickable cards, and "whose event" stands in a sunken strip at the bottom
     (`sunken`, like an option below its feature) instead of as a mark in the text. The feed

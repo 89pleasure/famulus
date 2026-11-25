@@ -22,6 +22,7 @@ local chatAliases = ns:NewFeature({
     id = "chatAliases",
     category = "aliases",
     icon = "chat", -- its entry in the settings (UI.media)
+    preview = "chat", -- its picture there (UI/Previews.lua)
     default = true,
     requires = {
         "ChatFrameUtil.AddSenderNameFilter", "ChatFrameUtil.RemoveSenderNameFilter",

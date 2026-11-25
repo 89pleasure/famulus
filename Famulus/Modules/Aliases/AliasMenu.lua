@@ -14,6 +14,7 @@ local aliasMenu = ns:NewFeature({
     id = "aliasMenu",
     category = "aliases",
     icon = "menu", -- its entry in the settings (UI.media)
+    preview = "menu", -- its picture there (UI/Previews.lua)
     default = true,
     requires = { "Menu.ModifyMenu" },
 })

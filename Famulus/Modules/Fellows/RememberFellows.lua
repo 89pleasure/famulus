@@ -13,6 +13,7 @@ local rememberFellows = ns:NewFeature({
     id = "rememberFellows",
     category = "fellows",
     icon = "people", -- its entry in the settings (UI.media)
+    preview = "fellows", -- its picture there (UI/Previews.lua)
     default = false,
     requires = { "GetNumGroupMembers", "UnitGUID", "UnitName" },
     options = {

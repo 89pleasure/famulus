@@ -62,6 +62,7 @@ local MIN_WIDTH, MAX_WIDTH = 230, 460
 local GROUND_INSET = 3 -- keeps grain and dusk inside the rounded corners
 local GRAIN_TEXELS = 128 -- size of grain.tga, as in UI.Grain
 local GAP = 10 -- between two bands
+local BAR_INSET = 10 -- the running-out line's distance from the band's ends
 local MAX_CARDS = 3
 local FADE_IN, FADE_OUT = 0.25, 0.5
 local DEFAULT_SECONDS = 7
@@ -196,8 +197,8 @@ local function NewReactButton(card)
     return button
 end
 
-local function NewCard()
-    local card = CreateFrame("Frame", nil, Anchor())
+local function NewCard(parent)
+    local card = CreateFrame("Frame", nil, parent)
     card:SetSize(WIDTH, HEIGHT)
     UI.Shadow(card, 22, 10, 6)
     -- The band is built like the card of an option in the window, and
@@ -213,12 +214,6 @@ local function NewCard()
     dusk:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -GROUND_INSET, GROUND_INSET)
     UI.Shade(dusk, "VERTICAL", "clear", "dusk")
     card.grain = UI.Grain(card, GROUND_INSET, GROUND_INSET, GROUND_INSET, GROUND_INSET, WIDTH, HEIGHT, true)
-    -- Mark of a milestone, as on the card of a feature that is switched on.
-    card.mark = card:CreateTexture(nil, "BORDER")
-    card.mark:SetPoint("TOPLEFT", 0, -12)
-    card.mark:SetPoint("BOTTOMLEFT", 0, 12)
-    card.mark:SetWidth(2)
-    UI.Paint(card.mark, "accent")
 
     -- The crest: a frame of its own above the band, with a border two
     -- pixels strong in the colour of its kind.
@@ -251,6 +246,25 @@ local function NewCard()
     card.detail:SetWordWrap(false)
     card.detail:SetPoint("TOPLEFT", card.title, "BOTTOMLEFT", 0, -4)
     card.react = NewReactButton(card)
+
+    -- How long it stays: a line along its foot that runs out by the time the
+    -- card has faded. The client's animation shrinks it, no Lua per frame.
+    -- A card held by the mouse on its button stays past it.
+    card.bar = card:CreateTexture(nil, "OVERLAY")
+    card.bar:SetHeight(2)
+    card.bar:SetPoint("BOTTOMLEFT", BAR_INSET, 2)
+    card.bar:SetPoint("BOTTOMRIGHT", -BAR_INSET, 2)
+    UI.Shade(card.bar, "HORIZONTAL", "accent", "accent2")
+    card.bar:Hide()
+    card.barGroup = card.bar:CreateAnimationGroup()
+    card.barRun = card.barGroup:CreateAnimation("Scale")
+    card.barRun:SetScaleFrom(1, 1)
+    card.barRun:SetScaleTo(0.001, 1)
+    card.barRun:SetOrigin("LEFT", 0, 0)
+    -- At its end the client would draw it whole again.
+    card.barGroup:SetScript("OnFinished", function()
+        card.bar:Hide()
+    end)
     card.turn, card.leaves = 0, 0
     return card
 end
@@ -302,7 +316,8 @@ local function FillPeople(card, people)
 end
 
 -- The crest follows the book's pictures: an icon, a number, or the game's
--- own texture of an item. A milestone has an accent border and a mark.
+-- own texture of an item. A milestone has an accent border; no mark at its
+-- left, the running-out line along its foot is accent enough.
 local function Fill(card, story)
     local textLeft = FillPeople(card, story.people)
     local looks = UI.BookPictures
@@ -311,7 +326,6 @@ local function Fill(card, story)
     card.crestFill:SetColor(look.fill)
     local big = story.big and true or false
     card.shape.border:SetColor(big and "cardActive" or "cardBorder")
-    card.mark:SetShown(big)
     local photo = story.texture
     local icon = not photo and look.icon and (story.icon or look.icon) or nil
     local number = not icon and story.number
@@ -383,6 +397,7 @@ local function Release(card, inTween)
     card.reaction = nil
     card.react.over = false
     card.react.hover:Hide()
+    card.barGroup:Stop()
     card:Hide()
     pool[#pool + 1] = card
     Layout()
@@ -402,7 +417,7 @@ end
 
 function Feed.Show(story, seconds)
     Anchor()
-    local card = table.remove(pool) or NewCard()
+    local card = table.remove(pool) or NewCard(anchor)
     Fill(card, story)
     table.insert(shown, 1, card)
     while #shown > MAX_CARDS do
@@ -417,6 +432,10 @@ function Feed.Show(story, seconds)
     UI.Tween(card, FADE_IN, function(progress)
         card:SetAlpha(progress)
     end)
+    card.barGroup:Stop()
+    card.barRun:SetDuration((seconds or DEFAULT_SECONDS) + FADE_OUT)
+    card.bar:Show()
+    card.barGroup:Play()
     -- A card that was taken off and used again must not be hidden by the
     -- timer of its earlier life. One the mouse is on waits until it leaves.
     C_Timer.After(seconds or DEFAULT_SECONDS, function()
@@ -431,6 +450,15 @@ function Feed.Show(story, seconds)
     end)
     return card
 end
+
+-- A card as the feed draws it, on another frame and never on screen by
+-- itself: the picture of the live feed in its settings (UI/Previews.lua).
+-- Feed.Fill(card, story) gives it an event; it is then as wide as its text.
+function Feed.Card(parent)
+    return NewCard(parent)
+end
+Feed.Fill = Fill
+Feed.HEIGHT = HEIGHT
 
 -- The cards on screen, the newest first.
 function Feed.Shown()
