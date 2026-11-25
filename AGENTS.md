@@ -691,17 +691,35 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Umsetzung im Einzelnen hat der Assistent entschieden):** Alles geht über eine Warteschlange
     mit Ticker (alle 0,5 Sekunden, nur solange etwas wartet). Während der Chat-Sperre (Bosskampf,
     gesperrte Karte) bleibt sie stehen. Das Leitungsformat ist unverändert.
-    - **Takt wie der Client:** Famulus zählt die Erlaubnis des Clients mit (`ALLOWANCE` 10 auf
-      einmal, `REFILL` 1 je Sekunde). Meldet `SendAddonMessage` trotzdem `AddonMessageThrottle`,
+    - **Takt wie der Client:** Laut warcraft.wiki.gg (Seite `C_ChatInfo.SendAddonMessage`, Stand
+      Forever 1.60.1) darf jeder Präfix 10 Nachrichten auf einmal senden und bekommt eine je
+      Sekunde zurück, **außer Flüstern außerhalb von Instanzen**; dazu hat der Server eine eigene
+      Grenze und kann bei zu viel Verkehr die Verbindung trennen, und er kann die Werte jederzeit
+      ändern. Seit 2026-11-25 (Wunsch des Auftraggebers nach dem Abgleich mit dem Wiki) deshalb
+      zwei Budgets in `Flush`: die 10 plus 1 (`ALLOWANCE`, `REFILL`) nur für den Gildenkanal, und
+      für alles ein Budget nach Bytes mit den Werten von ChatThrottleLib v32 (`BANDWIDTH` 800 je
+      Sekunde, `BURST` 4000, `OVERHEAD` 40 je Nachricht). Nach einem Ladebildschirm
+      (`PLAYER_ENTERING_WORLD`) startet das Budget leer und füllt sich fünf Sekunden lang nur mit
+      einem Zehntel (`SETTLE`, wie ChatThrottleLib). Lehnt der Client doch ein Flüstern ab, zählen
+      Flüstern ab da auch gegen die 10 plus 1 (`whispersCounted`; `devLog` „whisper throttled“):
+      So zeigt sich im Spiel, ob Forever Flüstern drosselt. ChatThrottleLib selbst ist bewusst
+      nicht eingebunden (Entscheidung des Auftraggebers, 2026-11-25): Sie verwirft Nachrichten bei
+      `AddOnMessageLockdown`, kennt `TargetOffline` nicht, kann eingereihte Nachrichten nicht
+      ersetzen (Gruß mit spätem Stand, Nachholen in Runden), setzt dauerhafte Hooks und ist eine
+      Bibliothek mit globalem Namen. Ihr Vorteil, ein Budget gemeinsam mit anderen Addons, fehlt
+      Famulus also. Meldet `SendAddonMessage` trotzdem `AddonMessageThrottle`,
       `ChannelThrottle` oder `AddOnMessageLockdown`, bleibt die Nachricht vorn in der Reihe und
-      geht später noch einmal (wie ChatThrottleLib ab v29). Ein schlichtes `false` (ältere
-      Clients) gilt ebenso als abgelehnt, aber nur fünfmal (`MAX_REFUSED`), weil es auch eine
+      geht später noch einmal (wie ChatThrottleLib ab v29). Ein schlichtes `false` (Clients vor
+      10.2.7; Forever liefert laut UI-Quellcode das Enum) gilt ebenso als abgelehnt, aber nur fünfmal (`MAX_REFUSED`), weil es auch eine
       bleibende Ablehnung sein kann. Bei `TargetOffline` geht an die
       Person nichts mehr (`gone`), bis sie selbst wieder etwas schickt oder die Listen sie als
       offline und wieder online zeigen. Die Werte kommen aus `Enum.SendAddonMessageResult`, sonst
       aus festen Zahlen; `/fam test` prüft, ob es die drei Namen gibt (Gruppe `api`). Im
       Entwicklermodus steht je Sitzung und Art eine Zeile im `devLog` (`SHARE`, „throttled“,
-      „lockdown“, „offline“), ohne Namen. So lässt sich im Spiel sehen, ob Forever drosselt.
+      „whisper throttled“, „lockdown“, „offline“), ohne Namen. So lässt sich im Spiel sehen, ob
+      Forever drosselt. Die Zahlen des Enums sind im Branch `forever` von `Gethe/wow-ui-source`
+      bestätigt (`ChatConstantsDocumentation.lua`, 0 bis 12, 2026-11-25). Laut Wiki schicken
+      Testaccounts seit 1.60.1 keine Addon-Nachrichten; mit welchem Rückgabewert, ist offen.
     - **Zwei Spuren:** vorn die eigenen Einträge (live und nachgeholt, in zeitlicher Folge), Grüße,
       Fragen `W` und die Bilanz nach einem Live-Eintrag; hinten die Bilanz in einer Antwort,
       Angebote und weitergereichte Einträge. Eigene Einträge stehen bewusst vorn und in Reihe:
@@ -724,7 +742,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
       ein Gruß, und ein zweiter Gruß ersetzt die noch wartenden Einträge, statt sie zu verdoppeln.
       Der zweite Gruß kostet so meist nur sich selbst und eine Bilanz.
     - **Angebote** gehen nur über Leute, die gerade nicht online sind (die sagen es selbst), und
-      nicht noch einmal, solange frühere an denselben Gefährten warten. Ein Gruß nach einem
+      nicht noch einmal, solange frühere an denselben Gefährten warten oder sie weniger als 60
+      Sekunden her sind (`OFFER_GAP`; seit Flüstern schneller geht, ist die Antwort auf den ersten
+      Gruß meist schon raus, wenn beim ersten Kontakt der zweite kommt). Ein Gruß nach einem
       `/reload` des Gefährten bekommt sie also wieder (vorher einmal je Sitzung; ein Freund grüßt
       nicht per `P` und bekam nach seinem `/reload` keine mehr). Eine Frage `W` gilt erst als
       gestellt, wenn sie in der Reihe steht; geht der Gefragte offline oder meldet der Client
@@ -738,7 +758,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     in einen Service unter `Core/`, das Chronik-Protokoll bleibt in `Sharing.lua`. Das
     Leitungsformat bleibt dabei gleich (Alphas sind draußen); ein neues Feature bekommt neue
     Buchstaben statt einer neuen Version, alte Versionen übergehen unbekannte Arten.
-  - **Viele Nutzer (Analyse 2026-11-25, im Mock simuliert):** Ein Client loggt sich ein, N
+  - **Viele Nutzer (Analyse 2026-11-25, im Mock simuliert; vor dem Budget nach Bytes, die Zahlen
+    für „Nachher“ gehen davon aus, dass auch Flüstern 10 plus 1 zählen):** Ein Client loggt sich ein, N
     Gildenmitglieder mit Famulus sind online, zehn weitere offline, die anderen haben seine
     Neuigkeiten bis gestern; 30 Sekunden nach dem Login steigt er auf. Die Drosselung ist wie im
     Wiki nachgebaut. Die Simulation ist ein Skript außerhalb des Repos; die Gefährten darin
@@ -751,7 +772,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     - **Nachher:** Nichts geht durch die Drosselung verloren. Der Aufstieg erreicht alle: bei 5
       nach 7, bei 10 nach 42, bei 20 nach 112, bei 40 nach 252 Sekunden. Ab 20 weist die hintere
       Spur Angebote und doppelte Bilanzen ab (bei 40: 220 und 60).
-    - **Grenze des Flüsterns:** Jede Nachricht geht einzeln an jeden, bei einer je Sekunde. Für
+    - **Grenze des Flüsterns:** Jede Nachricht geht einzeln an jeden, nach dem Wiki mit etwa 7 je
+      Sekunde (Budget nach Bytes), falls Forever Flüstern doch drosselt, mit einer. Für
       große Gilden der Weg über den Gildenkanal: Issue #12 (Live-Einträge, Bilanz und Angebote
       einmal an die Gilde; offen sind ältere Versionen und die Reihenfolge). Dort steht auch, dass
       `MAX_ENTRIES` (2000) für eigene und fremde Einträge zusammen gilt.

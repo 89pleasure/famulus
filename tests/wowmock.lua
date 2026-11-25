@@ -614,7 +614,9 @@ C_BattleNet = {
 -- Addon messages: every call lands in mock.attempts, what the client accepted
 -- in mock.sent. mock.addonResult(message) may answer with a result code in
 -- place of the client. With mock.addonThrottle the client refuses like the
--- real one (warcraft.wiki.gg): ten at once, then one more per second.
+-- real one (warcraft.wiki.gg): ten at once, then one more per second, but
+-- whispers only with mock.whisperThrottle (the wiki exempts them outside
+-- instances). mock.bytesSent adds up what was accepted, for the bandwidth.
 mock.sent = {}
 mock.attempts = {}
 local addonAllowance, addonRefilled = 10, nil
@@ -633,7 +635,7 @@ C_ChatInfo = {
                 result = answer -- false too, like older clients
             end
         end
-        if result == 0 and mock.addonThrottle then
+        if result == 0 and mock.addonThrottle and (chatType ~= "WHISPER" or mock.whisperThrottle) then
             addonAllowance = math.min(10, addonAllowance + (mock.now - (addonRefilled or mock.now)))
             addonRefilled = mock.now
             if addonAllowance < 1 then
@@ -644,6 +646,7 @@ C_ChatInfo = {
         end
         message.result = result
         if result == 0 then
+            mock.bytesSent = (mock.bytesSent or 0) + #text
             mock.sent[#mock.sent + 1] = message
         end
         return result

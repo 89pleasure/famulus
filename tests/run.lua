@@ -1450,7 +1450,14 @@ end
 mock.sent = {}
 mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Mira Stormfeather")
 mock.Advance(0.5)
-check(#mock.sent >= 5 and #mock.sent <= 10, "an answer of 24 messages starts with no more than the client lets through at once (" .. #mock.sent .. ")")
+do
+    local cost = 0
+    for _, message in ipairs(mock.sent) do
+        cost = cost + #message.text + 40
+    end
+    check(#mock.sent > 10 and cost <= 4000,
+        "whispers are not held to the client's ten at once, only to the bandwidth budget (" .. #mock.sent .. " messages, " .. cost .. " bytes)")
+end
 -- Her own hello back carries the newest of the entries that reached her.
 local miraHas = 0
 for _, message in ipairs(mock.sent) do
@@ -1474,20 +1481,30 @@ do
             lastOffer = i
         end
     end
-    check(inOrder and liveAt and lastOffer and liveAt < lastOffer,
-        "the own entries arrive in order, the live one after those caught up, and before the offers still waiting")
+    check(inOrder and liveAt and lastOffer,
+        "the own entries arrive in order, the live one after those caught up")
 end
 local toMira = kindsTo("Mira Stormfeather")
 check(toMira.E == #Chronicle.OwnSince(0, math.huge) and toMira.H == 1,
     "more than 20 missed arrive in rounds, all of them, and a second hello sends nothing twice (" .. tostring(toMira.E) .. " entries)")
 check(toMira.S == 3, "the statistics go with each answer and once after the live entry")
 check(toMira.O == 2 and not sentTo("Mira Stormfeather", "1~O~Tom Greywind~" .. (queuedAt - 100)),
-    "offers do not go twice while they wait, and not about someone who is online")
+    "offers do not go twice in a row, and not about someone who is online")
 check(refused() == 0 and sharing.ticker == nil, "the client refused nothing, and the queue is empty")
 mock.sent = {}
 mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~" .. time(), "WHISPER", "Mira Stormfeather")
 mock.Advance(10)
 check(kindsTo("Mira Stormfeather").O == 2, "a hello after the offers went out, as after a reload, gets them again")
+-- A client that throttles whispers after all: one refusal, then whispers
+-- keep to its count as well.
+mock.whisperThrottle = true
+mock.Advance(20)
+mock.sent, mock.attempts = {}, {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Mira Stormfeather")
+mock.Advance(60)
+check(refused() == 1 and (kindsTo("Mira Stormfeather").E or 0) == #Chronicle.OwnSince(0, math.huge),
+    "if the client refuses a whisper, whispers count against its allowance from then on (" .. refused() .. " refused)")
+mock.whisperThrottle = false
 
 local refusedOnce = false
 mock.addonResult = function()
@@ -1593,6 +1610,16 @@ do
     end
     check(greeted == 6, "with many entries waiting, every friend still gets the entries and a hello back (" .. greeted .. " of 6)")
 end
+-- After a loading screen the budget starts empty and refills slowly.
+mock.Advance(10)
+mock.Fire("PLAYER_ENTERING_WORLD")
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Mira Stormfeather")
+mock.Advance(1)
+check(#mock.sent <= 1, "after a loading screen it starts slowly (" .. #mock.sent .. " in the first second)")
+mock.Advance(10)
+check(#mock.sent > 10, "and is back to full speed a few seconds later (" .. #mock.sent .. ")")
+mock.Advance(60)
 -- A question that never went out does not keep the person from being asked
 -- of someone else.
 mock.state.lockdown = true

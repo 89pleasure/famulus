@@ -30,10 +30,14 @@
 --
 -- Sending: the client refuses addon messages during boss fights and on
 -- restricted maps, and it lets each prefix send ten messages at once and
--- gives back one per second (warcraft.wiki.gg, retail since 10.2.7; Forever
--- unconfirmed). What it refuses is lost, so everything passes through a queue
--- that keeps the same count and a ticker empties; the ticker runs only while
--- something waits. A message the client refuses anyway waits and goes again.
+-- gives back one per second, except whispers outside instances
+-- (warcraft.wiki.gg, SendAddonMessage). The server has its own limit and may
+-- disconnect a client that sends too much. What the client refuses is lost,
+-- so everything passes through a queue a ticker empties; the ticker runs
+-- only while something waits. It keeps the client's count for the guild
+-- channel, and for everything a bandwidth budget like ChatThrottleLib's,
+-- which starts slow after a loading screen. A message the client refuses
+-- anyway waits and goes again; a refused whisper makes whispers count too.
 -- The queue has two lanes. The own entries, live or caught up, go first and
 -- in order, with greetings, questions and the statistics after a live
 -- entry; a companion's mark ("I have your news up to <time>") must never
@@ -45,7 +49,7 @@
 -- twice (when the other comes online and on the first contact); the mark in
 -- a hello is read when it goes out, so the second costs little. Offers go
 -- only about people who are not online themselves, and not again while
--- earlier ones to the same companion still wait.
+-- earlier ones to the same companion still wait or went out just before.
 
 local _, ns = ...
 local Chronicle = ns.ChronicleService
@@ -68,11 +72,20 @@ local VERSION = "1"
 local SEND_INTERVAL = 0.5 -- seconds between two looks at the queue
 local ALLOWANCE = 10 -- messages the client lets a prefix send at once
 local REFILL = 1 -- messages it gives back per second
+-- The bandwidth budget for all messages, ChatThrottleLib's (v32) values:
+-- bytes per second, at most at once, and what each message costs on top.
+local BANDWIDTH = 800
+local BURST = 4000
+local OVERHEAD = 40
+local SETTLE = 5 -- seconds after a loading screen with a tenth of the bandwidth
 local MAX_NOW = 100 -- messages waiting in the first lane, own entries not counted
 local MAX_LATER = 200 -- messages waiting in the second lane
 local CATCH_UP = 20 -- entries sent to someone who was away, per round
 local MAX_REFUSED = 5 -- tries for a message the client answers with a bare false
 local MAX_OFFERS = 20 -- people whose news is offered on a hello
+-- Seconds in which a companion gets no offers again: the second hello of a
+-- first contact comes right after the first, a reload takes longer.
+local OFFER_GAP = 60
 local LINK_AGE = 30 * 86400 -- how long a direct answer vouches for someone
 local MAX_TEXT = 60 -- bytes of a name or place in a message
 -- Seconds from an own event to the statistics that follow it: the game counts
@@ -100,6 +113,7 @@ local linked = {} -- key -> name: whose addon answered this session
 local asked = {} -- key of someone offline -> key of the companion asked about them
 local gone = {} -- key -> true: the client said they are offline, the lists not yet
 local helloWaiting = {} -- key -> true: a hello to them waits in the queue
+local offeredAt = {} -- key -> GetTime() of the last offers queued for them
 local registered = false
 local greetedGuild = false
 local statsPending = false -- the statistics will go out to the linked shortly
@@ -238,6 +252,9 @@ end
 
 local nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
 local allowance, refilled = ALLOWANCE, nil -- our count of the client's, and when it was last topped up
+local bytes = 0 -- what the bandwidth budget has left
+local settleUntil = 0 -- GetTime() until which the budget refills slowly
+local whispersCounted = false -- the client refused a whisper: they count against the allowance too
 
 local function Waiting(lane)
     return lane.tail - lane.head + 1
@@ -264,7 +281,19 @@ end
 
 local CatchUp -- below; the last entry of a round calls for the next
 
--- Sends what waits, as far as the allowance goes: the first lane first.
+-- Tops up both budgets for the time since the last look.
+local function Refill(clock)
+    local elapsed = clock - (refilled or clock)
+    refilled = clock
+    allowance = math.min(ALLOWANCE, allowance + elapsed * REFILL)
+    if clock < settleUntil then
+        bytes = math.min(BANDWIDTH / 2, bytes + elapsed * BANDWIDTH / 10)
+    else
+        bytes = math.min(BURST, bytes + elapsed * BANDWIDTH)
+    end
+end
+
+-- Sends what waits, as far as the budgets go: the first lane first.
 local function Flush()
     if Waiting(nowLane) + Waiting(laterLane) <= 0 then
         nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
@@ -275,10 +304,8 @@ local function Flush()
     if ns.ChatService.InLockdown() then
         return
     end
-    local clock = GetTime()
-    allowance = math.min(ALLOWANCE, allowance + (clock - (refilled or clock)) * REFILL)
-    refilled = clock
-    while allowance >= 1 do
+    Refill(GetTime())
+    while true do
         local lane = Waiting(nowLane) > 0 and nowLane or laterLane
         local item = lane[lane.head]
         if not item then
@@ -293,6 +320,10 @@ local function Flush()
             if type(text) == "function" then
                 text = text()
             end
+            local counted = item.channel or whispersCounted
+            if bytes < #text + OVERHEAD or (counted and allowance < 1) then
+                return -- the next look has more
+            end
             result = C_ChatInfo.SendAddonMessage(PREFIX, text, item.channel or "WHISPER", online[item.key])
             if ns.IsSecret(result) then
                 result = nil
@@ -305,12 +336,19 @@ local function Flush()
             if result == THROTTLED or result == CHANNEL_THROTTLED or result == LOCKDOWN
                 or (result == false and item.refused < MAX_REFUSED) then
                 -- Refused, so not sent: the message stays first in line and
-                -- waits until the client lets more through.
-                Note(result == LOCKDOWN and "lockdown" or "throttled")
+                -- waits until the client lets more through. A refused
+                -- whisper means this client counts whispers after all.
+                if result ~= LOCKDOWN and not item.channel then
+                    whispersCounted = true
+                end
+                Note(result == LOCKDOWN and "lockdown" or item.channel and "throttled" or "whisper throttled")
                 allowance = 0
                 return
             end
-            allowance = allowance - 1
+            bytes = bytes - (#text + OVERHEAD)
+            if counted then
+                allowance = allowance - 1
+            end
             if result == OFFLINE and item.key then
                 Note("offline")
                 gone[item.key] = true
@@ -407,10 +445,10 @@ end
 
 -- Offers the news of others this client knows, newest first, except of the
 -- one who receives the offer and of people who are online and can tell it
--- themselves. Not again while earlier offers to them still wait: the second
--- hello of a first contact would double them.
+-- themselves. Not again while earlier offers to them still wait or within
+-- OFFER_GAP: the second hello of a first contact would double them.
 local function SendOffers(key)
-    if OffersWaiting(key) then
+    if OffersWaiting(key) or (offeredAt[key] and GetTime() - offeredAt[key] < OFFER_GAP) then
         return
     end
     local entries, seen, count = Chronicle.Entries(), {}, 0
@@ -426,7 +464,7 @@ local function SendOffers(key)
                     if not item then
                         return -- the lane is full; the next hello tries again
                     end
-                    item.offer = true
+                    item.offer, offeredAt[key] = true, GetTime()
                     if count == MAX_OFFERS then
                         return
                     end
@@ -684,6 +722,13 @@ function sharing:GUILD_ROSTER_UPDATE()
     end
 end
 
+-- The server is touchy after a loading screen (ChatThrottleLib's
+-- experience): the budget starts empty and refills slowly for a while.
+function sharing:PLAYER_ENTERING_WORLD()
+    Refill(GetTime())
+    bytes, settleUntil = 0, GetTime() + SETTLE
+end
+
 function sharing:OnEnable()
     if not registered then
         registered = true
@@ -693,6 +738,7 @@ function sharing:OnEnable()
     self:RegisterEvent("CHAT_MSG_ADDON")
     self:RegisterEvent("FRIENDLIST_UPDATE")
     self:RegisterEvent("GUILD_ROSTER_UPDATE")
+    self:RegisterEvent("PLAYER_ENTERING_WORLD")
     if C_FriendList.ShowFriends then
         C_FriendList.ShowFriends()
     end
@@ -705,7 +751,8 @@ end
 
 function sharing:OnDisable()
     friends, guild, guildOnline, online, linked, asked = {}, {}, {}, {}, {}, {}
-    gone, helloWaiting = {}, {}
+    gone, helloWaiting, offeredAt = {}, {}, {}
+    whispersCounted = false
     greetedGuild, statsPending = false, false -- a pending After lapses with the feature
     nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
 end
