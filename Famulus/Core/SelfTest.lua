@@ -335,6 +335,13 @@ local function CheckNames()
                 "%s members (%s online), %d listed as offline, %d with a GUID", Describe(total), Describe(online), offline, withGuid))
         end
     end
+    -- Aliases in chat find the name in the game's notices that someone came
+    -- online (in a player link) or went offline (as plain text, once).
+    local online, offline = ERR_FRIEND_ONLINE_SS, ERR_FRIEND_OFFLINE_S
+    local linked = type(online) == "string" and string.find(online, "|Hplayer:", 1, true) ~= nil
+    local slots = type(offline) == "string" and select(2, string.gsub(offline, "%%s", "")) or 0
+    Add("names", "online notices", linked and slots == 1 and "ok" or "warn", string.format(
+        "online line %s, offline line has %d name slot(s)", linked and "links the name" or "has no player link", slots))
     local menu = ns.features.aliasMenu
     if menu and Menu and Menu.GetOpenMenuTags then
         Add("names", "context menu", "ok", #menu.TAGS .. " menu tags hooked while the feature is on")

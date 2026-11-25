@@ -40,7 +40,7 @@ L.lang_auto = "Spielclient"
 
 -- Aliase
 L.f_chatAliases = "Aliase im Chat"
-L.f_chatAliases_desc = "Zeigt vor Chatnachrichten den Alias statt des Charakternamens. Flüstern und Einladen erreichen weiterhin den Charakter."
+L.f_chatAliases_desc = "Zeigt vor Chatnachrichten und in den Meldungen, wenn jemand online kommt oder offline geht, den Alias statt des Charakternamens. Flüstern und Einladen erreichen weiterhin den Charakter."
 L.o_chatAliases_style = "Anzeige"
 L.o_chatAliases_style_desc = "Den Alias allein zeigen oder mit dem Charakternamen dahinter."
 L.o_chatAliases_style_alias = "Alias"

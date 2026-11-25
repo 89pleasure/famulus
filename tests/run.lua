@@ -207,6 +207,8 @@ check(Aliases.Count() == 0 and FamulusDB.aliases == nil, "a fresh install has no
 check(mock.CountSenderFilters() == 1, "the chat filter is installed while the feature is on")
 check(mock.SenderName("CHAT_MSG_SAY", "|cff3fc7ebJaina-Proudmoore|r", "Jaina-Proudmoore") == "|cff3fc7ebJaina-Proudmoore|r",
     "without an alias a sender keeps their name")
+check(mock.SystemMessage("Jaina Proudmoore has gone offline.") == "Jaina Proudmoore has gone offline.",
+    "and the notice that they went offline stays as it is")
 
 check(Aliases.Set("Jaina Proudmoore", "  Anna ") and Aliases.Count() == 1 and aliasEvents == 1, "an alias can be set and is announced")
 check(FamulusDB.aliases["jaina-proudmoore"].alias == "Anna" and FamulusDB.profile.aliases == nil,
@@ -237,6 +239,36 @@ check(mock.CountSenderFilters() == 0, "switching off removes the chat filter")
 check(mock.SenderName("CHAT_MSG_SAY", "Jaina-Proudmoore", "Jaina-Proudmoore") == "Jaina-Proudmoore", "and names are back")
 enable("chatAliases")
 check(mock.CountSenderFilters() == 1, "switching on again installs it once")
+
+-- The notices that someone came online or went offline
+local online = string.format(ERR_FRIEND_ONLINE_SS, "Jaina-Proudmoore", "Jaina-Proudmoore")
+local shown, argCount = mock.SystemMessage(online)
+check(mock.CountMessageFilters("CHAT_MSG_SYSTEM") == 1, "a filter for system lines is installed while the feature is on")
+check(shown == "|Hplayer:Jaina-Proudmoore|h[Anna]|h has come online." and argCount == 14,
+    "the online notice shows the alias, the link keeps the name: " .. tostring(shown))
+check(mock.SystemMessage(string.format(ERR_FRIEND_ONLINE_SS, "Jaina Proudmoore", "Jaina Proudmoore"))
+    == "|Hplayer:Jaina Proudmoore|h[Anna]|h has come online.", "also with a space in the name")
+check(mock.SystemMessage("|Hplayer:Jaina-Proudmoore:12:GUILD|h[|cff3fc7ebJaina-Proudmoore|r]|h has come online.")
+    == "|Hplayer:Jaina-Proudmoore:12:GUILD|h[|cff3fc7ebAnna|r]|h has come online.", "inside a class colour and with more link data")
+check(mock.SystemMessage("Jaina Proudmoore has gone offline.") == "Anna has gone offline.", "the offline notice shows the alias")
+ns:SetOption("chatAliases", "style", "both")
+check(mock.SystemMessage(online) == "|Hplayer:Jaina-Proudmoore|h[Anna (Jaina-Proudmoore)]|h has come online."
+    and mock.SystemMessage("Jaina Proudmoore has gone offline.") == "Anna (Jaina Proudmoore) has gone offline.",
+    "both notices follow the display setting")
+ns:SetOption("chatAliases", "style", "alias")
+local strangerOnline = string.format(ERR_FRIEND_ONLINE_SS, "Arthas-Menethil", "Arthas-Menethil")
+check(mock.SystemMessage(strangerOnline) == strangerOnline and mock.SystemMessage("Arthas Menethil has gone offline.") == "Arthas Menethil has gone offline."
+    and mock.SystemMessage("You are now away.") == "You are now away.", "other names and other system lines are untouched")
+check(mock.SystemMessage(online, { privateMessageList = { ["jaina-proudmoore"] = true } }) == online,
+    "a whisper window of its own gets the line unchanged, so it still recognises it")
+check(mock.SystemMessage(mock.SECRET) == mock.SECRET, "a secret line is passed through untouched")
+local englishOffline = ERR_FRIEND_OFFLINE_S
+ERR_FRIEND_OFFLINE_S = "%s ist jetzt offline."
+check(mock.SystemMessage("Jaina Proudmoore ist jetzt offline.") == "Anna ist jetzt offline.", "the offline notice is found in the client's language")
+ERR_FRIEND_OFFLINE_S = englishOffline
+enable("chatAliases", false)
+check(mock.CountMessageFilters("CHAT_MSG_SYSTEM") == 0 and mock.SystemMessage(online) == online, "switching off removes the filter for system lines")
+enable("chatAliases")
 
 check(Aliases.Set("Thrall", "|cffff0000Bo|r|Hx|hss") and Aliases.Get("Thrall") == "cffff0000BorHxhss", "an alias cannot carry colours or links")
 check(Aliases.Set("Thrall", string.rep("ä", 40)) and #Aliases.Get("Thrall") == 48, "a long alias is cut at a whole character")
@@ -3052,6 +3084,8 @@ check(findCheck(result, "api", "GetItemInfo").status == "ok", "removed API is co
 check(findCheck(result, "api", "UnitIsInMyGuild").status == "ok" and findCheck(result, "names", "guild roster").detail == "not in a guild"
     and findCheck(result, "names", "friends list").detail == "0 friends, 0 with a GUID",
     "the report says how friends list and guild roster look, without names")
+check(findCheck(result, "names", "online notices").status == "ok", "the report says whether the online and offline notices name the player as expected: "
+    .. findCheck(result, "names", "online notices").detail)
 setState({ guild = { { name = "Ena Fremd", guid = "Player-1-ENA", online = true }, { name = "Tom Hartwig" } } })
 SlashCmdList.FAMULUS("test")
 result = FamulusDB.selfTest
