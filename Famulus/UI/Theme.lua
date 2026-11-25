@@ -54,6 +54,20 @@ UI.media = {
     cheer = MEDIA .. "cheer.tga",
     strong = MEDIA .. "strong.tga",
     clap = MEDIA .. "clap.tga",
+    -- Icons of the entries in the settings tabs (feature.icon and others).
+    share = MEDIA .. "share.tga",
+    bell = MEDIA .. "bell.tga",
+    chat = MEDIA .. "chat.tga",
+    shield = MEDIA .. "shield.tga",
+    tooltip = MEDIA .. "tooltip.tga",
+    menu = MEDIA .. "menu.tga",
+    link = MEDIA .. "link.tga",
+    trash = MEDIA .. "trash.tga",
+    globe = MEDIA .. "globe.tga",
+    compass = MEDIA .. "compass.tga",
+    person = MEDIA .. "person.tga",
+    drop = MEDIA .. "drop.tga",
+    resize = MEDIA .. "resize.tga",
     shadow = MEDIA .. "shadow.tga",
     grain = MEDIA .. "grain.tga",
     logo = MEDIA .. "logo.tga",
@@ -218,7 +232,7 @@ local function Compose(accent)
     colors.accentDeep = mix(base, BLACK, 0.80) -- ground of a picture in the chronicle
     colors.accentTrail = alpha(base, 0.28) -- the line the chronicle's events hang on
     colors.accentNone = alpha(base, 0) -- where an accent line fades out
-    colors.cardActive = alpha(base, 0.26) -- border of a card whose feature is on
+    colors.cardActive = alpha(base, 0.26) -- border of a card that stands out (a milestone, the chosen one)
     return true
 end
 Compose(DEFAULT_ACCENT)

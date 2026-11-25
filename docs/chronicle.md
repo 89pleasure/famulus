@@ -34,8 +34,9 @@ picture-book look are built and checked against the mock only.
   - On the three story tabs the book is 600 px wide (`BOOK_W`, the size before the window was
     rebuilt); to its right, 28 px apart, a rail of 272 px (`UI.Rail`, `UI/Rail.lua`; a tab
     provides it via `tab.rail`). It does not scroll with the book but on its own, in case it is
-    taller than the window. During a search and on "Settings" there is no rail; rows and cards
-    then take the full width (`RowSetItem` is passed the width).
+    taller than the window. During a search there is no rail; rows and cards then take the full
+    width (`RowSetItem` is passed the width). "Settings" shows entries and the chosen one instead
+    (see "Settings tabs" in `docs/window.md`).
   - "Everyone": card "This week" (level with number of level-ups, deaths, newly discovered zones,
     professions and milestones; only the character being played, last seven days, first name on
     the right) and card "Friends" (alias, last event with time or day, level, online/offline).
@@ -487,7 +488,8 @@ picture-book look are built and checked against the mock only.
   person: strip, rail, filter line "Only events of …" and the sentences of the live feed. Without
   an alias only the name stands there.
   - **Option** "Character name behind the alias" (`general.chronicleNames`, default on) as its
-    own card "Display" under Chronicle › Settings, below the features. Off: only the alias. The
+    own entry under the heading "Display" in Chronicle › Settings, below the features (until
+    2026-11-25 a card of its own, see "Settings tabs" in `docs/window.md`). Off: only the alias. The
     option only applies to the brackets; the class icon has no switch (confirmed by the owner,
     2026-11-24).
   - **The character name no longer stands in the line below the heading** ("Jaina Proudmoore ·
