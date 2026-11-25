@@ -505,8 +505,41 @@ check(navButton("Aliases").selected and not navButton("Aliases").pill:IsShown(),
     "the main feature is selected and shows no counter")
 mock.Click(tabButton("Settings"))
 check(tabButton("Settings").selected and not tabButton("Names").selected, "a click on a tab chooses it")
+-- A settings tab: its features as entries on the left, the chosen one in
+-- full on the right.
+local function visibleEntries()
+    local list = {}
+    for _, frame in ipairs(mock.frames) do
+        if frame.entry and frame.switch and frame:IsVisible() then
+            list[#list + 1] = frame
+        end
+    end
+    return list
+end
+local detail = window.detail
+local entries = visibleEntries()
+check(#entries == 5 and entries[1].label:GetText() == ns.L.f_chatAliases and entries[1].chosen and not entries[2].chosen,
+    "the display tab lists its five features, the first one chosen (got " .. #entries .. ")")
+check(not window.scroll:IsShown() and window.list:GetWidth() == 296 and detail:IsVisible() and detail.title:GetText() == ns.L.f_chatAliases
+    and detail.desc:GetText() == ns.L.f_chatAliases_desc, "on the right the chosen feature in full: its name and what it does")
+check(detail.crumb:GetText() == "Aliases", "above the name the page it belongs to")
+check(entries[1].entry.item.icon == "chat" and entries[1].icon:IsShown() and entries[1].tile.token == "accentSoft"
+    and entries[5].entry.item.icon == "shield", "every entry has its feature's icon, on a lit tile while it runs")
+local iconsKnown = true
+for _, feature in ipairs(ns.featureList) do
+    iconsKnown = iconsKnown and feature.icon ~= nil and ns.UI.media[feature.icon] ~= nil
+end
+check(iconsKnown, "every feature names an icon the window has")
+check(entries[1].mark:IsShown() and not entries[2].mark:IsShown() and entries[1].ground.fill.parts[1]:IsShown(),
+    "the chosen entry lies on a card with the accent mark")
+check(entries[1].sub:GetText() == "On  ·  1 option" and entries[3].sub:GetText() == "On" and entries[1].toggle.on,
+    "below each name whether it is on and how many options it has; its switch at the right")
+check(detail.pills[1].text:GetText() == "On" and detail.pills[2].text:GetText() == "Default: on" and detail.toggle.on,
+    "the detail says whether it is on and what its default is")
 local rows = visibleRows()
-check(#rows == 7, "the display tab shows the five features and their options (got " .. #rows .. ")")
+check(#rows == 1 and rows[1].item.id == "chatAliases.style" and rows[1].dropdown:IsShown() and rows[1].desc:IsShown()
+    and detail.optionsTitle:GetText() == "Options" and not detail.picture:IsShown() and not detail.chipsTitle:IsShown(),
+    "its option is a row with its help text below \"Options\"; no picture, no chips (got " .. #rows .. ")")
 check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
 mock.Click(window.resetButton)
 check(window.resetButton.label:GetText() == "Reset", "and a click on it does nothing")
@@ -515,38 +548,25 @@ check(window.master == nil, "the pages carry no master switch any more")
 local function flipAliases()
     ns:SetOption("categories", "aliases", not ns:IsCategoryEnabled("aliases"))
 end
-local function visibleCards()
-    local list = {}
-    for _, frame in ipairs(mock.frames) do
-        if frame.mark and frame:IsVisible() then
-            list[#list + 1] = frame
-        end
-    end
-    return list
-end
-local aliasCards = visibleCards()
-check(#aliasCards == 5 and #aliasCards[1].block.items == 2, "every feature has its own card, together with its options")
-check(aliasCards[1].mark:IsShown() and aliasCards[2].mark:IsShown(), "the card of a running feature wears the accent mark")
 
--- Toggle through the row itself.
-local optionRow = rows[2]
-local function isFolded(row)
-    return row.item.child and not row.desc:IsShown() and row.height < rows[1].height
-end
-check(not isFolded(optionRow) and optionRow.desc:IsShown() and not optionRow.disabled, "the option of a running feature is open")
-mock.Click(rows[1])
-check(not ns.features.chatAliases.enabled, "clicking a row switches the feature off")
+-- The entry's own switch.
+local optionRow = rows[1]
+check(not optionRow.disabled and not detail.off:IsShown(), "the option of a running feature can be changed")
+mock.Click(entries[1].switch)
+check(not ns.features.chatAliases.enabled, "the switch in the entry turns the feature off")
 mock.Advance(0.3)
-check(#visibleRows() == 7 and isFolded(optionRow), "the option of a switched-off feature is a slim row without help text")
-check(optionRow.disabled and optionRow.dropdown:IsShown(), "it is greyed out but shows its value")
-check(optionRow.bullet:IsShown() and not rows[1].bullet:IsShown(), "options are marked with a dot below their feature")
-check(optionRow.sunkenLast.parts[1]:IsShown() and not optionRow.sunken:IsShown(), "an option that ends its card has the rounded ground")
-check(not aliasCards[1].mark:IsShown() and aliasCards[2].mark:IsShown(), "the card of a switched-off feature loses the mark")
+check(entries[1].chosen and detail.title:GetText() == ns.L.f_chatAliases, "without choosing another entry")
+check(optionRow:IsVisible() and optionRow.disabled and optionRow.dropdown:IsShown() and optionRow.desc:IsShown(),
+    "its option stays in full, greyed out")
+check(detail.off:IsShown() and detail.off:GetText() == "Switch on \"Aliases in chat\" to change its options.",
+    "and the detail says why: " .. tostring(detail.off:GetText()))
+check(entries[1].sub:GetText() == "Off  ·  1 option" and not entries[1].toggle.on and detail.pills[1].text:GetText() == "Off"
+    and not detail.toggle.on and entries[1].tile.token == "control", "entry and detail show that it is off")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
 check(not navButton("Aliases").pill:IsShown(), "the sidebar counts nothing")
 ns:SetOption("chatAliases", "style", "both")
 mock.Advance(0.3)
-check(optionRow.dropdown.text:GetText() == ns.L.o_chatAliases_style_both and isFolded(optionRow), "a chosen value shows while folded as well")
+check(optionRow.dropdown.text:GetText() == ns.L.o_chatAliases_style_both, "a chosen value shows while greyed out as well")
 mock.Click(optionRow)
 mock.Advance(0.05)
 local menuOpen = false
@@ -563,7 +583,8 @@ check(not ns:IsCategoryEnabled("aliases") and not ns.features.tooltipAliases.ena
 check(mock.CountSenderFilters() == 0, "nothing of a switched-off category reacts to the game")
 check(ns:GetOption("tooltipAliases", "enabled") == true and ns:GetOption("chatAliases", "enabled") == false, "the features' own settings are kept")
 check(window.area.name:GetText() == "Aliases", "the page's name stays in the head")
-check(window.offNotice:IsShown() and #visibleRows() == 0 and not window.resetButton:IsShown(), "the page shows only the notice")
+check(window.offNotice:IsShown() and #visibleRows() == 0 and #visibleEntries() == 0 and not detail:IsVisible()
+    and not window.resetButton:IsShown(), "the page shows only the notice")
 check(tabButton("Settings").label:GetAlpha() < 1, "the tab of the category is greyed out")
 check(FamulusDB.profile.categories.aliases == false, "the switch is saved")
 enable("chatAliases")
@@ -573,24 +594,32 @@ check(ns.features.liveFeed.enabled, "other categories keep running")
 flipAliases()
 mock.Advance(0.3)
 check(ns.features.tooltipAliases.enabled and FamulusDB.profile.categories == nil, "switching the category on again resumes the features")
-check(tabButton("Settings").label:GetAlpha() == 1 and not window.offNotice:IsShown() and #visibleRows() == 7, "and the tab is back to normal")
+check(tabButton("Settings").label:GetAlpha() == 1 and not window.offNotice:IsShown() and #visibleEntries() == 5 and detail:IsVisible(),
+    "and the tab is back to normal")
 
-mock.Click(rows[1])
-check(ns.features.chatAliases.enabled, "and the feature on again")
+mock.Click(detail.switch)
+check(ns.features.chatAliases.enabled, "the switch beside the feature's name turns it on again")
 mock.Advance(0.3)
-check(not isFolded(optionRow) and optionRow.desc:IsShown() and not optionRow.disabled, "which unfolds its option with its help text")
+check(not optionRow.disabled and not detail.off:IsShown() and entries[1].toggle.on, "which frees its option")
 check(window.resetButton.disabled, "back on defaults, reset is greyed out again")
-window.scroll:SetVerticalScroll(30)
-mock.Click(rows[1])
+
+-- Choosing another entry.
+mock.Click(entries[2])
+check(entries[2].chosen and not entries[1].chosen and entries[2].mark:IsShown() and not entries[1].mark:IsShown()
+    and detail.title:GetText() == ns.L.f_tooltipAliases and #visibleRows() == 0 and not detail.optionsTitle:IsShown(),
+    "a click on an entry shows that feature; one without options shows none")
+mock.Click(entries[2].switch)
 mock.Advance(0.3)
-mock.Click(rows[1])
+check(not ns.features.tooltipAliases.enabled and entries[2].sub:GetText() == "Off" and not detail.toggle.on and entries[2].chosen,
+    "its switch turns it off and both sides follow")
+mock.Click(detail.switch)
 mock.Advance(0.3)
-check(window.scroll:GetVerticalScroll() == 30, "folding and unfolding do not make the page jump")
-window.scroll:SetVerticalScroll(0)
+check(ns.features.tooltipAliases.enabled and entries[2].toggle.on, "and on again")
 
 -- Tabs.
 mock.Click(tabButton("Names"))
 check(tabButton("Names").selected, "a click on a tab opens it")
+check(#visibleEntries() == 0 and not detail:IsVisible() and window.scroll:IsShown(), "a tab without settings shows cards of rows")
 mock.Advance(0.3)
 check(mock.CountOnUpdateFrames() == 0, "the sliding tab bar comes to rest")
 mock.Click(tabButton("Settings"))
@@ -598,6 +627,8 @@ mock.Click(navButton("Settings"))
 check(navButton("Settings").bar:IsShown(), "the chosen icon carries the accent stroke")
 mock.Click(navButton("Aliases"))
 check(tabButton("Settings").selected, "a page remembers its tab")
+check(entries[2].chosen and detail.title:GetText() == ns.L.f_tooltipAliases, "and the tab its chosen entry")
+mock.Click(entries[1])
 
 -- Every page and tab renders, in both languages.
 for _, language in ipairs({ "enUS", "deDE" }) do
@@ -620,7 +651,8 @@ for _, language in ipairs({ "enUS", "deDE" }) do
             end
             for _, tab in ipairs(tabs) do
                 mock.Click(tab)
-                check(#visibleRows() > 0, "tab " .. tab.label:GetText() .. " of " .. page .. " has rows")
+                check(#visibleRows() > 0 or (#visibleEntries() > 0 and detail.title:GetText() ~= ""),
+                    "tab " .. tab.label:GetText() .. " of " .. page .. " has rows or entries")
             end
         end
     end
@@ -711,21 +743,26 @@ check(editor ~= nil and editor:IsVisible() and aliasRows[2].item.kind == "info",
 check(editor.name.placeholder:GetText() == "Character or BattleTag#1234" and editor.save.label:GetText() == "Save", "the input row is labelled")
 check(not navButton("Aliases").pill:IsShown(), "the sidebar entry shows no counter")
 mock.Click(tabButton("Settings"))
-check(#visibleRows() == 7 and window.resetButton:IsShown(), "the display tab shows the five features with their options, and reset")
+check(#visibleEntries() == 5 and window.resetButton:IsShown(), "the display tab lists the five features, and reset")
 -- The master switches in Settings › General.
 mock.Click(navButton("Settings"))
 mock.Click(tabButton("General"))
-local switches = visibleRows()
-check(switches[1].item.section == "categories" and switches[1].item.key == "chronicle" and switches[2].item.key == "fellows"
-    and switches[3].item.key == "aliases" and switches[3].toggle.on, "settings › general starts with the three main features, in the sidebar's order")
-mock.Click(switches[3])
+local switches = visibleEntries()
+local function itemOf(entry)
+    return entry.entry.item
+end
+check(itemOf(switches[1]).section == "categories" and itemOf(switches[1]).key == "chronicle" and itemOf(switches[2]).key == "fellows"
+    and itemOf(switches[3]).key == "aliases" and switches[3].toggle.on and switches[1].chosen
+    and detail.title:GetText() == ns.L.area_chronicle,
+    "settings › general starts with the three main features, in the sidebar's order")
+mock.Click(switches[3].switch)
 mock.Advance(0.1)
 check(not ns:IsCategoryEnabled("aliases") and navButton("Aliases").pill:IsShown() and navButton("Aliases").count:GetText() == "OFF"
     and navButton("Aliases").label:GetAlpha() < 1,
     "switching one off greys it in the head")
 check(not window.resetButton.disabled, "and makes settings › general resettable")
 mock.Click(navButton("Aliases"))
-check(window.offNotice:IsShown() and #visibleRows() == 0 and window.offNotice.text:GetText():find("Aliases", 1, true),
+check(window.offNotice:IsShown() and #visibleRows() == 0 and #visibleEntries() == 0 and window.offNotice.text:GetText():find("Aliases", 1, true),
     "its page shows only the notice")
 window.search.edit:SetText("kontextm")
 check(#visibleRows() == 0, "search leaves a switched-off feature out")
@@ -833,9 +870,21 @@ check(FamulusDB.aliases == nil, "the tests leave no alias behind")
 mock.Click(navButton("Settings"))
 mock.Click(tabButton("General"))
 check(tabButton("General").selected and tabButton("Appearance"), "the settings page has a general and an appearance tab")
-local generalRows = visibleRows()
+local generalRows = visibleEntries()
 check(#generalRows == 7, "the three main features, language, chat feedback, minimap button and character profile (got " .. #generalRows .. ")")
+check(generalRows[4].value:IsShown() and generalRows[4].value:GetText() == ns.L.lang_auto and not generalRows[4].toggle:IsShown(),
+    "a choice shows its value in the entry instead of a switch")
+local generalIcons = {}
+for index, entry in ipairs(generalRows) do
+    generalIcons[index] = entry.entry.item.icon
+end
+check(table.concat(generalIcons, " ") == "flag people tag globe chat compass person" and generalRows[4].tile.token == "control",
+    "the addon's own settings have icons as well; only a running switch lights its tile: " .. table.concat(generalIcons, " "))
 mock.Click(generalRows[4]) -- language
+check(detail.title:GetText() == "Language" and detail.dropdown:IsShown() and not detail.toggle:IsShown()
+    and detail.pills[1].text:GetText() == "Default: " .. ns.L.lang_auto and not detail.pills[2]:IsShown(),
+    "chosen, the detail offers the dropdown and names the default")
+mock.Click(detail.dropdown.open)
 mock.Advance(0.05)
 local picked = false
 for _, frame in ipairs(mock.frames) do
@@ -852,20 +901,21 @@ ns:SetOption("general", "language", "auto")
 
 -- Character profile.
 enable("tooltipAliases", false)
-mock.Click(generalRows[7])
+mock.Click(generalRows[7].switch)
 mock.Advance(0.1)
 check(ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "character profile starts as a copy")
 enable("tooltipAliases")
-mock.Click(generalRows[7])
+mock.Click(generalRows[7].switch)
 mock.Advance(0.1)
 check(not ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "switching back restores the account settings")
 enable("tooltipAliases")
 
 -- Settings: appearance tab.
 mock.Click(tabButton("Appearance"))
-local looks = visibleRows()
-check(#looks == 3 and looks[1].swatches:IsShown() and looks[2].toggle:IsShown() and looks[3].dropdown:IsShown(),
+local looks = visibleEntries()
+check(#looks == 3 and looks[1].dot:IsShown() and looks[2].toggle:IsShown() and looks[3].value:IsShown(),
     "colour scheme, sparks and window size")
+check(looks[1].chosen and detail.swatches:IsShown() and not detail.pills[1]:IsShown(), "the colour scheme shows its swatches in the detail")
 check(window.themeButton == nil and ns.UI.colors.card[1] < 0.3, "the window is dark and has no light version")
 
 -- Fonts load lazily: a string waits on the game's font, then switches and is redrawn.
@@ -883,7 +933,7 @@ check(lazy.font == inter and lazy.fontSize == 13 and lazy.fontSets == setsBefore
 mock.Advance(1)
 check(ns.UI.fontLoaded[inter] == true and lazy.fontSets == setsBefore + 3, "and the retries stop")
 local lilac
-for _, dot in ipairs(looks[1].swatches.dots) do
+for _, dot in ipairs(detail.swatches.dots) do
     if dot.value == "lilac" then
         lilac = dot
     end
@@ -920,7 +970,7 @@ ns:SetOption("general", "accent", "lilac")
 mock.Advance(0.1)
 check(lilac.selected and lilac.ring:IsShown(), "the chosen swatch wears a ring")
 mock.Click(looks[1])
-check(ns:GetOption("general", "accent") == "lilac", "a click beside the swatches changes nothing")
+check(ns:GetOption("general", "accent") == "lilac", "a click on its entry changes nothing")
 check(not window.resetButton.disabled, "a changed look makes the tab resettable")
 mock.Click(window.resetButton)
 mock.Click(window.resetButton)
@@ -929,7 +979,7 @@ check(ns:GetOption("general", "accent") == "lemon", "reset brings the default lo
 check(ns:GetOption("general", "language") == "auto" and ns:GetOption("general", "minimapAngle") == 215, "and touches nothing else")
 
 -- Window size.
-check(looks[3].label:GetText() == "Window size" and looks[3].dropdown.text:GetText() == "100%", "the appearance tab offers the window size")
+check(looks[3].label:GetText() == "Window size" and looks[3].value:GetText() == "100%", "the appearance tab offers the window size")
 ns:SetOption("general", "windowScale", 120)
 check(window.scale == 1.2, "changing it rescales the window at once")
 ns:SetOption("general", "windowScale", 100)
@@ -954,10 +1004,10 @@ end
 local sparksPlaying, sparksTotal = sparkGroups()
 check(sparksTotal > 10 and sparksPlaying == sparksTotal, "the sparks rise while the window is open (" .. sparksPlaying .. " of " .. sparksTotal .. ")")
 check(looks[2].label:GetText() == "Sparks in the background" and looks[2].toggle.on, "and have a switch on the appearance tab")
-mock.Click(looks[2])
+mock.Click(looks[2].switch)
 mock.Advance(0.1)
 check(ns:GetOption("general", "embers") == false and sparkGroups() == 0, "switching them off stops every one")
-mock.Click(looks[2])
+mock.Click(looks[2].switch)
 mock.Advance(0.1)
 check(sparkGroups() == sparksTotal, "switching them on starts them again")
 
@@ -1161,21 +1211,42 @@ do -- the live feed: what was just written down appears on screen for a while
             end
         end
     end
+    -- The sounds played so far, and the last one.
+    local function sounds()
+        local last
+        for _, call in ipairs(mock.calls) do
+            if call[1] == "PlaySoundFile" then
+                last = call
+            end
+        end
+        return mock.count("PlaySoundFile"), last
+    end
     Feed.Clear()
     check(ns.features.liveFeed.enabled and ns:GetOption("liveFeed", "zone") == false and ns:GetOption("liveFeed", "level") == true
-        and ns:GetOption("liveFeed", "own") == false,
-        "the feed is on from the start; arrivals in a zone and the player's own events are not shown")
+        and ns:GetOption("liveFeed", "own") == false and ns:GetOption("liveFeed", "sound") == true,
+        "the feed is on from the start, with its sound; arrivals in a zone and the player's own events are not shown")
+    mock.Advance(3) -- (a sound shortly before would hold back the next)
+    local heard = sounds()
     -- (Two events of a kind within a second count as one; hence the times.)
     Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 18, probe = true })
     check(#Feed.Shown() == 0, "from the start the feed is about companions: the player's own events stay off screen")
     ns:SetOption("liveFeed", "own", true)
     Chronicle.Add("level", { level = 14, t = time() - 19, probe = true })
     check(#Feed.Shown() == 0, "the player's own level-up is not shown: the game announces it itself")
+    check(sounds() == heard, "no card, no sound")
     Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 20, probe = true })
     local card = Feed.Shown()[1]
     check(#Feed.Shown() == 1 and card:IsShown() and card.title:GetText() == "Learned to ride"
         and card.photo:IsShown() and not card.icon:IsShown() and not card.number:IsShown(),
         "asked for, an event of the player's own appears as a card with an icon of the game")
+    local count, sound = sounds()
+    check(count == heard + 1 and sound[2] == ns.features.liveFeed.SOUND and sound[3] == "SFX",
+        "a card comes with a sound, on the game's sound effects channel")
+    local file = io.open("Famulus/" .. ns.features.liveFeed.SOUND:match("\\Famulus\\(.+)$"):gsub("\\", "/"), "rb")
+    check(file ~= nil and file:read(4) == "OggS", "the sound is an Ogg file in the addon folder")
+    if file then
+        file:close()
+    end
     check(card.crest:GetHeight() < card:GetHeight() and card.crest:GetWidth() < card:GetWidth()
         and card:GetWidth() >= 230 and card.mark:IsShown() and card.grain ~= nil,
         "the picture is a crest inside its band; a milestone carries the mark of an active card")
@@ -1191,6 +1262,7 @@ do -- the live feed: what was just written down appears on screen for a while
         and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
     check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and not Feed.Shown()[1].mark:IsShown(),
         "a band is as wide as its text needs; a companion's event is no milestone")
+    check(sounds() == heard + 1, "cards that come together bring one sound")
     for skill = 1, 3 do
         Chronicle.Add("skill", { skill = skill, name = "Craft " .. skill, rank = 75, probe = true })
     end
@@ -1203,6 +1275,13 @@ do -- the live feed: what was just written down appears on screen for a while
     Chronicle.Add("level", { level = 15, who = "Jaina Proudmoore", t = time() - 23, probe = true })
     check(#Feed.Shown() == 1 and Feed.Shown()[1].number:IsShown() and Feed.Shown()[1].number:GetText() == "15",
         "a companion's level-up appears with its number")
+    check(sounds() == heard + 2, "a card some time later brings its own sound")
+    Feed.Clear()
+    mock.Advance(3)
+    ns:SetOption("liveFeed", "sound", false)
+    Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 26, probe = true })
+    check(#Feed.Shown() == 1 and sounds() == heard + 2, "with the sound switched off, the card comes silently")
+    ns:SetOption("liveFeed", "sound", true)
     Feed.Clear()
     ns:SetOption("liveFeed", "level", false)
     Chronicle.Add("level", { level = 16, who = "Jaina Proudmoore", t = time() - 24, probe = true })
@@ -1227,8 +1306,11 @@ do -- the live feed: what was just written down appears on screen for a while
     SlashCmdList.FAMULUS("feed reset")
     check(not Feed.IsMoving() and FamulusDB.feed == nil, "/fam feed fixes it again, /fam feed reset puts it back")
     Feed.Clear()
+    mock.Advance(3)
+    heard = sounds()
     SlashCmdList.FAMULUS("feed test")
-    check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13", "/fam feed test shows a sample card")
+    check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13" and sounds() == heard + 1,
+        "/fam feed test shows a sample card, with its sound")
     Feed.Clear()
     forget()
 end
@@ -2377,11 +2459,65 @@ do -- an item is shown with the game's icon of it, in its own colours
 end
 mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
-check(#visibleRows() == 18 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
-    and not window.railScroll:IsShown() and visibleRows()[1]:GetWidth() == 900,
-    "recording: the four switches, the reactions of sharing, the feed's twelve options and how people are named; no book, no rail (got " .. #visibleRows() .. ")")
-check(visibleRows()[18].item.key == "chronicleNames" and visibleRows()[18].toggle ~= nil and visibleRows()[18].item.get() == true,
-    "the character name behind an alias is a switch of its own, on from the start")
+do
+    local recording = visibleEntries()
+    check(#recording == 5 and recording[1].toggle:IsShown() and #bookFrames("story") == 0 and not window.railScroll:IsShown()
+        and window.list:IsShown() and window.detail:IsShown(),
+        "recording: the four switches and how people are named, as entries; no book, no rail (got " .. #recording .. ")")
+    check(recording[5].entry.item.key == "chronicleNames" and recording[5].toggle.on and recording[5].entry.title == "Display",
+        "the character name behind an alias is a switch of its own under a heading, on from the start")
+    -- The live feed in full: its three options as rows, the kinds of events as chips.
+    mock.Click(recording[4])
+    local detail = window.detail
+    local function chips()
+        local list = {}
+        for _, chip in ipairs(detail.chips) do
+            if chip:IsVisible() then
+                list[#list + 1] = chip
+            end
+        end
+        return list
+    end
+    local kinds = chips()
+    check(recording[4].sub:GetText() == "On  ·  13 options" and #visibleRows() == 3 and #kinds == 10
+        and detail.chipsTitle:GetText() == "Kinds of events" and detail.chipsCount:GetText() == "9 of 10 on",
+        "the live feed: duration, sound and own events as rows, ten kinds as chips, nine of them on")
+    check(kinds[2].label:GetText() == "Deaths" and kinds[2].on and kinds[2].option.icon == "skull" and ns.UI.media.skull
+        and kinds[9].label:GetText() == "New zones" and not kinds[9].on and not kinds[9].lit.parts[1]:IsShown() and kinds[10].label:GetText() == "Reactions" and kinds[10].option.icon == "cheer",
+        "each chip with its kind's icon, lit while on")
+    check(detail.hint:GetText() == ns.L.o_liveFeed_kinds_desc, "below the chips what they are for")
+    kinds[2].scripts.OnEnter(kinds[2])
+    check(detail.hint:GetText() == ns.L.o_liveFeed_death_desc, "pointing at a chip explains it")
+    kinds[2].scripts.OnLeave(kinds[2])
+    check(detail.hint:GetText() == ns.L.o_liveFeed_kinds_desc, "and the explanation goes again")
+    mock.Click(kinds[2])
+    mock.Advance(0.1)
+    check(ns:GetOption("liveFeed", "death") == false and not kinds[2].on and detail.chipsCount:GetText() == "8 of 10 on",
+        "a click on a chip switches its kind")
+    mock.Click(kinds[2])
+    mock.Advance(0.1)
+    check(ns:GetOption("liveFeed", "death") == true and kinds[2].on, "and back")
+    detail.scroll:SetVerticalScroll(30)
+    mock.Click(detail.switch)
+    mock.Advance(0.1)
+    check(not ns.features.liveFeed.enabled and kinds[2].disabled and kinds[2]:GetAlpha() < 1 and detail.off:IsShown(),
+        "switched off, its chips are greyed out")
+    mock.Click(kinds[2])
+    mock.Advance(0.1)
+    check(ns:GetOption("liveFeed", "death") == true, "and clicks on them do nothing")
+    mock.Click(detail.switch)
+    mock.Advance(0.1)
+    check(ns.features.liveFeed.enabled and not kinds[2].disabled and detail.scroll:GetVerticalScroll() == 30,
+        "switching it off and on does not make the detail jump")
+    -- A picture of what it does, once a feature has one.
+    ns.features.liveFeed.picture = "Interface\\AddOns\\Famulus\\Media\\logo.tga"
+    mock.Click(recording[3])
+    mock.Click(recording[4])
+    check(detail.picture:IsShown() and detail.title.mockPoint[5] < -200, "a feature's picture stands above its name")
+    ns.features.liveFeed.picture = nil
+    mock.Click(recording[1])
+    check(not detail.picture:IsShown(), "without one there is no picture")
+end
 Chronicle.Clear()
 mock.Advance(0.1)
 mock.Click(tabButton("Everyone"))
@@ -2692,15 +2828,22 @@ end
 mock.Click(window.tabs.back)
 mock.Click(pageTab("Settings"))
 mock.Advance(0.1)
-check(#visibleRows() == 4 and visibleRows()[1].toggle and visibleRows()[4].item.kind == "action" and pageTab("Settings").selected
-    and window.resetButton:IsShown() and not overview:IsShown() and not overview.card:IsShown(),
-    "settings: the switch and its two options, then tidying up, with reset beside the tabs; no overview")
+local fellowEntries = visibleEntries()
+check(#fellowEntries == 2 and fellowEntries[1].toggle:IsShown() and fellowEntries[1].sub:GetText():find("2 options", 1, true)
+    and #visibleRows() == 2 and fellowEntries[2].entry.item.kind == "action" and fellowEntries[2].entry.title == "Tidy up"
+    and pageTab("Settings").selected and window.resetButton:IsShown() and not overview:IsShown() and not overview.card:IsShown(),
+    "settings: the switch with its two options, then tidying up, with reset beside the tabs; no overview")
+mock.Click(fellowEntries[2])
 do -- tidying up: whoever is neither a friend nor in the guild goes, after asking
+    -- The chosen entry in full: its name, what it would do, the button.
     local function tidy()
         mock.Advance(0.1)
-        return visibleRows()[4]
+        local detail = window.detail
+        return { label = detail.title, desc = detail.desc, action = detail.action }
     end
     local row = tidy()
+    check(#visibleRows() == 0 and not fellowEntries[2].toggle:IsShown() and not window.detail.toggle:IsShown(),
+        "tidying up has a button instead of a switch")
     check(row.label:GetText() == "Remove everyone but friends and guild" and row.action:IsShown() and not row.action.disabled
         and row.desc:GetText() == "One person is neither on your friends list nor in your guild: Mira Sturmfeder."
         and row.action.label:GetText() == "Remove", "tidy up names who would go; Tom is in the group and stays: " .. row.desc:GetText())

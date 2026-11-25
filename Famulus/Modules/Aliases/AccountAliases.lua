@@ -16,6 +16,7 @@ local AliasService = ns.AliasService
 local accountAliases = ns:NewFeature({
     id = "accountAliases",
     category = "aliases",
+    icon = "link", -- its entry in the settings (UI.media)
     default = true,
     requires = {
         "BNGetNumFriends",

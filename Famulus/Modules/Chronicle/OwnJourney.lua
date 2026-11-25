@@ -8,6 +8,7 @@ local Chronicle = ns.ChronicleService
 local journey = ns:NewFeature({
     id = "ownJourney",
     category = "chronicle",
+    icon = "flag", -- its entry in the settings (UI.media)
     default = false,
     requires = { "GetRealZoneText", "UnitLevel" },
 })

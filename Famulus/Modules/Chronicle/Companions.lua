@@ -9,6 +9,7 @@ local Chronicle = ns.ChronicleService
 local companions = ns:NewFeature({
     id = "companions",
     category = "chronicle",
+    icon = "people", -- its entry in the settings (UI.media)
     default = false,
     requires = { "C_FriendList.GetNumFriends", "C_FriendList.GetFriendInfoByIndex" },
 })

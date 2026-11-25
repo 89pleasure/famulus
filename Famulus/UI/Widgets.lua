@@ -695,6 +695,93 @@ function UI.Swatches(parent, onSelect)
 end
 
 ---------------------------------------------------------------------------
+-- Pill: a short label on a tinted ground, e.g. whether a setting is on and
+-- what its default is. Lit, it takes the accent.
+---------------------------------------------------------------------------
+
+function UI.Pill(parent)
+    local pill = CreateFrame("Frame", nil, parent)
+    pill:SetHeight(22)
+    pill.ground = UI.Round(pill, "chip", 6)
+    pill.text = UI.Text(pill, 11, "textDim", "medium")
+    pill.text:SetPoint("LEFT", 8, 0)
+    pill.text:SetJustifyV("MIDDLE")
+    pill.text:SetWordWrap(false)
+
+    function pill:Set(text, lit)
+        self.text:SetText(text)
+        self.ground:SetColor(lit and "accentSoft" or "chip")
+        UI.Ink(self.text, lit and "accent" or "textDim")
+        self:SetWidth(math.floor(self.text:GetStringWidth() + 16.5))
+    end
+    return pill
+end
+
+---------------------------------------------------------------------------
+-- Chip: one switch of a group of alike switches (e.g. the kinds of events
+-- the live feed shows), with an icon in front. Lit while on. The owner
+-- sets chip.onEnter and chip.onLeave to explain it somewhere.
+---------------------------------------------------------------------------
+
+local CHIP_H, CHIP_RADIUS = 34, 7
+
+function UI.Chip(parent, onClick)
+    local chip = CreateFrame("Button", nil, parent)
+    chip:SetHeight(CHIP_H)
+    local pixel = UI.Pixel(chip)
+    chip.card = UI.Card(chip, "control", "controlBorder", CHIP_RADIUS)
+    chip.lit = UI.Round(chip, "accentSoft", CHIP_RADIUS - pixel, { sublevel = 2, inset = pixel })
+    chip.lit:Hide()
+    local hover = UI.Round(chip, "hover", CHIP_RADIUS, { sublevel = 3 })
+    hover:Hide()
+
+    chip.icon = UI.Icon(chip, "circle", 14, "textMuted")
+    chip.icon:SetPoint("LEFT", 11, 0)
+    chip.label = UI.Text(chip, 12, "textDim", "medium")
+    chip.label:SetPoint("LEFT", chip.icon, "RIGHT", 8, 0)
+    chip.label:SetPoint("RIGHT", -8, 0)
+    chip.label:SetWordWrap(false)
+    chip.label:SetJustifyV("MIDDLE")
+
+    -- icon: a name from UI.media.
+    function chip:Set(label, icon, on, disabled)
+        on, disabled = on and true or false, disabled and true or false
+        self.label:SetText(label)
+        self.icon:SetTexture(UI.media[icon] or UI.media.circle)
+        self.on, self.disabled = on, disabled
+        self.lit:SetShown(on)
+        self.card.border:SetColor(on and "accentLine" or "controlBorder")
+        UI.Tint(self.icon, on and "accent" or "textMuted")
+        UI.Ink(self.label, on and "text" or "textDim")
+        self:SetAlpha(disabled and 0.45 or 1)
+        if disabled then
+            hover:Hide()
+        end
+    end
+
+    chip:SetScript("OnEnter", function(self)
+        if not self.disabled then
+            hover:Fade(true)
+        end
+        if self.onEnter then
+            self.onEnter(self)
+        end
+    end)
+    chip:SetScript("OnLeave", function(self)
+        hover:Fade(false)
+        if self.onLeave then
+            self.onLeave(self)
+        end
+    end)
+    chip:SetScript("OnClick", function(self)
+        if not self.disabled then
+            onClick(self)
+        end
+    end)
+    return chip
+end
+
+---------------------------------------------------------------------------
 -- Dropdown: a value box plus one shared popup menu.
 ---------------------------------------------------------------------------
 

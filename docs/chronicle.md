@@ -34,8 +34,9 @@ picture-book look are built and checked against the mock only.
   - On the three story tabs the book is 600 px wide (`BOOK_W`, the size before the window was
     rebuilt); to its right, 28 px apart, a rail of 272 px (`UI.Rail`, `UI/Rail.lua`; a tab
     provides it via `tab.rail`). It does not scroll with the book but on its own, in case it is
-    taller than the window. During a search and on "Settings" there is no rail; rows and cards
-    then take the full width (`RowSetItem` is passed the width).
+    taller than the window. During a search there is no rail; rows and cards then take the full
+    width (`RowSetItem` is passed the width). "Settings" shows entries and the chosen one instead
+    (see "Settings tabs" in `docs/window.md`).
   - "Everyone": card "This week" (level with number of level-ups, deaths, newly discovered zones,
     professions and milestones; only the character being played, last seven days, first name on
     the right) and card "Friends" (alias, last event with time or day, level, online/offline).
@@ -426,9 +427,35 @@ picture-book look are built and checked against the mock only.
     "Reset" removes it. Checked against the mock only.
   - Switches per event kind (`level`, `death`, `boss`, `achievement`, `ability`, `item`,
     `profession`, `skill`, `zone`); only `zone` is off by default (the owner's requirement:
-    zones rather not, level-ups yes). Plus `own` (own events too, default off)
-    and `duration` (4, 7 or 12 seconds). A kind without a switch (newer version at the companion's
-    end) stays invisible. A new kind needs an entry in `KINDS` and its two texts.
+    zones rather not, level-ups yes). Plus `own` (own events too, default off),
+    `sound` (see below) and `duration` (4, 7 or 12 seconds). A kind without a switch (newer
+    version at the companion's end) stays invisible. A new kind needs an entry in `KINDS` and its
+    two texts.
+  - **Sound (the owner's request, 2026-11-25: "a simple 2-click sound"):** A card comes with a
+    soft double click, `Media/click.ogg` (`feed:Chime` in `LiveFeed.lua`, also for
+    `/fam feed test`). The owner chose a file of Famulus's own over the game's click played twice
+    (the assistant's advice: a menu click as a notice sounds like "I clicked something", and the
+    `SOUNDKIT` IDs are unchecked in Forever). Option `sound` ("Play a sound", default on, because
+    it only plays with a card that comes anyway). The assistant's decisions, except for the
+    timbre:
+    - **Timbre (the owner's choice, 2026-11-25):** a soft, round "tock-tock". The first version
+      (two bright clicks at 1650 and 1852 Hz, 85 ms apart) did not please; of four tries
+      (mechanical, soft, bright, both clicks at one pitch) the owner liked "soft" best, "maybe a
+      little lower". Since then: two clicks 110 ms apart at 800 and 898 Hz (the second a whole
+      tone higher), a faint wood-block overtone, little noise at the attack, 260 ms in all, peak
+      about -6 dB, mono Ogg Vorbis, 5.9 KB. The owner chose 800 Hz over the same at 670 Hz
+      ("800 Hz fits"), having heard both outside the game.
+    - Written by `tools/make_sound.js` (the settings in `SOUND` at the top; other tries via
+      `make({ ...SOUND, pitch: 670 }, 'try.ogg')`): Node draws the wave, ffmpeg (`libvorbis`) encodes it;
+      the game plays only `.ogg` and `.mp3` from an addon folder. The noise is seeded and the
+      encoder leaves out its version, so the script writes the same file again. ffmpeg was
+      installed on the Windows machine via `winget install Gyan.FFmpeg` for this (2026-11-25).
+    - Played with `PlaySoundFile(path, "SFX")`: it follows the game's sound effects volume and
+      mute, like the game's own notices.
+    - One sound for cards that come together: none within two seconds of the last (`QUIET`), a
+      time stamp, no timer.
+    - The game only finds a file that was in the addon folder at login or the last `/reload`.
+    Checked against the mock only, not yet heard in game.
   - The card uses the book's pictures (`UI.BookPictures`, `UI.ChronicleStory`): icon, number
     or item icon. At most three cards one below the other, the newest on top; they do not catch
     the mouse.
@@ -487,7 +514,8 @@ picture-book look are built and checked against the mock only.
   person: strip, rail, filter line "Only events of …" and the sentences of the live feed. Without
   an alias only the name stands there.
   - **Option** "Character name behind the alias" (`general.chronicleNames`, default on) as its
-    own card "Display" under Chronicle › Settings, below the features. Off: only the alias. The
+    own entry under the heading "Display" in Chronicle › Settings, below the features (until
+    2026-11-25 a card of its own, see "Settings tabs" in `docs/window.md`). Off: only the alias. The
     option only applies to the brackets; the class icon has no switch (confirmed by the owner,
     2026-11-24).
   - **The character name no longer stands in the line below the heading** ("Jaina Proudmoore ·
