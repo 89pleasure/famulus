@@ -24,7 +24,8 @@
 -- and the offers. Whoever answered is "linked" for the session and gets the
 -- live entries, and a moment after them the statistics once more.
 --
--- Reactions (option "reactions"): a click on a companion's card gives one
+-- Reactions (option "reactions"): a click on a companion's card in the book,
+-- or on the button of their card in the live feed, gives one
 -- (ChronicleService.React). It goes to them REACT_DELAY later, so that a
 -- click on and off again sends nothing; to someone not linked it waits for
 -- their next hello. Only what went out counts as told.

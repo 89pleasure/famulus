@@ -393,6 +393,16 @@ picture-book look are built and checked against the mock only.
     `reaction` in `UI.BookPictures`). Its own switch `reaction` (default on), signal
     `CHRONICLE_REACTION`. Not limited to fresh events: a reaction that waited for the next
     greeting is still news.
+  - **Reacting from the live feed:** a friend's card in the feed carries a button at the band's
+    right end (32 px, the kind's reaction icon; `story.reaction` in `UI/Feed.lua`, built by
+    `Reaction` in `LiveFeed.lua`). It does what a click on the card in the book does
+    (`ChronicleService.React`, sent by `Sharing.lua` as before): muted until given, then accent
+    icon on `accentDeep`; a second click takes it back; tooltip "Click to react" / "You
+    reacted …" (without the "will see it" line: the friend has just sent the entry, so they are
+    online). Only while reactions are on (`ChronicleService.ReactionsOn`, shared with the book);
+    no button on the player's own cards, on reaction cards or on `friendLevel`. `/fam feed test`
+    shows the button on its sample card too; there it only lights up and sends nothing, so the
+    look can be checked with one account. Checked against the mock only, not yet seen in game.
   - **Data:** on a friend's entry `mine` (the player's reaction) and `told` (what the friend was
     last told); on an own entry `r = { [<name>] = <reaction> }`. Never sent with the entry
     (`FIELDS` in `Sharing.lua` leaves them out); they go with the entry when `Trim` drops it.
@@ -457,8 +467,11 @@ picture-book look are built and checked against the mock only.
     - The game only finds a file that was in the addon folder at login or the last `/reload`.
     Checked against the mock only, not yet heard in game.
   - The card uses the book's pictures (`UI.BookPictures`, `UI.ChronicleStory`): icon, number
-    or item icon. At most three cards one below the other, the newest on top; they do not catch
-    the mouse.
+    or item icon. At most three cards one below the other, the newest on top. The cards do not
+    catch the mouse, so clicks go through to the world; only the reaction button does (see
+    "Reacting from the live feed"). While the mouse is on it the card stays past its time, a
+    card already fading comes back, and once the mouse has left it goes 1.5 seconds later
+    (`LINGER`).
   - **Shape "crest on the banner" (chosen by the owner on the mockup, 2026-11-19, draft B1):**
     The picture is a square crest (72 px, corners 14, border two pixels in the colour of the kind)
     and sits centred on a banner (56 px tall), 14 px from the left end of the banner; it sticks

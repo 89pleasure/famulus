@@ -1,7 +1,9 @@
 -- Shows what companions have just experienced as a card on screen
 -- (UI/Feed.lua), each kind of event with its own switch. The player's own
 -- events appear only if asked for (option "own", off from the start): the
--- feed is about the others.
+-- feed is about the others. A friend's card has a button to react to it, as
+-- a click on their card in the chronicle does, while reactions are on
+-- (option "reactions" of Sharing.lua).
 --
 -- It listens to the chronicle, not to the game: no event, no timer of its
 -- own. The cards can be moved in the game's Edit Mode or with /fam feed.
@@ -88,6 +90,32 @@ local function Show(kind, story)
     feed:Chime()
 end
 
+-- The button to react to a friend's event: it gives the reaction of its
+-- kind, and a second click takes it back (ChronicleService.React). Sharing.lua
+-- tells the friend, as for a click in the chronicle.
+local function Reaction(entry)
+    local Chronicle = ns.ChronicleService
+    local reaction = Chronicle.Reaction(entry)
+    if not reaction or entry.demo or not Chronicle.ReactionsOn() then
+        return nil
+    end
+    return {
+        icon = reaction,
+        given = function()
+            return entry.mine ~= nil
+        end,
+        toggle = function()
+            -- Reactions may have been switched off since the card came.
+            if Chronicle.ReactionsOn() then
+                Chronicle.React(entry, entry.mine == nil)
+            end
+        end,
+        tooltip = function(tip)
+            tip:SetText(entry.mine and ns.L.c_react_given or ns.L.c_react)
+        end,
+    }
+end
+
 local function OnChronicleChanged(entry)
     if not feed.enabled or type(entry) ~= "table" or entry.demo then
         return
@@ -113,7 +141,9 @@ local function OnChronicleChanged(entry)
         return
     end
     Show(kind, function()
-        return UI.ChronicleStory(entry)
+        local story = UI.ChronicleStory(entry)
+        story.reaction = Reaction(entry)
+        return story
     end)
 end
 
