@@ -211,7 +211,11 @@ owner.
   needed), and at the DNS provider A and AAAA records pointing to GitHub for the domain without
   `www`, a CNAME to `89pleasure.github.io` for `www`. Without a domain the page is at
   `89pleasure.github.io/famulus/`; that works because all paths are relative. GitHub sees the
-  visitors' IP addresses, that belongs in the privacy policy. Never run on GitHub yet.
+  visitors' IP addresses, that belongs in the privacy policy. Since 2026-11-25 two jobs, build
+  and deploy, as in GitHub's own Pages workflow: in one job `deploy-pages` twice looked for the
+  artifact before GitHub listed it ("Found 0 artifact(s)"), and re-running the failed job uploaded
+  a second one ("Multiple artifacts"). If a run fails, re-run the whole workflow or start it by
+  hand, not only the failed job.
 - **Version on the page (2026-11-25, the owner's request: "should show the current release
   version"):** `fact_version` and `in_rel_d` say "Version <x>" in both languages. When
   publishing, `website.yml` replaces every "Version <x.y.z[-alpha|beta.n]>" in `index.html` and
@@ -219,8 +223,8 @@ owner.
   file then does not name it. The workflow also runs on every pushed tag `v*` and then always
   publishes `main`, not the tagged commit. In the repo the texts carry the last release by hand
   (`0.1.0-alpha.2`), only so that the local preview is right. A new text with the version must
-  keep the form "Version <x>". The assistant's decision; the replacement was checked locally,
-  never run on GitHub.
+  keep the form "Version <x>". The assistant's decision; the replacement ran on GitHub on
+  2026-11-25 ("Version 0.1.0-alpha.2"), a run started by a tag has not happened yet.
 - **Download (2026-11-25, the owner's request):** The buttons in the navigation and the header
   say "Download" instead of "Install"/"Installation" and, like the button in the release box,
   lead straight to `www.curseforge.com/wow/addons/famulus` (project verified on CurseForge, not
