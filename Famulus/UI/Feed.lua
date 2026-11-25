@@ -5,7 +5,16 @@
 --   UI.Feed.Show(story, seconds)   -- story: as for the book (UI/Book.lua)
 --   UI.Feed.SetMoving(true)        -- shows where the cards appear; drag to move
 --
--- The cards do not catch the mouse. The place is saved account-wide in
+--   story.reaction = {             -- optional: a button at the band's right
+--       icon = "cheer",            -- end that reacts to a friend's event
+--       given = function() return true end, -- whether the player has
+--       toggle = function() end,   -- gives the reaction or takes it back
+--       tooltip = function(tip) end,
+--   }
+--
+-- Only that button catches the mouse; the rest of a card lets clicks through
+-- to the world. While the mouse is on it the card stays, and goes a moment
+-- after the mouse has left. The place is saved account-wide in
 -- FamulusDB.feed, like the window's.
 
 local _, ns = ...
@@ -29,10 +38,17 @@ local GAP = 10 -- between two bands
 local MAX_CARDS = 3
 local FADE_IN, FADE_OUT = 0.25, 0.5
 local DEFAULT_SECONDS = 7
+-- The button to react, at the band's right end, in the middle.
+local REACT = 32
+local REACT_ICON = 18
+local REACT_RIGHT = 16 -- from the band's right end
+local REACT_GAP = 12 -- between the text and the button
+local LINGER = 1.5 -- seconds a card stays once the mouse has left its button
 
 local anchor
 local pool, shown = {}, {} -- shown: the newest first
 local moving = false
+local FadeOut -- (below)
 
 local function Place()
     anchor:ClearAllPoints()
@@ -65,6 +81,95 @@ local function Layout()
         card:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, y)
         y = y - HEIGHT - GAP
     end
+end
+
+-- The button's look: muted until the player has reacted, then in the accent
+-- on the ground of an accent, as a lit chip in the window.
+local function PaintReaction(button)
+    local reaction = button.card.reaction
+    if not reaction then
+        return
+    end
+    local given = reaction.given() and true or false
+    button.ground.fill:SetColor(given and "accentDeep" or "control")
+    button.ground.border:SetColor(given and "accentLine" or "controlBorder")
+    button.icon:SetTexture(UI.media[reaction.icon] or UI.media.cheer)
+    UI.Tint(button.icon, given and "accent" or button.over and "text" or "textMuted")
+end
+
+local function ReactionTooltip(button)
+    local reaction = button.card.reaction
+    if reaction and reaction.tooltip then
+        GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+        reaction.tooltip(GameTooltip)
+        GameTooltip:Show()
+    end
+end
+
+local function HideTooltip(button)
+    if GameTooltip.IsOwned and GameTooltip:IsOwned(button) then
+        GameTooltip:Hide()
+    end
+end
+
+-- The button to react. While the mouse is on it the card stays, and one that
+-- is fading comes back; once the mouse has left, a card whose time is up
+-- goes LINGER later.
+local function NewReactButton(card)
+    local button = CreateFrame("Button", nil, card)
+    button.card = card
+    button:SetSize(REACT, REACT)
+    button:SetPoint("RIGHT", card, "RIGHT", -REACT_RIGHT, 0)
+    button:SetFrameLevel(card:GetFrameLevel() + 3)
+    button:EnableMouse(true)
+    button.ground = UI.Card(button, "control", "controlBorder", 8)
+    button.hover = UI.Round(button, "hover", 8, { layer = "ARTWORK" })
+    button.hover:Hide()
+    button.icon = UI.Icon(button, "cheer", REACT_ICON, "textMuted", "OVERLAY")
+    button.icon:SetPoint("CENTER")
+    button:SetScript("OnEnter", function(self)
+        self.over = true
+        card.held = true
+        if card.fading then
+            UI.CancelTween(card)
+            card.fading = false
+            card.due = true
+            card:SetAlpha(1)
+        end
+        self.hover:Fade(true)
+        PaintReaction(self)
+        ReactionTooltip(self)
+    end)
+    button:SetScript("OnLeave", function(self)
+        self.over = false
+        card.held = false
+        card.leaves = card.leaves + 1
+        self.hover:Fade(false)
+        PaintReaction(self)
+        HideTooltip(self)
+        if card.due then
+            local turn, leave = card.turn, card.leaves
+            C_Timer.After(LINGER, function()
+                if card.turn == turn and card.leaves == leave and card.due and not card.held then
+                    FadeOut(card)
+                end
+            end)
+        end
+    end)
+    button:SetScript("OnClick", function(self)
+        local reaction = card.reaction
+        if not reaction then
+            return
+        end
+        reaction.toggle()
+        PaintReaction(self)
+        -- What the tooltip said no longer holds.
+        if self.over then
+            ReactionTooltip(self)
+        end
+    end)
+    button:Hide()
+    return button
 end
 
 local function NewCard()
@@ -121,7 +226,8 @@ local function NewCard()
     card.detail = UI.Text(card, 12, "textMuted")
     card.detail:SetWordWrap(false)
     card.detail:SetPoint("TOPLEFT", card.title, "BOTTOMLEFT", 0, -4)
-    card.turn = 0
+    card.react = NewReactButton(card)
+    card.turn, card.leaves = 0, 0
     return card
 end
 
@@ -174,15 +280,22 @@ local function Fill(card, story)
         card.title:SetPoint("LEFT", card, "LEFT", TEXT_LEFT, 0)
     end
 
+    -- A friend's event may bring the button to react, at the right end.
+    local reaction = story.reaction
+    card.reaction = reaction
+    card.react:SetShown(reaction ~= nil)
+    PaintReaction(card.react)
+    local right = reaction and REACT_RIGHT + REACT + REACT_GAP or TEXT_RIGHT
+
     -- The band is as wide as its text needs; text beyond the widest band is
     -- cut off.
     local wanted = math.max(TextWidth(card.title), detail and TextWidth(card.detail) or 0)
-    local width = math.min(MAX_WIDTH, math.max(MIN_WIDTH, math.ceil(TEXT_LEFT + wanted + TEXT_RIGHT)))
+    local width = math.min(MAX_WIDTH, math.max(MIN_WIDTH, math.ceil(TEXT_LEFT + wanted + right)))
     card:SetWidth(width)
     -- The grain keeps one texel per pixel whatever the width.
     local tile = GRAIN_TEXELS * UI.Pixel(card)
     card.grain:SetTexCoord(0, (width - GROUND_INSET * 2) / tile, 0, (HEIGHT - GROUND_INSET * 2) / tile)
-    local room = width - TEXT_LEFT - TEXT_RIGHT
+    local room = width - TEXT_LEFT - right
     card.title:SetWidth(room)
     card.detail:SetWidth(room)
 end
@@ -200,9 +313,26 @@ local function Release(card, inTween)
     if not inTween then
         UI.CancelTween(card)
     end
+    HideTooltip(card.react)
+    card.held, card.due, card.fading = false, false, false
+    card.reaction = nil
+    card.react.over = false
+    card.react.hover:Hide()
     card:Hide()
     pool[#pool + 1] = card
     Layout()
+end
+
+-- The card's time is up: it fades out and is gone.
+function FadeOut(card)
+    local turn = card.turn
+    card.due, card.fading = false, true
+    UI.Tween(card, FADE_OUT, function(progress)
+        card:SetAlpha(1 - progress)
+        if progress >= 1 and card.turn == turn then
+            Release(card, true)
+        end
+    end)
 end
 
 function Feed.Show(story, seconds)
@@ -223,17 +353,16 @@ function Feed.Show(story, seconds)
         card:SetAlpha(progress)
     end)
     -- A card that was taken off and used again must not be hidden by the
-    -- timer of its earlier life.
+    -- timer of its earlier life. One the mouse is on waits until it leaves.
     C_Timer.After(seconds or DEFAULT_SECONDS, function()
         if card.turn ~= turn then
             return
         end
-        UI.Tween(card, FADE_OUT, function(progress)
-            card:SetAlpha(1 - progress)
-            if progress >= 1 and card.turn == turn then
-                Release(card, true)
-            end
-        end)
+        if card.held then
+            card.due = true
+            return
+        end
+        FadeOut(card)
     end)
     return card
 end

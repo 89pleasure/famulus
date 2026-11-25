@@ -1260,6 +1260,8 @@ do -- the live feed: what was just written down appears on screen for a while
     Chronicle.Add("item", { item = 211527, name = "Cozy Sleeping Bag", who = "Jaina Proudmoore", probe = true })
     check(#Feed.Shown() == 2 and Feed.Shown()[1].title:GetText() == "Jaina Proudmoore receives: Cozy Sleeping Bag"
         and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
+    check(not Feed.Shown()[1].react:IsShown() and not Feed.Shown()[2].react:IsShown() and not Feed.Shown()[1].mouseEnabled,
+        "without sharing there is no button to react, and the cards let the mouse through")
     check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and not Feed.Shown()[1].mark:IsShown(),
         "a band is as wide as its text needs; a companion's event is no milestone")
     check(sounds() == heard + 1, "cards that come together bring one sound")
@@ -1542,7 +1544,7 @@ do
         "a friend's reaction to an own entry is kept with it, by name")
     local card = ns.UI.Feed.Shown()[1]
     check(card and card.title:GetText() == "Jaina Proudmoore celebrates with you" and card.detail:GetText():find("Reached level 14", 1, true) == 1
-        and card.icon:IsShown(), "and appears on screen: who, and to what")
+        and card.icon:IsShown() and not card.react:IsShown(), "and appears on screen: who, and to what; a reaction cannot be reacted to")
     react("1~X~" .. at .. "~level~cheer~", "Some Stranger")
     react("1~X~" .. (at + 1) .. "~level~cheer~")
     react("1~X~" .. at .. "~zone~cheer~")
@@ -1566,6 +1568,97 @@ do
     mock.sent = {}
 end
 jaina.connected = true
+
+-- The live feed: a friend's card on screen has a button that reacts to it
+-- right there, as a click on their card in the chronicle does.
+do
+    local Feed = ns.UI.Feed
+    Feed.Clear()
+    mock.Advance(3)
+    mock.sent = {}
+    local function sent()
+        local texts = {}
+        for _, message in ipairs(mock.sent) do
+            texts[#texts + 1] = tostring(message.text)
+        end
+        return table.concat(texts, " | ")
+    end
+    local function find(kind, at)
+        for _, entry in ipairs(Chronicle.Entries()) do
+            if entry.k == kind and entry.who == "Jaina Proudmoore" and entry.t == at then
+                return entry
+            end
+        end
+    end
+    local at = time() - 1
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~boss~id=7;name=Hogger;zone=Elwynn Forest", "WHISPER", "Jaina Proudmoore")
+    local boss = find("boss", at)
+    local card = Feed.Shown()[1]
+    local button = card and card.react
+    check(boss and button and button:IsShown() and button.mouseEnabled and not card.mouseEnabled
+        and button.ground.fill.token == "control",
+        "a friend's card on screen has a button to react; only the button catches the mouse")
+    check(card.title:GetWidth() <= card:GetWidth() - 76 - 16 - 32, "the text keeps clear of the button")
+    button.scripts.OnEnter(button)
+    check(GameTooltip:GetText() == ns.L.c_react, "pointing at it says what it does")
+    button.scripts.OnClick(button)
+    check(boss.mine == "strong" and button.ground.fill.token == "accentDeep" and GameTooltip:GetText() == ns.L.c_react_given,
+        "a click reacts with the kind's reaction, lights the button up and says how to take it back")
+    mock.Advance(3)
+    check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. at .. "~boss~strong~" and boss.told == "strong",
+        "and it goes to the friend as from the chronicle: " .. sent())
+    mock.sent = {}
+    button.scripts.OnClick(button)
+    check(boss.mine == nil and button.ground.fill.token == "control" and GameTooltip:GetText() == ns.L.c_react,
+        "a second click takes it back")
+    mock.Advance(3)
+    check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. at .. "~boss~~", "and tells her so: " .. sent())
+    mock.Advance(5)
+    check(Feed.Shown()[1] == card and card:IsShown() and card:GetAlpha() == 1,
+        "while the mouse is on the button, the card stays beyond its time")
+    button.scripts.OnLeave(button)
+    mock.Advance(1)
+    check(card:IsShown(), "and a moment longer once the mouse has left")
+    mock.Advance(1.2)
+    check(#Feed.Shown() == 0 and not card:IsShown() and not button.over, "then it goes")
+
+    -- A card that is already fading comes back under the mouse.
+    mock.sent = {}
+    at = time() - 1
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~level~level=21;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
+    card = Feed.Shown()[1]
+    button = card.react
+    check(button:IsShown() and find("level", at) ~= nil and button.icon ~= nil, "a friend's level-up has the button as well")
+    mock.Advance(7.2)
+    check(card:IsShown() and card:GetAlpha() < 1, "(the card is fading)")
+    button.scripts.OnEnter(button)
+    mock.Advance(4)
+    check(card:IsShown() and card:GetAlpha() == 1, "a fading card comes back when the mouse is on its button")
+    button.scripts.OnLeave(button)
+    mock.Advance(2.1)
+    check(#Feed.Shown() == 0, "and goes once the mouse has left")
+    check(find("level", at).mine == nil and #mock.sent == 0, "pointing alone reacts to nothing: " .. sent())
+
+    -- With reactions switched off there is no button.
+    sharing:Set("reactions", false)
+    at = time() - 1
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~death~level=21;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
+    check(#Feed.Shown() == 1 and not Feed.Shown()[1].react:IsShown(), "with reactions switched off, a friend's card has no button")
+    sharing:Set("reactions", true)
+    Feed.Clear()
+
+    -- The sample card shows the button too; it lights up and sends nothing.
+    SlashCmdList.FAMULUS("feed test")
+    card = Feed.Shown()[1]
+    button = card.react
+    check(button:IsShown(), "/fam feed test shows the button to react")
+    button.scripts.OnClick(button)
+    mock.Advance(3)
+    check(button.ground.fill.token == "accentDeep" and #mock.sent == 0, "on the sample card it lights up and sends nothing: " .. sent())
+    Feed.Clear()
+    mock.Advance(10)
+    mock.sent = {}
+end
 
 -- Passing on: news of someone offline comes from a companion who has it, only
 -- about guild members or people whose addon answered directly.

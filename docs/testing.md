@@ -56,7 +56,9 @@ the index there says which file it is in.
   game's tooltip on a card looks right, and, with two accounts, whether a reaction arrives at
   once and one to someone offline at their next login. With one account the sample entries
   (`/fam chronicle demo`) show the look: reactions received on the level 40, one given on
-  Borin's boss.
+  Borin's boss. The button on a friend's card in the live feed: with one account
+  `/fam feed test` shows it (it lights up, sends nothing); open in game whether it can be
+  clicked in combat and while moving, and whether the card stays while the mouse is on it.
 - **Sound of the live feed (2026-11-25, checked against the mock only, not yet in game):** see
   "Sound" under "Live feed". Open in game: whether `click.ogg` plays after a `/reload`
   (`/fam feed test`), whether it is too loud or too quiet next to the game's sounds.

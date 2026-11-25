@@ -37,8 +37,8 @@ guild channel), only known fields; `|` and control characters are removed.
   and skip the field on receipt), `1~X~<time>~<kind>~<reaction>~k=v` (a reaction, see
   "Reactions" below).
 - **Reactions (the owner's request, 2026-11-25; checked against the mock only, not yet in
-  game):** A click on a friend's card in the chronicle reacts to it (see "Reactions" under
-  "Chronicle"). The message `1~X~<time>~<kind>~<reaction>~k=v` goes by whisper to the person
+  game):** A click on a friend's card in the chronicle, or on the button of their card in the
+  live feed, reacts to it (see "Reactions" under "Chronicle"). The message `1~X~<time>~<kind>~<reaction>~k=v` goes by whisper to the person
   whose entry it is; `<reaction>` is `cheer`, `strong`, `sad` or `clap`, empty when taken back.
   The entry is found by time and kind; `k=v` carries `skill`, `rank`, `ability` and `item`
   where the entry has them (`ChronicleService.MARKS`), the same fields that tell two entries

@@ -347,9 +347,23 @@ SlashCmdList.FAMULUS = function(input)
             return
         end
         if command == "feed test" then
-            -- A sample card, to see place, look and timing, and to hear the sound.
+            -- A sample card, to see place, look and timing, and to hear the
+            -- sound. Its button to react lights up and sends nothing.
             local level = UnitLevel and tonumber(UnitLevel("player")) or 1
-            Feed.Show({ kind = "level", title = L.c_level:format(level), number = level, big = true },
+            local given = false
+            local reaction = ns.ChronicleService.ReactionsOn() and {
+                icon = "cheer",
+                given = function()
+                    return given
+                end,
+                toggle = function()
+                    given = not given
+                end,
+                tooltip = function(tip)
+                    tip:SetText(given and L.c_react_given or L.c_react)
+                end,
+            } or nil
+            Feed.Show({ kind = "level", title = L.c_level:format(level), number = level, big = true, reaction = reaction },
                 ns.features.liveFeed.SECONDS[ns:GetOption("liveFeed", "duration")])
             ns.features.liveFeed:Chime()
         elseif command == "feed reset" then

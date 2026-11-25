@@ -694,23 +694,16 @@ local function Placeless(entry)
     return setmetatable({ zone = false }, { __index = entry })
 end
 
--- Whether reactions are given and shown: sharing is on, and so is its
--- option (Modules/Chronicle/Sharing.lua).
-local function ReactionsOn()
-    local sharing = ns.features.sharing
-    return sharing ~= nil and sharing.enabled and sharing:Get("reactions") == true
-end
-
 -- The reaction on a card of the chronicle's book. A companion's event gets
 -- the player's with a click on the card, and loses it with another; what
 -- else a click did (a recipe book) moves to the picture. The player's own
 -- event shows how many reacted, and who on the mouse. For a run: the
 -- reaction goes to its newest entry, and those received to any count.
 local function CardReaction(event, run)
-    if not ReactionsOn() then
+    local Chronicle = ns.ChronicleService
+    if not Chronicle.ReactionsOn() then
         return
     end
-    local Chronicle = ns.ChronicleService
     local newest = run[1]
     local reaction = Chronicle.Reaction(newest)
     if reaction then

@@ -475,6 +475,13 @@ ChronicleService.REACTIONS = {
 -- event twice in Add: field -> "n" (number) or "s" (text).
 ChronicleService.MARKS = { skill = "n", rank = "n", ability = "s", item = "n" }
 
+-- Whether reactions are given and shown: sharing is on, and so is its
+-- option (Modules/Chronicle/Sharing.lua). The book and the live feed ask.
+function ChronicleService.ReactionsOn()
+    local sharing = ns.features.sharing
+    return sharing ~= nil and sharing.enabled and sharing:Get("reactions") == true
+end
+
 -- Whether a reaction is one this version knows.
 function ChronicleService.IsReaction(reaction)
     for _, known in pairs(ChronicleService.REACTIONS) do
