@@ -122,7 +122,14 @@ owner.
     within this range. The horse now has a curved neck, a long head, small ears,
     a mane, a long tail and a rein, but no saddle blanket any more.
   - **Flora and fauna:** an old broadleaf tree next to the moon, with an owl with glowing eyes
-    sitting on its branch; broadleaf trees between the pines (`trees.broad`), bushes (`bushes`),
+    sitting on its branch. **The owl blinks** (the owner's request, 2026-11-25: both eyes, not a
+    wink with one; the rhythm is the assistant's decision): both eyes shut to a slit of light for
+    about a third of a second, in a 12-second cycle once and, about 6 seconds later, twice in a
+    row (`.blink` in `styles.css`; in `scene.js` a `glow` can carry a class as its fifth field).
+    The first blink comes about 2.5 seconds after loading; it pauses with the other motion while
+    the header is out of sight. Checked in headless Chrome at 1440 and 375 px (open, single blink,
+    both blinks of the double; off with reduced motion).
+    Broadleaf trees between the pines (`trees.broad`), bushes (`bushes`),
     tufts of grass (`grass`), a stag, bats flying across the moon, fireflies.
     Two moons, a large white one and a small blue one, as on Azeroth.
   - **Fire:** the logo's flame, flickering via CSS; highlight edge on the figures towards the fire.
