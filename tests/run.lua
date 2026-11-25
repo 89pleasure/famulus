@@ -2082,8 +2082,8 @@ local fellows = ns.features.rememberFellows
 local stateBeforeFellows, eventsBeforeFellows, realTime = mock.state, ns:CountRegisteredEvents(), time
 local timersBeforeFellows = mock.ActiveTimers()
 local clock = 1800000000
-time = function()
-    return clock
+time = function(when)
+    return when and realTime(when) or clock
 end
 local mira = { name = "Mira", surname = "Sturmfeder", guid = "Player-1-MIRA", level = 20, class = "MAGE" }
 local tom = { name = "Tom", surname = "Hartwig", guid = "Player-1-TOM", level = 21, class = "PRIEST" }
@@ -2523,11 +2523,19 @@ check(overview.card:IsShown() and overview.card.name:GetText() == "Lysa Morgenta
 check(window.fellowBook:IsShown() and window.fellowBook.width == 1180 - 224 - 2 * 28 - 320 - 20,
     "the book fills the rest of the width beside the card")
 local storyChapters = bookFrames("chapter")
-check(#storyChapters == 4 and storyChapters[1].chapter.title == "Uldaman" and storyChapters[2].chapter.title == "Badlands"
-    and storyChapters[4].chapter.title == "Westfall" and storyChapters[1].chapter.sub == "2 h 0 min together",
-    "a chapter per day together, the newest first, and one for the first meeting")
-check(storyChapters[3].chapter.small == nil and storyChapters[3].chapter.title ~= storyChapters[4].chapter.small,
-    "a day without a zone is named by its own date, once")
+check(#storyChapters == 4 and storyChapters[1].chapter.small:match("^%d%d:%d%d – %d%d:%d%d$")
+    and storyChapters[1].chapter.sub == "2 h 0 min together" and storyChapters[4].chapter.sub == nil,
+    "a chapter per session of play, the newest first, down to the first meeting: "
+        .. tostring(storyChapters[1] and storyChapters[1].chapter.small))
+local sessionTitles = {}
+for _, part in ipairs({ "morning", "midday", "afternoon", "evening", "night" }) do
+    for _, when in ipairs({ "today", "yesterday" }) do
+        sessionTitles[ns.L["c_when_" .. when .. "_" .. part]] = true
+    end
+end
+check(sessionTitles[storyChapters[1].chapter.title] and storyChapters[2].chapter.small:match("^%d%d%d%d%-%d%d%-%d%d$"),
+    "the chapters are named by the time of day, an older one with its date: "
+        .. tostring(storyChapters[1].chapter.title) .. " / " .. tostring(storyChapters[2].chapter.small))
 local found = {}
 for _, event in ipairs(bookFrames("story")) do
     found[event.story.title] = event.story
@@ -2536,7 +2544,7 @@ check(found["You are now trusted"] and found["You are now trusted"].big, "the da
 local spans, raidLine, partyLine = 0, nil, nil
 for _, event in ipairs(bookFrames("story")) do
     local detail = event.story.detail
-    if event.story.title == "Together on the road" and detail and detail:find(" to ", 1, true) then
+    if event.story.kind == "fellow" and detail and detail:find(" to ", 1, true) then
         spans = spans + 1
         if detail:find("2 bosses$") then
             raidLine = detail
@@ -2545,7 +2553,8 @@ for _, event in ipairs(bookFrames("story")) do
         end
     end
 end
-check(spans == 2, "a day tells when you were together")
+check(spans == 2 and found["On the road in Uldaman"] and found["On the road in Badlands"],
+    "a stretch together says where and when")
 check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss" and found["Archaedas defeated"].detail == "in Uldaman"
     and found["Archaedas defeated"].chip == nil, "bosses defeated together, from the fellow travellers' own day log")
 check(raidLine and partyLine, "bosses without a name (a raid) are counted on the day's line, named ones are not")
@@ -2557,9 +2566,10 @@ check(found["Met"] and found["Met"].big and found["Met"].detail:find("at level 2
 local bossCards, togetherCards = 0, 0
 for _, event in ipairs(bookFrames("story")) do
     bossCards = bossCards + (event.story.kind == "boss" and 1 or 0)
-    togetherCards = togetherCards + (event.story.title == "Together on the road" and 1 or 0)
+    togetherCards = togetherCards + (event.story.kind == "fellow" and 1 or 0)
 end
-check(bossCards == 1 and togetherCards == 3, "a day with only a boss and no times still tells that you were together")
+check(bossCards == 1 and togetherCards == 3 and found["Together on the road"] and found["Together on the road"].detail == "1 boss",
+    "a day with only a boss and no times still tells that you were together")
 
 -- Her own events are in the chronicle: the card leads there, and back.
 check(overview.card.chronicle:IsShown() and overview.card.chronicleWho == "Lysa-Morgentau"
@@ -2607,8 +2617,30 @@ mock.Advance(0.1)
 mock.Click(overview.tiles[3])
 mock.Advance(0.1)
 storyChapters = bookFrames("chapter")
-check(#storyChapters == 1 and storyChapters[1].chapter.title == "Duskwood" and #bookFrames("story") == 1,
+check(#storyChapters == 1 and storyChapters[1].chapter.small:match("^%d%d%d%d%-%d%d%-%d%d$") and #bookFrames("story") == 1,
     "a person without a day log has only the chapter of the first meeting")
+mock.Click(window.tabs.back)
+-- A session over midnight is one stretch in one chapter, though the day log splits it.
+local today = date("*t", clock)
+local midnight = time({ year = today.year, month = today.month, day = today.day, hour = 0 })
+FamulusDB.fellows["Player-1-OLD"].days = {
+    [Fellows.DayKey(midnight - 60)] = { s = 3540, z = "Tanaris", b = 0, f = midnight - 3600, l = midnight - 60 },
+    [Fellows.DayKey(midnight + 60)] = { s = 1740, z = "Tanaris", b = 0, f = midnight + 60, l = midnight + 1800 },
+}
+ns:Fire("FELLOWS_CHANGED")
+mock.Advance(0.1)
+mock.Click(overview.tiles[3])
+mock.Advance(0.1)
+storyChapters = bookFrames("chapter")
+local stretches = {}
+for _, event in ipairs(bookFrames("story")) do
+    if event.story.kind == "fellow" then
+        stretches[#stretches + 1] = event.story
+    end
+end
+check(#stretches == 1 and stretches[1].detail == date("%H:%M", midnight - 3600) .. " to " .. date("%H:%M", midnight + 1800)
+    and storyChapters[1].chapter.sub == "1 h 28 min together",
+    "a session over midnight is one stretch: " .. tostring(stretches[1] and stretches[1].detail))
 mock.Click(window.tabs.back)
 FamulusDB.fellows["Player-1-STORY"], FamulusDB.fellows["Player-1-OLD"] = nil, nil
 Chronicle.Clear()
