@@ -1,7 +1,9 @@
 -- What a card of the chronicle's book holds (UI/Book.lua): its picture,
--- and beside it three parts: whose event it is in the head (empty for the
--- player's own), the text, kept at two lines, and the time and place in
--- the foot. How large it is follows the event's weight.
+-- and beside it whose event it is in the head (none for the player's own),
+-- the text, and the time and place in the foot. The card is as high as
+-- that needs; the event's weight sets the picture, the room above and
+-- below, and the headline. Picture and text keep the same left edges on
+-- every card, so that the book reads calmly.
 --
 --   story = {
 --       content = UI.ChronicleCard,
@@ -16,14 +18,16 @@ local _, ns = ...
 local UI = ns.UI
 
 local LINE, LINE_GAP = 14, 4 -- the head and the foot, and their distance from the text
-local TEXT_GAP = 12 -- between the picture and the text
+local SIDE = 14 -- left of the picture's column and right of the text
+local COLUMN = 54 -- the picture's column; a smaller picture stands in its middle
+local TEXT_GAP = 12 -- between the picture's column and the text
 
--- How much an event weighs: the card's padding, its picture and headline.
--- A heavy one is also a milestone (story.big, the book's accent).
+-- How much an event weighs: its picture, the room above and below, and the
+-- headline. A heavy one is also a milestone (story.big, the book's accent).
 local WEIGHTS = {
     low = { pad = 8, picture = 40, title = 12, font = "medium", number = 18 },
-    medium = { pad = 12, picture = 54, title = 13, font = "medium", number = 24 },
-    high = { pad = 15, picture = 54, title = 15, font = "semibold", number = 24 },
+    medium = { pad = 12, picture = COLUMN, title = 13, font = "medium", number = 24 },
+    high = { pad = 15, picture = COLUMN, title = 15, font = "semibold", number = 24 },
 }
 
 local function Build(part)
@@ -54,7 +58,7 @@ function UI.ChronicleCard(part, story, width)
     local weight = WEIGHTS[story.weight] or WEIGHTS.medium
     local look = UI.BookPictures[story.kind] or UI.BookPictures.zone
     local pad, size = weight.pad, weight.picture
-    local textWidth = width - pad * 2 - size - TEXT_GAP
+    local textWidth = width - SIDE * 2 - COLUMN - TEXT_GAP
     UI.SetBookPicture(part, story, size, weight.number)
 
     -- The head: whose event it is.
@@ -69,7 +73,7 @@ function UI.ChronicleCard(part, story, width)
         part.chipText:SetText(chip.text or "")
     end
 
-    -- The text: two lines are kept, whether it needs them or not.
+    -- The text, as high as it is.
     part.title:SetWidth(textWidth)
     part.title:SetText(story.title or "")
     UI.SetFont(part.title, weight.title, weight.font)
@@ -81,23 +85,24 @@ function UI.ChronicleCard(part, story, width)
         part.detail:SetText(story.detail)
         textHeight = textHeight + 4 + part.detail:GetStringHeight()
     end
-    textHeight = math.max(textHeight, 2 * (weight.title + 4))
 
     -- The foot: when and where.
     part.footer:SetShown(story.footer ~= nil)
     part.footer:SetWidth(textWidth)
     part.footer:SetText(story.footer or "")
 
-    local blockHeight = LINE + LINE_GAP + textHeight + LINE_GAP + LINE
+    local headHeight = chip and LINE + LINE_GAP or 0
+    local blockHeight = headHeight + textHeight + LINE_GAP + LINE
     local height = math.floor(math.max(size, blockHeight) + pad * 2 + 0.5)
-    local left = pad + size + TEXT_GAP
+    local left = SIDE + COLUMN + TEXT_GAP
     local top = math.floor((height - blockHeight) / 2 + 0.5)
     part.picture:ClearAllPoints()
-    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", pad, -math.floor((height - size) / 2 + 0.5))
+    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE + math.floor((COLUMN - size) / 2 + 0.5),
+        -math.floor((height - size) / 2 + 0.5))
     part.chipDot:ClearAllPoints()
     part.chipDot:SetPoint("TOPLEFT", part, "TOPLEFT", left, -top)
     part.title:ClearAllPoints()
-    part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(top + LINE + LINE_GAP))
+    part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(top + headHeight))
     part.footer:ClearAllPoints()
     part.footer:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(top + blockHeight - LINE))
     return height

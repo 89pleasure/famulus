@@ -562,21 +562,27 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   geprüft, im Spiel noch nicht gesehen):** Gilt nur für das Buch der Chronik. Jedes Ereignis dort
   hat ein Gewicht (`story.weight`, Tabelle `WEIGHT` in `UI/Options.lua`, Maße in `WEIGHTS` in
   `UI/ChronicleCard.lua`):
-  - **Leicht** (`low`): Tode, Ankünfte in neuen Gebieten. Weniger Rand (8 px), Bild 40 px,
-    Überschrift 12 px. Karte 84 px hoch.
+  - **Leicht** (`low`): Tode, Ankünfte in neuen Gebieten. Bild 40 px, oben und unten 8 px,
+    Überschrift 12 px.
   - **Mittel** (`medium`): Berufs-Meilensteine und alles, was der Auftraggeber nicht eingeordnet
     hat (Herausforderungen, Gegenstände, Fähigkeiten, Beruf erlernt; Entscheidung des
-    Assistenten). Wie die bisherige normale Karte. 94 px.
+    Assistenten). Bild 54 px, oben und unten 12 px, Überschrift 13 px.
   - **Schwer** (`high`): Bosse und Stufenaufstiege, dazu was die Tabellen mit `big` markieren
     (Reiten). Das bisherige Meilenstein-Aussehen: Akzentrand, Akzentmarke links, Überschrift
-    15 px halbfett. 104 px. Wörtlich nach Art umgesetzt: Auch Stufen und Bosse von Freunden
+    15 px halbfett, oben und unten 15 px. Wörtlich nach Art umgesetzt: Auch Stufen und Bosse von Freunden
     sind schwer (vorher nur der eigene Aufstieg).
   - **Aufbau neben dem Bild:** Kopf, Inhalt, Fuß. Der Kopf nennt die Person (Klassensymbol, sonst
-    Anfangsbuchstabe, und `ChronicleService.Label`); bei eigenen Ereignissen bleibt er leer, die
-    Zeile bleibt aber frei, damit alle Karten eines Gewichts gleich gebaut sind (Entscheidung des
-    Assistenten). Der Inhalt (Überschrift und Zeile darunter) hält immer zwei Zeilen Höhe frei
-    und wächst nur, wenn er mehr braucht. Der Fuß nennt immer Uhrzeit und Ort („21:14 ·
-    Dunkelküste“, ohne Ort nur die Uhrzeit). Der vertiefte Streifen mit dem Namen unter der Karte
+    Anfangsbuchstabe, und `ChronicleService.Label`); bei eigenen Ereignissen gibt es ihn nicht.
+    Der Fuß nennt immer Uhrzeit und Ort („21:14 · Dunkelküste“, ohne Ort nur die Uhrzeit).
+  - **Höhe nach Inhalt, gleiche Kanten (Wunsch des Auftraggebers nach dem ersten Screenshot,
+    2026-11-25):** Die erste Fassung hielt die Kopfzeile auch ohne Namen und immer zwei Zeilen
+    Text frei und hängte Rand und Bildgröße ans Gewicht; im Spiel sah das hohl und unruhig aus
+    (leere Flächen, Bild und Text je Gewicht an anderer Stelle). Seitdem ist die Karte so hoch
+    wie Bild oder Text plus Rand oben und unten. Seitlich haben alle Karten denselben Rand
+    (`SIDE`), das Bild steht in einer Spalte von 54 px (`COLUMN`), ein kleineres mittig darin,
+    und der Text beginnt überall an derselben Kante. Das Gewicht wirkt nur auf Bildgröße, Rand
+    oben und unten, Überschrift und Akzent. Entscheidungen des Assistenten im Einzelnen; im
+    Spiel noch nicht gesehen. Der vertiefte Streifen mit dem Namen unter der Karte
     ist entfallen; die Weggefährten behalten ihren Streifen (`story.foot`).
   - **Der Ort steht nie im Text:** Das Buch liest die Sätze mit ausgeblendetem Gebiet
     (`Placeless` in `UI/Options.lua`): „Gefallen“ statt „Gefallen in Dunkelküste“, „Neues Gebiet

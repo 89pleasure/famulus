@@ -1747,6 +1747,16 @@ check(events[6].story.weight == "high" and events[6].bar:IsShown() and events[6]
 check(events[4].story.kind == "death" and events[4].story.weight == "low" and events[5].story.weight == "low"
     and events[4].card:GetHeight() < events[2].card:GetHeight() and events[4].picture:GetWidth() < events[2].picture:GetWidth(),
     "deaths and new zones weigh low: a lower card, a smaller picture")
+do
+    local edge = events[1].title.mockPoint[4]
+    local same = true
+    for index = 1, 6 do
+        same = same and events[index].title.mockPoint[4] == edge
+    end
+    check(same and edge > events[4].picture.mockPoint[4] + events[4].picture:GetWidth()
+        and not events[2].chipText:IsShown() and events[2].title.mockPoint[5] > events[1].title.mockPoint[5],
+        "the text begins at the same edge on every card; without a name the card has no head line")
+end
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
     and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"
     and events[4].detail:GetText() == "at level 13" and events[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil
