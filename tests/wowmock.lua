@@ -578,10 +578,11 @@ C_FriendList = {
 }
 -- Battle.net friends:
 -- mock.state.bnFriends = { { battleTag = "Anna#1234", games = { { characterName = "Jaina Proudmoore",
--- playerGuid = "Player-1-JAINA" } } }, ... }
+-- playerGuid = "Player-1-JAINA", areaName = "Tanaris", characterLevel = 40, className = "Mage" } } }, ... }
 -- A game without wowProjectID counts as this game; the first one is what the
 -- friends list shows. A friend without games is offline.
 WOW_PROJECT_ID = 99
+BNET_CLIENT_WOW = "WoW"
 local function bnGame(friend, index)
     local game = friend and friend.games and friend.games[index]
     if not game then
@@ -591,6 +592,10 @@ local function bnGame(friend, index)
         characterName = game.characterName,
         playerGuid = game.playerGuid,
         wowProjectID = game.wowProjectID or WOW_PROJECT_ID,
+        clientProgram = game.clientProgram or BNET_CLIENT_WOW,
+        areaName = game.areaName,
+        characterLevel = game.characterLevel,
+        className = game.className,
         isOnline = true,
     }
 end
@@ -720,7 +725,8 @@ end
 function IsGuildMember(guid)
     return guid == "Player-1-GUILD"
 end
--- mock.state.guild = { { name = ..., online = true, mobile = false }, ... }; nil: not in a guild
+-- mock.state.guild = { { name = ..., online = true, mobile = false, level = 20, zone = "Westfall" }, ... };
+-- nil: not in a guild
 function IsInGuild()
     return mock.state.guild ~= nil
 end
@@ -730,8 +736,13 @@ end
 function GetGuildRosterInfo(index)
     local member = (mock.state.guild or {})[index]
     if member then
-        return member.name, "Member", 1, 20, "Mage", "Elwynn Forest", "", "", member.online or false, 0, member.class or "MAGE", 0, 0, member.mobile or false, false, 0, member.guid
+        return member.name, "Member", 1, member.level or 20, "Mage", member.zone or "Elwynn Forest", "", "", member.online or false, 0,
+            member.class or "MAGE", 0, 0, member.mobile or false, false, 0, member.guid
     end
+end
+-- mock.state.resting = true: in a city or an inn.
+function IsResting()
+    return mock.state.resting == true
 end
 C_GuildInfo = {
     GuildRoster = function()
@@ -984,6 +995,10 @@ end
 
 -- Chat input. InsertLink only succeeds while a chat input is open.
 ChatFrameUtil = {
+    -- Opens the chat input with a whisper to them.
+    SendTell = function(name)
+        record("ChatFrameUtil.SendTell", name)
+    end,
     AddSenderNameFilter = function(callback)
         senderFilters[#senderFilters + 1] = callback
     end,

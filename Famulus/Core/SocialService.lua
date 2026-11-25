@@ -35,9 +35,12 @@
 --       visit(info) for every entry of the friends list: the client's
 --       FriendInfo, whose fields still need checking.
 --   SocialService.EachGuildMember(visit)
---       visit(name, online, mobile, guid, class) for every member of the
---       guild roster; nobody outside a guild. A secret or missing name, GUID
---       or class comes as nil, online and mobile as true or false.
+--       visit(name, online, mobile, guid, class, level, zone) for every
+--       member of the guild roster; nobody outside a guild. A secret or
+--       missing name, GUID, class, level or zone comes as nil, online and
+--       mobile as true or false. The zone is where they were when the
+--       roster came; the client sends a new roster only when asked
+--       (C_GuildInfo.GuildRoster).
 --   SocialService.EachBattleNetFriend(visit, index)
 --       visit(battleTag, games) for every Battle.net friend, or only the one
 --       at index. games: the client's game accounts they are online with
@@ -139,8 +142,12 @@ function SocialService.EachGuildMember(visit)
         return
     end
     for i = 1, Number(GetNumGuildMembers) do
-        local name, _, _, _, _, _, _, _, online, _, class, _, _, mobile, _, _, guid = GetGuildRosterInfo(i)
-        visit(IsPlainText(name) and name or nil, Yes(online), Yes(mobile), IsPlainText(guid) and guid or nil, ClassFile(class))
+        local name, _, _, level, _, zone, _, _, online, _, class, _, _, mobile, _, _, guid = GetGuildRosterInfo(i)
+        if ns.IsSecret(level) or type(level) ~= "number" or level < 1 then
+            level = nil
+        end
+        visit(IsPlainText(name) and name or nil, Yes(online), Yes(mobile), IsPlainText(guid) and guid or nil, ClassFile(class),
+            level, IsPlainText(zone) and zone or nil)
     end
 end
 

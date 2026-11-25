@@ -56,6 +56,13 @@ local EXPECT_PRESENT = {
     "C_GuildInfo.GuildRoster",
     "C_FriendList.ShowFriends",
     "BNConnected",
+    -- What Modules/Fellows/NearbyService.lua uses to tell who is nearby:
+    -- Battle.net friends in this game, quiet places, and the whisper.
+    "BNET_CLIENT_WOW",
+    "WOW_PROJECT_ID",
+    "IsResting",
+    "UnitOnTaxi",
+    "ChatFrameUtil.SendTell",
     -- What Modules/Chronicle/Sharing.lua reads from SendAddonMessage: a
     -- refused message waits and goes again, none to someone offline.
     "Enum.SendAddonMessageResult.AddonMessageThrottle",

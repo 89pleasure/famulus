@@ -22,6 +22,9 @@
 --       { kind = "group", title = "Most frequent group", note = "4×",
 --         people = { { name = "Mira Stormfeather", class = "MAGE", progress = 0.7 } },
 --         names = "Mira and Borin", line = "12 h 20 min together", text = "..." },
+--       { kind = "places", title = "Where your people are", note = "12 online",
+--         places = { { name = "Tanaris", line = "Level 38–42", count = 4, here = true } },
+--         more = "3 more zones" },
 --   }
 --
 -- A number may stand alone in its row (stats: { wide = true }); a person
@@ -39,6 +42,7 @@ local TITLE_TOP = 12
 local BODY_TOP = 34 -- below a card's title
 local ROW = 50 -- a person
 local BAR = 32 -- a profession
+local PLACE = 34 -- a zone
 local CREST, CREST_GAP = 34, 6 -- the people of a group
 
 ---------------------------------------------------------------------------
@@ -62,7 +66,7 @@ local function CreateCard(rail)
     card.text:SetWidth(rail.width - PAD * 2)
     card.text:SetSpacing(2)
     card.hintLine = UI.Line(card, "divider")
-    card.cells, card.rows, card.bars, card.crests = {}, {}, {}, {}
+    card.cells, card.rows, card.bars, card.crests, card.places = {}, {}, {}, {}, {}
     return card
 end
 
@@ -191,12 +195,40 @@ local function Bar(card, index)
     return bar
 end
 
+-- A zone: its name, the levels of the people there, and how many they are.
+-- The player's own zone stands out in the accent.
+local function Place(card, index)
+    local place = card.places[index]
+    if place then
+        return place
+    end
+    place = CreateFrame("Frame", nil, card)
+    place:SetHeight(PLACE)
+    place.divider = UI.Line(place, "divider")
+    place.divider:SetPoint("TOPLEFT")
+    place.divider:SetPoint("TOPRIGHT")
+    place.count = UI.Text(place, 12, "textDim", "semibold")
+    place.count:SetPoint("RIGHT", 0, 0)
+    place.count:SetJustifyH("RIGHT")
+    place.count:SetJustifyV("MIDDLE")
+    place.line = UI.Text(place, 11, "textMuted")
+    place.line:SetPoint("RIGHT", place.count, "RIGHT", -30, 0)
+    place.line:SetJustifyH("RIGHT")
+    place.line:SetJustifyV("MIDDLE")
+    place.name = UI.Text(place, 12, "text")
+    place.name:SetPoint("LEFT", 0, 0)
+    place.name:SetJustifyV("MIDDLE")
+    place.name:SetWordWrap(false)
+    card.places[index] = place
+    return place
+end
+
 local function Reset(card)
     card.title:Hide()
     card.note:Hide()
     card.text:Hide()
     card.hintLine:Hide()
-    for _, list in ipairs({ card.cells, card.rows, card.bars, card.crests }) do
+    for _, list in ipairs({ card.cells, card.rows, card.bars, card.crests, card.places }) do
         for _, part in ipairs(list) do
             part:Hide()
         end
@@ -394,6 +426,36 @@ function layouts.group(card, spec, width)
         y = y + 10 + card.text:GetStringHeight()
     end
     return y + 14
+end
+
+-- Where the people are: one row per zone, the player's own first.
+function layouts.places(card, spec, width)
+    Title(card, spec)
+    local y = BODY_TOP - 6
+    for index, each in ipairs(spec.places or {}) do
+        local place = Place(card, index)
+        place:SetWidth(width - PAD * 2)
+        place.divider:SetShown(index > 1)
+        place.count:SetText(tostring(each.count or ""))
+        place.line:SetText(each.line or "")
+        UI.Ink(place.count, each.here and "accent" or "textDim")
+        UI.Ink(place.name, each.here and "accent" or "text")
+        UI.SetFont(place.name, 12, each.here and "semibold" or "regular")
+        place.name:SetText(each.name or "")
+        place.name:SetWidth(width - PAD * 2 - 30 - place.line:GetStringWidth() - 10)
+        place:ClearAllPoints()
+        place:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -y)
+        place:Show()
+        y = y + PLACE
+    end
+    if spec.more then
+        card.text:SetText(spec.more)
+        card.text:ClearAllPoints()
+        card.text:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -(y + 4))
+        card.text:Show()
+        y = y + 4 + card.text:GetStringHeight()
+    end
+    return y + 10
 end
 
 function layouts.note(card, spec)

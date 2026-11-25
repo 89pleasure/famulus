@@ -488,6 +488,170 @@ function UI.FellowOverview(parent, cardParent, cardWidth)
 end
 
 ---------------------------------------------------------------------------
+-- Nearby: friends and guild who are online, in sections ("Here in Tanaris",
+-- "Similar level", "Also online"), each a list. UI/Options.lua builds the
+-- model.
+--
+--   local list = UI.NearbyList(parent)
+--   local height = list:SetModel(model, width)
+--
+--   model = {
+--       sections = { { title = "Here in Tanaris", note = "4", more = "2 more" or nil,
+--                      people = { person, ... } }, ... },
+--       onChoose(person),  -- a click on a fellow traveller's row
+--       onWhisper(person), -- the button at the row's end
+--   }
+--   person = { name, label (the alias, else the name), sub, class, progress,
+--              tier or nil, level, diff, place, here,
+--              guid (a fellow traveller's) or nil }
+---------------------------------------------------------------------------
+
+local NEAR_ROW = 52
+local NEAR_COLUMNS = { level = 0.47, place = 0.58, bond = 0.8 } -- share of the width
+local SECTION_SPACE = 22 -- between two sections
+
+local function CreateNearRow(list)
+    local row = CreateFrame("Button", nil, list)
+    -- Above the sections' cards, whichever was made first.
+    row:SetFrameLevel(list:GetFrameLevel() + 3)
+    row:SetHeight(NEAR_ROW)
+    row.hover = UI.Round(row, "hover", 8, { sublevel = 1 })
+    row.hover:Hide()
+    row.line = UI.Line(row, "divider")
+    row.line:SetPoint("TOPLEFT", 12, 0)
+    row.line:SetPoint("TOPRIGHT", -12, 0)
+    row.crest = UI.Crest(row, 36)
+    row.crest:SetPoint("LEFT", 14, 0)
+    row.name = UI.Text(row, 13, "text", "medium")
+    row.name:SetPoint("TOPLEFT", row.crest, "TOPRIGHT", 12, -1)
+    row.name:SetWordWrap(false)
+    row.sub = UI.Text(row, 11, "textMuted")
+    row.sub:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -4)
+    row.sub:SetWordWrap(false)
+    row.level = UI.Text(row, 12, "textDim", "medium")
+    row.level:SetJustifyV("MIDDLE")
+    row.diff = UI.Text(row, 11, "textMuted")
+    row.diff:SetPoint("LEFT", row.level, "RIGHT", 5, 0)
+    row.place = UI.Text(row, 12, "textMuted")
+    row.place:SetJustifyV("MIDDLE")
+    row.place:SetWordWrap(false)
+    row.badge = UI.TierBadge(row)
+    row.whisper = UI.IconButton(row, "chat", function(self)
+        list.model.onWhisper(self:GetParent().person)
+    end, 28)
+    row.whisper:SetPoint("RIGHT", -10, 0)
+    row:SetScript("OnEnter", function(self)
+        if self.person and self.person.guid then
+            self.hover:Fade(true)
+        end
+    end)
+    row:SetScript("OnLeave", function(self)
+        self.hover:Fade(false)
+    end)
+    row:SetScript("OnClick", function(self)
+        if self.person and self.person.guid then
+            self.hover:Hide()
+            list.model.onChoose(self.person)
+        end
+    end)
+    return row
+end
+
+local function FillNearRow(row, person, first, width)
+    row.person = person
+    row:SetWidth(width)
+    row.crest:SetPerson(person.name, person.class)
+    row.crest:SetProgress(person.progress or 0)
+    row.name:SetText(person.label or person.name)
+    row.sub:SetText(person.sub or "")
+    row.name:SetWidth(width * NEAR_COLUMNS.level - 72)
+    row.sub:SetWidth(width * NEAR_COLUMNS.level - 72)
+    row.level:SetText(person.level or "")
+    row.level:ClearAllPoints()
+    row.level:SetPoint("LEFT", row, "LEFT", width * NEAR_COLUMNS.level, 0)
+    row.diff:SetText(person.diff or "")
+    row.place:SetText(person.place or "")
+    UI.Ink(row.place, person.here and "accent" or "textMuted")
+    row.place:SetWidth(width * (NEAR_COLUMNS.bond - NEAR_COLUMNS.place) - 10)
+    row.place:ClearAllPoints()
+    row.place:SetPoint("LEFT", row, "LEFT", width * NEAR_COLUMNS.place, 0)
+    row.badge:SetShown(person.tier ~= nil)
+    if person.tier then
+        row.badge:SetTier(person.tier)
+        row.badge:ClearAllPoints()
+        row.badge:SetPoint("LEFT", row, "LEFT", width * NEAR_COLUMNS.bond, 0)
+    end
+    row.line:SetShown(not first)
+    if not row:IsMouseOver() then
+        row.hover:Hide()
+    end
+end
+
+function UI.NearbyList(parent)
+    local list = CreateFrame("Frame", nil, parent)
+    list.sections, list.rows = {}, {}
+
+    function list:SetModel(model, width)
+        self.model = model
+        self:SetWidth(width)
+        local y, used = 0, 0
+        for index, section in ipairs(model.sections) do
+            local part = self.sections[index]
+            if not part then
+                part = {}
+                part.title = UI.Text(self, 12, "textMuted", "medium")
+                part.card = Card(self)
+                part.card:SetFrameLevel(self:GetFrameLevel() + 1)
+                part.card:EnableMouse(false)
+                part.more = UI.Text(part.card, 12, "textMuted")
+                self.sections[index] = part
+            end
+            part.title:SetText(section.note and (section.title .. "  ·  " .. section.note) or section.title)
+            part.title:ClearAllPoints()
+            part.title:SetPoint("TOPLEFT", self, "TOPLEFT", 2, -y)
+            part.title:Show()
+            y = y + TITLE_H
+            part.card:SetWidth(width)
+            part.card:ClearAllPoints()
+            part.card:SetPoint("TOPLEFT", self, "TOPLEFT", 0, -y)
+            part.card:Show()
+            local rowY = 4
+            for position, person in ipairs(section.people) do
+                used = used + 1
+                local row = self.rows[used] or CreateNearRow(self)
+                self.rows[used] = row
+                FillNearRow(row, person, position == 1, width)
+                row:ClearAllPoints()
+                row:SetPoint("TOPLEFT", self, "TOPLEFT", 0, -(y + rowY))
+                row:Show()
+                rowY = rowY + NEAR_ROW
+            end
+            part.more:SetShown(section.more ~= nil)
+            if section.more then
+                part.more:SetText(section.more)
+                part.more:ClearAllPoints()
+                part.more:SetPoint("TOPLEFT", part.card, "TOPLEFT", 16, -(rowY + 8))
+                rowY = rowY + 32
+            end
+            part.card:SetHeight(rowY + 4)
+            y = y + rowY + 4 + SECTION_SPACE
+        end
+        for index = #model.sections + 1, #self.sections do
+            self.sections[index].title:Hide()
+            self.sections[index].card:Hide()
+        end
+        for index = used + 1, #self.rows do
+            self.rows[index]:Hide()
+        end
+        local height = math.max(1, y - SECTION_SPACE)
+        self:SetHeight(height)
+        return height
+    end
+
+    return list
+end
+
+---------------------------------------------------------------------------
 -- What a card of the fellow travellers' books holds (UI/Book.lua): a
 -- picture or a person's crest, the text, the people of a group as plates,
 -- and a sunken strip below that says, in the accent, what the event adds.

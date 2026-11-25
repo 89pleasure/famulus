@@ -41,6 +41,8 @@ Modules\Chronicle\Sharing.lua
 Modules\Chronicle\LiveFeed.lua
 Modules\Fellows\FellowService.lua
 Modules\Fellows\RememberFellows.lua
+Modules\Fellows\NearbyService.lua
+Modules\Fellows\NearbyFriends.lua
 
 UI\Theme.lua
 UI\Widgets.lua

@@ -1946,6 +1946,254 @@ local function TimelineRail()
     return cards
 end
 
+---------------------------------------------------------------------------
+-- Nearby: friends and guild who are online right now, the ones in the
+-- player's zone first, then those of a similar level, then everyone else;
+-- beside it, the zones they are in. Only while "Who is nearby" runs: it
+-- keeps the lists fresh.
+---------------------------------------------------------------------------
+
+local FellowNearbyTab
+do
+    local NEAR_SIMILAR = 5 -- levels apart that still count as similar
+    local NEAR_ROWS = 40 -- rows of "Also online"; the rest are counted
+    local NEAR_PLACES = 8 -- zones in the rail
+    
+    local NEAR_OFF_ITEM = {
+        kind = "info",
+        label = function()
+            return L.ui_near_off
+        end,
+        desc = function()
+            return L.ui_near_off_desc
+        end,
+    }
+    
+    local NEAR_EMPTY_ITEM = {
+        kind = "info",
+        label = function()
+            return L.ui_near_empty
+        end,
+        desc = function()
+            return L.ui_near_empty_desc
+        end,
+    }
+    
+    -- One look per render: blocks, list and rail all ask for it.
+    local nearbyLook
+    
+    local function NearbyData()
+        local feature = ns.features.nearbyFriends
+        if not (feature and feature.enabled) then
+            return nil
+        end
+        local at = GetTime()
+        if nearbyLook and nearbyLook.at == at then
+            return nearbyLook
+        end
+        local Nearby = ns.NearbyService
+        Nearby.Ask()
+        local people, here, level = Nearby.People(feature:Get("guild"))
+        local list = {}
+        for _, person in ipairs(people) do
+            -- Whoever is in the group is with the player anyway.
+            if not person.grouped then
+                list[#list + 1] = person
+            end
+        end
+        nearbyLook = { at = at, people = list, here = here, level = level, now = time() }
+        return nearbyLook
+    end
+    
+    local function LevelApart(person, data)
+        if not (person.level and data.level) then
+            return 1000
+        end
+        return math.abs(person.level - data.level)
+    end
+    
+    local function NearPerson(person, data)
+        local tier, progress, seconds, guid = ns.NearbyService.Bond(person, data.now)
+        local alias = ns.AliasService.Get(person.name)
+        local parts = {}
+        if alias then
+            parts[#parts + 1] = person.name
+        end
+        parts[#parts + 1] = ClassName(person.class)
+        parts[#parts + 1] = L["ui_near_from_" .. person.from]
+        local diff
+        if person.level and data.level and person.level ~= data.level then
+            diff = (person.level > data.level and "+" or "−") .. math.abs(person.level - data.level)
+        end
+        return {
+            name = person.name,
+            label = alias or person.name,
+            sub = table.concat(parts, "  ·  "),
+            class = person.class,
+            progress = progress or 0,
+            tier = tier,
+            seconds = seconds or -1,
+            guid = guid,
+            level = person.level and tostring(person.level) or "",
+            diff = diff,
+            place = person.zone or L.ui_near_nowhere,
+            here = data.here ~= nil and person.zone == data.here,
+            apart = LevelApart(person, data),
+            source = person,
+        }
+    end
+    
+    -- The closest bond first, then the nearest level, then by name.
+    local function NearOrder(a, b)
+        if a.seconds ~= b.seconds then
+            return a.seconds > b.seconds
+        elseif a.apart ~= b.apart then
+            return a.apart < b.apart
+        end
+        return a.label < b.label
+    end
+    
+    local function NearbyModel()
+        local data = NearbyData()
+        if not data or #data.people == 0 then
+            return nil
+        end
+        local here, similar, others = {}, {}, {}
+        for _, person in ipairs(data.people) do
+            local row = NearPerson(person, data)
+            if row.here then
+                here[#here + 1] = row
+            elseif row.apart <= NEAR_SIMILAR then
+                similar[#similar + 1] = row
+            else
+                others[#others + 1] = row
+            end
+        end
+        table.sort(here, NearOrder)
+        table.sort(similar, NearOrder)
+        table.sort(others, function(a, b)
+            if a.apart ~= b.apart then
+                return a.apart < b.apart
+            end
+            return a.label < b.label
+        end)
+        local sections = {}
+        if #here > 0 then
+            sections[#sections + 1] = { title = L.ui_near_section_here:format(data.here), note = tostring(#here), people = here }
+        end
+        if #similar > 0 then
+            sections[#sections + 1] = {
+                title = L.ui_near_section_similar,
+                note = tostring(#similar) .. "  ·  " .. L.ui_near_similar_note:format(NEAR_SIMILAR),
+                people = similar,
+            }
+        end
+        if #others > 0 then
+            local shown, more = others, nil
+            if #others > NEAR_ROWS then
+                shown = {}
+                for index = 1, NEAR_ROWS do
+                    shown[index] = others[index]
+                end
+                more = L.ui_near_others:format(#others - NEAR_ROWS)
+            end
+            sections[#sections + 1] = { title = L.ui_near_section_others, note = tostring(#others), people = shown, more = more }
+        end
+        return {
+            sections = sections,
+            onChoose = function(person)
+                if person.guid then
+                    ShowStoryOf(person.guid)
+                end
+            end,
+            onWhisper = function(person)
+                ns.NearbyService.Whisper(person.source)
+            end,
+        }
+    end
+    
+    -- The zones the people are in: the player's own first, then the fullest.
+    local function NearbyRail()
+        local data = NearbyData()
+        if not data or #data.people == 0 then
+            return nil
+        end
+        local byZone, zones = {}, {}
+        for _, person in ipairs(data.people) do
+            local name = person.zone or L.ui_near_nowhere
+            local zone = byZone[name]
+            if not zone then
+                zone = { name = name, count = 0, here = data.here ~= nil and person.zone == data.here }
+                byZone[name] = zone
+                zones[#zones + 1] = zone
+            end
+            zone.count = zone.count + 1
+            if person.level then
+                zone.low = math.min(zone.low or person.level, person.level)
+                zone.high = math.max(zone.high or person.level, person.level)
+            end
+        end
+        table.sort(zones, function(a, b)
+            if a.here ~= b.here then
+                return a.here
+            elseif a.count ~= b.count then
+                return a.count > b.count
+            end
+            return a.name < b.name
+        end)
+        local places = {}
+        for index = 1, math.min(#zones, NEAR_PLACES) do
+            local zone = zones[index]
+            local line
+            if zone.low and zone.low == zone.high then
+                line = L.c_p_level:format(zone.low)
+            elseif zone.low then
+                line = L.ui_near_range:format(zone.low, zone.high)
+            end
+            places[index] = { name = zone.name, line = line, count = zone.count, here = zone.here }
+        end
+        return {
+            {
+                kind = "places",
+                title = L.ui_near_places,
+                note = L.ui_near_places_note:format(#data.people),
+                places = places,
+                more = #zones > NEAR_PLACES and L.ui_near_places_more:format(#zones - NEAR_PLACES) or nil,
+            },
+        }
+    end
+    
+    function FellowNearbyTab()
+        return {
+            id = "nearby",
+            category = "fellows",
+            label = function()
+                return L.ui_tab_nearby
+            end,
+            desc = function()
+                return L.ui_tab_nearby_desc
+            end,
+            settings = {},
+            -- The list is drawn by UI.NearbyList; a card only says why it is empty.
+            blocks = function()
+                local data = NearbyData()
+                if not data then
+                    return { { items = { NEAR_OFF_ITEM } } }
+                elseif #data.people == 0 then
+                    return { { items = { NEAR_EMPTY_ITEM } } }
+                end
+                return {}
+            end,
+            nearby = NearbyModel,
+            rail = NearbyRail,
+            -- The search finds the people on the overview, not here.
+            search = function()
+                return {}
+            end,
+        }
+    end
+end
+
 local function FellowTimelineTab()
     return {
         id = "timeline",
@@ -2186,6 +2434,7 @@ function layouts.fellows()
     return {
         FellowOverviewTab(),
         FellowTimelineTab(),
+        FellowNearbyTab(),
         record,
     }
 end
@@ -3326,6 +3575,7 @@ function Render()
     -- A tab with a rail leaves it the right part of the content.
     local railCards = not searching and not off and tab.rail and tab.rail() or nil
     local overview = not searching and not off and not storyPerson and tab.overview and tab.overview() or nil
+    local nearby = not searching and not off and tab.nearby and tab.nearby() or nil
     local aside = railCards and RAIL_GAP + RAIL_W or 0
     local width = railCards and BOOK_W or contentWidth
     window.scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -(PAD + aside), 18)
@@ -3455,6 +3705,18 @@ function Render()
     elseif window.fellows then
         window.fellows:Hide()
         window.fellows.card:SetShown(storyPerson ~= nil)
+    end
+
+    if nearby then
+        if not window.nearby then
+            window.nearby = UI.NearbyList(content)
+        end
+        window.nearby:ClearAllPoints()
+        window.nearby:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
+        y = y + window.nearby:SetModel(nearby, width)
+        window.nearby:Show()
+    elseif window.nearby then
+        window.nearby:Hide()
     end
 
     window.scroll:SetContentHeight(y)
@@ -4033,6 +4295,12 @@ end)
 -- The guild roster came: tidying up can count again.
 ns:On("SOCIAL_CHANGED", function()
     RequestRefresh("layout")
+end)
+-- Who is where changed: only the tab that shows it is drawn again.
+ns:On("NEARBY_CHANGED", function()
+    if window and window:IsShown() and searchText == "" and currentPage == "fellows" and CurrentTab().id == "nearby" then
+        RequestRefresh("layout")
+    end
 end)
 ns:On("PROFILE_CHANGED", function()
     ApplyScale()
