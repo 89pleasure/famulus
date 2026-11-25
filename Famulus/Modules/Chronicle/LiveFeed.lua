@@ -13,6 +13,20 @@ local ADDON_NAME, ns = ...
 -- "reaction": a friend reacted to one of the player's events (Sharing.lua).
 local KINDS = { "level", "death", "boss", "achievement", "ability", "item", "profession", "skill", "zone", "reaction" }
 local OFF_BY_DEFAULT = { zone = true }
+-- The window shows the kinds as a group of chips ("kinds"), each with the
+-- icon of its kind (a name from UI.media, as the chronicle's cards use).
+local ICONS = {
+    level = "flag",
+    death = "skull",
+    boss = "swords",
+    achievement = "star",
+    ability = "horseshoe",
+    item = "chest",
+    profession = "hammer",
+    skill = "hammer",
+    zone = "peaks",
+    reaction = "cheer",
+}
 
 local options = {
     { key = "duration", type = "select", default = "normal", values = { "short", "normal", "long" } },
@@ -20,12 +34,13 @@ local options = {
     { key = "own", type = "toggle", default = false },
 }
 for _, kind in ipairs(KINDS) do
-    options[#options + 1] = { key = kind, type = "toggle", default = not OFF_BY_DEFAULT[kind] }
+    options[#options + 1] = { key = kind, type = "toggle", default = not OFF_BY_DEFAULT[kind], group = "kinds", icon = ICONS[kind] }
 end
 
 local feed = ns:NewFeature({
     id = "liveFeed",
     category = "chronicle",
+    icon = "bell", -- its entry in the settings (UI.media)
     default = true,
     options = options,
 })

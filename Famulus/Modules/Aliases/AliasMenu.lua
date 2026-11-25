@@ -13,6 +13,7 @@ local AliasService = ns.AliasService
 local aliasMenu = ns:NewFeature({
     id = "aliasMenu",
     category = "aliases",
+    icon = "menu", -- its entry in the settings (UI.media)
     default = true,
     requires = { "Menu.ModifyMenu" },
 })

@@ -155,6 +155,73 @@ PEOPLE = [
 write_tga("people.tga", 32, stroke(PEOPLE, PEN, [(11, 12.5, 4.4), (23, 10.5, 3.4)]))
 
 
+def ellipse(cx, cy, rx, ry, steps=32):
+    return [
+        (cx + rx * math.cos(2 * math.pi * i / steps), cy + ry * math.sin(2 * math.pi * i / steps))
+        for i in range(steps + 1)
+    ]
+
+
+# Icons of the entries in the settings tabs, one per feature or setting
+# (feature.icon, GENERAL_ICONS in UI/Options.lua). Drawn like the icons above.
+ICONS = {
+    # Two arrows, one each way: sharing with friends.
+    "share": ([
+        [(6, 11), (25, 11)], [(20.5, 6.5), (25, 11), (20.5, 15.5)],
+        [(26, 21), (7, 21)], [(11.5, 16.5), (7, 21), (11.5, 25.5)],
+    ], []),
+    # A bell: events shown on screen.
+    "bell": ([
+        arc(16, 14.5, 7, 180, 360) + [(23, 20), (26, 23.5), (6, 23.5), (9, 20), (9, 14.5)],
+        arc(16, 24.5, 2.8, 0, 180, 12),
+        [(16, 7.5), (16, 5)],
+    ], []),
+    # A speech bubble with two lines of text: chat.
+    "chat": ([
+        [(5.5, 7), (26.5, 7), (26.5, 21), (14, 21), (8.5, 26), (9.5, 21), (5.5, 21), (5.5, 7)],
+        [(10, 12), (22, 12)], [(10, 16), (18, 16)],
+    ], []),
+    # A shield: the guild (Guildy).
+    "shield": ([
+        [(16, 4.5), (26, 8), (26, 15.5), (22.5, 22), (16, 27.5), (9.5, 22), (6, 15.5), (6, 8), (16, 4.5)],
+    ], []),
+    # A box of text beside the mouse pointer: a tooltip.
+    "tooltip": ([
+        [(11, 4.5), (27, 4.5), (27, 15), (11, 15), (11, 4.5)],
+        [(15, 9.75), (23, 9.75)],
+        [(5, 13.5), (5, 27), (8.6, 23.6), (11, 28.5), (13.4, 27.4), (11, 22.6), (15.5, 22.5), (5, 13.5)],
+    ], []),
+    # A list with a dot before each line: a context menu.
+    "menu": ([
+        [(11, 9), (26, 9)], [(11, 16), (26, 16)], [(11, 23), (21, 23)],
+        [(5.8, 9), (6.2, 9)], [(5.8, 16), (6.2, 16)], [(5.8, 23), (6.2, 23)],
+    ], []),
+    # Two rings of a chain: one alias for all characters of an account.
+    "link": ([], [(12, 20, 6.5), (20, 12, 6.5)]),
+    # A bin: tidying up.
+    "trash": ([
+        [(6, 9), (26, 9)], [(12.5, 9), (13.5, 5), (18.5, 5), (19.5, 9)],
+        [(8.5, 9), (10, 27), (22, 27), (23.5, 9)],
+        [(13.5, 13.5), (14, 22.5)], [(18.5, 13.5), (18, 22.5)],
+    ], []),
+    # A globe: the language.
+    "globe": ([[(5, 16), (27, 16)], ellipse(16, 16, 4.8, 11)], [(16, 16, 11)]),
+    # A compass: the minimap.
+    "compass": ([[(16, 8), (19.5, 16), (16, 24), (12.5, 16), (16, 8)]], [(16, 16, 11)]),
+    # One person: this character only.
+    "person": ([arc(16, 29, 9.5, 180, 360)], [(16, 11, 4.8)]),
+    # A drop of paint: the colour scheme.
+    "drop": ([[(16, 4.5)] + arc(16, 19.5, 7.5, -30, 210) + [(16, 4.5)]], []),
+    # Two corners pulled apart: the window's size.
+    "resize": ([
+        [(5.5, 13), (5.5, 5.5), (13, 5.5)], [(26.5, 19), (26.5, 26.5), (19, 26.5)],
+        [(6.5, 6.5), (25.5, 25.5)],
+    ], []),
+}
+for name, (paths, circles) in ICONS.items():
+    write_tga(name + ".tga", 32, stroke(paths, PEN, circles))
+
+
 # Pictures of the chronicle: drawn in a 32 px box like the icons, but written
 # at twice the size, because they are shown larger. pen: the line's width at
 # that size.

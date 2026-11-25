@@ -218,7 +218,8 @@ These points are design decisions; `tests/run.lua` checks most of them.
   switching the language breaks.
 - **Settings:** Only what differs from the default is saved (`ns:SetOption`).
 - **Window:** Rows are built automatically from features and their `options`
-  (`type = "toggle"` or `"select"`; addon options also `"swatch"`). New widgets belong in
+  (`type = "toggle"` or `"select"`; addon options also `"swatch"`); in a settings tab each feature
+  is an entry with the icon it names (`icon`, a name from `UI.media`). New widgets belong in
   `UI/Widgets.lua`. Never set colours directly; use colour names with `UI.Paint` (surfaces),
   `UI.Tint` (images) or `UI.Ink` (text): only then does the open window follow a change of colour
   scheme. Texts via `UI.Text` (font and fallback).
