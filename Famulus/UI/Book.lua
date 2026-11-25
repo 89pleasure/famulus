@@ -45,10 +45,13 @@ local DOT_GAP = DOT + 12 -- between the dots of two events on the line
 -- How wide a card is, by its weight: a share of its side of the book. A
 -- narrower card keeps to the line.
 local WIDTHS = { low = 0.8, medium = 0.9, high = 1 }
--- The room between a card's edge and what it holds, the same on every side
--- and every card; contents use it as UI.BookPad.
+-- The room between a card's edge and what it holds, the same on every card:
+-- UI.BookPad at the sides and below, UI.BookPadTop above. Measured from the
+-- outer edge; the frame's hairline takes a pixel of it, and at the top the
+-- line of light takes one more, so the top gets one more to look the same.
 local PAD = 14
 UI.BookPad = PAD
+UI.BookPadTop = PAD + 1
 local HEAD_TOP, HEAD_BOTTOM = 6, 16 -- room above and below a chapter's heading
 local HEAD_GAP = 16 -- between the place and the words beside it
 local CHAPTER_GAP = 16 -- below a chapter's last card

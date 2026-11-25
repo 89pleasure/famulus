@@ -1770,8 +1770,8 @@ do
     for index = 1, 6 do
         level = level and events[index].picture.mockPoint[5] == events[index].title.mockPoint[5]
     end
-    check(level and events[2].picture.mockPoint[4] == ns.UI.BookPad and events[2].picture.mockPoint[5] == -ns.UI.BookPad
-    and events[6].picture.mockPoint[5] == -ns.UI.BookPad and events[1].picture.mockPoint[5] == -(28 + ns.UI.BookPad),
+    check(level and events[2].picture.mockPoint[4] == ns.UI.BookPad and events[2].picture.mockPoint[5] == -ns.UI.BookPadTop
+    and events[6].picture.mockPoint[5] == -ns.UI.BookPadTop and events[1].picture.mockPoint[5] == -(28 + ns.UI.BookPad - 1),
     "picture and text begin at the same height; the room inside the edge and below the strip is the book's, the same for every weight")
 end
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()

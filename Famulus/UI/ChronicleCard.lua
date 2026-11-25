@@ -108,11 +108,12 @@ function UI.ChronicleCard(part, story, width)
 
     -- The strip above, then picture and text side by side: both begin at
     -- the same height, and the foot ends with the taller of the two.
-    local headHeight = chip and STRIP or 0
+    -- Below the strip the room is the book's at the sides: the strip's line
+    -- takes a pixel of it like the frame's hairline does.
+    local body = chip and STRIP + pad - 1 or UI.BookPadTop
     local blockHeight = textHeight + LINE_GAP + LINE
     local bodyHeight = math.max(size, blockHeight)
-    local height = math.floor(pad * 2 + headHeight + bodyHeight + 0.5)
-    local body = pad + headHeight
+    local height = math.floor(body + bodyHeight + pad + 0.5)
     local left = pad + size + TEXT_GAP
     part.picture:ClearAllPoints()
     part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", pad, -body)

@@ -598,7 +598,11 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     oben und unten, Überschrift und Akzent. Seit 2026-11-25 (Wunsch des Auftraggebers nach einem
     Screenshot: bei HIGH war der Abstand zur Namensleiste größer als bei MEDIUM und LOW) legt
     das Book den Innenabstand fest, `UI.BookPad` (14 px), gleich an allen Seiten, für jedes
-    Gewicht und unter der Namensleiste; das Gewicht wirkt nur noch auf Breite, Bildgröße,
+    Gewicht und unter der Namensleiste. Gemessen vom äußeren Rand; weil Haarlinie und
+    Lichtkante oben innen je etwa einen Pixel nehmen und die Linie der Namensleiste in der
+    Leiste liegt, bekommt oben einen Pixel mehr (`UI.BookPadTop`) und unter der Namensleiste
+    einen weniger. Nachgemessen am Screenshot vom 2026-11-25 (vorher sichtbar: unter der
+    Leiste 32, seitlich 30, oben 27 Bildschirmpixel); das Gewicht wirkt nur noch auf Breite, Bildgröße,
     Überschrift und Akzent. Eine leichte Karte mit zwei Zeilen Text kann deshalb höher sein
     als eine mittlere mit einer. Die Weggefährten haben ihren eigenen Rand behalten (12, bei
     Meilensteinen 15 px). Entscheidungen des Assistenten im Einzelnen; im
