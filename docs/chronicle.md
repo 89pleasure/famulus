@@ -11,10 +11,20 @@ picture-book look are built and checked against the mock only.
 
 - **Structure:** area and category `chronicle`, data via `ns.ChronicleService`
   (`Modules/Chronicle/ChronicleService.lua`) in `FamulusDB.chronicle` (account-wide, outside the
-  profiles, at most 2000 entries, kind and values instead of text). Tabs "Everyone", "My journey",
+  profiles, at most 2000 entries, kind and values instead of text; see "Limit" below). Tabs "Everyone", "My journey",
   "Friends" (until 2026-11-24 "Companions", see "Chronicle and fellow travellers") and "Settings"
   (until 2026-11-23 "Recording") (`layouts.chronicle`). In the project notes from before then, the
   chronicle's people are often still called "companions"; in the window they are "Friends".
+- **Limit (since 2026-11-25, the owner's go-ahead after closing issue #12):** at most 2000
+  entries (`MAX_ENTRIES`), of them at most 1000 of others (`MAX_OTHERS`, entries with `who`),
+  in `Trim` in `ChronicleService.lua`, on every new entry and on loading. Beyond 1000 of others
+  their oldest goes; beyond 2000 in all the oldest entry of anyone. Before, the oldest entry
+  went whoever it was from, and in a guild with many Famulus users the news of others would
+  have pushed the player's own journey out within days (estimate: 40 members with about 10
+  entries a day each). A pure "others go first" was rejected: with 2000 own entries no news of
+  others would have been kept at all. The half is the assistant's decision. An existing file
+  with more than 1000 entries of others loses their oldest on the next login. Checked against
+  the mock only.
 - **Book with rail (the owner's decision, 2026-11-23, chosen on the HTML mockup "Famulus
   Chronicle": variant A with "Bundle repeats" and "Chapter head on one line"):**
   The trigger was the first screenshot in the 1180 window: cards 428 px wide with about 170 px of

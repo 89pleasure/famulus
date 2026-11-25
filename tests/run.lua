@@ -1672,6 +1672,27 @@ Chronicle.Clear()
 FamulusDB.chronicle = { entries = chronicleBeforeSharing, friends = {} }
 setState(stateBeforeChronicle)
 
+do -- a full chronicle keeps the player's own journey
+    local saved, now = FamulusDB.chronicle, time()
+    local entries = { { k = "level", t = now - 5000, level = 2 } }
+    for i = 2, 1001 do
+        entries[i] = { k = "death", t = now - 5000 + i, who = "Mira Sturmfeder" }
+    end
+    FamulusDB.chronicle = { entries = entries, friends = {} }
+    Chronicle.Add("death", { who = "Borin Eisenbart" })
+    check(#Chronicle.Entries() == 1001 and Chronicle.Entries()[1].k == "level" and Chronicle.Entries()[2].t == now - 4997,
+        "news of others keeps to half the chronicle; then their oldest goes, not the player's own oldest entry")
+    entries = {}
+    for i = 1, 2000 do
+        entries[i] = { k = "death", t = now - 5000 + i }
+    end
+    FamulusDB.chronicle = { entries = entries, friends = {} }
+    Chronicle.Add("death", { who = "Borin Eisenbart" })
+    check(#Chronicle.Entries() == 2000 and Chronicle.Entries()[1].t == now - 4998 and Chronicle.Entries()[2000].who == "Borin Eisenbart",
+        "a chronicle full of the player's own entries still takes news of others; their oldest entry goes")
+    FamulusDB.chronicle = saved
+end
+
 -- The page.
 if not window:IsShown() then
     SlashCmdList.FAMULUS("")
