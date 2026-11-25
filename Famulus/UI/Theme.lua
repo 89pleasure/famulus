@@ -218,7 +218,7 @@ local function Compose(accent)
     colors.accentDeep = mix(base, BLACK, 0.80) -- ground of a picture in the chronicle
     colors.accentTrail = alpha(base, 0.28) -- the line the chronicle's events hang on
     colors.accentNone = alpha(base, 0) -- where an accent line fades out
-    colors.cardActive = alpha(base, 0.26) -- border of a card whose feature is on
+    colors.cardActive = alpha(base, 0.26) -- border of a card that stands out (a milestone, the chosen one)
     return true
 end
 Compose(DEFAULT_ACCENT)

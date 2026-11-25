@@ -53,7 +53,7 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   (colour scheme, embers, window size). The first page on opening is the first in the sidebar,
   so since 2026-11-24 the chronicle (before that the aliases).
 - **Master switch** (since 2026-11-24, the owner's decision: "Only the master switches"):
-  the three categories as the first card "Features" under Settings › General
+  the three categories as the first entries, under the heading "Features", in Settings › General
   (`CategoryItem`, texts `area_<id>` and `area_<id>_desc`). The switches of the individual features
   stay on their tabs. If a category is off, its entry in the sidebar is greyed out and carries
   "OFF", its tabs are greyed out, and instead of the content its page shows
@@ -84,15 +84,18 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   a change of colour scheme.
 - **Accents and effects:** Accent, gradient and glow stand only for "active / here": switch on
   (gradient, glow), selected tab (stroke with gradient and glow), selected area in the
-  sidebar (fading gradient, glowing bar, counter on an accent badge), card of a
-  running feature (fine accent border, mark on the left), field with focus (ring), logo. In addition,
+  sidebar (fading gradient, glowing bar, counter on an accent badge), the chosen entry of a
+  settings tab (card, mark on the left; until 2026-11-25 the card of a running feature with a
+  fine accent border), a lit chip, the pill "On", field with focus (ring), logo. In addition,
   as a signature, a soft glow in the accent colour behind the logo. Depth via a highlight edge at the
-  top of window and cards and recessed option rows. Hover fades in and out (`Shape:Fade`).
+  top of window and cards and recessed containers (the options in a settings tab). Hover fades in
+  and out (`Shape:Fade`).
   The owner's decisions on the mockup: **one** line between sidebar and content, the
-  window border runs uniformly around everything; the line above an option row goes from card edge
-  to card edge; option rows carry a dot, no angle and no leader line; the
+  window border runs uniformly around everything; the
   main button ("Save") has a horizontal gradient, a darker border, a light line
-  inside and a shadow, but no top-to-bottom gradient (it looked "plasticky").
+  inside and a shadow, but no top-to-bottom gradient (it looked "plasticky"). Also decided then
+  and gone with the settings tabs (2026-11-25): option rows below their feature with a dot and a
+  line from card edge to card edge.
 - **Background (2026-11-19, the owner's request):** A fine grain (`grain.tga`, pure
   noise, one texel per screen pixel via `SetTexCoord`, `UI.Grain`) lies as a band across the
   full window width, sidebar and content alike, as high as the header (`GRAIN_BAND`), and
@@ -105,8 +108,48 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   per frame. They run only while the window is open and lie behind cards and entries. Can be
   switched off under Settings › Appearance (`general.embers`, default on). Confirmed in game: grain
   and embers run. Not yet seen: the band in the sidebar and its fade-out.
-- **Cards:** In category tabs each feature has a card of its own, together with its
-  options (`FeatureBlocks`, spacing `CARD_GAP`). The search still groups per tab.
+- **Settings tabs (since 2026-11-25, the owner's decision, chosen on the HTML mockup
+  "Famulus-Einstellungen", claude.ai artifact `LFwDhswccJYQ5APKWMd3bA`: variant B "Feature +
+  detail"):** Trigger: the owner found the settings a plain list and wanted them clearer, with
+  room for pictures of what an option does later. The owner's own idea was a narrow list with a
+  fixed panel that follows the mouse (variant A, the assistant's recommendation); also rejected:
+  C (tiles, options in a drawer) and D (a list that unfolds, explanations as tooltips). Every tab
+  with settings (`tab.split`: Chronicle, Fellow travellers and Aliases › Settings, Settings ›
+  General and Appearance) shows, instead of cards of rows (`Render` → `RenderSplit`):
+  - **On the left the entries** (`LIST_W` 296 px, scrolls on its own): one per item that is no
+    option of another (features, master switches, the addon's own options, tidying up), 56 px
+    tall: the name, below it "On · 11 options" for a switch, what it does for the other kinds, or
+    why it cannot run; at the right the switch (with a hit area of its own), the chosen value of a
+    select or the colour scheme's dot. A block's title ("Features", "Display", "Tidy up") stands as
+    a heading above its entries. The chosen entry lies on a card with the accent mark at its left;
+    a click on another one chooses it. The choice is kept per tab (`chosenEntries`), at first the
+    first entry.
+  - **On the right the chosen entry in full** (a card of 584 px, scrolls on its own): its
+    picture if it has one, the name with its control at the right (switch, dropdown, swatches or
+    button), pills with the state ("On" in the accent) and the default ("Default: on",
+    `UI.Pill`), the whole text, then its options: plain ones as rows with their help text in a
+    recessed card below "Options"; the options of a group (`option.group`) as chips (`UI.Chip`,
+    three per line, an icon in front, `option.icon`, lit while on) below the group's heading
+    (`o_<feature>_<group>`) with "8 of 9 on"; pointing at a chip explains it in the line below
+    them (`o_<feature>_<group>_desc` while nothing is pointed at). So far only the live feed's
+    kinds of events form a group ("kinds"; the icons of the chronicle's cards, except flag for
+    level-ups and horseshoe for abilities, so that they differ; reactions show `cheer`).
+  - **Options of a switched-off feature** stay in full but greyed out, with "Switch on "…" to
+    change its options." The folding of option rows (`compact`), their dot and recessed ground,
+    `FeatureBlocks` and the accent mark on feature cards are gone.
+  - **Pictures:** a feature or an option may carry `picture` (a texture path); the detail then
+    shows it above the name (536 × 196 px, inside the padding). None has one yet; without a
+    picture the detail starts with the name. Icons in the entries, as in the mockup, are not
+    built: the media are drawn by `tools/make_media.py`, and the Windows machine has no Python
+    (as of 2026-11-25).
+  - Unchanged: the search (rows in cards, grouped per tab), reset per tab, the notice of a
+    switched-off area, the tabs without settings.
+  - The assistant's decisions within variant B: sizes, the wording of pills and of the line below
+    an entry, that Settings › General and Appearance are shown the same way (as in the mockup),
+    the chips' icons. Checked against the mock only, not yet seen in game. The website's rebuilt
+    window still shows the old list (see "Window" in `docs/website.md`).
+- **Cards:** Tabs without settings (the alias list, "About", empty books) and the search show
+  cards of rows; the search groups them per tab.
 - **Technique for this:** `UI.Shade(texture, direction, from, to)` for gradients (`SetGradient`,
   follows the theme like `UI.Paint`); `Shape:SetGradient` spreads a gradient over the parts of a
   round shape and needs its size. Glow needs no new texture: `UI.Shadow` with an
@@ -168,6 +211,6 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   is not redrawing the text (as above).
 - Unchanged since 2026-11-16: fixed window height, longer pages scroll; the page for the
   addon's own settings is called "Settings" (internally `general`); tagline and
-  tab description say what the player finds there, no technical notes; options of a
-  feature (`child`) sit indented below it and are collapsed while the
-  feature is switched off (narrow, greyed out, value visible); the search shows them in full.
+  tab description say what the player finds there, no technical notes. Options of a feature
+  (`child`) sat indented below it and folded while the feature was off; since 2026-11-25 they
+  belong to its entry in a settings tab (see "Settings tabs"); the search shows them in full.

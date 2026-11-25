@@ -8,6 +8,8 @@
 -- A page has tabs; a tab has blocks; a block is one card of rows. Every row
 -- is described by an "item" (label, help text, getter, setter). Main
 -- features ("areas", see Core/Features.lua) get their page from a layout.
+-- A settings tab (tab.split) shows its items differently: a list of
+-- entries on the left, the chosen one in full on the right.
 
 local _, ns = ...
 local L = ns.L
@@ -26,7 +28,7 @@ local HEADER = TABS + 20
 local BOOK_W, RAIL_GAP = 600, 28
 local RAIL_W = CONTENT_W - BOOK_W - RAIL_GAP
 local NAV_ROW = 34
-local BLOCK_GAP, BLOCK_TITLE, CARD_GAP = 22, 24, 8
+local BLOCK_GAP, BLOCK_TITLE = 22, 24
 
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
 local WINDOW_SCALES = { 80, 90, 100, 110, 120, 130, 140 }
@@ -42,6 +44,7 @@ local pages, pageOrder = {}, {}
 local currentPage, selectedTabs, searchText = nil, {}, ""
 local rows, cards, navButtons = {}, {}, {}
 local renderedKey -- page, tab or search the rows were last laid out for
+local listKey, detailKey -- settings tab and entry the list and the detail were last laid out for
 local railKey -- page and tab the chronicle's rail was last filled for
 local chronicleWho -- the companion the chronicle's book is narrowed to, or nil
 local fellowSort = "last" -- order of the fellow travellers' list: "last" or "time"
@@ -51,6 +54,7 @@ local tidyArmed, tidyToken = false, 0 -- the fellow travellers' tidying up asks 
 local aliasEditor -- input row of the aliases page, once it has been shown
 local embers = {} -- the sparks in the background, one set per ground
 local Render, PlayEmbers, SelectPage, RefreshState -- forward declarations
+local RenderSplit, RefreshSplit -- the settings tabs, see there
 
 -- Grain lies in a band across the top of the window, sidebar and content
 -- alike, and fades out below the tabs.
@@ -66,7 +70,16 @@ local function FeatureItem(feature)
     end
     return {
         kind = "toggle",
+        id = feature.id,
         section = feature.id,
+        -- A picture of what the feature does, shown above it in its
+        -- settings tab: a texture path on the feature (feature.picture).
+        picture = function()
+            return feature.picture
+        end,
+        default = function()
+            return ns:GetDefault(feature.id, "enabled")
+        end,
         label = function()
             return L["f_" .. feature.id]
         end,
@@ -97,12 +110,18 @@ local function OptionItem(feature, option)
     local prefix = "o_" .. feature.id .. "_" .. option.key
     local item = {
         kind = option.type,
+        id = feature.id .. "." .. option.key,
         child = true,
         section = feature.id,
-        -- While its feature is switched off, an option stays listed as a
-        -- slim row without help text; search always shows it in full.
-        compact = function()
-            return ns:GetOption(feature.id, "enabled") ~= true
+        -- Options of a group (option.group) are shown together as chips,
+        -- each with its icon, below a heading of their own.
+        group = option.group,
+        icon = option.icon,
+        picture = function()
+            return option.picture
+        end,
+        default = function()
+            return ns:GetDefault(feature.id, option.key)
         end,
         label = function()
             return L[prefix]
@@ -129,6 +148,15 @@ local function OptionItem(feature, option)
             return list
         end
     end
+    if option.group then
+        local group = "o_" .. feature.id .. "_" .. option.group
+        item.groupLabel = function()
+            return L[group]
+        end
+        item.groupDesc = function()
+            return L[group .. "_desc"]
+        end
+    end
     return item
 end
 
@@ -137,8 +165,12 @@ end
 local function GeneralItem(key, kind, values)
     return {
         kind = kind,
+        id = "general." .. key,
         section = "general",
         key = key,
+        default = function()
+            return ns:GetDefault("general", key)
+        end,
         label = function()
             return L["g_" .. key]
         end,
@@ -159,8 +191,12 @@ end
 local function CategoryItem(category)
     return {
         kind = "toggle",
+        id = "categories." .. category,
         section = "categories",
         key = category,
+        default = function()
+            return ns:GetDefault("categories", category)
+        end,
         label = function()
             return L["area_" .. category]
         end,
@@ -190,12 +226,7 @@ local function FeatureItems(category)
     local items = {}
     for _, feature in ipairs(ns.featureList) do
         if feature.category == category and feature:IsShown() then
-            local item = FeatureItem(feature)
-            -- Whether the feature really runs; its card shows that.
-            item.active = function()
-                return feature.enabled == true
-            end
-            items[#items + 1] = item
+            items[#items + 1] = FeatureItem(feature)
             for _, option in ipairs(feature.options) do
                 items[#items + 1] = OptionItem(feature, option)
             end
@@ -321,26 +352,21 @@ local Initial = UI.Initial
 -- Pages and tabs
 ---------------------------------------------------------------------------
 
--- One card per feature: the feature's row and, below it, its options.
-local function FeatureBlocks(items)
-    local blocks = {}
-    for _, item in ipairs(items) do
-        local block = blocks[#blocks]
-        if item.child and block then
-            block.items[#block.items + 1] = item
-        else
-            blocks[#blocks + 1] = { items = { item }, tight = true, active = item.active }
-        end
-    end
-    return blocks
-end
-
+-- A settings tab of a main feature: its features, each followed by its
+-- options. Shown as entries with the chosen one in full (split).
 local function CategoryTab(category)
     local items = FeatureItems(category)
-    local blocks = FeatureBlocks(items)
+    -- A list of its own: a layout may add to the settings (for reset)
+    -- what it shows in a block of its own.
+    local shown = {}
+    for index, item in ipairs(items) do
+        shown[index] = item
+    end
+    local blocks = { { items = shown } }
     return {
         id = category,
         category = category,
+        split = true,
         label = function()
             return L["cat_" .. category]
         end,
@@ -394,9 +420,11 @@ function layouts.aliases()
     return { names, display }
 end
 
+-- A tab of the addon's own settings, shown like the features' (split).
 local function SimpleTab(id, items)
     return {
         id = id,
+        split = true,
         label = function()
             return L["ui_tab_" .. id]
         end,
@@ -1042,8 +1070,8 @@ function layouts.chronicle()
     record.desc = function()
         return L.ui_tab_record_desc
     end
-    -- How the chronicle names people records nothing: a card of its own
-    -- below the features.
+    -- How the chronicle names people records nothing: an entry of its own
+    -- below the features, under a heading.
     local names = GeneralItem("chronicleNames", "toggle")
     record.settings[#record.settings + 1] = names
     local featureBlocks = record.blocks()
@@ -2080,6 +2108,7 @@ local function TidyItem()
     end
     return {
         kind = "action",
+        id = "tidy",
         label = function()
             return L.ui_fellow_tidy
         end,
@@ -2135,7 +2164,7 @@ function layouts.fellows()
     record.desc = function()
         return L.ui_fellows_record_desc
     end
-    -- Below the switches, a card to tidy the list up. It works on what is
+    -- Below the switches, an entry to tidy the list up. It works on what is
     -- stored, so it stays while remembering is switched off.
     local switches = record.blocks
     record.blocks = function()
@@ -2270,8 +2299,11 @@ end
 -- Rows
 ---------------------------------------------------------------------------
 
-local function ValueText(item)
-    local current = item.get()
+-- The text of a select's value: the chosen one, or the one given.
+local function ValueText(item, current)
+    if current == nil then
+        current = item.get()
+    end
     for _, entry in ipairs(item.values()) do
         if entry.value == current then
             return entry.text
@@ -2375,8 +2407,8 @@ local function ControlWidth(row, kind)
     return 0
 end
 
--- last: the row is the last one of its card. width: of the card.
-local function RowSetItem(row, item, index, flat, last, width)
+-- index: of the row in its card. width: of the card.
+local function RowSetItem(row, item, index, width)
     row.item = item
     row:SetWidth(width)
     local kind = item.kind
@@ -2395,25 +2427,11 @@ local function RowSetItem(row, item, index, flat, last, width)
         row.actionWidth = math.max(wide, row.action:GetWidth())
     end
 
-    local child = item.child and not flat
-    local indent = (child and 44) or (PERSON_ROWS[kind] and 58) or 18
-    local compact = not flat and item.compact ~= nil and item.compact()
-    local padding = compact and 10 or 15
+    local indent = PERSON_ROWS[kind] and 58 or 18
+    local padding = 15
     local controlWidth = ControlWidth(row, kind)
     local textWidth = width - indent - 18 - controlWidth - (controlWidth > 0 and 24 or 0)
 
-    -- An option lies a little deeper in the card than its feature, marked
-    -- with a dot; the line above it runs from edge to edge.
-    local pixel = UI.Pixel(row)
-    row.sunken:SetShown(child and not last)
-    row.sunkenLast:SetShown(child and last)
-    row.bullet:SetShown(child)
-    row.bullet:ClearAllPoints()
-    row.bullet:SetPoint("TOPLEFT", 25, -(padding + 5))
-    local edge = child and pixel or 18
-    row.divider:ClearAllPoints()
-    row.divider:SetPoint("TOPLEFT", edge, 0)
-    row.divider:SetPoint("TOPRIGHT", -edge, 0)
     if PERSON_ROWS[kind] then
         row.initial:SetText(Initial(item.label()))
     end
@@ -2424,16 +2442,13 @@ local function RowSetItem(row, item, index, flat, last, width)
     row.label:SetText(item.label())
 
     local note = item.note and item.note()
-    row.desc:SetShown(not compact)
     row.desc:SetWidth(textWidth)
-    row.desc:SetText(compact and "" or (note or item.desc()))
+    row.desc:SetText(note or item.desc())
     UI.Ink(row.desc, note and "warning" or "textMuted")
 
     local height
     if kind == "aliasEdit" then
         height = 64
-    elseif compact then
-        height = math.max(36, padding * 2 + row.label:GetStringHeight())
     else
         height = math.max(54, padding * 2 + row.label:GetStringHeight() + 4 + row.desc:GetStringHeight())
     end
@@ -2469,20 +2484,10 @@ local function CreateRow(parent)
     row.hover = UI.Round(row, "hover", 8, { inset = 4 })
     row.hover:Hide()
 
+    -- The line above every row but a card's first.
     row.divider = UI.Line(row)
-
-    -- Ground of an option row; rounded where it ends the card.
-    local pixel = UI.Pixel(row)
-    row.sunken = row:CreateTexture(nil, "BACKGROUND", nil, -2)
-    row.sunken:SetPoint("TOPLEFT", pixel, 0)
-    row.sunken:SetPoint("BOTTOMRIGHT", -pixel, 0)
-    UI.Paint(row.sunken, "sunken")
-    row.sunkenLast = UI.Round(row, "sunken", 9, {
-        sublevel = -2,
-        inset = pixel,
-        square = { TOPLEFT = true, TOPRIGHT = true },
-    })
-    row.bullet = UI.Icon(row, "circle", 5, "textMuted")
+    row.divider:SetPoint("TOPLEFT", 18, 0)
+    row.divider:SetPoint("TOPRIGHT", -18, 0)
 
     row.label = UI.Text(row, 13, "text", "medium")
     row.desc = UI.Text(row, 12, "textMuted")
@@ -2514,13 +2519,6 @@ local function CreateCard(parent)
     sheen:SetPoint("TOPLEFT", 10, -pixel)
     sheen:SetPoint("TOPRIGHT", -10, -pixel)
 
-    -- Mark of a card whose feature is switched on.
-    card.mark = card:CreateTexture(nil, "BORDER")
-    card.mark:SetPoint("TOPLEFT", 0, -14)
-    card.mark:SetPoint("BOTTOMLEFT", 0, 14)
-    card.mark:SetWidth(2)
-    UI.Paint(card.mark, "accent")
-
     card.title = UI.Text(card, 12, "textDim", "semibold")
     card.title:SetPoint("BOTTOMLEFT", card, "TOPLEFT", 4, 9)
     card.note = UI.Text(card, 12, "textMuted", "medium")
@@ -2529,12 +2527,567 @@ local function CreateCard(parent)
     return card
 end
 
--- Shows on a feature's card whether the feature runs.
-local function CardRefresh(card)
-    local active = card.block ~= nil and card.block.active ~= nil and card.block.active()
-    card.shape.border:SetColor(active and "cardActive" or "cardBorder")
-    card.mark:SetShown(active)
-end
+---------------------------------------------------------------------------
+-- Settings tabs: the entries on the left, the chosen one in full on the
+-- right: its picture (if it has one), its text and its options. An entry
+-- is an item that is no option of another; the options that follow it
+-- belong to it. A block of its own, so that its names stay inside it.
+---------------------------------------------------------------------------
+
+do
+    local LIST_W, SPLIT_GAP = 296, 20
+    local DETAIL_W = CONTENT_W - LIST_W - SPLIT_GAP
+    local ENTRY_H, ENTRY_GAP, ENTRY_TITLE = 56, 4, 24
+    local DETAIL_PAD, PICTURE_H = 24, 196
+    local CHIP_H, CHIP_GAP, CHIP_COLUMNS = 34, 8, 3
+
+    local entryFrames, entryTitles, detailRows = {}, {}, {}
+    local chosenEntries = {} -- page:tab -> id of the entry shown in full
+    local ChooseEntry
+
+    local function SplitEntries(tab)
+        local list = {}
+        for _, block in ipairs(tab.blocks()) do
+            for index, item in ipairs(block.items) do
+                local last = list[#list]
+                if item.child and last then
+                    last.options[#last.options + 1] = item
+                else
+                    list[#list + 1] = { item = item, options = {}, title = index == 1 and block.title or nil }
+                end
+            end
+        end
+        return list
+    end
+
+    local function IsDisabled(item)
+        return item.disabled ~= nil and item.disabled() or false
+    end
+
+    -- Below an entry's name: why it cannot run, if so; for a switch whether
+    -- it is on and how many options it has; otherwise what it does.
+    local function EntrySub(entry)
+        local item = entry.item
+        local note = item.note and item.note()
+        if note then
+            return note, "warning"
+        end
+        if item.kind ~= "toggle" then
+            return item.desc(), "textMuted"
+        end
+        local state = item.get() and L.ui_state_on or L.ui_state_off
+        local count = #entry.options
+        if count == 1 then
+            return L.ui_entry_option:format(state), "textMuted"
+        elseif count > 1 then
+            return L.ui_entry_options:format(state, count), "textMuted"
+        end
+        return state, "textMuted"
+    end
+
+    local function EntryRefresh(frame, animate)
+        local item = frame.entry.item
+        local kind = item.kind
+        local alpha = IsDisabled(item) and 0.45 or 1
+        frame.label:SetText(item.label())
+        frame.label:SetAlpha(alpha)
+        local sub, token = EntrySub(frame.entry)
+        frame.sub:SetText(sub)
+        UI.Ink(frame.sub, token)
+
+        frame.toggle:SetShown(kind == "toggle")
+        frame.switch:SetShown(kind == "toggle")
+        frame.value:SetShown(kind == "select")
+        frame.dot:SetShown(kind == "swatch")
+        local right = 0
+        if kind == "toggle" then
+            frame.toggle:Set(item.get(), animate)
+            frame.toggle:SetAlpha(alpha)
+            right = 34
+        elseif kind == "select" then
+            frame.value:SetText(ValueText(item))
+            right = math.min(110, math.ceil(frame.value:GetStringWidth()) + 2)
+            frame.value:SetWidth(right)
+        elseif kind == "swatch" then
+            frame.dot:SetVertexColor(UI.AccentSwatch(item.get()))
+            right = 14
+        end
+        local width = LIST_W - 28 - (right > 0 and right + 12 or 0)
+        frame.label:SetWidth(width)
+        frame.sub:SetWidth(width)
+
+        -- The chosen entry lies on a card, with the accent mark at its left.
+        frame.ground.border:SetShown(frame.chosen)
+        frame.ground.fill:SetShown(frame.chosen)
+        frame.mark:SetShown(frame.chosen)
+    end
+
+    -- An entry of the list: name, a line below it and, at the right, its
+    -- switch, its value or its colour. A click chooses it; the switch has a
+    -- hit area of its own.
+    local function CreateEntry(parent)
+        local entry = CreateFrame("Button", nil, parent)
+        entry:SetSize(LIST_W, ENTRY_H)
+        entry:SetFrameLevel(parent:GetFrameLevel() + 2)
+        entry.ground = UI.Card(entry, "card", "cardBorder", 9)
+        entry.hover = UI.Round(entry, "hover", 9, { sublevel = 3 })
+        entry.hover:Hide()
+        entry.mark = entry:CreateTexture(nil, "BORDER")
+        entry.mark:SetPoint("TOPLEFT", 0, -16)
+        entry.mark:SetPoint("BOTTOMLEFT", 0, 16)
+        entry.mark:SetWidth(2)
+        UI.Paint(entry.mark, "accent")
+
+        entry.label = UI.Text(entry, 13, "text", "medium")
+        entry.label:SetPoint("TOPLEFT", 14, -11)
+        entry.label:SetWordWrap(false)
+        entry.sub = UI.Text(entry, 11, "textMuted")
+        entry.sub:SetPoint("TOPLEFT", entry.label, "BOTTOMLEFT", 0, -5)
+        entry.sub:SetWordWrap(false)
+
+        entry.toggle = UI.Toggle(entry)
+        entry.toggle:SetPoint("RIGHT", -14, 0)
+        entry.switch = CreateFrame("Button", nil, entry)
+        entry.switch:SetSize(56, ENTRY_H)
+        entry.switch:SetPoint("RIGHT")
+        entry.switch:SetScript("OnClick", function()
+            local item = entry.entry.item
+            if not IsDisabled(item) then
+                item.set(not item.get())
+            end
+        end)
+        entry.value = UI.Text(entry, 12, "textDim", "medium")
+        entry.value:SetPoint("RIGHT", -14, 0)
+        entry.value:SetJustifyH("RIGHT")
+        entry.value:SetJustifyV("MIDDLE")
+        entry.value:SetWordWrap(false)
+        entry.dot = UI.Icon(entry, "circle", 14)
+        entry.dot:SetPoint("RIGHT", -16, 0)
+
+        entry:SetScript("OnEnter", function(self)
+            if not self.chosen then
+                self.hover:Fade(true)
+            end
+        end)
+        entry:SetScript("OnLeave", function(self)
+            self.hover:Fade(false)
+        end)
+        entry:SetScript("OnClick", function(self)
+            ChooseEntry(self.entry.item.id)
+        end)
+        return entry
+    end
+
+    -- The control at the right of the chosen entry's name, and its width.
+    local function DetailControl(detail, kind)
+        local item = detail.current
+        detail.toggle:SetShown(kind == "toggle")
+        detail.switch:SetShown(kind == "toggle")
+        detail.dropdown:SetShown(kind == "select")
+        detail.swatches:SetShown(kind == "swatch")
+        detail.action:SetShown(kind == "action")
+        if kind == "toggle" then
+            return detail.toggle, 34
+        elseif kind == "select" then
+            return detail.dropdown, detail.dropdown:GetWidth()
+        elseif kind == "swatch" then
+            detail.swatches:SetValues(item.values(), item.get())
+            return detail.swatches, detail.swatches:GetWidth()
+        elseif kind == "action" then
+            -- Room for the longer of its two labels.
+            detail.action:SetLabel(item.confirm())
+            local wide = detail.action:GetWidth()
+            detail.action:SetLabel(item.button())
+            return detail.action, math.max(wide, detail.action:GetWidth())
+        end
+        return nil, 0
+    end
+
+    -- Whether the chosen entry is on, and its default. True if there is one.
+    local function DetailPills(detail)
+        local item = detail.current
+        local first, second = detail.pills[1], detail.pills[2]
+        local default = item.default and item.default()
+        first:Hide()
+        second:Hide()
+        if item.kind == "toggle" then
+            local on = item.get() == true
+            first:Set(on and L.ui_state_on or L.ui_state_off, on and not IsDisabled(item))
+            second:Set(default and L.ui_default_on or L.ui_default_off, false)
+            first:Show()
+            second:Show()
+        elseif item.kind == "select" and default ~= nil then
+            first:Set(L.ui_default_value:format(ValueText(item, default)), false)
+            first:Show()
+        end
+        return first:IsShown()
+    end
+
+    -- Refreshes the chosen entry's controls, pills and chips in place.
+    local function RefreshDetail(animate)
+        local detail = window.detail
+        if not detail or not detail:IsShown() or not detail.current then
+            return
+        end
+        local item = detail.current
+        local alpha = IsDisabled(item) and 0.45 or 1
+        if item.kind == "toggle" then
+            detail.toggle:Set(item.get(), animate)
+            detail.toggle:SetAlpha(alpha)
+        elseif item.kind == "select" then
+            detail.dropdown.text:SetText(ValueText(item))
+            detail.dropdown:SetAlpha(alpha)
+        elseif item.kind == "swatch" then
+            detail.swatches:SetValues(item.values(), item.get())
+        elseif item.kind == "action" then
+            local armed = item.armed()
+            detail.action:SetLabel(armed and item.confirm() or item.button())
+            detail.action:SetTone(armed and "danger" or nil)
+            detail.action:SetDisabled(not item.usable())
+        end
+        DetailPills(detail)
+        local on, total = 0, 0
+        for _, chip in ipairs(detail.chips) do
+            if chip:IsShown() then
+                local option = chip.option
+                chip:Set(option.label(), option.icon, option.get(), IsDisabled(option))
+                total = total + 1
+                on = on + (option.get() and 1 or 0)
+            end
+        end
+        detail.chipsCount:SetText(L.ui_chips_count:format(on, total))
+    end
+
+    -- A chip switches its option; pointed at, the line below the chips
+    -- explains it.
+    local function NewChip(detail)
+        local chip = UI.Chip(detail.scroll.content, function(self)
+            self.option.set(not self.option.get())
+        end)
+        chip.onEnter = function(self)
+            detail.hint:SetText(self.option.desc())
+        end
+        chip.onLeave = function()
+            detail.hint:SetText(detail.hintText or "")
+        end
+        detail.chips[#detail.chips + 1] = chip
+        return chip
+    end
+
+    -- Lays out the right part of a settings tab for one entry: its picture
+    -- (if it has one), name and control, whether it is on and its default, its
+    -- text, then its options: rows with their help text, a group as chips.
+    local function ShowEntry(entry)
+        local detail, item = window.detail, entry.item
+        detail.current = item
+        local body = detail.scroll.content
+        local width = DETAIL_W - 2 * DETAIL_PAD
+        local y = DETAIL_PAD - 2
+
+        local picture = item.picture and item.picture()
+        detail.picture:SetShown(picture ~= nil)
+        if picture then
+            detail.picture:SetTexture(picture)
+            y = DETAIL_PAD + PICTURE_H + 20
+        end
+
+        -- The control sits on the middle of the name's first line.
+        local control, controlWidth = DetailControl(detail, item.kind)
+        detail.title:ClearAllPoints()
+        detail.title:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD, -y)
+        detail.title:SetWidth(width - (controlWidth > 0 and controlWidth + 16 or 0))
+        detail.title:SetText(item.label())
+        if control then
+            control:ClearAllPoints()
+            control:SetPoint("RIGHT", body, "TOPRIGHT", -DETAIL_PAD, -(y + 11))
+        end
+        y = y + math.max(22, detail.title:GetStringHeight()) + 12
+
+        if DetailPills(detail) then
+            detail.pills[1]:ClearAllPoints()
+            detail.pills[1]:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD, -y)
+            y = y + 22 + 14
+        end
+
+        -- What it does, or why it cannot run.
+        local note = item.note and item.note()
+        detail.desc:ClearAllPoints()
+        detail.desc:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD, -y)
+        detail.desc:SetWidth(width)
+        detail.desc:SetText(note or item.desc())
+        UI.Ink(detail.desc, note and "warning" or "textDim")
+        y = y + detail.desc:GetStringHeight()
+
+        local plain, grouped = {}, {}
+        for _, option in ipairs(entry.options) do
+            local list = option.group and grouped or plain
+            list[#list + 1] = option
+        end
+        -- Options of a switched-off feature stay visible, greyed, with a word why.
+        local off = #entry.options > 0 and item.kind == "toggle" and not item.get()
+        detail.off:SetShown(off)
+        if off then
+            y = y + 16
+            detail.off:ClearAllPoints()
+            detail.off:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD, -y)
+            detail.off:SetWidth(width)
+            detail.off:SetText(L.ui_options_off:format(item.label()))
+            y = y + detail.off:GetStringHeight()
+        end
+
+        detail.optionsTitle:SetShown(#plain > 0)
+        detail.options:SetShown(#plain > 0)
+        if #plain > 0 then
+            y = y + 24
+            detail.optionsTitle:ClearAllPoints()
+            detail.optionsTitle:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD + 2, -y)
+            detail.optionsTitle:SetText(L.ui_options)
+            y = y + 22
+            local offset = 0
+            for index, option in ipairs(plain) do
+                local row = detailRows[index]
+                if not row then
+                    row = CreateRow(detail.options)
+                    detailRows[index] = row
+                end
+                RowSetItem(row, option, index, width)
+                row:ClearAllPoints()
+                row:SetPoint("TOPLEFT", detail.options, "TOPLEFT", 0, -offset)
+                row:Show()
+                offset = offset + row.height
+            end
+            detail.options:ClearAllPoints()
+            detail.options:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD, -y)
+            detail.options:SetSize(width, math.max(1, offset))
+            y = y + offset
+        end
+        for index = #plain + 1, #detailRows do
+            detailRows[index]:Hide()
+        end
+
+        detail.chipsTitle:SetShown(#grouped > 0)
+        detail.chipsCount:SetShown(#grouped > 0)
+        detail.hint:SetShown(#grouped > 0)
+        if #grouped > 0 then
+            y = y + 24
+            detail.chipsTitle:ClearAllPoints()
+            detail.chipsTitle:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD + 2, -y)
+            detail.chipsTitle:SetText(grouped[1].groupLabel())
+            detail.chipsCount:ClearAllPoints()
+            detail.chipsCount:SetPoint("TOPRIGHT", body, "TOPRIGHT", -DETAIL_PAD - 2, -y)
+            y = y + 22
+            local chipWidth = math.floor((width - CHIP_GAP * (CHIP_COLUMNS - 1)) / CHIP_COLUMNS)
+            for index, option in ipairs(grouped) do
+                local chip = detail.chips[index] or NewChip(detail)
+                chip.option = option
+                local column, line = (index - 1) % CHIP_COLUMNS, math.floor((index - 1) / CHIP_COLUMNS)
+                chip:ClearAllPoints()
+                chip:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD + column * (chipWidth + CHIP_GAP),
+                    -(y + line * (CHIP_H + CHIP_GAP)))
+                chip:SetWidth(chipWidth)
+                chip:Show()
+            end
+            local lines = math.ceil(#grouped / CHIP_COLUMNS)
+            y = y + lines * CHIP_H + (lines - 1) * CHIP_GAP + 12
+            detail.hintText = grouped[1].groupDesc()
+            detail.hint:ClearAllPoints()
+            detail.hint:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD + 2, -y)
+            detail.hint:SetWidth(width - 4)
+            detail.hint:SetText(detail.hintText)
+            y = y + 34 -- room for an explanation of two lines
+        end
+        for index = #grouped + 1, #detail.chips do
+            detail.chips[index]:Hide()
+        end
+
+        detail.scroll:SetContentHeight(y + DETAIL_PAD)
+        RefreshDetail(false)
+    end
+
+    local function CreateDetail()
+        local detail = CreateFrame("Frame", nil, window)
+        detail:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD + LIST_W + SPLIT_GAP, -(HEAD + HEADER))
+        detail:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -PAD, 18)
+        UI.Card(detail, "card", "cardBorder", 10)
+        local pixel = UI.Pixel(detail)
+        local sheen = UI.Line(detail, "sheenSoft")
+        sheen:SetPoint("TOPLEFT", 10, -pixel)
+        sheen:SetPoint("TOPRIGHT", -10, -pixel)
+
+        local scroll = UI.Scroll(detail)
+        scroll:SetPoint("TOPLEFT", pixel, -pixel)
+        scroll:SetPoint("BOTTOMRIGHT", -pixel, pixel)
+        scroll.content:SetWidth(DETAIL_W - 2 * pixel)
+        detail.scroll = scroll
+        local body = scroll.content
+
+        detail.picture = body:CreateTexture(nil, "ARTWORK")
+        detail.picture:SetPoint("TOPLEFT", DETAIL_PAD, -DETAIL_PAD)
+        detail.picture:SetSize(DETAIL_W - 2 * DETAIL_PAD, PICTURE_H)
+        detail.picture:Hide()
+
+        detail.title = UI.Text(body, 17, "text", "semibold")
+        detail.toggle = UI.Toggle(body)
+        detail.switch = CreateFrame("Button", nil, body)
+        detail.switch:SetSize(56, 40)
+        detail.switch:SetPoint("CENTER", detail.toggle, "CENTER")
+        detail.switch:SetScript("OnClick", function()
+            local item = detail.current
+            if not IsDisabled(item) then
+                item.set(not item.get())
+            end
+        end)
+        detail.dropdown = UI.Dropdown(body)
+        detail.dropdown.open = CreateFrame("Button", nil, detail.dropdown)
+        detail.dropdown.open:SetAllPoints(detail.dropdown)
+        detail.dropdown.open:SetScript("OnClick", function()
+            local item = detail.current
+            if not IsDisabled(item) then
+                UI.OpenMenu(detail.dropdown, item.values(), item.get(), item.set)
+            end
+        end)
+        detail.swatches = UI.Swatches(body, function(value)
+            detail.current.set(value)
+        end)
+        detail.action = UI.Button(body, function()
+            detail.current.click()
+        end)
+
+        detail.pills = { UI.Pill(body), UI.Pill(body) }
+        detail.pills[2]:SetPoint("LEFT", detail.pills[1], "RIGHT", 6, 0)
+        detail.desc = UI.Text(body, 13, "textDim")
+        detail.desc:SetSpacing(3)
+        detail.off = UI.Text(body, 12, "textMuted")
+        detail.optionsTitle = UI.Text(body, 12, "textDim", "semibold")
+        -- The options lie a little deeper than the card.
+        detail.options = CreateFrame("Frame", nil, body)
+        UI.Card(detail.options, "window", "cardBorder", 8)
+        detail.chipsTitle = UI.Text(body, 12, "textDim", "semibold")
+        detail.chipsCount = UI.Text(body, 12, "textMuted", "medium")
+        detail.chipsCount:SetJustifyH("RIGHT")
+        detail.hint = UI.Text(body, 12, "textMuted")
+        detail.hint:SetSpacing(2)
+        detail.chips = {}
+        detail:Hide()
+        window.detail = detail
+    end
+
+    local function BuildSplit()
+        local list = UI.Scroll(window)
+        list:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -(HEAD + HEADER))
+        list:SetPoint("BOTTOMLEFT", window, "BOTTOMLEFT", SIDEBAR + PAD, 18)
+        list:SetWidth(LIST_W)
+        list.content:SetWidth(LIST_W)
+        list:Hide()
+        window.list = list
+        CreateDetail()
+    end
+
+    -- Shows the entries of a settings tab and the chosen one, or hides both.
+    function RenderSplit(page, tab, shown)
+        if not shown then
+            if window.list then
+                window.list:SetContentHeight(1) -- the thumbs lie outside the frames
+                window.list:Hide()
+                window.detail.scroll:SetContentHeight(1)
+                window.detail:Hide()
+            end
+            listKey, detailKey = nil, nil
+            return
+        end
+        if not window.list then
+            BuildSplit()
+        end
+        local list = SplitEntries(tab)
+        local where = page.id .. ":" .. tab.id
+        local chosen = list[1]
+        for _, entry in ipairs(list) do
+            if entry.item.id == chosenEntries[where] then
+                chosen = entry
+            end
+        end
+        chosenEntries[where] = chosen and chosen.item.id or nil
+
+        local content = window.list.content
+        local y, titles = 0, 0
+        for index, entry in ipairs(list) do
+            if entry.title then
+                titles = titles + 1
+                local heading = entryTitles[titles]
+                if not heading then
+                    heading = UI.Text(content, 12, "textDim", "semibold")
+                    entryTitles[titles] = heading
+                end
+                y = y + (index > 1 and 12 or 0)
+                heading:ClearAllPoints()
+                heading:SetPoint("TOPLEFT", content, "TOPLEFT", 4, -y)
+                heading:SetText(entry.title)
+                heading:Show()
+                y = y + ENTRY_TITLE
+            end
+            local frame = entryFrames[index]
+            if not frame then
+                frame = CreateEntry(content)
+                entryFrames[index] = frame
+            end
+            frame.entry = entry
+            frame.chosen = entry == chosen
+            frame.hover:Hide()
+            frame:ClearAllPoints()
+            frame:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
+            EntryRefresh(frame, false)
+            frame:Show()
+            y = y + ENTRY_H + ENTRY_GAP
+        end
+        for index = #list + 1, #entryFrames do
+            entryFrames[index]:Hide()
+        end
+        for index = titles + 1, #entryTitles do
+            entryTitles[index]:Hide()
+        end
+        window.list:Show()
+        window.list:SetContentHeight(y)
+        if where ~= listKey then
+            listKey = where
+            window.list:ScrollToTop()
+        end
+
+        window.detail:SetShown(chosen ~= nil)
+        if chosen then
+            ShowEntry(chosen)
+            local key = where .. ":" .. chosen.item.id
+            if key ~= detailKey then
+                detailKey = key
+                window.detail.scroll:ScrollToTop()
+            end
+        end
+    end
+
+    -- Refreshes the entries and the chosen one in place.
+    function RefreshSplit(animate)
+        if not window.list or not window.list:IsShown() then
+            return
+        end
+        for _, frame in ipairs(entryFrames) do
+            if frame:IsShown() then
+                EntryRefresh(frame, animate)
+            end
+        end
+        for _, row in ipairs(detailRows) do
+            if row:IsShown() then
+                RowRefresh(row, animate)
+            end
+        end
+        RefreshDetail(animate)
+    end
+
+    function ChooseEntry(id)
+        local page = pages[currentPage]
+        chosenEntries[page.id .. ":" .. CurrentTab(page).id] = id
+        tidyArmed = false
+        Render()
+    end
+end -- settings tabs
 
 ---------------------------------------------------------------------------
 -- Rendering
@@ -2673,11 +3226,7 @@ function RefreshState(animate)
             RowRefresh(rows[i], animate)
         end
     end
-    for i = 1, #cards do
-        if cards[i]:IsShown() then
-            CardRefresh(cards[i])
-        end
-    end
+    RefreshSplit(animate)
     UpdateResetButton()
     RefreshNav()
     RefreshTabs()
@@ -2713,6 +3262,14 @@ function Render()
     window.offNotice:SetShown(off)
     window.offNotice.text:SetText(L.ui_off_notice:format(page.title()))
     window.offNotice.button:SetLabel(L.ui_off_enable)
+
+    -- A settings tab lists its entries and shows the chosen one instead of
+    -- cards of rows; the search shows rows as everywhere.
+    local split = not searching and not off and tab.split == true
+    if split then
+        blocks = {}
+    end
+    window.scroll:SetShown(not split)
 
     -- A fellow traveller's story, if one is open and the person still there.
     local storyPerson, storyChapters
@@ -2797,18 +3354,15 @@ function Render()
                 row = CreateRow(content)
                 rows[rowCount] = row
             end
-            RowSetItem(row, item, index, searching, index == #block.items, width)
+            RowSetItem(row, item, index, width)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(y + offset))
             row:Show()
             offset = offset + row.height
         end
-        card.block = block
         card:SetHeight(math.max(1, offset))
         card:Show()
-        CardRefresh(card)
-        -- Cards of single features sit close together.
-        y = y + offset + (block.tight and not searching and CARD_GAP or BLOCK_GAP)
+        y = y + offset + BLOCK_GAP
     end
     for index = rowCount + 1, #rows do
         rows[index]:Hide()
@@ -2899,6 +3453,8 @@ function Render()
         window.railScroll:SetContentHeight(1) -- its thumb lies outside it
         window.railScroll:Hide()
     end
+
+    RenderSplit(page, tab, split)
 
     window.search.placeholder:SetText(L.ui_search)
     RefreshNav()
@@ -3339,6 +3895,7 @@ local function Build()
         DisarmReset()
         tidyArmed = false
         renderedKey, railKey, chronicleWho, fellowStory = nil, nil, nil, nil
+        listKey, detailKey = nil, nil
         window.search.edit:ClearFocus()
         if aliasEditor then
             aliasEditor:ClearFocus()
@@ -3411,9 +3968,9 @@ ns:On("OPTION_CHANGED", function(section, key)
     elseif section == "general" and key == "embers" then
         PlayEmbers()
     end
-    -- Switching a feature folds or unfolds its options, which moves rows;
-    -- a main feature's switch swaps its page for a notice; the chronicle
-    -- names people anew, or shows reactions or not.
+    -- Switching a feature greys its options and says why, which moves what
+    -- follows; a main feature's switch swaps its page for a notice; the
+    -- chronicle names people anew, or shows reactions or not.
     local feature = ns.features[section]
     if (key == "enabled" and feature and #feature.options > 0) or section == "categories"
         or (section == "general" and key == "chronicleNames") or (section == "sharing" and key == "reactions") then

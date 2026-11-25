@@ -57,6 +57,10 @@ the index there says which file it is in.
   once and one to someone offline at their next login. With one account the sample entries
   (`/fam chronicle demo`) show the look: reactions received on the level 40, one given on
   Borin's boss.
+- **Settings tabs (2026-11-25, checked against the mock only, not yet in game):** see "Settings
+  tabs" in `docs/window.md`. Open in game: whether the list and the detail scroll by the mouse
+  wheel, whether the switch in an entry and the one beside the name react (each has a hit area of
+  its own), how pills and chips look, whether long names are cut off cleanly.
 - **New window (2026-11-18, checked against the mock only, not yet in game):** see "The
   window" below. The Inter fonts load (see "Font"). Open in game: whether rounded corners, shadows and hairlines look clean, switching
   the colour schemes, the sliding tab marker, gradients and glow effects.
