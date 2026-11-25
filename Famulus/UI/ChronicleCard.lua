@@ -1,5 +1,5 @@
--- What a card of the chronicle's book holds (UI/Book.lua): whose event it
--- is in a sunken strip at the top (none for the player's own), below it
+-- What a card of the chronicle's book holds (UI/Book.lua): a sunken strip
+-- at the top with whose event it is and the icon of its kind, below it
 -- the picture, and beside that the text and the time and place in the
 -- foot. The card is as high as
 -- that needs. The book sets the room inside the card's edge (UI.BookPad),
@@ -10,7 +10,7 @@
 --       content = UI.ChronicleCard,
 --       weight = "low" or "medium" or "high", -- see WEIGHTS
 --       kind, texture, icon, number, count, item, spell, -- the picture (UI.SetBookPicture)
---       chip = { initial = "A", text = "Companion", class = "MAGE" or nil } or nil,
+--       chip = { text = "Companion", class = "MAGE" or nil },
 --       title = "Fallen", detail = "at level 13" or nil,
 --       footer = "21:14  ·  Duskwood",
 --   }
@@ -20,7 +20,8 @@ local UI = ns.UI
 
 local LINE, LINE_GAP = 14, 4 -- the foot, and its distance from the text
 local STRIP = 28 -- the sunken strip at the top that names whose event it is
-local CHIP = 18 -- the class icon or initial in it
+local CHIP = 18 -- the class icon in it
+local KIND = 13 -- the icon of the event's kind, on the strip's right
 local TEXT_GAP = 12 -- between the picture and the text, whatever its size
 
 -- How much an event weighs: its picture and headline. The book makes a
@@ -45,17 +46,14 @@ local function Build(part)
     local stripLine = UI.Line(strip)
     stripLine:SetPoint("BOTTOMLEFT", pixel, 0)
     stripLine:SetPoint("BOTTOMRIGHT", -pixel, 0)
-    part.chipDot = UI.Icon(strip, "circle", CHIP, "accentSoft")
-    part.chipDot:SetPoint("LEFT", strip, "LEFT", UI.BookPad, 0)
-    part.chipInitial = UI.Text(strip, 10, "accent", "semibold")
-    part.chipInitial:SetPoint("CENTER", part.chipDot, "CENTER")
-    part.chipInitial:SetJustifyH("CENTER")
-    -- Where the class is known, its icon instead of the initial.
+    -- Whose event it is: the class icon where it is known, and the name.
     part.chipClass = UI.ClassIcon(strip, CHIP)
-    part.chipClass:SetPoint("CENTER", part.chipDot, "CENTER")
+    part.chipClass:SetPoint("LEFT", strip, "LEFT", UI.BookPad, 0)
     part.chipText = UI.Text(strip, 11, "textMuted")
-    part.chipText:SetPoint("LEFT", part.chipDot, "RIGHT", 6, 0)
     part.chipText:SetWordWrap(false)
+    -- And on the right, the icon of its kind.
+    part.kindIcon = UI.Icon(strip, "sparkle", KIND, "accent")
+    part.kindIcon:SetPoint("RIGHT", strip, "RIGHT", -UI.BookPad, 0)
     part.title = UI.Text(part, 13, "text", "medium")
     part.title:SetSpacing(1)
     part.detail = UI.Text(part, 12, "textMuted")
@@ -75,18 +73,15 @@ function UI.ChronicleCard(part, story, width)
     local textWidth = width - pad * 2 - size - TEXT_GAP
     UI.SetBookPicture(part, story, size, weight.number)
 
-    -- The head: whose event it is.
-    local chip = story.chip
-    local classShown = UI.SetClass(part.chipClass, chip and chip.class)
-    part.strip:SetShown(chip ~= nil)
-    part.chipDot:SetShown(chip ~= nil and not classShown)
-    part.chipInitial:SetShown(chip ~= nil and not classShown)
-    part.chipText:SetShown(chip ~= nil)
-    if chip then
-        part.chipInitial:SetText(chip.initial or "")
-        part.chipText:SetWidth(width - pad * 2 - CHIP - 6)
-        part.chipText:SetText(chip.text or "")
-    end
+    -- The strip: whose event it is, and the icon of its kind.
+    local chip = story.chip or {}
+    local classShown = UI.SetClass(part.chipClass, chip.class)
+    local nameLeft = pad + (classShown and CHIP + 6 or 0)
+    part.chipText:ClearAllPoints()
+    part.chipText:SetPoint("LEFT", part.strip, "LEFT", nameLeft, 0)
+    part.chipText:SetWidth(math.max(1, width - nameLeft - pad - KIND - 8))
+    part.chipText:SetText(chip.text or "")
+    part.kindIcon:SetTexture(UI.media[story.icon or look.mark] or UI.media[look.mark])
 
     -- The text, as high as it is.
     part.title:SetWidth(textWidth)
@@ -110,7 +105,7 @@ function UI.ChronicleCard(part, story, width)
     -- the same height, and the foot ends with the taller of the two.
     -- Below the strip the room is the book's at the sides: the strip's line
     -- takes a pixel of it like the frame's hairline does.
-    local body = chip and STRIP + pad - 1 or UI.BookPadTop
+    local body = STRIP + pad - 1
     local blockHeight = textHeight + LINE_GAP + LINE
     local bodyHeight = math.max(size, blockHeight)
     local height = math.floor(body + bodyHeight + pad + 0.5)

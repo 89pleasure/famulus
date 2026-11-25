@@ -1733,8 +1733,9 @@ check(events[2].top > events[1].top and events[2].top < events[1].top + events[1
     and events[2].top + events[2].cardHeight / 2 >= events[1].top + events[1].cardHeight / 2 + 30,
     "each side runs on by itself: a card reaches into the height of the one across, the dots keep apart")
 check(events[1].story.chip and events[1].story.chip.text == "Jaina Proudmoore" and events[1].story.chip.initial == "J"
-    and events[1].chipText:IsShown() and not events[2].chipText:IsShown() and events[1].foot == nil,
-    "a companion's event names them in the head of the card, not in the headline; the player's own leaves it empty")
+    and events[1].chipText:GetText() == "Jaina Proudmoore" and events[1].foot == nil
+    and events[2].strip:IsShown() and events[2].chipText:GetText() == (Chronicle.Character() or ""),
+    "every card names whose event it is in its strip, not in the headline; the player's own name their character")
 check(events[1].number:IsShown() and events[1].number:GetText() == "20" and not events[1].icon:IsShown()
     and events[1].photo:IsShown() and events[1].dim:IsShown() and events[1].story.texture == ns.UI.gameIcons.level
     and events[1].story.weight == "high" and events[1].bar:IsShown(),
@@ -1755,23 +1756,24 @@ do
         same = same and title.mockPoint[4] - picture.mockPoint[4] - picture:GetWidth()
             == events[1].title.mockPoint[4] - events[1].picture.mockPoint[4] - events[1].picture:GetWidth()
     end
-    check(same and not events[2].chipText:IsShown() and events[2].title.mockPoint[5] > events[1].title.mockPoint[5],
-        "the text keeps the same distance from the picture on every card; without a name the card has no head line")
+    check(same and events[2].title.mockPoint[5] == events[1].title.mockPoint[5],
+        "the text keeps the same distance from the picture on every card, and begins below the strip on each")
 end
 check(events[4].card:GetWidth() < events[2].card:GetWidth() and events[2].card:GetWidth() < events[6].card:GetWidth()
     and events[6].card:GetWidth() == (window.book:GetWidth() - 44) / 2
     and events[4].card.mockPoint[1] == (events[4].onLeft and "TOPRIGHT" or "TOPLEFT"),
     "the book sets a card's width by its weight, and a narrower card keeps to the line")
-check(events[1].strip:IsShown() and events[1].chipDot.mockPoint[4] == events[1].picture.mockPoint[4]
-    and events[1].picture.mockPoint[5] <= -28 and not events[2].strip:IsShown(),
-    "a companion's name stands in a sunken strip of its own above the picture; the player's own have none")
+check(events[1].strip:IsShown() and events[2].strip:IsShown() and events[1].picture.mockPoint[5] <= -28
+    and events[1].kindIcon:IsShown() and events[1].kindIcon.mockPoint[1] == "RIGHT" and events[1].mark == nil
+    and events[1].dot:IsShown() and events[1].glow:IsShown(),
+    "the name stands in a sunken strip above the picture, the icon of the kind at its right; on the line a glowing dot")
 do
     local level = true
     for index = 1, 6 do
         level = level and events[index].picture.mockPoint[5] == events[index].title.mockPoint[5]
     end
-    check(level and events[2].picture.mockPoint[4] == ns.UI.BookPad and events[2].picture.mockPoint[5] == -ns.UI.BookPadTop
-    and events[6].picture.mockPoint[5] == -ns.UI.BookPadTop and events[1].picture.mockPoint[5] == -(28 + ns.UI.BookPad - 1),
+    check(level and events[2].picture.mockPoint[4] == ns.UI.BookPad and events[2].picture.mockPoint[5] == -(28 + ns.UI.BookPad - 1)
+    and events[6].picture.mockPoint[5] == events[2].picture.mockPoint[5] and events[1].picture.mockPoint[5] == events[2].picture.mockPoint[5],
     "picture and text begin at the same height; the room inside the edge and below the strip is the book's, the same for every weight")
 end
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
@@ -1816,16 +1818,16 @@ do -- a click on a companion narrows the book to them, a second one widens it ag
 end
 do -- the class beside a companion's name, and the character name behind an alias
     local first = bookFrames("story")[1]
-    check(first.chipInitial:IsShown() and first.chipDot:IsShown() and not first.chipClass:IsShown()
+    check(not first.chipClass:IsShown() and first.chipText.mockPoint[4] == ns.UI.BookPad
         and people.rows[1].initial:IsShown() and not people.rows[1].class:IsShown(),
-        "while the class is not known, the initial stands beside the name")
+        "while the class is not known, the name stands alone in the book's strip; the rail shows the initial")
     Chronicle.Class("Jaina Proudmoore", "MAGE")
     ns.AliasService.Set("Jaina Proudmoore", "Anna")
     mock.Advance(0.1)
     first = bookFrames("story")[1]
     local row = railCard("people").rows[1]
-    check(first.story.chip.class == "MAGE" and first.chipClass:IsShown() and not first.chipInitial:IsShown()
-        and not first.chipDot:IsShown() and row.class:IsShown() and not row.initial:IsShown() and not row.avatar:IsShown(),
+    check(first.story.chip.class == "MAGE" and first.chipClass:IsShown() and first.chipText.mockPoint[4] > ns.UI.BookPad
+        and row.class:IsShown() and not row.initial:IsShown() and not row.avatar:IsShown(),
         "a known class shows its icon instead, in the book and in the rail")
     check(first.chipText:GetText() == "Anna (Jaina Proudmoore)" and row.name:GetText() == "Anna (Jaina Proudmoore)"
         and (first.story.detail == nil or not first.story.detail:find("Proudmoore", 1, true)),
@@ -1981,7 +1983,8 @@ end
 mock.Click(tabButton("My journey"))
 mock.Advance(0.1)
 events = bookFrames("story")
-check(#events == 5 and events[1].story.title == "Challenge completed: Challenge 501" and events[1].story.chip == nil,
+check(#events == 5 and events[1].story.title == "Challenge completed: Challenge 501"
+    and events[1].story.chip.text == Chronicle.Character() and events[1].strip:IsShown(),
     "my journey: only my own")
 mock.Click(tabButton("Friends"))
 mock.Advance(0.1)
@@ -2047,7 +2050,7 @@ do -- an item is shown with the game's icon of it, in its own colours
     local mine, theirs
     for _, each in ipairs(bookFrames("story")) do
         if each.story.kind == "skill" then
-            if each.story.chip then
+            if each.story.chip.text == "Jaina Proudmoore" then
                 theirs = each
             else
                 mine = each

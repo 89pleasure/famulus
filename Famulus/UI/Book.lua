@@ -13,8 +13,7 @@
 --                                       -- heading, the zones in the order of time
 --       events = { {
 --           content = UI.ChronicleCard, -- builds what the card holds, see below
---           kind = "level",             -- the icon on the line, see PICTURES
---           icon = "horseshoe",         -- optional: an icon of its own (UI.media)
+--           kind = "level",             -- for its picture, see PICTURES
 --           weight = "low" or "medium" or "high", -- optional: how wide the card
 --                                       -- is, see WIDTHS; without, as wide as can be
 --           big = true,                 -- a milestone: accent border and mark
@@ -39,9 +38,9 @@ local UI = ns.UI
 
 local AXIS = 44 -- width of the column the line runs through
 local GAP = 14 -- between two events
-local DOT = 22
+local DOT, GLOW = 6, 18 -- the glowing dot on the line, and its halo
 local PHOTO_INSET = 2 -- an icon of the game fills its frame but for a fine line
-local DOT_GAP = DOT + 12 -- between the dots of two events on the line
+local DOT_GAP = 34 -- between the dots of two events on the line
 -- How wide a card is, by its weight: a share of its side of the book. A
 -- narrower card keeps to the line.
 local WIDTHS = { low = 0.8, medium = 0.9, high = 1 }
@@ -59,9 +58,9 @@ local ROUTE_GAP, ROUTE_H, ROUTE_PAD = 8, 22, 9 -- the route below a heading
 local ROUTE_ARROW = 10 -- the arrow between two zones of the route
 local ROUTE_STEP = 6 -- between a plate and an arrow
 
--- Per kind: the picture's icon (none: the number), its colours, and the
--- icon on the line. Also used by the cards' contents and the live feed
--- (UI/Feed.lua) as UI.BookPictures.
+-- Per kind: the picture's icon (none: the number), its colours, and a
+-- small icon of the kind (mark) for a card's content to show. Used by the
+-- cards' contents and the live feed (UI/Feed.lua) as UI.BookPictures.
 local PICTURES = {
     level = { fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "sparkle" },
     achievement = { icon = "star", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "star" },
@@ -340,16 +339,14 @@ local function CreateEvent(book)
     event:SetWidth(book.width)
 
     -- The dot that sits on the line (the line itself belongs to the chapter).
-    event.ring = UI.Icon(event, "circle", DOT, "accentLine", "BORDER")
-    event.core = UI.Icon(event, "circle", DOT - 2, "window", "ARTWORK")
-    event.core:SetPoint("CENTER", event.ring, "CENTER")
-    event.mark = UI.Icon(event, "sparkle", 11, "accent", "OVERLAY")
+    -- A glowing dot in the accent, like what is active elsewhere in the window.
+    event.dot = UI.Icon(event, "circle", DOT, "accent", "ARTWORK")
+    event.glow = UI.Halo(event, event.dot, GLOW, "accentGlow", "BORDER")
     -- A short line from the dot to its card, so that with cards on both
     -- sides it is plain which dot belongs to which.
     event.tick = event:CreateTexture(nil, "BACKGROUND")
     event.tick:SetSize(AXIS / 2 - DOT / 2, UI.Pixel(event))
     UI.Paint(event.tick, "accentLine")
-    event.mark:SetPoint("CENTER", event.ring, "CENTER")
     local card = CreateFrame("Frame", nil, event)
     event.card = card
     -- A story with onClick can be clicked; its card lights up under the
@@ -390,7 +387,6 @@ end
 local function EventSet(event, story, onLeft, width)
     event.story = story
     event.onLeft = onLeft
-    local look = PICTURES[story.kind] or PICTURES.zone
     local column = math.floor((width - AXIS) / 2 * (WIDTHS[story.weight] or 1) + 0.5)
     local card = event.card
 
@@ -426,13 +422,12 @@ local function EventSet(event, story, onLeft, width)
     card:EnableMouse(story.onClick ~= nil)
     event.hover:Hide()
     event.bar:SetShown(big)
-    event.mark:SetTexture(UI.media[story.icon or look.mark] or UI.media[look.mark])
 
     -- The dot at the height of the card's middle.
-    event.ring:ClearAllPoints()
-    event.ring:SetPoint("CENTER", event, "TOP", 0, -cardHeight / 2)
+    event.dot:ClearAllPoints()
+    event.dot:SetPoint("CENTER", event, "TOP", 0, -cardHeight / 2)
     event.tick:ClearAllPoints()
-    event.tick:SetPoint(onLeft and "RIGHT" or "LEFT", event.ring, onLeft and "LEFT" or "RIGHT", 0, 0)
+    event.tick:SetPoint(onLeft and "RIGHT" or "LEFT", event.dot, onLeft and "LEFT" or "RIGHT", 0, 0)
 
     event.cardHeight = cardHeight
     event:SetHeight(cardHeight)

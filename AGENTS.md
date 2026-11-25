@@ -576,6 +576,17 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     bündig mit dem Bild, nicht mehr über dem Text rechts vom Bild; die Reihe ist ein vertiefter
     Streifen über die ganze Kartenbreite wie früher der Name unten (`sunken`, oben rund, unten
     eine feine Linie, 28 px hoch, Klassensymbol 18 px).
+  - **Streifen mit Typ-Icon, Punkte ohne Symbol (Wunsch des Auftraggebers, 2026-11-25):** Der
+    Streifen steht seitdem auf jeder Karte der Chronik, bei eigenen Ereignissen mit dem Namen
+    des eigenen Charakters (`ChronicleService.Character`, Klasse aus `ChronicleService.Class`;
+    gesetzt in `ChronicleRun`). Rechtsbündig darin das Symbol der Art (`mark` aus
+    `UI.BookPictures`, oder `story.icon` wie das Hufeisen), 13 px in Akzentfarbe; vorher stand es
+    auf dem Punkt der Linie. Der Kreis mit dem Anfangsbuchstaben links vom Namen ist entfallen:
+    links steht das Klassensymbol, wo die Klasse bekannt ist, sonst beginnt der Name am Rand
+    (Entscheidung des Assistenten: wörtlich „das Initial-Icon kann weg“, das Klassensymbol
+    bleibt). Die Punkte auf der Linie sind leuchtende Punkte in Akzentfarbe wie früher die
+    Anzeige „x von y aktiv“ (6 px, `UI.Halo` mit `accentGlow`, 18 px), in allen Büchern, also
+    auch bei den Weggefährten (Book-Design).
     Der Fuß nennt immer Uhrzeit und Ort („21:14 · Dunkelküste“, ohne Ort nur die Uhrzeit).
   - **Höhe nach Inhalt, gleiche Kanten (Wunsch des Auftraggebers nach dem ersten Screenshot,
     2026-11-25):** Die erste Fassung hielt die Kopfzeile auch ohne Namen und immer zwei Zeilen
@@ -630,8 +641,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     unverändert ist.
 
 - **Bilder sind Symbole des Spiels (Wunsch des Auftraggebers, 2026-11-19):** Sie sind eckig und es
-  gibt sehr viele; die eigenen Zeichnungen (`skull.tga` usw.) stehen nur noch klein auf dem Punkt
-  der Zeitlinie und als Rückfall. Reihenfolge (`EntryTexture` in `UI/Options.lua`):
+  gibt sehr viele; die eigenen Zeichnungen (`skull.tga` usw.) stehen nur noch klein im Streifen
+  der Karte (bis 2026-11-25 auf dem Punkt der Zeitlinie) und als Rückfall. Reihenfolge (`EntryTexture` in `UI/Options.lua`):
   1. das Symbol, das mit dem Eintrag gespeichert ist (`entry.icon`, eine Datei-ID): bei Berufen
      aus `GetProfessionInfo`, bei Herausforderungen aus `GetAchievementInfo`; es wird mitgeteilt;
   2. das Symbol des Gegenstands (`C_Item.GetItemIconByID`) oder des Zaubers einer Fähigkeit
@@ -705,8 +716,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Tabelle.** Was beim Einschalten schon in den Taschen liegt, wird nur gemerkt. Bisher: 211527
     (Schlafsack, ID vom Auftraggeber). Im Buch zeigt ein Gegenstand das Symbol, das das Spiel ihm
     gibt (Wunsch des Auftraggebers; `C_Item.GetItemIconByID`, `story.texture` in `UI/Book.lua`):
-    in eigenen Farben, also ohne `UI.Tint`, mit beschnittenem Rand im runden Rahmen. Der Punkt auf
-    der Zeitlinie bleibt die Truhe; kennt der Client kein Symbol, steht sie auch im Bild. Das ist
+    in eigenen Farben, also ohne `UI.Tint`, mit beschnittenem Rand im runden Rahmen. Das kleine
+    Symbol (im Streifen, früher auf dem Punkt der Zeitlinie) bleibt die Truhe; kennt der Client kein Symbol, steht sie auch im Bild. Das ist
     die einzige Stelle, an der das Buch eine Textur des Spiels statt eines eigenen Symbols zeigt.
     Die Maus über dem Bild zeigt den Tooltip des Spiels (Wunsch des Auftraggebers): bei
     Gegenständen `GameTooltip:SetItemByID`, bei Fähigkeiten aus der Tabelle `SetSpellByID`
@@ -965,7 +976,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   Klassensymbol des Spiels (`UI-Classes-Circles`, `UI.ClassIcon`/`UI.SetClass` in
   `UI/Widgets.lua`, die auch das Wappen der Weggefährten nutzt): im Kopf einer Karte des
   Buchs und in der Randspalte (Liste „Freunde“, Bilanz-Karten). Ist die Klasse unbekannt, bleibt
-  der Buchstabe. Hinter einem Alias steht der Charaktername in Klammern, „Papa (Borin Eisenbart)“
+  in der Randspalte der Buchstabe; im Buch steht seit 2026-11-25 dann nur der Name. Hinter einem Alias steht der Charaktername in Klammern, „Papa (Borin Eisenbart)“
   (`ChronicleService.Label`), überall, wo die Chronik die Person nennt: Streifen, Randspalte,
   Filterzeile „Nur Ereignisse von …“ und die Sätze der Live-Einblendung. Ohne Alias steht nur der
   Name.

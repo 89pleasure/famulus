@@ -679,6 +679,9 @@ local function ChronicleRun(run)
         or event.kind == "item" and Chronicle.Item(newest.item) or nil
     event.weight = special and special.big and "high" or WEIGHT[event.kind] or "medium"
     event.big = event.weight == "high"
+    -- The strip names everyone, the player's own character too.
+    local me = Chronicle.Character()
+    event.chip = event.chip or { text = me, class = me and Chronicle.Class(me) }
     event.content = UI.ChronicleCard
     return event
 end
