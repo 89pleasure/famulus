@@ -123,6 +123,21 @@ local function FillTile(tile, person, rank, chosen)
     end
 end
 
+-- A tile of the closest companions on another frame, to look at only: the
+-- picture of the fellow travellers' settings (UI/Previews.lua). Its width
+-- is set before UI.FillFellowTile(tile, person, rank); person as in the
+-- overview's model.
+function UI.FellowTile(parent)
+    local tile = CreateTile(parent)
+    tile:EnableMouse(false)
+    return tile
+end
+
+function UI.FillFellowTile(tile, person, rank)
+    FillTile(tile, person, rank, false)
+end
+UI.FELLOW_TILE_H = TILE_H
+
 ---------------------------------------------------------------------------
 -- List
 ---------------------------------------------------------------------------

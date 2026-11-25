@@ -185,13 +185,39 @@ local washes = {
     warning = hex("f5b14c"),
     danger = hex("f06a6a"),
     -- The pictures of the settings (UI/Previews.lua) show the game, not the
-    -- window: the chat in the game's colours. Their night sky follows the
-    -- scheme (see Compose).
+    -- window, in the game's own colours: chat, tooltip, menu, Battle.net,
+    -- the minimap, the classes. Their night sky follows the scheme (see
+    -- Compose).
     sceneCaption = { 0, 0, 0, 0.42 },
     chatBox = { 0, 0, 0, 0.38 },
     chatGuild = { 0.25, 1, 0.25, 1 },
     chatParty = { 0.667, 0.667, 1, 1 },
     chatSystem = { 1, 1, 0, 1 },
+    chatWhite = { 1, 1, 1, 1 },
+    chatFamulus = hex("ffb347"), -- the prefix of the addon's own lines (Core/Init.lua)
+    tooltipFill = { 0.035, 0.04, 0.1, 0.95 },
+    tooltipBorder = hex("5d6470"),
+    tooltipLabel = { 0.61, 0.64, 0.73, 1 }, -- as Modules/Aliases/TooltipAliases.lua writes "Alias"
+    tooltipGuild = hex("8ef08e"),
+    menuTitle = { 1, 0.82, 0, 1 },
+    bnetBlue = { 0.51, 0.77, 1, 1 },
+    bnetFill = { 0.04, 0.06, 0.1, 0.94 },
+    bnetBorder = { 0.51, 0.77, 1, 0.25 },
+    bnetChip = { 0.51, 0.77, 1, 0.12 },
+    bnetGrey = { 0.54, 0.6, 0.66, 1 },
+    guildyFill = { 0.055, 0.063, 0.08, 0.94 },
+    guildyBorder = { 1, 1, 1, 0.12 },
+    guildyHead = hex("e9d9a8"),
+    minimapGround = hex("3a5246"),
+    minimapLand = { 0.42, 0.49, 0.29, 0.7 },
+    minimapWater = { 0.17, 0.26, 0.33, 0.8 },
+    minimapRim = hex("8a7a55"),
+    classWARRIOR = hex("c69b6d"),
+    classMAGE = hex("3fc7eb"),
+    classPRIEST = hex("ffffff"),
+    classHUNTER = hex("aad372"),
+    classROGUE = hex("fff468"),
+    classDRUID = hex("ff7c0a"),
 }
 
 -- hue and saturation tint the grounds; tones are the accent's base tone, its
@@ -258,6 +284,14 @@ local function Compose(accent)
     colors.moonGlow = alpha(base, 0.16)
     colors.moonBlue = hsl(hue + 18, 0.46, 0.78)
     colors.moonBlueHalo = alpha(colors.moonBlue, 0.35)
+    -- Every scheme in small, whichever is chosen: the picture of the choice.
+    for id, each in pairs(accents) do
+        colors["schemeWindow_" .. id] = hsl(each.hue, each.saturation, ladder.window[1])
+        colors["schemeCard_" .. id] = hsl(each.hue, each.saturation, ladder.card[1])
+        colors["schemeTrack_" .. id] = hsl(each.hue, each.saturation * ladder.track[2], ladder.track[1])
+        colors["schemeAccent_" .. id] = hex(each.tones[1])
+        colors["schemeAccent2_" .. id] = hex(each.tones[2])
+    end
     return true
 end
 Compose(DEFAULT_ACCENT)

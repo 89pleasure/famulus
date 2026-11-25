@@ -416,11 +416,12 @@ function UI.SetDisplayFont(region, size)
     end
 end
 
--- The game's chat font, for pictures of the chat (UI/Previews.lua); the
--- client has it loaded from the start. Without it, the window's font.
-function UI.SetChatFont(region, size)
-    local source = ChatFontNormal
-    local path = source and source.GetFont and source:GetFont()
+-- One of the game's fonts, named by its font object ("ChatFontNormal",
+-- "GameTooltipText"), for pictures of the game (UI/Previews.lua); the
+-- client has them loaded from the start. Without it, the window's font.
+function UI.SetGameFont(region, object, size)
+    local source = _G[object]
+    local path = type(source) == "table" and source.GetFont and source:GetFont()
     if type(path) == "string" then
         ApplyFont(region, path, size)
     else

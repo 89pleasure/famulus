@@ -44,6 +44,17 @@ local GENERAL_ICONS = {
     windowScale = "resize",
     chronicleNames = "tag",
 }
+-- Their pictures (UI/Previews.lua; features: feature.preview).
+local GENERAL_PREVIEWS = {
+    language = "lang",
+    chatOutput = "chatfam",
+    minimapButton = "minimap",
+    charProfile = "profile",
+    accent = "accent",
+    embers = "embers",
+    windowScale = "scale",
+    chronicleNames = "names",
+}
 
 -- Rows that stand for a person: an avatar with an initial in front, a
 -- button to remove them behind. A click calls item.open, the button
@@ -177,6 +188,7 @@ local function GeneralItem(key, kind, values)
         id = "general." .. key,
         section = "general",
         icon = GENERAL_ICONS[key] or "gear",
+        preview = GENERAL_PREVIEWS[key],
         key = key,
         default = function()
             return ns:GetDefault("general", key)
@@ -204,6 +216,7 @@ local function CategoryItem(category)
         id = "categories." .. category,
         section = "categories",
         icon = AREA_ICONS[category] or "sparkle",
+        preview = "areas",
         key = category,
         default = function()
             return ns:GetDefault("categories", category)
@@ -855,6 +868,24 @@ local function TitleChapter(chapter, now)
     chapter.entries = nil
 end
 
+-- One chapter as the chronicle's book tells it, from entries (the newest
+-- first), each on a card of its own: the picture of the chronicle's
+-- settings (UI/Previews.lua). Its cards cannot be clicked and show no
+-- tooltip; the samples' people have their classes.
+function UI.ChronicleChapter(entries)
+    local chapter = { entries = entries, events = {} }
+    for index, entry in ipairs(entries) do
+        local story = ChronicleRun({ entry })
+        story.onClick, story.tooltip, story.onPicture, story.item, story.spell = nil, nil, nil, nil, nil
+        if story.chip and not story.chip.class and entry.who then
+            story.chip.class = ns.ChronicleService.SampleClass(entry.who)
+        end
+        chapter.events[index] = story
+    end
+    TitleChapter(chapter, time())
+    return chapter
+end
+
 -- One chapter per session of play (SESSION_GAP), the newest event first;
 -- what repeats right away shares a card (SameRun). wanted(entry): which
 -- entries; a companion chosen in the rail narrows them further. Returns nil
@@ -1314,6 +1345,12 @@ local function FellowPerson(guid, person, now)
         firstLevelText = first and tonumber(person.firstLevel) and L.ui_fellow_met_detail:format(tonumber(person.firstLevel)) or nil,
         sinceText =first and L.ui_fellow_since:format(DayTitle(DayKey(first))) or nil,
     }
+end
+
+-- A made-up person (FellowService.SamplePerson) as the overview shows them:
+-- the picture of the fellow travellers' settings (UI/Previews.lua).
+function UI.FellowSample(person)
+    return FellowPerson("sample:" .. person.name, person, time())
 end
 
 -- "10:40 to 12:50"
@@ -2362,6 +2399,7 @@ local function TidyItem()
         kind = "action",
         id = "tidy",
         icon = "trash",
+        preview = "tidy",
         label = function()
             return L.ui_fellow_tidy
         end,
@@ -3125,6 +3163,13 @@ do
                 local row = detailRows[index]
                 if not row then
                     row = CreateRow(detail.options)
+                    -- Pointed at, an option may show what it does in the picture.
+                    row:HookScript("OnEnter", function(self)
+                        UI.Previews.Focus(detail.stage, self.item and self.item.optionKey)
+                    end)
+                    row:HookScript("OnLeave", function()
+                        UI.Previews.Focus(detail.stage, nil)
+                    end)
                     detailRows[index] = row
                 end
                 RowSetItem(row, option, index, width)

@@ -17,6 +17,7 @@ local accountAliases = ns:NewFeature({
     id = "accountAliases",
     category = "aliases",
     icon = "link", -- its entry in the settings (UI.media)
+    preview = "bnet", -- its picture there (UI/Previews.lua)
     default = true,
     requires = {
         "BNGetNumFriends",

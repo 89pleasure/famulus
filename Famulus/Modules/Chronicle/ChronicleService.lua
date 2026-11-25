@@ -72,9 +72,10 @@ local function Party(entry)
 end
 
 -- A companion's name as the player knows them: the alias, if there is one.
+-- A sample (ChronicleService.Sample) may bring the alias it shows under.
 local function Companion(entry)
     local name = entry.who or L.c_someone
-    local alias = ns.AliasService and ns.AliasService.Get(name)
+    local alias = entry.sampleAlias or ns.AliasService and ns.AliasService.Get(name)
     if alias then
         return alias, name
     end
@@ -971,6 +972,21 @@ local DEMO_PEOPLE = {
 -- The samples' three people (Mira, Borin, Lysa) in the addon's language.
 function ChronicleService.SamplePeople()
     return unpack(DEMO_PEOPLE[ns:GetLocaleCode()] or DEMO_PEOPLE.enUS)
+end
+
+-- Their classes, as the fellow travellers' samples have them.
+local DEMO_CLASSES = { "MAGE", "WARRIOR", "PRIEST" }
+
+-- The class of one of the samples' people, in any language, or nil.
+function ChronicleService.SampleClass(name)
+    for _, people in pairs(DEMO_PEOPLE) do
+        for index, person in ipairs(people) do
+            if person == name then
+                return DEMO_CLASSES[index]
+            end
+        end
+    end
+    return nil
 end
 
 -- One made-up entry of a kind, a friend's (own: the player's), with the

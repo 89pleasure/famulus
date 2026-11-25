@@ -10,6 +10,7 @@ local companions = ns:NewFeature({
     id = "companions",
     category = "chronicle",
     icon = "people", -- its entry in the settings (UI.media)
+    preview = "friends", -- its picture there (UI/Previews.lua)
     default = false,
     requires = { "C_FriendList.GetNumFriends", "C_FriendList.GetFriendInfoByIndex" },
 })

@@ -161,35 +161,56 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   - **Options of a switched-off feature** stay in full but greyed out, with "Switch on "…" to
     change its options." The folding of option rows (`compact`), their dot and recessed ground,
     `FeatureBlocks` and the accent mark on feature cards are gone.
-  - **Pictures (`UI/Previews.lua`, since 2026-11-25 as a trial):** no screenshots but small
-    scenes drawn live, so that a change to the addon needs no new picture. A feature names its
-    scene (`preview = "feed"`); the detail shows it above the name on a stage of 536 × 196 px
-    inside the padding (`UI.Previews.Stage`, clips its scenes). A scene is built the first time it
-    is shown and kept; it uses the addon's own building blocks and the chronicle's sample people
-    (`ChronicleService.SamplePeople`, `ChronicleService.Sample(kind)`), so it follows switches,
-    options, colour scheme and language. Pointing at a chip focuses it on that option
-    (`UI.Previews.Focus`, the option's key). What moves does so by the client's animations,
-    stopped while the scene is hidden. Without a scene the detail starts with the page's name.
-    - `feed`: the live feed's own cards (`UI.Feed.Card`, `UI.Feed.Fill`; never on screen) with
-      Mira's level and Borin's boss over the night sky, their running-out line (see "Live feed"
-      in `docs/chronicle.md`) looping over the chosen duration, below them "Visible for 7
-      seconds". Pointed at a kind, a card of that kind (reactions via
-      `liveFeed.ReactionStory`), faint while the kind or the feature is off.
-    - `chat`: four lines in the game's chat font (`UI.SetChatFont`, `ChatFontNormal`) and its
-      default colours (tokens `chatGuild`, `chatParty`, `chatSystem`); Borin under the alias
-      "Dad"/"Papa" as `AliasService.Format` writes it with the chosen style, framed in the
-      accent, also in the online notice. Switched off: his name.
-    - The night sky (`World`), after the website's (`website/scene.js`, `styles.css`): a rounded
-      gradient (`skyTop` into `skyLow`, a dusk with a little accent), 46 seeded stars of which
-      about a fifth twinkle (alpha animations), and Azeroth's two moons: a large one at the right
-      (rim `moonRim`, brighter towards the top left `moonMid`, `moonCore`, glow `moonHalo`,
-      `moonGlow`) and a small blue one at the top left (`moonBlue`). All from `circle.tga` and
-      `shadow.tga`; the tokens follow the colour scheme, as on the website. Stars and glows stay
-      clear of the rounded corners (the stage clips square).
-    - The chat's three texts of a line meet top to top: anchored by their middles, an empty text in
-      front (the online notice starts with the name) pulled the name into the line above.
-    - The mockup has scenes for every entry (tooltip, context menu, Guildy, Battle.net, minimap,
-      book cards, fellow traveller, colour schemes, embers, window size and more); not built.
+  - **Pictures (`UI/Previews.lua`, since 2026-11-25):** no screenshots but small scenes
+    drawn live, so that a change to the addon needs no new picture. Every entry names its scene
+    (`preview = "feed"` on a feature, `GENERAL_PREVIEWS` for the addon's own settings,
+    `"areas"` for the master switches, `"tidy"`); the detail shows it above the name on a stage
+    of 536 × 196 px inside the padding (`UI.Previews.Stage`, clips its scenes). A scene is built
+    the first time it is shown and kept, and drawn again whenever the detail refreshes (a setting
+    changed, `UI.Previews.Refresh`). It uses the addon's own building blocks and the samples'
+    people, so it follows switches, options, colour scheme and language. Pointing at a chip or an
+    option row focuses it on that option (`UI.Previews.Focus`, the option's key,
+    `item.optionKey`). What moves does so by the client's animations (or `UI.Embers`), stopped
+    while the scene is hidden. What is switched off is drawn faint (0.38).
+    - **Samples:** `ChronicleService.SamplePeople`, `Sample(kind, own)` (one unsaved entry of the
+      chronicle's samples), `SampleClass(name)` and `entry.sampleAlias` (a sample shows under that
+      alias); `FellowService.SamplePerson(index)` (a stored person as the samples would have
+      written them). The scenes' own words are `ui_preview_*`.
+    - **Two grounds:** scenes of the game stand on the website's night sky (`World`, after
+      `website/scene.js` and `styles.css`: a rounded gradient `skyTop` into `skyLow`, a dusk with a
+      little accent; 46 seeded stars, about a fifth twinkling; Azeroth's two moons, a large one at
+      the right with rim, brighter top left and glow, a small blue one at the top left; tokens
+      `sky*`, `star`, `moon*` follow the colour scheme). Scenes of the window stand on its ground
+      (`window` into `sidebar` with its hairline). Stars and glows stay clear of the rounded
+      corners (the stage clips square). The game's places are drawn in its fonts
+      (`UI.SetGameFont` with `ChatFontNormal`, `GameTooltipText`, `GameFontNormal` ...) and default
+      colours (tokens `chat*`, `tooltip*`, `menuTitle`, `bnet*`, `guildy*`, `minimap*`,
+      `class<FILE>`). What a setting changes is framed in the accent (`Outline`).
+    - **Chronicle:** `book` (Record my journey), `friends` (Follow my friends) and `names`
+      (character name behind the alias) are the chronicle's own book (`UI.Book` with
+      `UI.ChronicleChapter`, which builds the cards as the chronicle does, without click, tooltip
+      and route), made smaller to fit (`Fit`). `share`: the player's crest and Mira's, news
+      travelling both ways between them. `feed`: the live feed's own cards (`UI.Feed.Card`,
+      `UI.Feed.Fill`; never on screen), their running-out line looping over the duration; pointed
+      at a kind, a card of that kind (reactions via `liveFeed.ReactionStory`), at "own" one of the
+      player's.
+    - **Fellow travellers:** `fellows`: the overview's tiles (`UI.FellowTile`,
+      `UI.FillFellowTile`, the person from `UI.FellowSample`); pointed at "raids" a list of which
+      groups count, at "friendsOnly" whom it remembers. `tidy`: who stays, who goes (struck out).
+    - **Aliases:** `chat` (four lines of chat, Borin under the alias as `AliasService.Format`
+      writes it, also in the online notice), `tooltip` (the line `TooltipAliases` adds), `menu`
+      (the entry `AliasMenu` adds), `bnet` (a Battle.net friend under the alias, with three
+      characters), `guildy` (Guildy's list). Switched off, the alias is missing.
+    - **Settings:** `areas` (the sidebar's three entries, a switched-off one with "OFF"), `lang`
+      (the tagline in both languages, the one shown chosen), `chatfam` (the addon's own chat line
+      among others), `minimap` (the button at the saved angle, drawn as `UI/MinimapButton.lua`
+      draws it), `profile` (all characters or this one), `accent` (every scheme as a small window;
+      tokens `scheme*_<id>` for all schemes at once), `embers` (`UI.Embers`), `scale` (the window
+      at a few sizes).
+    - The chat's three texts of a line meet top to top: anchored by their middles, an empty text
+      in front (the online notice starts with the name) pulled the name into the line above.
+    - Open in game: whether the book, the tiles and the game's fonts read well made smaller,
+      whether the moving parts run.
   - **Icons of the entries** (added on 2026-11-25 after the owner's first look in game: "the
     icons are missing"): a feature names its own (`icon` in `ns:NewFeature`, a name from
     `UI.media`; the test checks that every feature has one the window knows), the addon's own

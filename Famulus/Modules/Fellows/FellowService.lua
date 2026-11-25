@@ -547,6 +547,31 @@ local DEMO_PEOPLE = {
 }
 
 local DEMO_CLASSES = { { "MAGE", 40 }, { "WARRIOR", 38 }, { "PRIEST", 39 }, { "HUNTER", 34 }, { "ROGUE", 41 }, { "DRUID", 37 } }
+
+-- One of the sample people (1 Mira ... 6 Ena) as a stored person looks,
+-- with hours, groups and bosses of their own; never stored. For the
+-- pictures of the settings (UI/Previews.lua).
+local SAMPLE_TIMES = { -- { hours together, groups, bosses, last seen (hours ago), zone }
+    { 26, 14, 34, 2, 2 }, { 19, 11, 21, 26, 4 }, { 8, 5, 9, 70, 3 },
+    { 2, 2, 1, 120, 1 }, { 1, 1, 0, 200, 5 }, { 1, 1, 2, 300, 6 },
+}
+
+function FellowService.SamplePerson(index)
+    local locale = ns:GetLocaleCode()
+    local people, zones = DEMO_PEOPLE[locale] or DEMO_PEOPLE.enUS, DEMO_ZONES[locale] or DEMO_ZONES.enUS
+    local class, times = DEMO_CLASSES[index], SAMPLE_TIMES[index]
+    if not (class and times) then
+        return nil
+    end
+    local now = time()
+    return {
+        name = people[index], class = class[1], level = class[2],
+        seconds = times[1] * 3600, times = times[2], bosses = times[3],
+        last = now - times[4] * 3600, zone = zones[times[5]],
+        first = now - (22 - index) * 86400, firstZone = zones[5], firstLevel = 20 + index,
+        demo = true,
+    }
+end
 -- Their evenings, from which their days are told: the day (0 the latest
 -- evening, -1 the one before ...), from and to ("HH:MM"; past midnight it
 -- ends the next day), the zones (DEMO_ZONES) and who was there

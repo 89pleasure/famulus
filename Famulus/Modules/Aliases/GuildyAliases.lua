@@ -17,6 +17,7 @@ local guildyAliases = ns:NewFeature({
     id = "guildyAliases",
     category = "aliases",
     icon = "shield", -- its entry in the settings (UI.media)
+    preview = "guildy", -- its picture there (UI/Previews.lua)
     default = true,
     addon = "Guildy",
     requires = {
