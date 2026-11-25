@@ -452,6 +452,9 @@ UIParent = CreateFrame("Frame", "UIParent")
 Minimap = CreateFrame("Frame", "Minimap")
 GameTooltip = CreateFrame("GameTooltip", "GameTooltip")
 ItemRefTooltip = CreateFrame("GameTooltip", "ItemRefTooltip")
+function GameTooltip:IsOwned()
+    return false
+end
 EditModeManagerFrame = CreateFrame("Frame", "EditModeManagerFrame")
 
 DEFAULT_CHAT_FRAME = {

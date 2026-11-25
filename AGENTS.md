@@ -138,6 +138,10 @@ nicht mehr darin („da wir uns nun ganz woanders bewegen thematisch“); die Ta
   nicht im Spiel):** siehe „Klasse und Name“ unter „Chronik“. Offen im Spiel: ob die Klassensymbole
   im Streifen (18 px) und in der Randspalte (30 px) sauber aussehen, ob `className` der
   Freundesliste in Forever zu `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE` passt.
+- **Runden der Weggefährten (2026-11-24, nur gegen den Mock geprüft, noch nicht im Spiel):**
+  siehe „Runden“ unter „Weggefährten“. Offen im Spiel: ob eine Runde über `/reload` und
+  Verbindungsabbrüche hinweg zusammenbleibt, ob `ZONE_CHANGED_NEW_AREA` die Gebiete einer Runde
+  vollständig liefert, wie Wappen und Namensplaketten im Buch aussehen.
 - **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster),
   im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values, Taint).
 - **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
@@ -964,8 +968,12 @@ denselben Karten, und die Bossnamen der Weggefährten kamen aus der Chronik. Von
   „Bilanz“, „Stats“, „In der Chronik“, Bosse nur in Gruppen mit Namen). Nur gegen den Mock
   geprüft, im Spiel noch nicht gesehen. Die Website zeigt noch den alten Stand (Reiter
   „Gefährten“, „Steckbriefe“).
-- **Ideen, die nur die Weggefährten können** (vorgeschlagen, nicht beauftragt): Stammgruppen
-  (wer immer wieder gemeinsam in der Gruppe ist) und gemeinsame Dungeons je Person.
+- **Ideen, die nur die Weggefährten können:** Stammgruppen (wer immer wieder gemeinsam in der
+  Gruppe ist) stehen seit 2026-11-24 im Reiter „Runden“ (siehe „Weggefährten“); gemeinsame
+  Dungeons je Person sind vorgeschlagen, nicht beauftragt. Auch die Runden halten sich an die
+  Regel: Sie zeigen,
+  wer mit wem wann unterwegs war, nicht, was dabei geschah (keine Tode, keine eigenen Stufen,
+  Bosse nur als Zahl).
 
 ## Weggefährten
 
@@ -985,7 +993,8 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   times, seconds, bosses, tag } }`, accountweit, außerhalb der Profile, nach GUID (ein Name kann sich
   ändern). `tag` ist der BattleTag, wenn die Person in der Gruppe als Battle.net-Freund erkannt
   wurde (seit 2026-11-24, siehe unten). Nichts davon wird verschickt. Höchstens 500 Personen; darüber fällt heraus, wer am
-  längsten nicht mehr dabei war (nie jemand aus der aktuellen Gruppe).
+  längsten nicht mehr dabei war (nie jemand aus der aktuellen Gruppe). Dazu seit 2026-11-24 die
+  Runden in `FamulusDB.fellowRuns` (siehe „Runden“).
 - **Zählen (Entscheidungen des Assistenten):**
   - Ereignisse: `GROUP_ROSTER_UPDATE` und `PLAYER_ENTERING_WORLD` gleichen die Liste mit der Gruppe
     ab, `BOSS_KILL` zählt einen Boss für alle Anwesenden, `PLAYER_LOGOUT` beendet alle Zeiten
@@ -1090,7 +1099,8 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   „Weggefährten – Entwürfe“) hat er eine Mischung gewählt; Beschreibung und Plan:
   `docs/superpowers/specs/2026-11-24-fellows-redesign-design.md` und
   `docs/superpowers/plans/2026-11-24-fellows-redesign.md`. Nur gegen den Mock geprüft.
-  - Tabs „Übersicht“ und „Einstellungen“. Symbol: zwei Figuren (`people.tga`).
+  - Tabs „Übersicht“, „Runden“ (seit 2026-11-24, siehe „Runden“ unten) und „Einstellungen“.
+    Symbol: zwei Figuren (`people.tga`).
   - **Übersicht** (`FellowModel` in `UI/Options.lua`, gezeichnet von `UI.FellowOverview` in
     `UI/Fellows.lua`): links „Engste Gefährten“, die drei mit der meisten gemeinsamen Zeit als
     Kacheln (Rang I–III, Wappen mit Ring, Name in der Buchschrift, Stufe und Klasse, Abzeichen der
@@ -1145,6 +1155,63 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   - Die Suche findet weiter jede Person als einfache Personenzeile (`FellowItem`, `tab.search`).
     Unter einem Alias steht der Name in der zweiten Zeile. Die Klasse kommt aus
     `LOCALIZED_CLASS_NAMES_MALE`, also in der Sprache des Clients.
+- **Runden (Entscheidung des Auftraggebers, 2026-11-24, an der Leinwand „Weggefährten – Verlauf“,
+  claude.ai-Artifact `L3v3BWqAv717ro24NVyQGF`: Variante B „Runden mit eigenem Protokoll“):**
+  **Name (Wahl des Auftraggebers, 2026-11-25):** Der Reiter heißt „Runden“ / „Groups“; der erste
+  Name „Verlauf“ / „Timeline“ gefiel ihm nicht („etwas unschön“). Ebenfalls vorgeschlagen:
+  „Unterwegs“, „Lagerfeuer“, „Gemeinsam“. Im Code heißt der Reiter weiter `timeline`
+  (`ui_tab_timeline`, `TimelineBook`, `TimelineRail`). Frage des Auftraggebers war, ob sich eine Ansicht lohnt, die die Geschichten aller Weggefährten
+  zeigt. Empfehlung des Assistenten: nicht alle Einzelgeschichten untereinander (das wäre ein
+  zweites Buch der Chronik), sondern wann ihr zusammen gespielt habt und mit wem. Verworfen: A,
+  ein Tagebuch aus dem vorhandenen Tagesprotokoll (je Person und Tag eine Karte; wer zusammen in
+  einer Gruppe war, ließe sich daraus nur raten, und es gibt keine Gesamtzeit in Gruppen). Nur
+  gegen den Mock geprüft, im Spiel noch nicht gesehen. Umsetzung im Einzelnen und die Abweichungen
+  von der Leinwand sind Entscheidungen des Assistenten:
+  - **Rundenprotokoll** (`FamulusDB.fellowRuns`, accountweit, außerhalb der Profile, nichts wird
+    verschickt): je Runde `f`, `l` (von, bis), `z` (die Gebiete in zeitlicher Reihenfolge,
+    höchstens sechs), `b` (Bosse) und `who = { [guid] = { f, l } }` (wer von wann bis wann dabei
+    war). Im Schlachtzug nur `raid = true` und `n` (die meisten Personen auf einmal), keine Namen,
+    dieselbe Regel wie bei den Bossen. Höchstens 30 Tage (wie das Tagesprotokoll) und 400 Runden.
+    `FellowService.Sync` schreibt mit; `Runs()` liefert die Runden und die laufende.
+  - **Eine Runde** dauert, solange jemand in der Gruppe gezählt wird. Wer später kommt oder früher
+    geht, ändert nichts an der Runde, nur an seinem `f`/`l`. Nach einer Pause von weniger als 30
+    Minuten (`MEET_GAP`) mit mindestens einem derselben Leute geht die alte Runde weiter
+    (`/reload`, Verbindungsabbruch, kurze Pause), sonst beginnt eine neue. Deshalb ist der Abend
+    der Leinwand (Uldaman, danach Tanaris mit Mimi) eine Runde „Unterwegs in Uldaman und
+    Tanaris“, weil Mimi die ganze Zeit dabei blieb; Borin und Lysa tragen „bis 22:40“.
+  - **Gebiete:** `rememberFellows` hört dafür zusätzlich auf `ZONE_CHANGED_NEW_AREA`
+    (`FellowService.Move`), nur solange das Feature an ist. Kehrt man zurück, steht das Gebiet im
+    Protokoll noch einmal, im Titel der Karte nur einmal.
+  - **Buch** (`TimelineBook` in `UI/Options.lua`, Reiter `timeline`): ein Kapitel je Spielabend
+    wie in der Chronik (`SESSION_GAP`, `SessionTitle`); Kapitelkopf mit von–bis und „N Std.
+    zusammen“. Je Runde eine Karte ohne Bild (`story.noPicture`): Titel „Unterwegs in …“ (im
+    Schlachtzug „Schlachtzug in …“), darunter von–bis, Dauer und Bosse als Zahl (im Schlachtzug
+    auch die Zahl der Personen), darunter je Person eine Plakette mit Klassensymbol und Namen
+    (`story.people`; Alias, sonst Vorname; „bis …“ oder „ab …“, wer mehr als fünf Minuten später
+    kam oder früher ging). Kehrt eine Gruppe von mindestens zwei derselben Leute wieder, sagt es
+    der Fuß in Akzentfarbe (`story.foot`): „Wieder mit Mira und Borin · 6-mal in 30 Tagen“.
+    Abweichung von der Leinwand („Zum 3. Mal mit …“): Gezählt wird nur, was das Protokoll noch
+    kennt, also 30 Tage, und das sagt der Satz; Englisch braucht so keine Ordnungszahlen. Gewählt
+    wird die Teilgruppe, die am häufigsten zusammen war, bei Gleichstand die größere; die Namen
+    stehen nach gemeinsamer Zeit. Dazwischen „Lysa kennengelernt“ (nur wer in einer gezeigten
+    Runde kennengelernt wurde) und „Du und Borin seid jetzt vertraut“ (Zeitpunkt aus den Runden,
+    ab der Zeit vor ihnen gerechnet wie `Milestones`), beide mit dem Wappen statt eines Bildes
+    (`story.crest`); ein Klick öffnet „Eure Geschichte“. Ab Vertraut ist die neue Stufe ein
+    Meilenstein (größere Karte), darunter nicht, wie beim Abzeichen. Runden unter einer Minute
+    ohne Boss und Runden, von deren Leuten niemand mehr in der Liste steht, erscheinen nicht.
+    Höchstens 50 Ereignisse, darunter „Ältere Runden bleiben gespeichert …“.
+  - **Randspalte** (`TimelineRail`): „Diese Woche“ (Zeit in Gruppen allein in ihrer Zeile, dafür
+    `wide` in `UI/Rail.lua`; Runden, Weggefährten, kennengelernt, neue Verbundenheit), „Häufigste
+    Runde“ (die Teilgruppe, die in den letzten sieben Tagen am öftesten zusammen war, ab zweimal;
+    Wappen nebeneinander, nicht überlappend wie auf der Leinwand, neue Kartenart `group`) und „Am
+    meisten zusammen“ (bis fünf Personen mit ihrer Zeit dieser Woche, ohne online/offline; ein
+    Klick öffnet „Eure Geschichte“).
+  - Nichts aus der Chronik, siehe „Chronik und Weggefährten“. „Vergessen“ und „Aufräumen“ nehmen
+    die Person auch aus den Runden; eine Runde ohne Leute fällt dann weg. Die Suche findet hier
+    nichts, die Personen findet sie in der Übersicht. Ohne Runde zeigt der Reiter, wie man anfängt.
+  - Wer vor diesem Stand schon Weggefährten hatte, sieht unter „Runden“ erst die Runden ab dem
+    Update; Tagesprotokoll und „Eure Geschichte“ bleiben, wie sie sind. Die Website zeigt die
+    Runden noch nicht.
 - **Verbundenheit (Entscheidung des Auftraggebers am Mockup, 2026-11-24):** Stufen nach gemeinsamer
   Zeit, `FellowService.TIERS`: Begegnung unter 1 Std., Bekannt ab 1, Vertraut ab 10, Unzertrennlich
   ab 40 (enUS: Encounter, Acquainted, Trusted, Inseparable; die englischen Namen hat der Assistent
@@ -1173,14 +1240,20 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
   geteilt. Der Beispiel-Boss in `/fam chronicle demo` hat zwei Gefährten. Die Weggefährten lesen
   `with` seit 2026-11-24 nicht mehr; sie merken sich ihre Bosse selbst (`k` im Tagesprotokoll).
 - **Beispieldaten (2026-11-24, Wunsch des Auftraggebers):** `/fam fellows demo` trägt sechs
-  erfundene Weggefährten ein (Klassen, Stufen, Gebiete, Zeiten von 25 Minuten bis 31 Stunden; Mira
-  und Borin wie in der Chronik), `/fam fellows demo clear` entfernt nur sie
-  (`FellowService.Demo`, `ClearDemo`). Sie tragen `demo = true` und GUIDs `Player-0-FAMDEMO..`;
-  seit 2026-11-24 auch Tage und `firstLevel`, sodass Mira und Borin einen Aufstieg erzählen, und
-  an Tagen in Uldaman oder den Todesminen Bosse mit Namen (je Person reihum, damit derselbe Boss
-  nicht an jedem Tag fällt). Sprache wie bei den Beispielen der Chronik (seit 2026-11-24 die von
-  Famulus); die drei anderen heißen auf Englisch Kael Thornwood, Tomas Greywind und Ena
-  Silverbrook.
+  erfundene Weggefährten ein (Klassen, Stufen, Gebiete; Mira und Borin wie in der Chronik),
+  `/fam fellows demo clear` entfernt nur sie (`FellowService.Demo`, `ClearDemo`). Sie tragen
+  `demo = true` und GUIDs `Player-0-FAMDEMO..`. Sprache wie bei den Beispielen der Chronik (seit
+  2026-11-24 die von Famulus); die drei anderen heißen auf Englisch Kael Thornwood, Tomas
+  Greywind und Ena Silverbrook.
+  - **Seit den Runden (2026-11-24)** entstehen sie aus elf erfundenen Abenden über drei Wochen
+    (`DEMO_RUNS`, Runden mit `demo = true`, die nie mit echten zusammenwachsen); Tage, Zeiten,
+    Bosse, Kennenlernen und Zuletzt-Zeile werden daraus berechnet, so wie die Zählung sie
+    geschrieben hätte. Vorher waren die Tage ausgedacht und passten zu keiner Runde. Der jüngste
+    Abend ist der heutige, sobald 23:20 Uhr vorbei ist, sonst der gestrige. Zeiten jetzt: Mira 32
+    Std. 20 Min., Borin 20 Std. 50 Min., Lysa 3 Std. 35 Min., Ena 3 Std. 30 Min., Kael 1 Std. 15
+    Min., Tomas 25 Min. (vorher 25 Minuten bis 31 Stunden). Mira und Borin erzählen weiter einen
+    Aufstieg (Vertraut), Bosse mit Namen gibt es in Uldaman und den Todesminen, Mira und Borin
+    sind die Stammgruppe (sechsmal in drei Wochen).
 - **Im Spiel ungeprüft:** alles. Besonders: ob `UnitName` für `party1`… Vor- und Nachname liefert
   wie für `player`, ob `GROUP_ROSTER_UPDATE` nach dem Login von selbst kommt (sonst fängt
   `PLAYER_ENTERING_WORLD` es auf), ob `IsInInstance` in Forever `pvp` meldet und ob `BOSS_KILL` in

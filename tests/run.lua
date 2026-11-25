@@ -1867,6 +1867,10 @@ check(Fellows.Count() == 2 and miraData and miraData.name == "Mira Sturmfeder" a
     and miraData.class == "MAGE" and miraData.times == 1 and miraData.firstZone == "The Deadmines"
     and Fellows.IsTogether("Player-1-MIRA"), "a party member is remembered: name, level, class, where you met")
 check(FamulusDB.fellows["Player-1-SELF"] == nil, "the player is not their own fellow")
+local fellowRuns = FamulusDB.fellowRuns
+check(fellowRuns and #fellowRuns == 1 and fellowRuns[1].z[1] == "The Deadmines" and fellowRuns[1].who["Player-1-MIRA"]
+    and fellowRuns[1].who["Player-1-TOM"] and select(2, Fellows.Runs()) == fellowRuns[1],
+    "the group itself is written down too: where, and who is in it")
 check(mock.ActiveTimers() == timersBeforeFellows, "counting the time together needs no timer")
 
 -- An hour later a boss falls, then Tom leaves.
@@ -1878,6 +1882,8 @@ mock.state.group = { members = { mira } }
 mock.Fire("GROUP_ROSTER_UPDATE")
 check(not Fellows.IsTogether("Player-1-TOM") and tomData.seconds == 3600 and tomData.zone == "The Deadmines",
     "whoever leaves has their time together counted")
+check(fellowRuns[1].b == 1 and fellowRuns[1].who["Player-1-TOM"].l == clock and fellowRuns[1].who["Player-1-TOM"].f == clock - 3600
+    and fellowRuns[1].l == clock, "the group counts its bosses, and from when to when each one was in it")
 local tomDay = tomData.days and tomData.days[Fellows.DayKey(clock)]
 check(tomDay and tomDay.s == 3600 and tomDay.z == "The Deadmines" and tomDay.b == 1 and tomDay.f == clock - 3600 and tomDay.l == clock,
     "a day records time, zone, bosses, first and last moment")
@@ -1893,6 +1899,7 @@ check(miraData.seconds == 4200 and not Fellows.IsTogether("Player-1-MIRA"), "log
 clock = clock + 60
 mock.Fire("PLAYER_ENTERING_WORLD")
 check(Fellows.IsTogether("Player-1-MIRA") and miraData.times == 1, "the same group right after a reload is no new time together")
+check(#fellowRuns == 1 and select(2, Fellows.Runs()) == fellowRuns[1], "and its run goes on")
 
 -- Offline members, unknown names and battlegrounds do not count.
 mira.offline = true
@@ -1907,6 +1914,7 @@ mock.state.group.members[2] = nil
 mock.state.instanceType = "pvp"
 mock.Fire("PLAYER_ENTERING_WORLD")
 check(not Fellows.IsTogether("Player-1-MIRA"), "battlegrounds do not count")
+check(select(2, Fellows.Runs()) == nil, "with nobody counted, the group's run is over")
 mock.state.instanceType = nil
 
 -- Hours later they meet again.
@@ -1914,11 +1922,20 @@ clock = clock + 3 * 3600
 mock.state.zone = "Westfall"
 mock.Fire("GROUP_ROSTER_UPDATE")
 check(miraData.times == 2 and Fellows.IsTogether("Player-1-MIRA"), "after a while apart, the next group is a new time together")
+check(#fellowRuns == 2 and fellowRuns[2].z[1] == "Westfall" and fellowRuns[2].who["Player-1-TOM"] == nil,
+    "and a new run, with only who is in it now")
+mock.state.zone = "Elwynn Forest"
+mock.Fire("ZONE_CHANGED_NEW_AREA")
+mock.state.zone = "Westfall"
+mock.Fire("ZONE_CHANGED_NEW_AREA")
+check(table.concat(fellowRuns[2].z, ", ") == "Westfall, Elwynn Forest, Westfall", "the run keeps where it went, also coming back")
 
 -- Raids count unless switched off.
 mock.state.group = { raid = true, members = { mira, tom } }
 mock.Fire("GROUP_ROSTER_UPDATE")
 check(Fellows.IsTogether("Player-1-TOM") and tomData.times == 2, "raid members count by default")
+check(fellowRuns[2].raid and fellowRuns[2].n == 2 and fellowRuns[2].who["Player-1-TOM"] == nil,
+    "a raid's run keeps only how many were in it")
 ns:SetOption("rememberFellows", "raids", false)
 check(not Fellows.IsTogether("Player-1-TOM") and not Fellows.IsTogether("Player-1-MIRA"),
     "without raids, being in a raid ends the stretch at once")
@@ -2420,7 +2437,17 @@ FamulusDB.fellows["Player-1-BAD"] = { name = "Bad", last = clock, times = 1, fir
         [20261121] = { s = 60, f = "abc" }, [20261120] = { s = 60, z = {} }, [20261119] = { s = 60, b = "2" },
         [20261118] = { s = 60, k = { { t = 1, n = "Ok" }, { t = "x", n = "Bad time" }, { t = 2, n = {} }, "z", { t = 3, n = "Z", z = 4 } } },
         [20261117] = { s = 60, k = "no list" }, [20261116] = { s = 60, k = { { t = 1 } } } } }
+local runsBefore = #FamulusDB.fellowRuns
+table.insert(FamulusDB.fellowRuns, { f = "x", l = 2 })
+table.insert(FamulusDB.fellowRuns, { f = 5, l = 3 })
+table.insert(FamulusDB.fellowRuns, { f = 1, l = 2, z = { "Ok", 5 }, b = "3" })
+table.insert(FamulusDB.fellowRuns, "no run")
+table.insert(FamulusDB.fellowRuns, { f = 1, l = 2, z = { "Ok", 5 }, who = { ["Player-1-G"] = { f = 1, l = 2 }, ["Player-1-H"] = "bad" } })
 ns:Fire("DATABASE_READY")
+check(#FamulusDB.fellowRuns == runsBefore + 1 and FamulusDB.fellowRuns[1].f == 1 and FamulusDB.fellowRuns[1].b == 0
+    and table.concat(FamulusDB.fellowRuns[1].z, ",") == "Ok" and FamulusDB.fellowRuns[1].who["Player-1-G"]
+    and FamulusDB.fellowRuns[1].who["Player-1-H"] == nil, "broken runs are dropped, the good one keeps what is good in it, oldest first")
+table.remove(FamulusDB.fellowRuns, 1)
 local bad = FamulusDB.fellows["Player-1-BAD"]
 check(#bad.days[20261118].k == 1 and bad.days[20261118].k[1].n == "Ok" and bad.days[20261117].k == nil
     and bad.days[20261116] and bad.days[20261116].k == nil, "broken bosses of a day are dropped, the day stays")
@@ -2452,8 +2479,93 @@ for _, day in ipairs(Fellows.Days(FamulusDB.fellows["Player-0-FAMDEMO02"])) do
     end
 end
 check(demoKills > 1 and not demoRepeat, "and bosses with names, from the dungeons they were in, each visit going on from the last")
+do -- the samples' days are told from their evenings, so both agree
+    local demoRuns, miraTime = 0, 0
+    for _, run in ipairs(FamulusDB.fellowRuns) do
+        if run.demo then
+            demoRuns = demoRuns + 1
+            local seen = run.who["Player-0-FAMDEMO01"]
+            miraTime = miraTime + (seen and seen.l - seen.f or 0)
+        end
+    end
+    check(demoRuns == 11 and miraTime == demoMira.seconds and miraTime == demoSum, "the samples have their evenings, and the days add up to them")
+end
+
+-- The timeline: every group as a book, the week beside it.
+mock.Click(navButton("Fellow travellers"))
+mock.Advance(0.1)
+check(pageTab("Overview") and pageTab("Groups") and pageTab("Settings"), "fellow travellers: overview, groups and settings")
+mock.Click(pageTab("Groups"))
+mock.Advance(0.1)
+do
+    local found = {}
+    for _, event in ipairs(bookFrames("story")) do
+        found[event.story.title] = event
+    end
+    local uldaman = found["On the road in Uldaman and Tanaris"]
+    check(uldaman and uldaman.story.noPicture and not uldaman.picture:IsShown() and uldaman.peopleCount == 3
+        and uldaman.people[1].name:GetText() == "Mira" and uldaman.people[2].name:GetText() == "Borin"
+        and uldaman.people[2].note:GetText() == "until 22:40" and not uldaman.people[1].note:IsShown(),
+        "a group's card: where, and who was in it, the earliest first; who left early says when")
+    check(uldaman and uldaman.story.detail:find("^19:05 to 23:10  ·  4 h 5 min  ·  3 bosses$") ~= nil,
+        "from when to when, how long, and the bosses as a number: " .. tostring(uldaman and uldaman.story.detail))
+    check(uldaman and uldaman.footText:IsShown() and uldaman.footText:GetText() == "Again with Mira and Borin  ·  6 times in 30 days"
+        and not uldaman.chipText:IsShown(), "the strip below says when the same people came together again: "
+        .. tostring(uldaman and uldaman.footText:GetText()))
+    local first = found["On the road in Westfall"]
+    check(first and not first.foot:IsShown(), "the first time together has no such strip")
+    local met = found["Met Lysa"]
+    check(met and met.crest and met.crest:IsShown() and not met.picture:IsShown() and met.story.detail == "in Uldaman, at level 31"
+        and met.story.onClick, "a person met: their crest, where and at which level; a click leads to your story")
+    check(found["You and Borin are now trusted"] and found["You and Borin are now trusted"].story.big
+        and found["You and Lysa are now acquainted"] and not found["You and Lysa are now acquainted"].story.big,
+        "a new bond tier is told, from Trusted on as a milestone")
+    local heads = bookFrames("chapter")
+    local evening
+    for _, head in ipairs(heads) do
+        evening = evening or (head.chapter.small == "19:05 – 23:10" and head)
+    end
+    check(evening and evening.chapter.sub == "4 h 5 min together", "a chapter per session of play, as in the chronicle")
+    check(not found["Archaedas defeated"], "nothing of what happened: that is the chronicle's to tell")
+end
+check(window.book.width == 600 and window.railScroll:IsShown() and railCard("stats") and railCard("group") and railCard("people"),
+    "beside the book a rail: the week, the most frequent group, the most time together")
+check(railCard("stats").spec.stats[1].wide and railCard("stats").spec.stats[1].label == "in groups"
+    and railCard("stats").cells[2]:GetWidth() < railCard("stats").cells[1]:GetWidth(), "the time in groups stands alone in its row")
+check(railCard("group").spec.names == "Mira and Borin" and railCard("group").spec.note == "4×" and railCard("group").crests[2]:IsShown()
+    and railCard("group").names:GetText() == "Mira and Borin", "the group that came together most often this week, with their crests")
+check(railCard("people").spec.people[1].name == "Mira Stormfeather" and railCard("people").spec.people[1].level == "12 h 50 min"
+    and not railCard("people").rows[1].state:IsShown(), "and with whom you spent the most time, without online or offline")
+mock.Click(railCard("people").rows[1])
+mock.Advance(0.1)
+check(overview.card:IsShown() and overview.card.name:GetText() == "Mira Stormfeather" and window.tabs.back:IsShown(),
+    "a click on a person leads to your story")
+mock.Click(window.tabs.back)
+mock.Advance(0.1)
+Fellows.Forget("Player-0-FAMDEMO03")
+local lysaLeft = false
+for _, run in ipairs(FamulusDB.fellowRuns) do
+    lysaLeft = lysaLeft or (run.who and run.who["Player-0-FAMDEMO03"] ~= nil)
+end
+check(not lysaLeft, "forgetting someone takes them out of the groups too")
 SlashCmdList.FAMULUS("fellows demo clear")
 check(Fellows.Count() == realFellows and FamulusDB.fellows["Player-1-TOM"] ~= nil, "/fam fellows demo clear removes only them")
+local demoLeft = false
+for _, run in ipairs(FamulusDB.fellowRuns) do
+    demoLeft = demoLeft or run.demo == true
+end
+check(not demoLeft, "and their evenings")
+do -- no group at all: the timeline says how to begin
+    local keptRuns = FamulusDB.fellowRuns
+    FamulusDB.fellowRuns = nil
+    mock.Click(navButton("Fellow travellers"))
+    mock.Click(pageTab("Groups"))
+    mock.Advance(0.1)
+    check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "No groups yet" and not window.railScroll:IsShown(),
+        "without any group, the timeline says how to begin, without a rail")
+    FamulusDB.fellowRuns = keptRuns
+    mock.Click(pageTab("Overview"))
+end
 
 -- The samples speak the addon's language, not the client's (a German client
 -- set to English gets English samples, for screenshots of the English window),
