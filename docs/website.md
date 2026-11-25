@@ -229,9 +229,10 @@ owner.
   keep the form "Version <x>". The assistant's decision; the replacement ran on GitHub on
   2026-11-25 ("Version 0.1.0-alpha.2"), a run after a release has not happened yet.
 - **Download (2026-11-25, the owner's request):** The buttons in the navigation and the header
-  say "Download" instead of "Install"/"Installation" and, like the button in the release box,
-  lead straight to `www.curseforge.com/wow/addons/famulus` (project verified on CurseForge, not
-  yet listed publicly as of 2026-11-25). The section "Installation" stays. The project page,
+  say "Download" instead of "Install"/"Installation" and scroll down to the section
+  "Installation" (the owner's request, 2026-11-25; before that they led straight to CurseForge).
+  Only the button in the release box there leads to `www.curseforge.com/wow/addons/famulus`, in a
+  new tab (project verified on CurseForge, not yet listed publicly as of 2026-11-25). The project page,
   not a direct file link (the assistant's recommendation, the owner agreed): it always shows the
   newest file, offers the CurseForge app as well as the zip, and a file link would change with
   every upload.
