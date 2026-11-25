@@ -212,6 +212,15 @@ owner.
   `www`, a CNAME to `89pleasure.github.io` for `www`. Without a domain the page is at
   `89pleasure.github.io/famulus/`; that works because all paths are relative. GitHub sees the
   visitors' IP addresses, that belongs in the privacy policy. Never run on GitHub yet.
+- **Version on the page (2026-11-25, the owner's request: "should show the current release
+  version"):** `fact_version` and `in_rel_d` say "Version <x>" in both languages. When
+  publishing, `website.yml` replaces every "Version <x.y.z[-alpha|beta.n]>" in `index.html` and
+  `i18n.js` with the newest tag on `main` (`git describe --tags`, without the "v") and fails if a
+  file then does not name it. The workflow also runs on every pushed tag `v*` and then always
+  publishes `main`, not the tagged commit. In the repo the texts carry the last release by hand
+  (`0.1.0-alpha.2`), only so that the local preview is right. A new text with the version must
+  keep the form "Version <x>". The assistant's decision; the replacement was checked locally,
+  never run on GitHub.
 - **Deliberately not included yet:** a download (publishing is open; the button says
   "Download coming soon"), Guildy (only once the PR there is accepted), more screenshots from the
   game (so far only the window in the header), legal notice and privacy policy (needed before
@@ -231,7 +240,7 @@ owner.
   and closing the story (focus returns), "Set alias", "In the chronicle"; no messages in the
   console, no horizontal scrolling.
 - **Keep in step with changes to the addon:** the screenshot in the header as soon as the window
-  visibly changes; version number (`fact_version`, `in_rel_d`), the counters
+  visibly changes; the counters
   in the rebuilt window (`renderWindow` in `main.js`: 5 alias features, 10 in total; in the HTML
   Chronicle 1/4 and Fellow travellers 0/1), new main features as tabs in the header and as their
   own section with an entry in the navigation; the bond tiers (`TIERS` in `main.js`)
