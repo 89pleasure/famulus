@@ -48,6 +48,15 @@ the index there says which file it is in.
   game):** see "Online and offline notices" under "Aliases". Open in game: whether the alias
   shows in "[Name] has come online." for friends and guild members and in "Name has gone
   offline.", and what `/fam test` reports under "online notices".
+- **Reactions in the chronicle (2026-11-25, checked against the mock only, not yet in game):**
+  see "Reactions" under "Chronicle" and under "Sharing". Seen in game (screenshot from the owner,
+  2026-11-25): the reaction at the foot of a friend's card, in the accent; at 15 px the clapping
+  hands did not read, reworked since (see "Look" there). Open in game: whether the four icons
+  load (`/fam test`, group `media`) and read well at 18 px in the foot of a card, whether the
+  game's tooltip on a card looks right, and, with two accounts, whether a reaction arrives at
+  once and one to someone offline at their next login. With one account the sample entries
+  (`/fam chronicle demo`) show the look: reactions received on the level 40, one given on
+  Borin's boss.
 - **New window (2026-11-18, checked against the mock only, not yet in game):** see "The
   window" below. The Inter fonts load (see "Font"). Open in game: whether rounded corners, shadows and hairlines look clean, switching
   the colour schemes, the sliding tab marker, gradients and glow effects.

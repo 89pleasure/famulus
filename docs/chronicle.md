@@ -350,6 +350,56 @@ picture-book look are built and checked against the mock only.
 - **`sharing` (the owner's decision, 2026-11-19):** Famulus talks to Famulus via
   whispered addon messages to friends and guild; protocol, relaying, statistics and
   queue are in [sharing.md](sharing.md).
+- **Reactions (the owner's request, 2026-11-25: "celebrate the achievements of other players
+  like on social media"; checked against the mock only, not yet seen in game):** A click on a
+  friend's card in the book reacts to their event, a second click takes it back. The message
+  and when it goes are under "Reactions" in [sharing.md](sharing.md); an option of `sharing`
+  (`reactions`, default on), no feature of its own, so no service for the exchange is needed
+  yet (see "No service of its own" there).
+  - **One reaction per kind (the owner's decision):** death 😢 `sad`, boss 💪 `strong`, level-up
+    🎉 `cheer`, profession milestone 👏 `clap`, special events (abilities such as riding, special
+    items) 🎉 `cheer` (`ChronicleService.REACTIONS`). The assistant added: challenges 🎉, a
+    profession learned 👏, arriving in a zone none (it happens all the time). A level seen on the
+    friends list (`friendLevel`) has none: its time is the reader's, the friend's own entry has
+    another one, so the two could not be matched.
+  - **Look (the owner's requirement):** one colour, following the colour scheme. The emojis are
+    line icons of their own (`sad.tga`, `cheer.tga`, `strong.tga`, `clap.tga`, drawn like the
+    other pictures in `tools/make_media.py`) and tinted via `UI.Tint`, so they change with the
+    colour scheme like everything else. The client cannot draw Unicode emojis. The TGAs were
+    written by a port of the same drawing to Node on the Windows machine (no Python there); a
+    run of `python3 tools/make_media.py` should give the same files but has not been done yet.
+    **Reworked after the first look in game (the owner's go-ahead, 2026-11-25):** at 15 px the
+    clapping hands looked like a rune, because the lines were drawn for the book's large pictures
+    and came out thinner than a pixel. Since then the four are drawn with a stronger line
+    (`REACTION_PEN`, 5 instead of 3.6 at 64 px), the arm without the crease of the fist, the hands
+    as two plain palms without thumbs leaning together, and shown at 18 px.
+  - **On the card (`CardReaction` in `UI/Options.lua`, `UI/ChronicleCard.lua`):** at the right
+    of the foot, on the line of time and place. A friend's card: the icon, muted until the
+    player reacted, then in the accent; the card glows under the mouse and its tooltip says
+    "Click to react", "You reacted. Click again to take it back." and, while the friend has not
+    been told yet, "… will see it as soon as you are both online.". The player's own card: the
+    icon in the accent with the number of people who reacted, their names (with alias) in the
+    tooltip; no reaction to oneself. A bundled card reacts to its newest entry; a click on a
+    bundle with a reaction anywhere in it takes them all back; on the player's own bundle the
+    people who reacted to any entry count once.
+  - **Professions (the assistant's decision, proposed 2026-11-25 without objection):** on a
+    friend's profession card the click now reacts, and the recipe book opens from a click on the
+    picture (tooltip "Open the recipe book"; `story.onPicture`, `story.pictureHint` in
+    `UI/Book.lua`). The player's own profession card still opens on a click, as it has no
+    reaction. Without reactions everything is as before.
+  - **Live feed:** a friend's reaction to one of the player's events appears as a card ("Mira
+    celebrates with you", below it the event), with the reaction as the picture (kind
+    `reaction` in `UI.BookPictures`). Its own switch `reaction` (default on), signal
+    `CHRONICLE_REACTION`. Not limited to fresh events: a reaction that waited for the next
+    greeting is still news.
+  - **Data:** on a friend's entry `mine` (the player's reaction) and `told` (what the friend was
+    last told); on an own entry `r = { [<name>] = <reaction> }`. Never sent with the entry
+    (`FIELDS` in `Sharing.lua` leaves them out); they go with the entry when `Trim` drops it.
+    Sample entries (`/fam chronicle demo`) bring a few: three friends cheered the level 40, Borin
+    mourned a death, the player reacted to Borin's boss.
+  - **Open:** who else sees reactions (see "Who sees what" in sharing.md); the website does not
+    show them yet. The clapping hands still look odd in game after the rework (the owner,
+    2026-11-25: "later; the function matters first"); the other three icons are fine for now.
 - **Rejected:** reading other players' statistics via the game's achievement comparison, as
   Guildy does. That only works for the targeted unit within sight and has led to disconnects
   with Guildy.

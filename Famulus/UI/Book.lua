@@ -18,6 +18,10 @@
 --                                       -- is, see WIDTHS; without, as wide as can be
 --           big = true,                 -- a milestone: accent border and mark
 --           onClick = function() end,   -- optional: what a click on the card does
+--           tooltip = function(tip) end, -- optional: fills the game's tooltip
+--                                       -- while the mouse is over the card
+--           onPicture = function() end, -- optional: what a click on the picture
+--           pictureHint = "...",        -- does, and what its tooltip says
 --           ...                         -- whatever its content reads
 --       } },
 --   } }
@@ -74,6 +78,8 @@ local PICTURES = {
     ability = { icon = "sparkle", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "sparkle" },
     death = { icon = "skull", fill = "deathGround", border = "deathLine", ink = "deathInk", mark = "skull", title = "deathInk" },
     boss = { icon = "swords", fill = "bossGround", border = "bossLine", ink = "bossInk", mark = "swords" },
+    -- A friend's reaction, in the live feed; story.icon names it ("cheer").
+    reaction = { icon = "cheer", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "cheer" },
     -- The story of a fellow traveller: time together, and the bond's milestones.
     fellow = { icon = "people", fill = "control", border = "controlBorder", ink = "textDim", mark = "people" },
     bond = { icon = "people", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "people" },
@@ -240,7 +246,8 @@ function UI.BookPicture(part)
     local picture = CreateFrame("Frame", nil, part)
     part.picture = picture
     -- A picture that stands for an item or a spell shows the game's tooltip
-    -- of it; the mouse is only caught where there is one.
+    -- of it, one that can be clicked says what the click does; the mouse is
+    -- only caught where there is one of these.
     picture:SetScript("OnEnter", function(self)
         local item, spell = self.item, self.spell
         if item and GameTooltip.SetItemByID then
@@ -251,10 +258,19 @@ function UI.BookPicture(part)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetSpellByID(spell)
             GameTooltip:Show()
+        elseif self.hint then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(self.hint)
+            GameTooltip:Show()
         end
     end)
     picture:SetScript("OnLeave", function()
         GameTooltip:Hide()
+    end)
+    picture:SetScript("OnMouseUp", function(self, button)
+        if button == "LeftButton" and self.onClick then
+            self.onClick()
+        end
     end)
     picture:SetScript("OnHide", function(self)
         if GameTooltip.IsOwned and GameTooltip:IsOwned(self) then
@@ -295,13 +311,15 @@ end
 -- Shows a story's picture (made by UI.BookPicture) at `size`: its game
 -- icon (story.texture), else the icon of its kind or story.icon, else its
 -- number (story.number, at `numberSize`); story.count in the corner;
--- story.item or story.spell for the tooltip.
+-- story.item or story.spell for the tooltip; story.onPicture for a click on
+-- it, with story.pictureHint as its tooltip.
 function UI.SetBookPicture(part, story, size, numberSize)
     local look = PICTURES[story.kind] or PICTURES.zone
     local picture = part.picture
     picture.item, picture.spell = story.item, story.spell
+    picture.onClick, picture.hint = story.onPicture, story.onPicture and story.pictureHint or nil
     picture:SetSize(size, size)
-    picture:EnableMouse(story.item ~= nil or story.spell ~= nil)
+    picture:EnableMouse(story.item ~= nil or story.spell ~= nil or story.onPicture ~= nil)
     part.pictureShape.border:SetColor(look.border)
     part.pictureShape.fill:SetColor(look.fill)
     local photo = story.texture
@@ -351,16 +369,32 @@ local function CreateEvent(book)
     local card = CreateFrame("Frame", nil, event)
     event.card = card
     -- A story with onClick can be clicked; its card lights up under the
-    -- mouse. The mouse is only caught where there is something to do.
-    card:SetScript("OnEnter", function()
-        event.hover:Fade(true)
+    -- mouse. One with a tooltip shows it there. The mouse is only caught
+    -- where there is something to do or to read.
+    card:SetScript("OnEnter", function(self)
+        local story = event.story
+        if story and story.onClick then
+            event.hover:Fade(true)
+        end
+        if story and story.tooltip then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            story.tooltip(GameTooltip)
+            GameTooltip:Show()
+        end
     end)
-    card:SetScript("OnLeave", function()
+    card:SetScript("OnLeave", function(self)
         event.hover:Fade(false)
+        if GameTooltip.IsOwned and GameTooltip:IsOwned(self) then
+            GameTooltip:Hide()
+        end
     end)
-    card:SetScript("OnMouseUp", function(_, button)
+    card:SetScript("OnMouseUp", function(self, button)
         local story = event.story
         if button == "LeftButton" and story and story.onClick then
+            -- What the tooltip said may no longer hold after the click.
+            if GameTooltip.IsOwned and GameTooltip:IsOwned(self) then
+                GameTooltip:Hide()
+            end
             story.onClick()
         end
     end)
@@ -424,7 +458,7 @@ local function EventSet(event, story, onLeft, width)
     local big = story.big and true or false
     event.borderColor = big and "cardActive" or "cardBorder"
     event.shape.border:SetColor(event.borderColor)
-    card:EnableMouse(story.onClick ~= nil)
+    card:EnableMouse(story.onClick ~= nil or story.tooltip ~= nil)
     event.hover:Hide()
     event.bar:SetShown(big)
 
