@@ -1,89 +1,89 @@
-# Veröffentlichung auf CurseForge
+# Publishing on CurseForge
 
-Teil des Projektwissens; Vorgaben, Regeln und die Übersicht aller Dateien stehen in
-[AGENTS.md](../AGENTS.md). Verweise der Form „siehe X“ meinen eine Überschrift oder einen fett
-gesetzten Eintrag; in welcher Datei er steht, sagt die Übersicht dort.
+Part of the project notes; requirements, rules and the index of all files are in
+[AGENTS.md](../AGENTS.md). References of the form "see X" point to a heading or a bold entry;
+the index there says which file it is in.
 
-Wunsch des Auftraggebers (2026-11-24): eine erste Alpha auf CurseForge, mit automatischem Upload.
-Eingerichtet am 2026-11-24 nach dem Vorbild von FlareUI und Guildy; der Aufbau im Einzelnen ist eine
-Entscheidung des Assistenten. Erste Datei: `v0.1.0-alpha.1` als Alpha, hochgeladen am 2026-11-24
-(Workflow grün, CurseForge antwortete „Success!“), danach in der Moderation von CurseForge.
+The owner's request (2026-11-24): a first alpha on CurseForge, with automatic upload.
+Set up on 2026-11-24 following the example of FlareUI and Guildy; the setup in detail is the
+assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11-24
+(workflow green, CurseForge answered "Success!"), then in CurseForge's moderation.
 
-- **Werkzeug:** der BigWigs-Packager (`BigWigsMods/packager@v2`) als GitHub Action in
-  `.github/workflows/release.yml`. Er bildet `## Interface: 16001` auf die CurseForge-Spielversion
-  „WoW Forever“ ab (laut Quellcode `16???` → `forever`, Versionstyp 88568). `.pkgmeta` hebt den
-  Unterordner `Famulus/` per `move-folders` an die Spitze des Zips (CurseForge will genau einen
-  Ordner, benannt wie die `.toc`) und lässt den Rest des Repos draußen. Lokal mit dem Packager
-  geprüft (`release.sh -d -z`): ein Ordner `Famulus` mit den Dateien des Addons, Version ersetzt.
-- **Ausgelöst wird nur durch einen Tag** `v…`, den der Auftraggeber selbst setzt. Pushes und Pull
-  Requests laden nie hoch; dort laufen nur die Tests (`.github/workflows/tests.yml`) und, wenn
-  sich auf `main` etwas in `website/` ändert, die Veröffentlichung der Website (siehe „Website“).
-- **Der Tag bestimmt den Dateityp.** `tools/release_check.sh` lässt nur drei Formen zu: `v1.2.3`
-  (Release), `v1.2.3-beta.1` (Beta), `v1.2.3-alpha.1` (Alpha). Grund (Vorgabe des Auftraggebers:
-  nichts mit „alpha“ oder „beta“ darf als normaler Release erscheinen): Der Packager lädt jeden Tag
-  ohne diese Wörter als Release hoch, `v0.2.0-rc1` wäre sonst bei allen Spielern gelandet. Das
-  Skript prüft außerdem, dass `CHANGELOG.md` einen Abschnitt `## <version>` (Tag ohne „v“) mit
-  Text hat, dass die `.toc` eine `## X-Curse-Project-ID` trägt und dass das Secret `CF_API_KEY`
-  gesetzt ist. Erst danach laufen die Tests, und nur wenn sie grün sind, baut und lädt der Packager.
-- **Ablauf eines Release:** Abschnitt in `CHANGELOG.md` schreiben (Englisch, wird der Changelog der
-  Datei auf CurseForge), per Pull Request nach `main` bringen, dann auf dem gemergten Stand von
-  `main` `git tag v0.1.0` und `git push origin v0.1.0`.
-  Prüfen vorab: `bash tools/release_check.sh v0.1.0`. Von Hand gestartet (Actions › Release › Run
-  workflow) baut der Workflow das Zip ohne Upload und hängt es eine Woche an den Lauf.
-- **Version:** Die `.toc` trägt `@project-version@` in einem `#@non-debug@`-Block, der Packager
-  setzt den Tag ein. Die Arbeitskopie (Junction) liest `## Version: dev` aus dem `#@debug@`-Block;
-  Fenster und Selbsttest zeigen dann „dev“. `ns.version` lässt das „v“ des Tags weg.
-- **Changelog:** Fehlt `.release-notes.md`, baut der Packager einen Changelog aus den Commits (samt
-  alter `Co-Authored-By`-Zeilen). Deshalb schreibt der Workflow die Datei immer, beim Probelauf
-  als Platzhalter.
-- **Regeln von CurseForge** (Support-Seiten, gelesen 2026-11-24): Projekt und jede Datei werden von
-  Hand geprüft (täglich 8–15 Uhr MEZ, der Reihe nach; Stunden bis Tage). In der App erscheint ein
-  Projekt nur mit mindestens einer Datei vom Typ Release; Alpha und Beta bekommt nur, wer die
-  Release-Art für das Addon umstellt. Jede Datei braucht einen Changelog; externe Download-Links
-  sind verboten.
-- **Lizenz (Entscheidung des Auftraggebers, 2026-11-24): alle Rechte vorbehalten**, nach dem
-  Muster von Cell (`LICENSE` im Wurzelordner). Er wollte den Code zeigen, aber keine veröffentlichten
-  Forks; die GPL (auch mit Namensschutz nach Abschnitt 7) hat er deshalb verworfen. Erlaubt: Code
-  ansehen, für den eigenen Gebrauch ändern, auf GitHub forken nur für Pull Requests. Nur mit
-  schriftlicher Erlaubnis: weitergeben, hochladen, als eigenes Projekt veröffentlichen, größere
-  Teile verwenden, Name und Logo nutzen. Beiträge darf der Auftraggeber unter beliebigen Bedingungen
-  verwenden (damit bleibt ein späterer Lizenzwechsel möglich). Der Wortlaut ist ein Entwurf des
-  Assistenten, keine Rechtsberatung; als Urheber steht auf Wunsch des Auftraggebers „89pleasure“. Der
-  Packager legt die Datei als `Famulus/LICENSE` ins Zip (lokal geprüft; als ungetrackte Datei
-  lässt er sie weg). Auf CurseForge „All Rights Reserved“ wählen. Damals verbreitet: alle Rechte
-  vorbehalten bei DBM, Details!, ElvUI, Cell, Masque; GPL bei WeakAuras, Questie, MDT, Guildy,
-  OneForAll, Polestar; MIT bei OmniCC und FlareUI. Den Fork-Knopf eines öffentlichen Repos kann keine
-  Lizenz abschalten. Vor dem Öffentlichmachen des Repos offen: Die alten Commits enthalten
-  `Co-Authored-By: Claude …`-Zeilen (siehe Arbeitsablauf).
-- **Logo für das Projekt:** `docs/curseforge/logo.png` (1024 × 1024), gerendert aus
-  `docs/curseforge/logo.svg`: die Flamme aus `tools/make_media.py` mit Schein auf dem dunklen Grund
-  von `logo-round.tga`, als volles Quadrat, weil CurseForge selbst zuschneidet, rundet und auf
-  400 × 400 verkleinert. Flamme und Funken liegen im eingeschriebenen Kreis, ein runder Zuschnitt
-  schneidet also nichts ab. Neu rendern (Git Bash, Chrome auf dem Windows-Rechner; im SVG-Kommentar
-  darf kein doppelter Bindestrich stehen):
+- **Tool:** the BigWigs packager (`BigWigsMods/packager@v2`) as a GitHub Action in
+  `.github/workflows/release.yml`. It maps `## Interface: 16001` to the CurseForge game version
+  "WoW Forever" (according to the source `16???` → `forever`, version type 88568). `.pkgmeta` lifts the
+  subfolder `Famulus/` to the top of the zip via `move-folders` (CurseForge wants exactly one
+  folder, named like the `.toc`) and leaves the rest of the repo out. Checked locally with the
+  packager (`release.sh -d -z`): one folder `Famulus` with the addon's files, version replaced.
+- **Only a tag triggers it:** `v…`, which the owner sets. Pushes and pull
+  requests never upload; they only run the tests (`.github/workflows/tests.yml`) and, when
+  something in `website/` changes on `main`, the publishing of the website (see "Website").
+- **The tag determines the file type.** `tools/release_check.sh` only allows three forms: `v1.2.3`
+  (release), `v1.2.3-beta.1` (beta), `v1.2.3-alpha.1` (alpha). Reason (the owner's requirement:
+  nothing with "alpha" or "beta" may appear as a normal release): the packager uploads every tag
+  without these words as a release, `v0.2.0-rc1` would otherwise have reached all players. The
+  script also checks that `CHANGELOG.md` has a section `## <version>` (tag without "v") with
+  text, that the `.toc` carries a `## X-Curse-Project-ID` and that the secret `CF_API_KEY`
+  is set. Only then do the tests run, and only if they are green does the packager build and upload.
+- **Course of a release:** write a section in `CHANGELOG.md` (English, becomes the changelog of the
+  file on CurseForge), bring it to `main` via pull request, then on the merged state of
+  `main` `git tag v0.1.0` and `git push origin v0.1.0`.
+  Check beforehand: `bash tools/release_check.sh v0.1.0`. Started by hand (Actions › Release › Run
+  workflow) the workflow builds the zip without upload and attaches it to the run for a week.
+- **Version:** The `.toc` carries `@project-version@` in a `#@non-debug@` block, the packager
+  inserts the tag. The working copy (junction) reads `## Version: dev` from the `#@debug@` block;
+  window and self-test then show "dev". `ns.version` drops the "v" of the tag.
+- **Changelog:** If `.release-notes.md` is missing, the packager builds a changelog from the commits
+  (including old `Co-Authored-By` lines). That is why the workflow always writes the file, on a
+  trial run as a placeholder.
+- **CurseForge's rules** (support pages, read 2026-11-24): the project and every file are reviewed
+  by hand (daily 8–15 CET, in order; hours to days). In the app a project only appears with at
+  least one file of type release; alpha and beta are only received by those who change the
+  release type for the addon. Every file needs a changelog; external download links
+  are forbidden.
+- **Licence (the owner's decision, 2026-11-24): all rights reserved**, following the
+  pattern of Cell (`LICENSE` in the root folder). The owner wanted to show the code, but no published
+  forks; the owner therefore rejected the GPL (even with name protection under section 7). Allowed: viewing
+  the code, changing it for one's own use, forking on GitHub only for pull requests. Only with
+  written permission: redistributing, uploading, publishing as one's own project, using larger
+  parts, using the name and logo. The owner may use contributions under any terms
+  (so a later licence change remains possible). The wording is a draft by the
+  assistant, not legal advice; at the owner's request the author is "89pleasure". The
+  packager puts the file into the zip as `Famulus/LICENSE` (checked locally; as an untracked file
+  it leaves it out). On CurseForge choose "All Rights Reserved". Common at the time: all rights
+  reserved for DBM, Details!, ElvUI, Cell, Masque; GPL for WeakAuras, Questie, MDT, Guildy,
+  OneForAll, Polestar; MIT for OmniCC and FlareUI. No licence can switch off the fork button of a
+  public repo. Open before making the repo public: the old commits contain
+  `Co-Authored-By: Claude …` lines (see "Workflow").
+- **Logo for the project:** `docs/curseforge/logo.png` (1024 × 1024), rendered from
+  `docs/curseforge/logo.svg`: the flame from `tools/make_media.py` with glow on the dark background
+  of `logo-round.tga`, as a full square, because CurseForge crops, rounds and scales it down to
+  400 × 400 itself. Flame and embers lie within the inscribed circle, so a round crop
+  cuts nothing off. Render again (Git Bash, Chrome on the Windows machine; the SVG comment
+  must not contain a double hyphen):
   `"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu
   --hide-scrollbars --force-device-scale-factor=1 --window-size=1024,1024
-  --screenshot="<abs. Pfad>\logo.png" "file:///<abs. Pfad>/logo.svg"`.
-  Eine Entscheidung des Assistenten, vom Auftraggeber noch nicht gesehen.
-- **Projekt angelegt** (vom Auftraggeber, 2026-11-24): CurseForge-Projekt-ID 1828785, steht als
-  `## X-Curse-Project-ID` in der `.toc`. Probelauf auf GitHub am 2026-11-24 grün: Spielversion
-  1.60.1 (Forever) erkannt, 60 Dateien (Addon plus `LICENSE`), Zip `Famulus-<version>-forever.zip`
-  (der Packager hängt „-forever“ an, auch an die Bezeichnung auf CurseForge).
-- **Erste Datei als Alpha (Entscheidung des Auftraggebers, 2026-11-24):** Tag `v0.1.0-alpha.1`,
-  „damit sie nicht als Release rausgeht, wir sind ja noch nicht so weit“. Verworfen ist damit die
-  Empfehlung des Assistenten (`v0.1.0` als Release, damit Famulus in der App erscheint). Folge:
-  Solange es keine Release-Datei gibt, steht Famulus nur auf der Website von CurseForge, nicht in
-  der App. Der Abschnitt in `CHANGELOG.md` heißt deshalb `## 0.1.0-alpha.1`.
-- **Token:** Das Repository-Secret `CF_API_KEY` hat der Auftraggeber selbst hinterlegt
-  (2026-11-24); der Token ging nicht durch den Assistenten.
-- **Offen:**
-  - Projektseite: Summary vom Auftraggeber gewählt („Your companion for playing together: Famulus
+  --screenshot="<abs. path>\logo.png" "file:///<abs. path>/logo.svg"`.
+  The assistant's decision, not yet seen by the owner.
+- **Project created** (by the owner, 2026-11-24): CurseForge project ID 1828785, stored as
+  `## X-Curse-Project-ID` in the `.toc`. Trial run on GitHub on 2026-11-24 green: game version
+  1.60.1 (Forever) detected, 60 files (addon plus `LICENSE`), zip `Famulus-<version>-forever.zip`
+  (the packager appends "-forever", also to the label on CurseForge).
+- **First file as alpha (the owner's decision, 2026-11-24):** tag `v0.1.0-alpha.1`,
+  "so it doesn't go out as a release, we're not that far yet". This rejects the
+  assistant's recommendation (`v0.1.0` as release, so that Famulus appears in the app). Consequence:
+  as long as there is no release file, Famulus is only on CurseForge's website, not in
+  the app. The section in `CHANGELOG.md` is therefore called `## 0.1.0-alpha.1`.
+- **Token:** The owner stored the repository secret `CF_API_KEY` personally
+  (2026-11-24); the token did not pass through the assistant.
+- **Open:**
+  - Project page: summary chosen by the owner ("Your companion for playing together: Famulus
     helps you stay close to the friends and fellow adventurers who make your journey so
-    special.“); die Beschreibung liegt als Entwurf des Assistenten in
-    `docs/curseforge/description.md` (Englisch, Markdown, ohne Guildy, weil dessen Anbindung nur
-    mit dem Fork geht). Kategorien: Der Assistent rät von „Companions“ ab (auf CurseForge
-    Haustiere und Reittiere) und empfiehlt „Chat & Communication“ mit „Guild“.
-  - Nicht eingerichtet: Wago, GitHub-Releases, eine Freigabe-Umgebung für die Secrets.
-- Auf GitHub gelaufen (2026-11-24): der Test-Workflow, ein Probelauf ohne Upload und der Upload
-  von `v0.1.0-alpha.1` („Uploading Famulus-v0.1.0-alpha.1-forever.zip (1.60.1 alpha) … Success!“).
-  Ein Tag ohne Upload (Freigabe, Wago, GitHub-Releases) ist nicht eingerichtet.
+    special."); the description is a draft by the assistant in
+    `docs/curseforge/description.md` (English, Markdown, without Guildy, because its integration only
+    works with the fork). Categories: the assistant advises against "Companions" (on CurseForge
+    pets and mounts) and recommends "Chat & Communication" with "Guild".
+  - Not set up: Wago, GitHub releases, an approval environment for the secrets.
+- Run on GitHub (2026-11-24): the test workflow, a trial run without upload and the upload
+  of `v0.1.0-alpha.1` ("Uploading Famulus-v0.1.0-alpha.1-forever.zip (1.60.1 alpha) … Success!").
+  A tag without upload (approval, Wago, GitHub releases) is not set up.

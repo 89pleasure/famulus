@@ -1,171 +1,173 @@
-# Das Fenster
+# The window
 
-Teil des Projektwissens; Vorgaben, Regeln und die Übersicht aller Dateien stehen in
-[AGENTS.md](../AGENTS.md). Verweise der Form „siehe X“ meinen eine Überschrift oder einen fett
-gesetzten Eintrag; in welcher Datei er steht, sagt die Übersicht dort.
+Part of the project notes; requirements, rules and the index of all files are in
+[AGENTS.md](../AGENTS.md). References of the form "see X" point to a heading or a bold entry;
+the index there says which file it is in.
 
-**Neugestaltung 2026-11-18** auf Wunsch des Auftraggebers: Mit den Aliasen kam die erste größere
-Funktion; das Fenster soll mit weiteren Hauptfunktionen übersichtlich bleiben. Vorgaben: Hauptfunktionen
-in der Seitenleiste mit eigenem Aufbau je Funktion, modern und
-schlicht wie Polestar, helles und dunkles Design (das helle ist seit 2026-11-19 wieder entfernt,
-siehe „Farben“), runde Ecken, eigene Schrift. Er hat freie Hand
-gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noch nicht bestätigt.
+**Redesign 2026-11-18** at the owner's request: the aliases brought the first larger feature; the
+window should stay clear as more main features are added. Requirements: main features
+in the sidebar with a layout of their own per feature, modern and
+plain like Polestar, light and dark design (the light one has been removed again since 2026-11-19,
+see "Colours"), round corners, a font of its own. The owner left a free hand;
+layout, colours and font are the assistant's decisions and not yet confirmed.
 
-- **Aufbau (seit 2026-11-23, Wunsch des Auftraggebers nach dem Vorbild von OneForAll, an einem
-  HTML-Mockup bestätigt):** Die Funktionen stehen oben, ihre Unterbereiche links.
-  - **Neuer Aufbau (2026-11-24, Wunsch des Auftraggebers nach dem ersten Blick auf die Weggefährten
-    ohne Seitenleiste):** Die Navigation steht wieder in der Seitenleiste, auf allen Seiten gleich.
-    Dazwischen gab es am selben Tag kurz einen Kopf mit Reitern, Suche und Symbolen und eine Seite
-    ohne Seitenleiste (`page.sidebar = false`); beides ist wieder entfernt.
-  - **Kopf** (76 hoch, über die ganze Breite, dunkler Grund wie die Seitenleiste): links Logo, Name
-    und Untertitel; daneben Name und Beschreibung der gewählten Seite (`window.area`, während der
-    Suche „Suche“ und die Zahl der Treffer); rechts nur Schließen.
-  - **Seitenleiste:** oben die Suche, darunter die Hauptfunktionen als Einträge mit Symbol
-    (`navButtons`; eine abgeschaltete ausgegraut mit „AUS“; gewählter Eintrag: auslaufender Verlauf, leuchtender
-    Balken), unten nach einer Linie „Einstellungen“ und „Über“. Die frühere Zeile „x von y aktiv“
-    ist entfernt, ebenso die Zeile „Aktiv“ unter „Über“ (Entscheidung des Auftraggebers,
-    2026-11-24: stammt aus der Zeit der vielen QoL-Funktionen). Auch die Zähler aktiv/gesamt an den
-    Einträgen sind entfernt.
-  - **Inhalt:** ganz oben die Unterbereiche der Seite als Tabs (`window.tabs`, 48 hoch, Strich mit
-    Verlauf unter dem gewählten), „Zurücksetzen“ rechts daneben. Eine Seite mit nur einem
-    Unterbereich („Über“) zeigt keine Tabs; während der Suche gibt es keine. Titel und
-    Beschreibung des Unterbereichs stehen nicht mehr über dem Inhalt (`ui_tab_*_desc` wird
-    derzeit nicht angezeigt). Der Grund von Kopf und Seitenleiste liegt auf dem Fenster selbst
-    (`Ground` in `UI/Options.lua`), damit die Körnung als ein Band darüber läuft.
-    Entscheidungen des Assistenten im Einzelnen, im Spiel noch nicht gesehen.
-  - Im Code heißen die Bereiche weiter „Seiten“ (`pages`, Knöpfe `navButtons`) und die
-    Unterbereiche „Reiter“ (`page.tabs`, `window.tabs`, Texte `ui_tab_<id>`); wo die Projektnotizen
-    „Reiter“ eines Bereichs sagen, sind die Einträge der Seitenleiste gemeint. Die Reiterzeile im
-    Inhalt (`UI.Tabs`) mit gleitender Markierung und die Überschrift „Funktionen“ sind entfallen.
-  - Fenster 1180 × 730 wie das Einstellungsfenster von FlareUI (Wunsch des Auftraggebers,
-    2026-11-23; vorher 880 × 590).
-  - Vom Auftraggeber im Spiel gesehen und bestätigt (2026-11-23, „sieht super aus“), samt der
-    Entscheidungen des Assistenten: „Über“ als eigener Reiter, Kopf und Seitenleiste auf demselben
-    Grund. Der Hauptschalter in der Seitenleiste ist seit 2026-11-24 in die Einstellungen gewandert.
-- **Bereiche (`ns.areas`, `Core/Features.lua`):** Jede Kategorie gehört zu genau einem Bereich (der
-  Test prüft das). Reihenfolge seit 2026-11-24: Chronik, Weggefährten, Aliase (siehe „Vorgaben“);
-  `ns.categories` folgt ihr, damit die Hauptschalter in derselben Reihenfolge stehen. Jeder Bereich hat einen eigenen Aufbau (`layouts.<bereich>` in
-  `UI/Options.lua`). `aliases`: Reiter „Namen“ mit Karte „Neuer Alias“ und Karte
-  „Deine Aliase“ (Avatar mit Anfangsbuchstabe), Reiter „Einstellungen“ (bis 2026-11-23 „Anzeige“) mit den Alias-Features.
-  `chronicle`: siehe „Chronik“. `fellows`: siehe „Weggefährten“. Die Einstellungen haben die Reiter „Allgemein“ (Sprache,
-  Rückmeldung im Chat, Minikartensymbol, Charakterprofil) und „Darstellung“ (Farbwelt, Funken,
-  Fenstergröße). Die erste Seite beim Öffnen ist die erste der Seitenleiste, seit 2026-11-24 also
-  die Chronik (vorher die Aliase).
-- **Hauptschalter** (seit 2026-11-24, Entscheidung des Auftraggebers: „Nur die Hauptschalter“):
-  die drei Kategorien als erste Karte „Funktionen“ unter Einstellungen › Allgemein
-  (`CategoryItem`, Texte `area_<id>` und `area_<id>_desc`). Die Schalter der einzelnen Features
-  bleiben auf ihren Reitern. Ist eine Kategorie aus, ist ihr Eintrag in der Seitenleiste ausgegraut und trägt
-  „AUS“, ihre Tabs sind ausgegraut, und ihre Seite zeigt statt des Inhalts
-  einen Hinweis mit dem Knopf „In den Einstellungen einschalten“ (`window.offNotice`), der
-  Einstellungen › Allgemein öffnet.
-- **Zurücksetzen** wirkt auf den Reiter (Features ganzer Abschnitt, Addon-Optionen nur ihr
-  Schlüssel; auf Einstellungen › Allgemein auch die drei Hauptschalter). Erster Klick fragt
-  („Wirklich zurücksetzen?“, rot), zweiter innerhalb von vier Sekunden führt aus; auf
-  Standardwerten ausgegraut; ohne Einstellungen (Liste der Aliase, „Über“) und auf einer
-  abgeschalteten Seite nicht vorhanden.
-- **Suche:** im Kopf, über alle Seiten und Reiter, Treffer gruppiert je Reiter in Karten („Aliase ·
-  Einstellungen“); keine Reiter in der Ergebnisansicht. Den Inhalt einer abgeschalteten Funktion
-  lässt sie aus, ihren Hauptschalter findet sie. Auf einer Seite ohne Seitenleiste nehmen die
-  Treffer die ganze Breite.
-- **Farben (überarbeitet 2026-11-18, Abend):** Der Auftraggeber fand den ersten Stand (neutrale
-  Grautöne, Akzent nur als Fläche) zu beliebig. Vorbilder für Farbkonzept, Akzente und Effekte:
-  Polestar Guide und Mastercraft, ohne sie zu kopieren. An einem HTML-Mockup hat er das Konzept
-  **„Zitrone“** gewählt: Petrol-Flächen, Akzent Zitronengelb. Eine Farbwelt (`general.accent`,
-  Liste `UI.accents`) ist seitdem ein ganzes Konzept und nicht mehr nur eine Akzentfarbe: Sie tönt
-  alle Flächen mit ihrem Farbton (`hue`, `saturation`; die Helligkeitsleiter `ladder`) und bringt
-  einen Akzent als Farbpaar (`accent` → `accent2`) für Verläufe. Vorhanden: `lemon` (Standard),
-  `mint`, `rose`, `lilac`, `amber`. Vom Auftraggeber im Spiel gesehen und bestätigt ist `lemon`;
-  die anderen vier stammen aus dem Mockup.
-- **Kein heller Modus (Entscheidung des Auftraggebers, 2026-11-19):** Das Fenster ist immer dunkel.
-  Entfernt sind die helle Palette, die Option `general.theme`, der Knopf oben rechts, die Symbole
-  Sonne und Mond und das nur dafür gebaute Umschaltfeld (`UI.Segmented`, Zeilentyp `segment`).
-  Nicht wieder einbauen, ohne zu fragen. Das Signal heißt weiter `THEME_CHANGED` und feuert beim
-  Wechsel der Farbwelt.
-- **Akzente und Effekte:** Akzent, Verlauf und Glühen stehen nur für „aktiv / hier“: Schalter an
-  (Verlauf, Schein), gewählter Reiter (Strich mit Verlauf und Schein), gewählter Bereich in der
-  Seitenleiste (auslaufender Verlauf, leuchtender Balken, Zähler auf Akzent-Plakette), Karte eines
-  laufenden Features (feiner Akzentrand, Marke links), Feld mit Fokus (Ring), Logo. Dazu als
-  Signatur ein weicher Schein in Akzentfarbe hinter dem Logo. Tiefe über eine Lichtkante oben an
-  Fenster und Karten und vertiefte Options-Zeilen. Hover blendet ein und aus (`Shape:Fade`).
-  Entscheidungen des Auftraggebers am Mockup: **eine** Linie zwischen Seitenleiste und Inhalt, der
-  Fensterrand läuft einheitlich um alles; die Linie über einer Options-Zeile geht von Kartenrand zu
-  Kartenrand; Options-Zeilen tragen einen Punkt, keinen Winkel und keine Führungslinie; der
-  Hauptknopf („Speichern“) hat einen waagerechten Verlauf, einen dunkleren Rand, eine helle Linie
-  innen und einen Schatten, aber keinen Verlauf von oben nach unten (wirkte „plastisch“).
-- **Hintergrund (2026-11-19, Wunsch des Auftraggebers):** Eine feine Körnung (`grain.tga`, reines
-  Rauschen, ein Texel je Bildschirmpixel über `SetTexCoord`, `UI.Grain`) liegt als Band über die
-  ganze Fensterbreite, Seitenleiste und Inhalt gleich, so hoch wie der Kopf (`GRAIN_BAND`), und
-  läuft unter den Reitern aus. Entscheidungen des Auftraggebers nach Blicken ins Spiel: eine erste
-  Fassung mit wolkiger Schicht sah fleckig aus; überall gleich war die Körnung zu viel; aus fünf
-  umschaltbaren Varianten wählte er „Seitenleiste und Kopf“, aber als ein durchgehendes Band in
-  Kopfhöhe. Die Auswahl im Fenster ist wieder entfernt. Der Inhalt wird nach unten etwas dunkler.
-  Dazu steigen kleine Funken auf (`UI.Embers`): Texturen mit Animationen des Clients
-  (`AnimationGroup`, `Alpha` und `Translation`), also ohne `OnUpdate` und ohne Lua pro Frame.
-  Sie laufen nur bei offenem Fenster und liegen hinter Karten und Einträgen. Abschaltbar unter
-  Einstellungen › Darstellung (`general.embers`, Standard an). Im Spiel bestätigt: Körnung und
-  Funken laufen. Noch nicht gesehen: das Band in der Seitenleiste und sein Auslaufen.
-- **Karten:** In Kategorie-Reitern hat jedes Feature eine eigene Karte, zusammen mit seinen
-  Optionen (`FeatureBlocks`, Abstand `CARD_GAP`). Die Suche gruppiert weiter je Reiter.
-- **Technik dazu:** `UI.Shade(texture, richtung, von, nach)` für Verläufe (`SetGradient`, folgt dem
-  Thema wie `UI.Paint`); `Shape:SetGradient` verteilt einen Verlauf auf die Teile einer runden Form
-  und braucht deren Größe. Schein und Glühen kommen ohne neue Textur aus: `UI.Shadow` mit einem
-  Akzent-Farbnamen statt `shadow`, `UI.Halo` und der Schein hinter dem Logo nutzen `shadow.tga`.
-  Alles nur gegen den Mock geprüft; im Spiel offen sind vor allem `SetGradient` auf Bild-Texturen
-  (runde Ecken von Schalter, Knopf, Logo), waagerechte Verläufe und die Stärke der Glüheffekte.
-- **Form:** runde Ecken aus Viertelkreisen von `circle.tga` plus drei Rechtecken (`UI.Round`,
-  `UI.Card` mit Haarlinien-Rand); Fenster 12, Karten 10, Bedienelemente 6–8. Weicher Schatten um
-  Fenster und Menüs (`UI.Shadow`, `shadow.tga`). Der frühere Verlaufsrahmen (`UI.GradientFrame`) ist
-  entfallen.
-- **Schrift:** Inter (SIL Open Font License 1.1) in Regular, Medium und SemiBold, mit
-  `tools/make_fonts.py` auf Latein, Griechisch, Kyrillisch und Satzzeichen gekürzt (je ~100 KB).
-  Auf koKR/zhCN/zhTW-Clients bleibt die Spielschrift.
-  **Wie der Client Schriften lädt (geklärt 2026-11-25, aus dem Quellcode von FlareUI, Kommentar
-  über `ns.FontRedraw` in `Core.lua`; dort aus Fehlerberichten von Spielern gelernt):** Eine
-  Schriftdatei lädt erst, wenn ein **sichtbarer** FontString **mit Text** sie verlangt. Bis dahin
-  liefert `SetFont` falsch und der String behält seine alte Schrift (ein neuer hat keine,
-  `SetText` wirft dann); ist die Datei da, wechselt er von selbst. Ein versteckter oder leerer
-  String lädt nichts. Text, der vor dem Laden gezeichnet wurde, kann leer bleiben; dieselbe
-  Schrift noch einmal setzen hilft nicht, Größe ändern und zurück zeichnet ihn neu. Folgen:
-  - Die Warnungen `font …` im Selbsttest (2026-11-19 und 2026-11-24) waren Fehlalarme: Er prüfte
-    an einem versteckten, leeren String. Auch das Anfragen beim Login (verstecktes Frame, ohne
-    Text) lud nichts und ist entfernt. Belegt durch den Screenshot im Kopf der Website (Windows,
-    2026-11-24): Das Fenster zeigt Inter in zwei Schnitten, nicht Friz Quadrata.
-  - Inter erschien trotz des alten Rückfalls auf die Spielschrift, weil der Client die erste
-    Anfrage behält und den String später umstellt, ohne ihn neu zu zeichnen. Das erklärt
-    vermutlich den leeren Reiter „Chronik“ und den fehlenden Zähler vom 2026-11-24 (Name des
-    Reiters blieb über Seitenwechsel leer, Breite und Zähler stimmten; nach `/reload` war alles
-    da).
-  - Seit 2026-11-25 (`ApplyFont` in `UI/Widgets.lua`, wie `SetFontRaw` bei FlareUI): Liefert
-    `SetFont` falsch, bekommt der String die Spielschrift, fragt erneut nach Inter und steht in
-    einer Liste; ein Ticker (0,5 s, nur solange jemand wartet, höchstens eine Minute, beim Öffnen
-    des Fensters neu) fragt nach, und sobald der Client ja sagt, wird der String mit Größe+1 und
-    zurück neu gezeichnet. Der Selbsttest liest `UI.fontLoaded` und warnt nur, wenn das Fenster
-    die Schrift verlangt hat und sie nicht kam; vor dem ersten Öffnen meldet er „not used yet“.
-  - Nicht übernommen von FlareUI: alle Strings 2 und 10 s nach jedem Ladebildschirm neu zeichnen
-    (dort gegen Strings, die sofort ja sagten und trotzdem leer blieben). Bleibt Text nach einem
-    Ladebildschirm leer, ist das der nächste Schritt.
-  - **Falls es wieder auftritt (Entscheidung des Auftraggebers, 2026-11-25):** Inter bleibt
-    vorerst. Bleibt Text trotz des Ladefixes leer, wechselt das Fenster auf eine Schrift des
-    Spiels, die von Anfang an geladen ist, und zwar **Arial Narrow** (`Fonts\ARIALN.TTF`),
-    nicht Friz Quadrata. Polestar zeigt in seinem Standard-Look die Spielschrift; Inter ist dort
-    nur eine Option, mit demselben schlichten Rückfall wie früher bei uns. Eine eigene
-    Schriftfamilie (`CreateFontFamily`, wie bei FlareUI) hilft gegen das Laden nicht: Sie wählt
-    je Text die Datei nach dem Alphabet (gegen Kästchen bei koreanischen oder chinesischen
-    Namen), aber Inter darin muss genauso erst laden.
-  - Im Spiel ungeprüft. Zu sehen wäre: Beim ersten Öffnen nach dem Login höchstens eine halbe
-    Sekunde Spielschrift, dann Inter, kein leerer Text; `/fam test` nach dem Öffnen meldet
-    `font …` als ok.
-  **Ebenfalls 2026-11-24, ungeklärt:** Nach einem Tod (23:44) zeigte die Chronik ihn im Buch, die
-  Karte „Diese Woche“ daneben zählte ihn nicht (5 statt 6); das Fenster war beim Tod zu und wurde
-  danach geöffnet. Buch und Randspalte entstehen im selben `Render` aus denselben Einträgen.
-  Beim nächsten Tod stimmte die Zahl wieder (7), BugGrabber hatte keinen Fehler, und der Mock
-  zählt auch mit den gespeicherten Daten des Auftraggebers richtig. Ein Test im Spiel (Beispiele
-  bei offenem Fenster einspielen) gab bei `/run local c=FamulusOptionsFrame.rail.cards[1]
-  print(c.spec.stats[2].value, c.cells[2].value:GetText())` „11 11“: berechnet und gesetzt (ob
-  das Fenster dabei auch 11 zeigte, hat der Auftraggeber nicht eigens gesagt). Tritt es wieder auf, diese Zeile sofort eingeben: Zeigt sie die neue Zahl, das
-  Fenster aber die alte, zeichnet der Client den Text nicht neu (wie oben).
-- Unverändert aus 2026-11-16: feste Fensterhöhe, längere Seiten scrollen; die Seite für
-  Addon-eigene Einstellungen heißt „Einstellungen“ (intern `general`); Untertitel und
-  Reiterbeschreibung sagen, was der Spieler dort findet, keine technischen Hinweise; Optionen eines
-  Features (`child`) stehen eingerückt unter ihm und sind bei abgeschaltetem
-  Feature eingeklappt (schmal, ausgegraut, Wert sichtbar), die Suche zeigt sie vollständig.
+- **Layout (since 2026-11-23, the owner's request following the example of OneForAll, confirmed
+  on an HTML mockup):** The features are at the top, their sub-areas on the left.
+  - **New layout (2026-11-24, the owner's request after the first look at the fellow travellers
+    without a sidebar):** Navigation is back in the sidebar, the same on all pages.
+    In between, on the same day, there was briefly a header with tabs, search and icons and a page
+    without a sidebar (`page.sidebar = false`); both are removed again.
+  - **Header** (76 high, across the full width, dark ground like the sidebar): on the left logo, name
+    and tagline; next to them name and description of the selected page (`window.area`, during a
+    search "Search" and the number of hits); on the right only Close.
+  - **Sidebar:** search at the top, below it the main features as entries with an icon
+    (`navButtons`; a switched-off one greyed out with "OFF"; selected entry: fading gradient, glowing
+    bar), at the bottom after a line "Settings" and "About". The former line "x of y active"
+    is removed, as is the line "Active" under "About" (the owner's decision,
+    2026-11-24: it dates from the time of the many QoL features). The active/total counters on the
+    entries are removed too.
+  - **Content:** at the very top the page's sub-areas as tabs (`window.tabs`, 48 high, stroke with
+    gradient under the selected one), "Reset" to the right of them. A page with only one
+    sub-area ("About") shows no tabs; during a search there are none. Title and
+    description of the sub-area are no longer shown above the content (`ui_tab_*_desc` is
+    currently not displayed). The ground of header and sidebar lies on the window itself
+    (`Ground` in `UI/Options.lua`), so that the grain runs over it as one band.
+    The assistant's decisions in detail, not yet seen in game.
+  - In the code the areas are still called "pages" (`pages`, buttons `navButtons`) and the
+    sub-areas "tabs" (`page.tabs`, `window.tabs`, texts `ui_tab_<id>`); where the project notes
+    say "tabs" of an area, they mean the entries of the sidebar. The tab row in the
+    content (`UI.Tabs`) with a sliding marker and the heading "Features" are gone.
+  - Window 1180 × 730 like the settings window of FlareUI (the owner's request,
+    2026-11-23; before that 880 × 590).
+  - Seen and confirmed in game by the owner (2026-11-23, "looks great"), together with the
+    assistant's decisions: "About" as a tab of its own, header and sidebar on the same
+    ground. The master switch in the sidebar has moved into the settings since 2026-11-24.
+- **Areas (`ns.areas`, `Core/Features.lua`):** Every category belongs to exactly one area (the
+  test checks this). Order since 2026-11-24: Chronicle, Fellow travellers, Aliases (see
+  "Requirements"); `ns.categories` follows it, so that the master switches are in the same order.
+  Each area has a layout of its own (`layouts.<area>` in
+  `UI/Options.lua`). `aliases`: tab "Names" with the card "New alias" and the card
+  "Your aliases" (avatar with initial), tab "Settings" (until 2026-11-23 "Display") with the alias
+  features. `chronicle`: see "Chronicle". `fellows`: see "Fellow travellers". The settings have the
+  tabs "General" (language, feedback in chat, minimap icon, character profile) and "Appearance"
+  (colour scheme, embers, window size). The first page on opening is the first in the sidebar,
+  so since 2026-11-24 the chronicle (before that the aliases).
+- **Master switch** (since 2026-11-24, the owner's decision: "Only the master switches"):
+  the three categories as the first card "Features" under Settings › General
+  (`CategoryItem`, texts `area_<id>` and `area_<id>_desc`). The switches of the individual features
+  stay on their tabs. If a category is off, its entry in the sidebar is greyed out and carries
+  "OFF", its tabs are greyed out, and instead of the content its page shows
+  a notice with the button "Switch on in settings" (`window.offNotice`), which
+  opens Settings › General.
+- **Reset** acts on the tab (features of the whole section, addon options only their
+  key; on Settings › General also the three master switches). The first click asks
+  ("Really reset?", red), a second within four seconds carries it out; greyed out on
+  default values; not present without settings (list of aliases, "About") and on a
+  switched-off page.
+- **Search:** in the header, across all pages and tabs, hits grouped per tab in cards ("Aliases ·
+  Settings"); no tabs in the results view. It leaves out the content of a switched-off feature,
+  but finds its master switch. On a page without a sidebar the
+  hits take the full width.
+- **Colours (reworked 2026-11-18, evening):** The owner found the first version (neutral
+  greys, accent only as a fill) too arbitrary. Role models for colour concept, accents and effects:
+  Polestar Guide and Mastercraft, without copying them. On an HTML mockup the owner chose the concept
+  **"Lemon"**: petrol surfaces, lemon-yellow accent. Since then a colour scheme (`general.accent`,
+  list `UI.accents`) is a whole concept and no longer just an accent colour: it tints
+  all surfaces with its hue (`hue`, `saturation`; the brightness ladder `ladder`) and brings
+  an accent as a colour pair (`accent` → `accent2`) for gradients. Available: `lemon` (default),
+  `mint`, `rose`, `lilac`, `amber`. Seen and confirmed in game by the owner is `lemon`;
+  the other four come from the mockup.
+- **No light mode (the owner's decision, 2026-11-19):** The window is always dark.
+  Removed are the light palette, the option `general.theme`, the button at the top right, the icons
+  sun and moon, and the toggle control built only for it (`UI.Segmented`, row type `segment`).
+  Do not build it back in without asking. The signal is still called `THEME_CHANGED` and fires on
+  a change of colour scheme.
+- **Accents and effects:** Accent, gradient and glow stand only for "active / here": switch on
+  (gradient, glow), selected tab (stroke with gradient and glow), selected area in the
+  sidebar (fading gradient, glowing bar, counter on an accent badge), card of a
+  running feature (fine accent border, mark on the left), field with focus (ring), logo. In addition,
+  as a signature, a soft glow in the accent colour behind the logo. Depth via a highlight edge at the
+  top of window and cards and recessed option rows. Hover fades in and out (`Shape:Fade`).
+  The owner's decisions on the mockup: **one** line between sidebar and content, the
+  window border runs uniformly around everything; the line above an option row goes from card edge
+  to card edge; option rows carry a dot, no angle and no leader line; the
+  main button ("Save") has a horizontal gradient, a darker border, a light line
+  inside and a shadow, but no top-to-bottom gradient (it looked "plasticky").
+- **Background (2026-11-19, the owner's request):** A fine grain (`grain.tga`, pure
+  noise, one texel per screen pixel via `SetTexCoord`, `UI.Grain`) lies as a band across the
+  full window width, sidebar and content alike, as high as the header (`GRAIN_BAND`), and
+  fades out below the tabs. The owner's decisions after looks in game: a first
+  version with a cloudy layer looked blotchy; the same everywhere, the grain was too much; from five
+  switchable variants the owner chose "sidebar and header", but as one continuous band at
+  header height. The selection in the window is removed again. The content gets slightly darker
+  towards the bottom. In addition, small embers rise (`UI.Embers`): textures with the client's
+  animations (`AnimationGroup`, `Alpha` and `Translation`), so without `OnUpdate` and without Lua
+  per frame. They run only while the window is open and lie behind cards and entries. Can be
+  switched off under Settings › Appearance (`general.embers`, default on). Confirmed in game: grain
+  and embers run. Not yet seen: the band in the sidebar and its fade-out.
+- **Cards:** In category tabs each feature has a card of its own, together with its
+  options (`FeatureBlocks`, spacing `CARD_GAP`). The search still groups per tab.
+- **Technique for this:** `UI.Shade(texture, direction, from, to)` for gradients (`SetGradient`,
+  follows the theme like `UI.Paint`); `Shape:SetGradient` spreads a gradient over the parts of a
+  round shape and needs its size. Glow needs no new texture: `UI.Shadow` with an
+  accent colour name instead of `shadow`, `UI.Halo` and the glow behind the logo use `shadow.tga`.
+  All checked against the mock only; open in game are above all `SetGradient` on image textures
+  (round corners of switch, button, logo), horizontal gradients and the strength of the glow effects.
+- **Shape:** round corners from quarter circles of `circle.tga` plus three rectangles (`UI.Round`,
+  `UI.Card` with a hairline border); window 12, cards 10, controls 6–8. Soft shadow around
+  window and menus (`UI.Shadow`, `shadow.tga`). The former gradient frame (`UI.GradientFrame`) is
+  gone.
+- **Font:** Inter (SIL Open Font License 1.1) in Regular, Medium and SemiBold, cut down with
+  `tools/make_fonts.py` to Latin, Greek, Cyrillic and punctuation (~100 KB each).
+  On koKR/zhCN/zhTW clients the game font stays.
+  **How the client loads fonts (cleared up 2026-11-25, from FlareUI's source code, comment
+  above `ns.FontRedraw` in `Core.lua`; learned there from players' bug reports):** A
+  font file only loads once a **visible** FontString **with text** asks for it. Until then
+  `SetFont` returns false and the string keeps its old font (a new one has none, and
+  `SetText` then throws); once the file is there, it switches by itself. A hidden or empty
+  string loads nothing. Text drawn before the load can stay empty; setting the same
+  font again does not help, changing the size and back redraws it. Consequences:
+  - The `font …` warnings in the self-test (2026-11-19 and 2026-11-24) were false alarms: it checked
+    on a hidden, empty string. The request at login (hidden frame, without
+    text) also loaded nothing and is removed. Proven by the screenshot in the website's header
+    (Windows, 2026-11-24): the window shows Inter in two weights, not Friz Quadrata.
+  - Inter appeared despite the old fallback to the game font because the client keeps the first
+    request and switches the string later without redrawing it. That probably explains
+    the empty tab "Chronicle" and the missing counter of 2026-11-24 (the tab's name
+    stayed empty across page changes, width and counter were right; after `/reload` everything was
+    there).
+  - Since 2026-11-25 (`ApplyFont` in `UI/Widgets.lua`, like `SetFontRaw` in FlareUI): if
+    `SetFont` returns false, the string gets the game font, asks for Inter again and goes on
+    a list; a ticker (0.5 s, only while someone is waiting, at most one minute, restarted on opening
+    the window) asks again, and as soon as the client says yes, the string is redrawn with size+1
+    and back. The self-test reads `UI.fontLoaded` and only warns if the window
+    asked for the font and it did not come; before the first opening it reports "not used yet".
+  - Not taken over from FlareUI: redrawing all strings 2 and 10 s after every loading screen
+    (there against strings that said yes right away and still stayed empty). If text stays empty
+    after a loading screen, that is the next step.
+  - **If it happens again (the owner's decision, 2026-11-25):** Inter stays
+    for now. If text stays empty despite the loading fix, the window switches to a font of the
+    game that is loaded from the start, namely **Arial Narrow** (`Fonts\ARIALN.TTF`),
+    not Friz Quadrata. Polestar shows the game font in its default look; Inter is there
+    only an option, with the same plain fallback we used to have. A font family of its own
+    (`CreateFontFamily`, as in FlareUI) does not help against the loading: it picks
+    the file per text by alphabet (against boxes for Korean or Chinese
+    names), but Inter in it has to load just the same.
+  - Not checked in game. What you would see: on the first opening after login at most half a
+    second of game font, then Inter, no empty text; `/fam test` after opening reports
+    `font …` as ok.
+  **Also 2026-11-24, unexplained:** After a death (23:44) the chronicle showed it in the book, the
+  card "This week" next to it did not count it (5 instead of 6); the window was closed at the death
+  and opened afterwards. Book and rail are created in the same `Render` from the same entries.
+  At the next death the number was right again (7), BugGrabber had no error, and the mock
+  also counts correctly with the owner's saved data. A test in game (loading the samples
+  while the window is open) gave "11 11" for `/run local c=FamulusOptionsFrame.rail.cards[1]
+  print(c.spec.stats[2].value, c.cells[2].value:GetText())`: computed and set (whether
+  the window also showed 11 at the time, the owner did not say explicitly). If it happens again,
+  enter this line right away: if it shows the new number but the window the old one, the client
+  is not redrawing the text (as above).
+- Unchanged since 2026-11-16: fixed window height, longer pages scroll; the page for the
+  addon's own settings is called "Settings" (internally `general`); tagline and
+  tab description say what the player finds there, no technical notes; options of a
+  feature (`child`) sit indented below it and are collapsed while the
+  feature is switched off (narrow, greyed out, value visible); the search shows them in full.

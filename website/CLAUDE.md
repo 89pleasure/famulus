@@ -1,4 +1,4 @@
-Projektwissen zu diesem Ordner. Claude Code lädt es, sobald hier eine Datei gelesen wird; die
-Übersicht aller Dateien steht in AGENTS.md › „Wissen unter `docs/`“.
+Project knowledge for this folder. Claude Code loads it as soon as a file here is read; the
+index of all files is in AGENTS.md › "Knowledge in `docs/`".
 
 @../docs/website.md

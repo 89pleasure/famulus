@@ -1,3 +1,3 @@
-Vorgaben, Entscheidungen und das Wissen über den WoW-Forever-Client stehen in [AGENTS.md](AGENTS.md).
+Requirements, decisions and what you need to know about the WoW Forever client are in [AGENTS.md](AGENTS.md).
 
 @AGENTS.md

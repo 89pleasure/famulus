@@ -1,245 +1,239 @@
-# Famulus – Projektwissen für KI-Assistenten
+# Famulus – project knowledge for AI assistants
 
-Famulus ist ein Addon für **World of Warcraft: Forever**, das das gemeinsame Spielen unter Freunden
-und in der Community verbessert, erleichtert und erweitert. Diese Datei hält fest, was der
-Auftraggeber will, welche Regeln für jede Arbeit gelten und was man über den Forever-Client wissen
-muss. Das Wissen zu den einzelnen Bereichen steht unter `docs/` (siehe „Wissen unter `docs/`“).
-Stand: 2026-11-25, Version 0.1.0.
+Famulus is an addon for **World of Warcraft: Forever** that improves, eases and extends playing
+together among friends and in the community. This file records what the owner wants, which rules
+hold for all work and what you need to know about the Forever client. The knowledge about the
+individual areas is in `docs/` (see "Knowledge in `docs/`").
+As of: 2026-11-25, version 0.1.0.
 
-## Vorgaben des Auftraggebers
+## Requirements from the owner
 
-Der Auftraggeber spielt WoW Forever und hat drei Sammel-Addons ausprobiert, die ihm gefallen:
-**OneForAll**, **FlareUI** und **Polestar**. Famulus soll sich an ihnen orientieren und sich auf
-Folgendes konzentrieren und beschränken:
+The owner plays WoW Forever and has tried three collection addons and likes them: **OneForAll**,
+**FlareUI** and **Polestar**. Famulus is to take its cue from them and to focus on, and limit
+itself to, the following:
 
-1. **Modernes, übersichtliches Layout.** Polestar gefällt ihm bisher am besten.
-2. **Gemeinsames Spielen im Mittelpunkt (Entscheidung des Auftraggebers, 2026-11-23).** Famulus
-   soll das Spielen unter Freunden und in der Community verbessern, erleichtern oder erweitern.
-   Die Funktionen sind die **Chronik**, die **Weggefährten** und die **Aliase** (seit 2026-11-23).
-   Keine Unitframes, Aktionsleisten, Guides, Schadensanzeigen oder Ähnliches.
-   - **Reihenfolge (Entscheidung des Auftraggebers, 2026-11-24):** Die Aliase stehen überall als
-     letzte der drei, im Addon (Seitenleiste, Hauptschalter) wie auf der Website (Navigation,
-     Abschnitte, Texte) und in README und Projektbeschreibung. Vorher standen sie überall vorn.
-     Die Begründung im Code („sie dienen den anderen beiden“) ist eine Deutung des Assistenten.
-   - **Quality of Life entfernt (2026-11-23):** „Das machen unzählige andere Addons schon.“
-     Entfernt sind die 16 QoL-Features (Händler, Quests, Beute, Soziales, Tooltips, Interface),
-     das Tagebuch (es führte nur Buch über diese Automatiken), die Pausentaste, der Baustein
-     `mirror` (`Core/GameOptions.lua`), `PopupService`, `QuestService` und die Selbsttest-Prüfungen
-     dafür. Wer nachsehen will, wie sie gebaut waren: Git-Verlauf bis Commit `66f68ec`.
-     Nicht wieder einbauen, ohne zu fragen.
-3. **Schwachstellen der drei Vorbilder analysieren und daraus lernen.**
-4. **Performance-optimiert.**
-5. **Mehrsprachig.** Englisch und Deutsch reichen vorerst.
+1. **Modern, clear layout.** Polestar is the owner's favourite so far.
+2. **Playing together at the centre (the owner's decision, 2026-11-23).** Famulus is to improve,
+   ease or extend playing among friends and in the community. The features are the
+   **chronicle**, the **fellow travellers** and the **aliases** (since 2026-11-23). No unit frames,
+   action bars, guides, damage meters or the like.
+   - **Order (the owner's decision, 2026-11-24):** The aliases come last of the three everywhere,
+     in the addon (sidebar, master switches) as on the website (navigation, sections, texts) and
+     in the README and the project description. Before, they came first everywhere. The reason
+     given in the code ("they serve the other two") is the assistant's interpretation.
+   - **Quality of life removed (2026-11-23):** "Countless other addons already do that."
+     Removed are the 16 QoL features (vendor, quests, loot, social, tooltips, interface), the
+     journal (it only kept track of these automations), the pause key, the building block
+     `mirror` (`Core/GameOptions.lua`), `PopupService`, `QuestService` and their self-test checks.
+     If you want to see how they were built: git history up to commit `66f68ec`.
+     Do not build them back in without asking.
+3. **Analyse the weaknesses of the three role models and learn from them.**
+4. **Optimised for performance.**
+5. **Multilingual.** English and German are enough for now.
 
-**Veröffentlichung:** Seit 2026-11-24 soll eine erste Alpha auf CurseForge erscheinen, mit
-automatischem Upload (Entscheidung des Auftraggebers, siehe „Veröffentlichung auf CurseForge“;
-vorher, Stand 2026-11-16: später, Zeitpunkt und Plattform offen). Feature-Set und Design sind
-weiter nicht fertig und haben Vorrang vor Release-Arbeit. Entscheidungen deshalb so treffen, dass sie für fremde Spieler taugen: saubere
-Versionierung, keine Annahmen über die eigene Addon-Sammlung, Verhalten neben anderen Addons im Blick.
+**Publishing:** Since 2026-11-24 a first alpha is to appear on CurseForge, with automatic upload
+(the owner's decision, see "Publishing on CurseForge"; before that, as of 2026-11-16: later, time
+and platform open). The feature set and design are still not finished and take priority over
+release work. So make decisions that work for players you do not know: clean versioning, no
+assumptions about your own addon collection, behaviour next to other addons in mind.
 
-Arbeitsweise: Er schreibt Deutsch und möchte Antworten auf Deutsch. Code, Kommentare und
-Commit-Nachrichten sind Englisch, diese Datei und `docs/*.md` Deutsch. Die README ist seit 2026-11-24 auf Wunsch
-des Auftraggebers Englisch und knapp gehalten (vorher Deutsch und ausführlich); Einzelheiten
-gehören hierher, nicht dorthin. Was Famulus von OneForAll, FlareUI und Polestar gelernt hat, steht
-nicht mehr darin („da wir uns nun ganz woanders bewegen thematisch“); die Tabelle unten bleibt.
+Way of working: The owner writes German and wants replies in German. **Everything that lives in
+the repo is English** (the owner's requirement, 2026-11-25): code, comments, commit messages, pull
+requests, the README, this file and `docs/` (until 2026-11-25 this file and `docs/` were German).
+German stays only where it is content: the deDE strings, the German website texts. The README has
+been English and kept short since 2026-11-24 at the owner's request (before that German and
+detailed); details belong here or in `docs/`, not there. What Famulus learned from OneForAll,
+FlareUI and Polestar is no longer in it ("since we are now in a quite different place
+thematically"); the table below stays.
 
-## Wissen unter `docs/`
+## Knowledge in `docs/`
 
-Diese Datei enthält nur, was für fast jede Arbeit gilt. Das Wissen zu einzelnen Bereichen steht
-unter `docs/`; lies die passende Datei, bevor du in dem Bereich arbeitest, und nur dann.
+This file contains only what holds for almost any work. The knowledge about individual areas is
+in `docs/`; read the matching file before you work in that area, and only then.
 
-| Datei | Inhalt | Lesen, wenn … |
+| File | Content | Read when … |
 |---|---|---|
-| [docs/window.md](docs/window.md) | Das Fenster: Aufbau (Kopf, Seitenleiste, Tabs), Bereiche, Hauptschalter, Zurücksetzen, Suche, Farben und Farbwelten, kein heller Modus, Akzente und Effekte, Hintergrund (Körnung, Funken), Karten, Form, Schrift (wie der Client Inter lädt) | du am Fenster, an Widgets, Farben, Effekten oder Schriften arbeitest |
-| [docs/chronicle.md](docs/chronicle.md) | Chronik: Buch mit Randspalte, Kapitel als Spielabend (Route), Bilderbuch, Gewichtung und Aufbau der Karten, Bilder, `ownJourney` (Gebiete, Berufe, Fähigkeiten, besondere Gegenstände), Beispieleinträge, `companions`, Live-Einblendung (`liveFeed`), Klasse und Name, was der Client hergibt | du an Chronik, Buch (`UI.Book`) oder Live-Einblendung arbeitest |
-| [docs/sharing.md](docs/sharing.md) | Teilen zwischen Spielern: Protokoll, Gilde, Weiterreichen, Statistiken, Warteschlange und Drosselung, Nachholen in Runden, Analyse „Viele Nutzer“ | du an Addon-Nachrichten oder `Sharing.lua` arbeitest |
-| [docs/fellows.md](docs/fellows.md) | Weggefährten: Daten, Zählen, Nur Freunde und Gilde, Aufräumen, Secret Values, Fenster (Übersicht, Eure Geschichte, Steckbrief), Runden, Verbundenheit, Tagesprotokoll, Beispieldaten | du an den Weggefährten arbeitest |
-| [docs/aliases.md](docs/aliases.md) | Aliase: Daten, Schlüssel, `chatAliases`, `tooltipAliases`, `aliasMenu`, andere Addons und `guildyAliases`, Alias für einen Battle.net-Account | du an den Aliasen oder an Anbindungen anderer Addons arbeitest |
-| [docs/testing.md](docs/testing.md) | Tests gegen den Mock, Stand der Prüfung im Spiel (Selbsttests, Fehler 2026-11-24), Test im Spiel (Pfade, `/fam test`, `/fam dev`, Lua-Fehler, BugSack) | du im Spiel testest, einen Fehler aus dem Spiel suchst, am Mock arbeitest oder wissen willst, was schon im Spiel bestätigt ist |
-| [docs/branding.md](docs/branding.md) | Name, Logo, Untertitel, verworfene Namen und Logos | du an Name, Logo oder Untertitel arbeitest |
-| [docs/website.md](docs/website.md) | Website: Technik, Aufbau, Demos, Lagerfeuer im Kopf, Fenster im Kopf (Screenshot), Sprachen, Hosting, was bei Änderungen am Addon mitzuziehen ist | du an `website/` arbeitest oder sich das Fenster sichtbar ändert |
-| [docs/release.md](docs/release.md) | Veröffentlichung auf CurseForge: Packager, Tags und Dateitypen, Ablauf eines Release, Version, Lizenz, Projektlogo, Projekt-ID, Offenes | du ein Release vorbereitest oder an Workflows, `.pkgmeta`, `LICENSE` arbeitest |
-| `docs/curseforge/` | Beschreibung und Logo der CurseForge-Projektseite | die Projektseite geändert wird |
-| `docs/superpowers/` | Spezifikationen und Pläne einzelner Vorhaben (Stand ihres Datums) | die Herkunft einer Entscheidung unklar ist |
+| [docs/window.md](docs/window.md) | The window: layout (header, sidebar, tabs), areas, master switches, reset, search, colours and colour schemes, no light mode, accents and effects, background (grain, embers), cards, shape, font (how the client loads Inter) | you work on the window, widgets, colours, effects or fonts |
+| [docs/chronicle.md](docs/chronicle.md) | Chronicle: book with rail, chapter as a play session (route), picture book, weighting and layout of the cards, pictures, `ownJourney` (zones, professions, abilities, special items), sample entries, `companions`, live feed (`liveFeed`), class and name, what the client offers | you work on the chronicle, the book (`UI.Book`) or the live feed |
+| [docs/sharing.md](docs/sharing.md) | Sharing between players: protocol, guild, relaying, statistics, queue and throttling, catching up in rounds, analysis "Many users" | you work on addon messages or `Sharing.lua` |
+| [docs/fellows.md](docs/fellows.md) | Fellow travellers: data, counting, friends and guild only, cleanup, secret values, window (overview, "Your story", profile card), groups, bond, daily log, sample data | you work on the fellow travellers |
+| [docs/aliases.md](docs/aliases.md) | Aliases: data, key, `chatAliases`, `tooltipAliases`, `aliasMenu`, other addons and `guildyAliases`, alias for a Battle.net account | you work on the aliases or on support for other addons |
+| [docs/testing.md](docs/testing.md) | Tests against the mock, state of checks in game (self-tests, bug 2026-11-24), testing in game (paths, `/fam test`, `/fam dev`, Lua errors, BugSack) | you test in game, hunt a bug from the game, work on the mock or want to know what is already confirmed in game |
+| [docs/branding.md](docs/branding.md) | Name, logo, tagline, rejected names and logos | you work on the name, logo or tagline |
+| [docs/website.md](docs/website.md) | Website: technology, layout, demos, campfire in the header, window in the header (screenshot), languages, hosting, what to update when the addon changes | you work on `website/` or the window changes visibly |
+| [docs/release.md](docs/release.md) | Publishing on CurseForge: packager, tags and file types, release steps, version, licence, project logo, project ID, open items | you prepare a release or work on workflows, `.pkgmeta`, `LICENSE` |
+| `docs/curseforge/` | Description and logo of the CurseForge project page | the project page changes |
+| `docs/superpowers/` | Specs and plans of single projects (as of their date) | the origin of a decision is unclear |
 
-- **Automatisch geladen:** Eine `CLAUDE.md` in einem Unterordner importiert die passende Datei
-  (`@…/docs/<datei>.md`); Claude Code lädt sie, sobald dort eine Datei gelesen wird:
+- **Loaded automatically:** A `CLAUDE.md` in a subfolder imports the matching file
+  (`@…/docs/<file>.md`); Claude Code loads it as soon as a file there is read:
   `Famulus/Modules/Chronicle/` (chronicle, sharing), `Famulus/Modules/Fellows/`,
-  `Famulus/Modules/Aliases/`, `Famulus/UI/` (window; nennt dazu, welche UI-Dateien zur Chronik
-  und zu den Weggefährten gehören), `tests/` (testing), `website/`, `.github/` (release). Wer
-  außerhalb dieser Ordner arbeitet (etwa `Core/`, `tools/`), liest selbst nach. Eine neue
-  `CLAUDE.md` unter `Famulus/` hält `.pkgmeta` aus dem Zip, `website/CLAUDE.md` entfernt der
-  Workflow vor dem Veröffentlichen; anderswo prüfen, ob sie veröffentlicht würde.
-- **Neues Wissen gehört in die passende Datei unter `docs/`, nicht hierher.** Hierher nur, was für
-  fast jede Arbeit gilt (Vorgaben, Regeln, Arbeitsablauf). Eine neue Datei bekommt eine Zeile in
-  der Tabelle.
-- Verweise der Form „siehe X“ meinen eine Überschrift oder einen fett gesetzten Eintrag; die
-  Tabelle sagt, in welcher Datei er steht.
-- Was „nur gegen den Mock geprüft“ und was im Spiel bestätigt ist, steht beim jeweiligen Eintrag;
-  eine Übersicht hat `docs/testing.md`.
+  `Famulus/Modules/Aliases/`, `Famulus/UI/` (window; it also names which UI files belong to the
+  chronicle and to the fellow travellers), `tests/` (testing), `website/`, `.github/` (release).
+  If you work outside these folders (for example `Core/`, `tools/`), read up yourself. A new
+  `CLAUDE.md` under `Famulus/` is kept out of the zip by `.pkgmeta`, `website/CLAUDE.md` is removed
+  by the workflow before publishing; anywhere else, check whether it would be published.
+- **New knowledge goes into the matching file in `docs/`, not here.** Only what holds for almost
+  any work belongs here (requirements, rules, workflow). A new file gets a row in the table.
+- References of the form "see X" point to a heading or a bold entry; the table says which file it
+  is in.
+- What is "checked against the mock only" and what is confirmed in game is noted with each
+  entry; `docs/testing.md` has an overview.
 
-## WoW Forever: was man wissen muss
+## WoW Forever: what you need to know
 
-Das Spiel erschien am 2026-11-04 und ist neuer als das Trainingswissen der meisten Modelle. Nicht
-aus dem Gedächtnis über „Classic“ schließen, sondern nachschlagen:
+The game came out on 2026-11-04 and is newer than the training knowledge of most models. Do not
+reason from memory about "Classic"; look things up:
 
-- Blizzards UI-Quellcode: `github.com/Gethe/wow-ui-source`, Branch `forever`
-- `warcraft.wiki.gg/wiki/Patch_1.60.1/API_changes` und `…/wiki/Secret_Values`
-- Quellcode der Vorbilder: `github.com/smoergi/OneForAll_Forever`, `github.com/malkkav/FlareUI`,
+- Blizzard's UI source: `github.com/Gethe/wow-ui-source`, branch `forever`
+- `warcraft.wiki.gg/wiki/Patch_1.60.1/API_changes` and `…/wiki/Secret_Values`
+- Source of the role models: `github.com/smoergi/OneForAll_Forever`, `github.com/malkkav/FlareUI`,
   `github.com/fitzforge/polestar`
 
-Recherchierte Fakten (Stand 2026-11-16, das Spiel wird häufig gepatcht):
+Researched facts (as of 2026-11-16, the game is patched often):
 
-- Spielversion 1.60.x, `## Interface: 16001`. Eine einfache `Addon.toc` genügt.
-  Addon-Ordner: `World of Warcraft/_forever_/Interface/AddOns/`.
-- Es ist die **moderne Retail-API** (Stand 12.x „Midnight“), nicht die Classic-API:
+- Game version 1.60.x, `## Interface: 16001`. A plain `Addon.toc` is enough.
+  Addon folder: `World of Warcraft/_forever_/Interface/AddOns/`.
+- It is the **modern retail API** (as of 12.x "Midnight"), not the Classic API:
   `C_Container`, `C_AddOns`, `C_Item`, `C_Spell`, `C_GossipInfo`, `C_QuestLog`, `C_Map`,
-  `TooltipDataProcessor`, `Settings.*`, `MenuUtil` und `AddonCompartmentFunc` existieren.
-- Entfernt: die Globals `GetItemInfo` und `GetSpellInfo` (stattdessen `C_Item.GetItemInfo`,
-  `C_Spell.GetSpellInfo`). `ChatFrame_AddMessageEventFilter` existiert im Client entgegen der
-  Recherche noch (Selbsttest 2026-11-16), ebenso `ChatFrameUtil.AddMessageEventFilter`; für neuen
-  Code die `ChatFrameUtil`-Variante nehmen.
-- **Addon-Beschränkungen wie in Midnight:**
-  - „Secret Values“: Solche Werte dürfen nicht verglichen, auf wahr/falsch geprüft, als
-    Tabellenschlüssel benutzt oder verrechnet werden. Weiterreichen und `string.format` sind
-    erlaubt. Prüfen mit `issecretvalue(v)`; im Addon über `ns.IsSecret`.
-  - `COMBAT_LOG_EVENT_UNFILTERED` ist für Addons unbrauchbar.
-  - `CopyToClipboard` ist geschützt. Chat-Nachrichten können im Kampf „secret“ sein.
-- Felder auf Blizzards StaticPopup-Dialoge zu schreiben verursacht Taint („Aktion blockiert“);
-  bei Polestar als Fehler gemeldet.
-- Spielinhalt: Stufe 60, Vanilla-ähnliche Welt, nur Bodenreittiere, vier Taschen plus
-  Reagenzientasche.
-- Schon in der Standard-UI enthalten, also nicht nachbauen: automatisches Plündern,
-  Taschen sortieren, Edit Mode, Abklingzeit-Zahlen, Schadensanzeige, sofortiger Questtext.
-  Laut UI-Quellcode außerdem (2026-11-23, im Spiel ungeprüft): ein Kalender mit Einladungen (der
-  Uhr-Knopf an der Minikarte, `Blizzard_Minimap/Camelot/GameTimeFrame.lua`) und eine Gruppensuche
-  im Vanilla-Stil (`Blizzard_GroupFinder_VanillaStyle`, `AllowLoadGameType: classic, camelot`).
-  Forever heißt im UI-Quellcode `camelot`. „Zuletzt zusammen gespielt“ (`Blizzard_RecentAllies`)
-  lädt nur in Retail (`mainline`), fehlt in Forever also.
+  `TooltipDataProcessor`, `Settings.*`, `MenuUtil` and `AddonCompartmentFunc` exist.
+- Removed: the globals `GetItemInfo` and `GetSpellInfo` (use `C_Item.GetItemInfo`,
+  `C_Spell.GetSpellInfo` instead). Contrary to the research, `ChatFrame_AddMessageEventFilter`
+  still exists in the client (self-test 2026-11-16), as does `ChatFrameUtil.AddMessageEventFilter`;
+  use the `ChatFrameUtil` variant for new code.
+- **Addon restrictions as in Midnight:**
+  - "Secret values": such values must not be compared, tested for true/false, used as table keys
+    or used in arithmetic. Passing them on and `string.format` are allowed. Check with
+    `issecretvalue(v)`; in the addon via `ns.IsSecret`.
+  - `COMBAT_LOG_EVENT_UNFILTERED` is useless for addons.
+  - `CopyToClipboard` is protected. Chat messages can be "secret" in combat.
+- Writing fields onto Blizzard's StaticPopup dialogs causes taint ("action blocked"); reported
+  as a bug for Polestar.
+- Game content: level 60, Vanilla-like world, ground mounts only, four bags plus a reagent bag.
+- Already part of the standard UI, so do not rebuild: auto loot, bag sorting, Edit Mode,
+  cooldown numbers, damage meter, instant quest text. According to the UI source also
+  (2026-11-23, not checked in game): a calendar with invites (the clock button on the minimap,
+  `Blizzard_Minimap/Camelot/GameTimeFrame.lua`) and a Vanilla-style group finder
+  (`Blizzard_GroupFinder_VanillaStyle`, `AllowLoadGameType: classic, camelot`).
+  In the UI source Forever is called `camelot`. "Recently played with" (`Blizzard_RecentAllies`)
+  only loads in retail (`mainline`), so it is missing in Forever.
 
-## Was aus den Vorbildern gelernt wurde
+## What was learned from the role models
 
-| Schwachstelle der Vorbilder | Regel in Famulus |
+| Weakness of the role models | Rule in Famulus |
 |---|---|
-| Events dauerhaft registriert, Option erst im Handler geprüft (OneForAll: ~38 Events) | Ein Feature registriert Events erst in `OnEnable` |
-| Ungedrosselte `OnUpdate`-Handler | Im Leerlauf läuft nichts pro Frame |
-| Umschalten braucht `/reload` (FlareUI-Module, OneForAll-Sprache und -Profil) | Alles wirkt sofort |
-| Hooks bleiben nach dem Abschalten aktiv | Hooks nur über `feature:HookFunction`/`HookScript` oder `feature:Once` plus `feature:Guard`; sie wirken nur bei eingeschaltetem Feature |
-| Megabytes an Code und Daten bei jedem Login (Polestar: 70–250 MB laut Issues) | Fenster wird erst beim ersten Öffnen gebaut; keine Bibliotheken |
-| Ersetzte Blizzard-Funktionen, überschriebene Methoden fremder Addons | Nur `hooksecurefunc`; nichts ersetzen, nichts in fremde Tabellen schreiben |
-| ~90 Optionen, uneinheitliche Standardwerte, Chat-Meldung je Aktion | Wenige Funktionen, eine Regel für Standardwerte, eine Sammelzeile je Aktion |
-| FlareUI ohne Deutsch; Polestar-Sprachen als Zusatz-Addons | enUS und deDE eingebaut und per Test auf Gleichstand geprüft |
+| Events registered permanently, option checked only in the handler (OneForAll: ~38 events) | A feature registers events only in `OnEnable` |
+| Unthrottled `OnUpdate` handlers | Nothing runs per frame while idle |
+| Switching needs `/reload` (FlareUI modules, OneForAll language and profile) | Everything takes effect at once |
+| Hooks stay active after switching off | Hooks only via `feature:HookFunction`/`HookScript` or `feature:Once` plus `feature:Guard`; they only act while the feature is on |
+| Megabytes of code and data at every login (Polestar: 70–250 MB according to issues) | The window is built on first opening; no libraries |
+| Replaced Blizzard functions, overwritten methods of other addons | Only `hooksecurefunc`; replace nothing, write nothing into other tables |
+| ~90 options, inconsistent defaults, a chat message per action | Few features, one rule for defaults, one summary line per action |
+| FlareUI without German; Polestar languages as extra addons | enUS and deDE built in and checked for parity by the test |
 
-## Chronik und Weggefährten
+## Chronicle and fellow travellers
 
-Am 2026-11-24 hat der Auftraggeber gefragt, ob es Sinn ergibt, beide getrennt zu führen. Bewertung
-des Assistenten: getrennt lassen, denn sie unterscheiden sich in der Grundlage. Die Chronik lebt
-von eigenen Ereignissen und dem, was Freunde mit Famulus schicken (Freundesliste und Gilde,
-teilt Daten); die Weggefährten von der Gruppenliste (jeder aus einer Gruppe, auch Fremde, nichts
-wird verschickt, bis 500 Personen; seit 2026-11-24 auf Wunsch nur Freunde und Gilde). Sie waren aber an vier Stellen ineinander gewachsen: dasselbe
-Wort „Gefährten“ für zwei Personenkreise, zwei „Steckbriefe“, zwei Bücher je Person mit teils
-denselben Karten, und die Bossnamen der Weggefährten kamen aus der Chronik. Von drei Varianten
-(klare Kante; Weggefährten als einziger Ort für Personen; zusammenlegen) hat der Auftraggeber
-**„Klare Kante“** gewählt. Die Regel seitdem:
+On 2026-11-24 the owner asked whether it makes sense to keep the two apart. The assistant's
+assessment: keep them apart, because they differ in their basis. The chronicle lives on your own
+events and on what friends with Famulus send (friends list and guild, shares data); the fellow
+travellers on the group roster (anyone from a group, strangers too, nothing is sent, up to 500
+people; since 2026-11-24 on request friends and guild only). But they had grown into each other in
+four places: the same word "companions" for two circles of people, two "profiles", two books per
+person with partly the same cards, and the fellow travellers' boss names came from the chronicle.
+Of three variants (clear line; fellow travellers as the only place for people; merge), the owner
+chose **"clear line"**. The rule since then:
 
-- **Die Chronik erzählt, was passiert ist; die Weggefährten zeigen, mit wem du spielst und wie
-  nah ihr euch seid.** Nichts, was der eine Bereich zeigt, wird im anderen wiederholt; sie
-  verweisen aufeinander.
-- **Namen:** Die Personen der Chronik heißen im Fenster „Freunde“ (Reiter, Randspalte, Feature
-  „Freunde begleiten“, Texte der Live-Einblendung), „Gefährten“ steht nur noch bei den
-  Weggefährten („Engste Gefährten“). Die geteilten Zahlen heißen „Bilanz“ (enUS „Stats“), nicht
-  mehr „Steckbrief“. Im Code bleiben `companions`, `ui_tab_companions`, `c_profiles` usw.
-- **Zwei Bücher je Person mit verschiedenen Fragen:** Chronik › Freunde, gefiltert auf eine
-  Person, zeigt ihre eigene Reise; „Eure Geschichte“ bei den Weggefährten nur das Gemeinsame
-  (Tage zusammen, gemeinsame Bosse, Verbundenheit, Kennenlernen). Die Einträge „aus <Name>s
-  Chronik“ dort sind entfallen. Verweise: „In der Chronik“ auf der Karte der Person,
-  „Eure Geschichte“ über dem gefilterten Buch der Chronik; beide nur, wenn der andere Bereich
-  eingeschaltet ist und die Person kennt.
-- **Jeder Bereich steht für sich:** Die Weggefährten merken sich die Namen gemeinsamer Bosse
-  selbst (`k` im Tagesprotokoll) und lesen die Chronik nur noch für den Verweis.
-- Umsetzung und Begriffe sind Entscheidungen des Assistenten im Rahmen der Variante („Freunde“,
-  „Bilanz“, „Stats“, „In der Chronik“, Bosse nur in Gruppen mit Namen). Nur gegen den Mock
-  geprüft, im Spiel noch nicht gesehen. Die Website zeigt noch den alten Stand (Reiter
-  „Gefährten“, „Steckbriefe“).
-- **Ideen, die nur die Weggefährten können:** Stammgruppen (wer immer wieder gemeinsam in der
-  Gruppe ist) stehen seit 2026-11-24 im Reiter „Runden“ (siehe „Weggefährten“); gemeinsame
-  Dungeons je Person sind vorgeschlagen, nicht beauftragt. Auch die Runden halten sich an die
-  Regel: Sie zeigen,
-  wer mit wem wann unterwegs war, nicht, was dabei geschah (keine Tode, keine eigenen Stufen,
-  Bosse nur als Zahl).
+- **The chronicle tells what happened; the fellow travellers show who you play with and how close
+  you are.** Nothing one area shows is repeated in the other; they refer to each other.
+- **Names:** The people of the chronicle are called "Friends" in the window (tab, rail, feature
+  "Follow my friends", texts of the live feed); "companions" now appears only with the fellow
+  travellers ("Closest companions"). The shared numbers are called "Stats" (German "Bilanz"), no
+  longer "profile". In the code `companions`, `ui_tab_companions`, `c_profiles` etc. stay.
+- **Two books per person with different questions:** Chronicle › Friends, filtered to one person,
+  shows their own journey; "Your story" with the fellow travellers only what you share (days
+  together, shared bosses, bond, first meeting). The entries "from <name>'s chronicle" there are
+  gone. References: "In the chronicle" on the person's card, "Your story" above the filtered book
+  of the chronicle; both only if the other area is switched on and knows the person.
+- **Each area stands on its own:** The fellow travellers remember the names of shared bosses
+  themselves (`k` in the daily log) and read the chronicle only for the reference.
+- Implementation and terms are the assistant's decisions within the variant ("Friends", "Bilanz",
+  "Stats", "In the chronicle", bosses with names only in groups). Checked against the mock only,
+  not yet seen in game. The website still shows the old state (tab "Companions", "Profiles").
+- **Ideas only the fellow travellers can do:** Regular groups (who is in a group together again
+  and again) are in the tab "Groups" since 2026-11-24 (see "Fellow travellers"); shared dungeons
+  per person are proposed, not commissioned. The groups keep to the rule as well: they show who
+  was out with whom and when, not what happened (no deaths, no own levels, bosses only as a
+  number).
 
-## Regeln für neuen Code
+## Rules for new code
 
-Diese Punkte sind Entwurfsentscheidungen; die meisten prüft `tests/run.lua`.
+These points are design decisions; `tests/run.lua` checks most of them.
 
-- **Feature-Registry:** Alles Schaltbare ist ein Feature über `ns:NewFeature`, **eine Datei je
-  Feature** unter `Modules/<Kategorie>/<Id>.lua` (beides großgeschrieben, z. B.
-  `Modules/Aliases/ChatAliases.lua`); der Test prüft das. Was der Selbsttest lesen muss
-  (Listen, CVar-Namen), hängt am Feature-Objekt.
-- **Lebenszyklus über die Feature-Klasse** (`Core/Features.lua`), die Registry räumt beim
-  Abschalten auf: Events über `feature:RegisterEvent`, wiederkehrende Timer über
-  `feature:StartTicker`, verzögerte
-  Einzelaufrufe über `feature:After` (verfallen beim Abschalten). Hooks lassen sich nicht
-  entfernen: `feature:HookFunction` (`hooksecurefunc`) und `feature:HookScript` setzen sie einmal
-  und lassen sie nur bei eingeschaltetem Feature wirken; für andere Hook-APIs `feature:Once` plus
-  `feature:Guard`.
-- **Services für geteilten Code:** Was mehrere Features brauchen, ist ein Service statt kopiertem
-  Code. Ein Service heißt **immer** `<Name>Service`: Datei `<Name>Service.lua`, Table
-  `ns.<Name>Service`, kein Feature darin (der Test prüft das). So ist an jedem Aufruf erkennbar,
-  ob etwas ein Service (`ns.AliasService.Get`), ein Feature (`ns.features.chatAliases`) oder eine
-  einfache Hilfsfunktion (`ns.IsSecret` in `Core/Init.lua`) ist. Für alle
-  Kategorien liegt ein Service unter `Core/` (`ChatService`: Klartext prüfen, Chat-Sperre prüfen;
-  `GroupService`: wer in der Gruppe ist; `SocialService`: wer Freund, Battle.net-Freund oder in der
-  Gilde ist, wer davon online ist, welche Klasse die Listen nennen, und Namen aus Listen in einer
-  Schreibweise. Wer Freundesliste,
-  Gildenliste oder Battle.net-Freunde liest, tut es über `SocialService.EachFriend`,
-  `EachGuildMember` und `EachBattleNetFriend` (seit dem Review vom 2026-11-24 auch Chronik,
-  Teilen und Account-Aliase); nur der Selbsttest liest den Client absichtlich direkt. Einen Namen
-  in jeder Schreibweise vergleicht `SocialService.Key`; `AliasService.Key` bleibt der Schlüssel,
-  unter dem Aliase gespeichert sind),
-  für eine Kategorie in deren Ordner (`Modules/Aliases/AliasService.lua`,
-  `Modules/Chronicle/ChronicleService.lua`). Ein Service hängt sich über
-  das interne Signal `FEATURE_STATE` an den Zustand seiner Features, statt dass jedes Feature ihn
-  in `OnEnable`/`OnDisable` selbst an- und abmelden muss. In der `.toc` steht ein Service vor den
-  Features, die ihn nutzen.
-- **Kategorie-Hauptschalter:** Jede Kategorie hat einen Hauptschalter (Option `categories.<id>`,
-  Standard an, Schalter unter Einstellungen › Allgemein). Ist er aus, läuft kein Feature der Kategorie, egal wie es
-  selbst eingestellt ist: keine Events, keine Timer, Hooks bleiben stumm. Die Einzelauswahl bleibt
-  gespeichert. Die Prüfung sitzt in `ns:SyncFeature`; ein Feature muss dafür nichts tun.
-- **`requires`:** Jede benötigte Client-API als Pfad angeben (`"C_FriendList.GetNumFriends"`).
-  Fehlt sie, bleibt das Feature aus und erscheint als „nicht verfügbar“.
-- **Standardwerte:** Was im Namen des Spielers handelt, Nachrichten an andere Spieler schickt
-  oder auf Spielereignisse lauscht, ist `default = false`. Nur Harmloses ist an. Ausnahme:
-  `accountAliases` lauscht erst, wenn der Spieler einen Alias für einen Battle.net-Account
-  angelegt hat (siehe „Aliase“).
-- **Chat:** Rückmeldungen über `ns:Notify` (abschaltbar), höchstens eine Zeile je Aktion.
-- **Globale Namen:** nur `FamulusDB`, `FamulusCharDB`, `SLASH_FAMULUS1/2`,
-  `Famulus_OnAddonCompartmentClick` sowie die benannten Frames `FamulusOptionsFrame` und
+- **Feature registry:** Everything that can be switched is a feature via `ns:NewFeature`, **one
+  file per feature** under `Modules/<Category>/<Id>.lua` (both capitalised, e.g.
+  `Modules/Aliases/ChatAliases.lua`); the test checks this. What the self-test needs to read
+  (lists, CVar names) hangs on the feature object.
+- **Life cycle via the feature class** (`Core/Features.lua`); the registry cleans up when a
+  feature is switched off: events via `feature:RegisterEvent`, recurring timers via
+  `feature:StartTicker`, delayed single calls via `feature:After` (they lapse when switched off).
+  Hooks cannot be removed: `feature:HookFunction` (`hooksecurefunc`) and `feature:HookScript` set
+  them once and let them act only while the feature is on; for other hook APIs `feature:Once`
+  plus `feature:Guard`.
+- **Services for shared code:** What several features need is a service instead of copied code.
+  A service is **always** called `<Name>Service`: file `<Name>Service.lua`, table
+  `ns.<Name>Service`, no feature in it (the test checks this). That way every call shows whether
+  something is a service (`ns.AliasService.Get`), a feature (`ns.features.chatAliases`) or a plain
+  helper (`ns.IsSecret` in `Core/Init.lua`). Services for all categories live under `Core/`
+  (`ChatService`: check plain text, check the chat lockdown; `GroupService`: who is in the group;
+  `SocialService`: who is a friend, a Battle.net friend or in the guild, who of them is online,
+  which class the lists name, and names from lists in one spelling. Whoever reads the friends
+  list, guild roster or Battle.net friends does it via `SocialService.EachFriend`,
+  `EachGuildMember` and `EachBattleNetFriend` (since the review of 2026-11-24 also chronicle,
+  sharing and account aliases); only the self-test reads the client directly on purpose. A name in
+  any spelling is compared by `SocialService.Key`; `AliasService.Key` stays the key aliases are
+  stored under), services for one category in its folder (`Modules/Aliases/AliasService.lua`,
+  `Modules/Chronicle/ChronicleService.lua`). A service follows the state of its features via the
+  internal signal `FEATURE_STATE` instead of every feature registering and unregistering it in
+  `OnEnable`/`OnDisable`. In the `.toc` a service comes before the features that use it.
+- **Category master switch:** Every category has a master switch (option `categories.<id>`,
+  default on, switch under Settings › General). If it is off, no feature of the category runs,
+  however it is set itself: no events, no timers, hooks stay silent. The individual choice stays
+  saved. The check sits in `ns:SyncFeature`; a feature needs to do nothing for it.
+- **`requires`:** Give every client API needed as a path (`"C_FriendList.GetNumFriends"`). If it
+  is missing, the feature stays off and shows as "not available".
+- **Defaults:** Anything that acts on the player's behalf, sends messages to other players or
+  listens to game events is `default = false`. Only harmless things are on. Exception:
+  `accountAliases` listens only once the player has created an alias for a Battle.net account
+  (see "Aliases").
+- **Chat:** Feedback via `ns:Notify` (can be switched off), at most one line per action.
+- **Global names:** only `FamulusDB`, `FamulusCharDB`, `SLASH_FAMULUS1/2`,
+  `Famulus_OnAddonCompartmentClick` and the named frames `FamulusOptionsFrame` and
   `FamulusMinimapButton`.
-- **Kosten im Leerlauf**, vom Test festgeschrieben: Laden erzeugt zwei Frames; nach dem Login mit
-  Standardwerten ist kein Spielereignis registriert, kein `OnUpdate`, kein Timer.
-- **Texte:** Jeder Schlüssel in `Locales/enUS.lua` **und** `Locales/deDE.lua`, mit denselben
-  Platzhaltern. Schema: `area_<bereich>`, `cat_<kategorie>`, `f_<feature>`, `o_<feature>_<option>`,
-  `g_<allgemein>`, `msg_<chat>`, `c_<chronik>`, `ui_<fenster>` (Reiter: `ui_tab_<id>`); Hilfetext mit Endung `_desc`. Texte erst zur Laufzeit über `ns.L`
-  lesen, nie beim Laden zwischenspeichern, sonst bricht der Sprachwechsel.
-- **Einstellungen:** Gespeichert wird nur, was vom Standard abweicht (`ns:SetOption`).
-- **Fenster:** Zeilen entstehen automatisch aus Features und deren `options`
-  (`type = "toggle"` oder `"select"`; Addon-Optionen auch `"swatch"`). Neue Widgets
-  gehören nach `UI/Widgets.lua`. Farben nie direkt setzen, sondern über Farbnamen mit `UI.Paint`
-  (Flächen), `UI.Tint` (Bilder) oder `UI.Ink` (Text): Nur so folgt das offene Fenster dem
-  Wechsel der Farbwelt. Texte über `UI.Text` (Schrift und Fallback).
+- **Cost while idle**, fixed by the test: loading creates two frames; after login with defaults
+  no game event is registered, no `OnUpdate`, no timer.
+- **Texts:** Every key in `Locales/enUS.lua` **and** `Locales/deDE.lua`, with the same
+  placeholders. Scheme: `area_<area>`, `cat_<category>`, `f_<feature>`, `o_<feature>_<option>`,
+  `g_<general>`, `msg_<chat>`, `c_<chronicle>`, `ui_<window>` (tabs: `ui_tab_<id>`); help text
+  ends in `_desc`. Read texts only at run time via `ns.L`, never cache them at load time, or
+  switching the language breaks.
+- **Settings:** Only what differs from the default is saved (`ns:SetOption`).
+- **Window:** Rows are built automatically from features and their `options`
+  (`type = "toggle"` or `"select"`; addon options also `"swatch"`). New widgets belong in
+  `UI/Widgets.lua`. Never set colours directly; use colour names with `UI.Paint` (surfaces),
+  `UI.Tint` (images) or `UI.Ink` (text): only then does the open window follow a change of colour
+  scheme. Texts via `UI.Text` (font and fallback).
 
-## Bewusst weggelassen
+## Left out on purpose
 
-| Funktion | Grund |
+| Feature | Reason |
 |---|---|
-| URLs im Chat anklickbar machen | Eigene Link-Typen im Forever-Client unbestätigt, Chat kann „secret“ sein, `CopyToClipboard` ist geschützt |
-| Quality-of-Life-Funktionen (Händler, Quests, Beute, Tooltips, Karte, Chat, Kamera) und das Tagebuch | Gibt es in vielen anderen Addons; Famulus konzentriert sich aufs gemeinsame Spielen (2026-11-23, siehe „Vorgaben“) |
-| Blizzard-Fenster verschieben, Minikarten-Symbole einsammeln | Bei den Vorbildern Hauptquelle für Taint und Addon-Konflikte |
-| Alles rund um das Kampflog | Für Addons nicht nutzbar |
-| Aliase auf Unitframes, Raidframes, Namensplaketten | Text auf Blizzards FontStrings zu überschreiben birgt Taint; Namen sind im Kampf oft secret. Siehe „Aliase“ |
+| Make URLs in chat clickable | Own link types unconfirmed in the Forever client, chat can be "secret", `CopyToClipboard` is protected |
+| Quality-of-life features (vendor, quests, loot, tooltips, map, chat, camera) and the journal | Many other addons have them; Famulus concentrates on playing together (2026-11-23, see "Requirements") |
+| Moving Blizzard frames, collecting minimap icons | The role models' main source of taint and addon conflicts |
+| Anything around the combat log | Not usable for addons |
+| Aliases on unit frames, raid frames, nameplates | Overwriting text on Blizzard's FontStrings risks taint; names are often secret in combat. See "Aliases" |
 
-## Arbeitsablauf
+## Workflow
 
 ```bash
 luajit tests/run.lua
@@ -254,42 +248,43 @@ python3 tools/make_media.py
 ```
 
 ```bash
-python3 tools/make_fonts.py <Inter-Release>/extras/ttf   # braucht fontTools
+python3 tools/make_fonts.py <Inter-release>/extras/ttf   # needs fontTools
 ```
 
 ```bash
-node tools/make_shot.js <screenshot.jpg> <x> <y> <breite> <höhe> website/assets/shots/window   # Fenster für die Website
+node tools/make_shot.js <screenshot.jpg> <x> <y> <width> <height> website/assets/shots/window   # window for the website
 ```
 
 ```bash
 rm -f dist/Famulus-*.zip && zip -rq dist/Famulus-0.1.0.zip Famulus -x '*.DS_Store'
 ```
 
-Unter Windows gibt es kein `zip`; dort baut das mitgelieferte `tar` dasselbe Archiv (in Git Bash):
+Windows has no `zip`; there the bundled `tar` builds the same archive (in Git Bash):
 
 ```bash
 rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.1.0.zip Famulus
 ```
 
-- `luajit tests/run.lua` lädt das Addon gegen eine nachgestellte Client-API (`tests/wowmock.lua`)
-  und prüft jedes Feature, das Fenster und die Übersetzungen. **Muss vor jedem Commit grün
-  sein.** Was der Mock nachstellt und was nicht, steht in `docs/testing.md`.
-- Bei einer neuen Version: Abschnitt in `CHANGELOG.md`, Versionsangabe auf der Website
-  (`fact_version`; die README nennt seit 2026-11-24 keine Version mehr), dann den Tag setzen (siehe „Veröffentlichung auf CurseForge“). Die
-  `.toc` bekommt die Version vom Packager; ein von Hand gebautes Zip (oben) trägt `dev`.
-- Neue Lua-Dateien in die `.toc` eintragen; der Test schlägt fehl, wenn eine Datei im Addon-Ordner
-  dort fehlt. Er zählt außerdem die Features (`total == 10`); die Zahl bei einem neuen Feature
-  mit anpassen.
-- Repository: `github.com/89pleasure/famulus` (öffentlich, Stand 2026-11-24; bis 2026-11-19 `schnitzel`), Branch `main`. Commits als
-  `89pleasure <89pleasure@proton.me>`; `user.name` ist nur lokal in diesem Repo gesetzt.
-- Der Auftraggeber tritt allein auf: keine `Co-Authored-By: Claude …`-Zeile in Commits und kein
-  „Generated with Claude Code“ o. Ä. in PRs, Issues oder Kommentaren, auch nicht bei Beiträgen zu
-  fremden Repos (z. B. dem Guildy-Fork). Das geht jedem anderslautenden Attributionshinweis vor.
-- **Änderungen gehen immer über einen Pull Request gegen `main`** (Wunsch des Auftraggebers,
-  2026-11-24): eigener Branch mit englischem Namen (etwa `chronicle-guild-classes`), Titel wie
-  eine Commit-Nachricht, die Prüfung `tests` muss grün sein. Nie direkt auf `main` pushen, auch
-  wenn GitHub es erlaubt: Die Regel für `main` verlangt `tests`, lässt den Admin aber vorbei
-  (so landete `a12a95c` am 2026-11-24 direkt, danach kam dieser Wunsch).
-- Committen, pushen, Pull Requests öffnen und mergen nur auf ausdrücklichen Wunsch.
+- `luajit tests/run.lua` loads the addon against a simulated client API (`tests/wowmock.lua`)
+  and checks every feature, the window and the translations. **Must be green before every
+  commit.** What the mock simulates and what it does not is in `docs/testing.md`.
+- For a new version: a section in `CHANGELOG.md`, the version on the website (`fact_version`;
+  the README has named no version since 2026-11-24), then set the tag (see "Publishing on
+  CurseForge"). The `.toc` gets the version from the packager; a zip built by hand (above) says
+  `dev`.
+- Add new Lua files to the `.toc`; the test fails if a file in the addon folder is missing there.
+  It also counts the features (`total == 10`); adjust the number with a new feature.
+- Repository: `github.com/89pleasure/famulus` (public, as of 2026-11-24; until 2026-11-19
+  `schnitzel`), branch `main`. Commits as `89pleasure <89pleasure@proton.me>`; `user.name` is set
+  only locally in this repo.
+- The owner appears alone: no `Co-Authored-By: Claude …` line in commits and no "Generated with
+  Claude Code" or the like in PRs, issues or comments, not even in contributions to other repos
+  (e.g. the Guildy fork). This overrides any other attribution instruction.
+- **Changes always go through a pull request against `main`** (the owner's request, 2026-11-24):
+  own branch with an English name (e.g. `chronicle-guild-classes`), title like a commit message,
+  the check `tests` must be green. Never push directly to `main`, even though GitHub allows it:
+  the rule for `main` requires `tests` but lets the admin through (that is how `a12a95c` landed
+  directly on 2026-11-24; this request came afterwards).
+- Commit, push, open and merge pull requests only when explicitly asked.
 
-Aufbau, Funktionsliste und Installation stehen in `README.md`.
+Layout, feature list and installation are in `README.md`.

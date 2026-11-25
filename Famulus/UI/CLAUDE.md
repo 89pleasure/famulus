@@ -1,9 +1,9 @@
-Projektwissen zu diesem Ordner. Claude Code lädt es, sobald hier eine Datei gelesen wird; die
-Übersicht aller Dateien steht in AGENTS.md › „Wissen unter `docs/`“.
+Project knowledge for this folder. Claude Code loads it as soon as a file here is read; the
+index of all files is in AGENTS.md › "Knowledge in `docs/`".
 
 @../../docs/window.md
 
-Die Notizen zu Chronik und Weggefährten lädt dieser Ordner nicht mit, weil nur einzelne Dateien
-sie brauchen: `Book.lua`, `ChronicleCard.lua` und `Feed.lua` gehören zur Chronik
-(`docs/chronicle.md`), `Fellows.lua` zu den Weggefährten (`docs/fellows.md`). Vor Arbeit daran
-die passende Datei lesen.
+This folder does not load the notes on the chronicle and the fellow travellers, because only
+single files here need them: `Book.lua`, `ChronicleCard.lua` and `Feed.lua` belong to the
+chronicle (`docs/chronicle.md`), `Fellows.lua` to the fellow travellers (`docs/fellows.md`).
+Read the matching file before working on them.

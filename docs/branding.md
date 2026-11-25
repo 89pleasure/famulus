@@ -1,39 +1,40 @@
-# Name, Logo und Untertitel
+# Name, logo and tagline
 
-Teil des Projektwissens; Vorgaben, Regeln und die Übersicht aller Dateien stehen in
-[AGENTS.md](../AGENTS.md). Verweise der Form „siehe X“ meinen eine Überschrift oder einen fett
-gesetzten Eintrag; in welcher Datei er steht, sagt die Übersicht dort.
+Part of the project notes; requirements, rules and the index of all files are in
+[AGENTS.md](../AGENTS.md). References of the form "see X" point to a heading or a bold entry;
+the index there says which file it is in.
 
-- **Name (2026-11-19):** Das Addon heißt **Famulus** (lateinisch: Gehilfe eines Gelehrten oder
-  Magiers); „Schnitzel“ war der Arbeitstitel. Verworfen, weil auf CurseForge schon für WoW Forever
-  vergeben: „Wisp“ (ForeverWisp, dazu Wisp-Figuren in Wishwell und Sparky), „Ignis“
-  (Rollenspiel-Addon), „Lantern“ (Lantern – QoL Core). Für „Famulus“ fand eine Websuche kein
-  gleichnamiges Addon; vor der Veröffentlichung direkt auf CurseForge und Wago prüfen. Umbenannt
-  sind Ordner, `.toc`, gespeicherte Variablen (`FamulusDB`, `FamulusCharDB`), Frame-Namen und die
-  Befehle (`/fam`, `/famulus`) und das GitHub-Repo (`89pleasure/famulus`). Der Untertitel im Fenster war zuerst „Dein Gehilfe in Azeroth“ / „Your assistant in Azeroth“
-  (`ui_tagline`), seit 2026-11-24 „Gemeinsam durch Azeroth“ / „Together through Azeroth“ (siehe
-  „Logo“). Auf dem Mac muss der
-  Symlink im Addon-Ordner neu angelegt werden (`Famulus` statt `Schnitzel`), und die Einstellungen
-  aus `SavedVariables/Schnitzel.lua` gehen nicht von selbst über.
-- **Logo (2026-11-19):** eine lodernde Flamme in drei Schichten mit Funken und weichem Schein, frei ohne Kachel
-  ("Lodernd"), vom Auftraggeber am Mockup gewählt. Verworfen: abstrakte Zeichen (Monogramm, Kerzen-F,
-  Laterne, Feder; "zu abstrakt und minimalistisch"), ein Maskottchen mit Gesicht und Fassungen mit
-  Spielwelt-Motiv (Quest-Ausrufezeichen, Fackel, Runenkreis, Zahnrad, Schild, Ruhestein). Blizzards
-  eigene Embleme (Allianz, Horde, WoW-Logo) bleiben außen vor. Den Kasten um die Flamme wollte er nach dem
-  ersten Blick ins Spiel nicht. `logo.tga` (Flamme allein: Fenster,
-  Addon-Liste) und `logo-round.tga` (auf dunkler Scheibe: Minikarte), 128 px, gezeichnet in
-  `tools/make_media.py`. Das Logo hat feste Farben und folgt der Farbwelt nicht. Auf dem
-  Windows-Rechner ist kein eigenes Python installiert; `make_media.py` braucht nur die
-  Standardbibliothek und lief dort mit einem vorhandenen Python 3.12. Im Spiel noch nicht gesehen.
-  **Bestätigt nach der Wende zum gemeinsamen Spielen (2026-11-24):** Der Auftraggeber war unsicher,
-  ob die Flamme noch passt. Am Mockup „Famulus Logo – Varianten“ sah er zwei Weiterentwicklungen
-  (drei Flammenzungen aus einem gemeinsamen Feuer; die Flamme auf gekreuzten Scheiten als
-  Lagerfeuer) und behielt die Flamme. Gedeutet wird sie jetzt als Lagerfeuer, an dem sich die
-  Gefährten treffen (Vorschlag des Assistenten); das trägt der Text, nicht das Bild.
-  **Neuer Untertitel (2026-11-24, Wahl des Auftraggebers):** „Gemeinsam durch Azeroth“ / „Together
-  through Azeroth“ statt „Dein Gehilfe in Azeroth“ (klang nach den entfernten QoL-Funktionen), im
-  Fensterkopf (`ui_tagline`) und auf der Website (`tagline`). Er muss in eine Zeile passen: Im Kopf
-  hat er bei 11 px nur etwa 180 px bis zum Seitennamen (`SIDEBAR + PAD`). Ebenfalls vorgeschlagen
-  und nicht gewählt: „Eure Reise, gemeinsam erzählt“ sowie „Das Lagerfeuer für deine Gefährten“ und
-  „Für alle, mit denen du unterwegs bist“ (beide zu lang für diesen Platz). Im Spiel noch nicht
-  gesehen.
+- **Name (2026-11-19):** The addon is called **Famulus** (Latin: assistant to a scholar or
+  magician); "Schnitzel" was the working title. Rejected because already taken on CurseForge for
+  WoW Forever: "Wisp" (ForeverWisp, plus Wisp figures in Wishwell and Sparky), "Ignis"
+  (roleplay addon), "Lantern" (Lantern – QoL Core). For "Famulus" a web search found no addon of
+  the same name; check directly on CurseForge and Wago before publishing. Renamed
+  are the folder, `.toc`, saved variables (`FamulusDB`, `FamulusCharDB`), frame names and the
+  commands (`/fam`, `/famulus`) and the GitHub repo (`89pleasure/famulus`). The window's tagline was first "Dein Gehilfe in Azeroth" / "Your assistant in Azeroth"
+  (`ui_tagline`), since 2026-11-24 "Gemeinsam durch Azeroth" / "Together through Azeroth" (see
+  "Logo"). On the Mac the
+  symlink in the addon folder has to be created again (`Famulus` instead of `Schnitzel`), and the
+  settings from `SavedVariables/Schnitzel.lua` do not carry over by themselves.
+- **Logo (2026-11-19):** a blazing flame in three layers with embers and a soft glow, free-standing without a tile
+  ("Lodernd", German for "blazing"), chosen by the owner from the mockup. Rejected: abstract signs (monogram, candle F,
+  lantern, quill; "too abstract and minimalist"), a mascot with a face, and versions with a
+  game-world motif (quest exclamation mark, torch, rune circle, cogwheel, shield, hearthstone). Blizzard's
+  own emblems (Alliance, Horde, WoW logo) stay out. The owner did not want the box around the flame after the
+  first look in game. `logo.tga` (flame alone: window,
+  addon list) and `logo-round.tga` (on a dark disc: minimap), 128 px, drawn in
+  `tools/make_media.py`. The logo has fixed colours and does not follow the colour scheme. On the
+  Windows machine no Python of our own is installed; `make_media.py` needs only the
+  standard library and ran there with an existing Python 3.12. Not yet seen in game.
+  **Confirmed after the turn to playing together (2026-11-24):** The owner was unsure
+  whether the flame still fits. On the mockup "Famulus Logo – Varianten" (German, "variants") the owner
+  saw two developments (three tongues of flame from one shared fire; the flame on crossed logs as
+  a campfire) and kept the flame. It is now read as a campfire where the
+  companions meet (the assistant's suggestion); the text carries that, not the image.
+  **New tagline (2026-11-24, the owner's choice):** "Gemeinsam durch Azeroth" / "Together
+  through Azeroth" instead of "Dein Gehilfe in Azeroth" (sounded like the removed QoL features), in
+  the window header (`ui_tagline`) and on the website (`tagline`). It must fit on one line: in the
+  header it has only about 180 px at 11 px up to the page name (`SIDEBAR + PAD`). Also proposed
+  and not chosen (German only): "Eure Reise, gemeinsam erzählt" ("Your journey, told together")
+  as well as "Das Lagerfeuer für deine Gefährten" ("The campfire for your companions") and
+  "Für alle, mit denen du unterwegs bist" ("For everyone you travel with") (both too long for
+  this space). Not yet seen in game.

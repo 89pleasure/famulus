@@ -1,293 +1,298 @@
-# Weggefährten
+# Fellow travellers
 
-Teil des Projektwissens; Vorgaben, Regeln und die Übersicht aller Dateien stehen in
-[AGENTS.md](../AGENTS.md). Verweise der Form „siehe X“ meinen eine Überschrift oder einen fett
-gesetzten Eintrag; in welcher Datei er steht, sagt die Übersicht dort.
+Part of the project notes; requirements, rules and the index of all files are in
+[AGENTS.md](../AGENTS.md). References of the form "see X" point to a heading or a bold entry;
+the index there says which file it is in.
 
-Idee aus einer Ideensammlung des Assistenten (2026-11-23), vom Auftraggeber ausgewählt: Famulus merkt
-sich, mit wem der Spieler in einer Gruppe war. Begründung: Forever hat „Zuletzt zusammen gespielt“
-nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
+Idea from a list of ideas by the assistant (2026-11-23), picked by the owner: Famulus remembers
+who the player was in a group with. Reasoning: Forever lacks "Recently played together" (Recent
+Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature does not need Famulus on the other side.
 
-- **Entscheidungen des Auftraggebers (2026-11-23):** eigener Bereich (nicht als
-  Unterbereich von Aliasen oder Chronik; ein Eintrag in der Seitenleiste). Erste Version: die Liste (wer, wann, wo, wie oft, wie lange)
-  und Boss-Einträge der Chronik, die nennen, wer dabei war. **Nicht** gewählt: Notizen zu Personen,
-  Hinweis im Tooltip, Knopf „Freund hinzufügen“. Nicht einbauen, ohne zu fragen.
-- **Aufbau:** Kategorie und Bereich `fellows`, ein Feature `rememberFellows`
-  (`Modules/Fellows/RememberFellows.lua`, Standard aus, weil es auf Spielereignisse lauscht), Daten
-  über `ns.FellowService` (`Modules/Fellows/FellowService.lua`). Wer gerade in der Gruppe ist, liefert
-  `ns.GroupService` (`Core/GroupService.lua`), den auch die Chronik nutzt.
-- **Daten:** `FamulusDB.fellows = { [guid] = { name, level, class, first, firstZone, last, zone,
-  times, seconds, bosses, tag } }`, accountweit, außerhalb der Profile, nach GUID (ein Name kann sich
-  ändern). `tag` ist der BattleTag, wenn die Person in der Gruppe als Battle.net-Freund erkannt
-  wurde (seit 2026-11-24, siehe unten). Nichts davon wird verschickt. Höchstens 500 Personen; darüber fällt heraus, wer am
-  längsten nicht mehr dabei war (nie jemand aus der aktuellen Gruppe). Dazu seit 2026-11-24 die
-  Runden in `FamulusDB.fellowRuns` (siehe „Runden“).
-- **Zählen (Entscheidungen des Assistenten):**
-  - Ereignisse: `GROUP_ROSTER_UPDATE` und `PLAYER_ENTERING_WORLD` gleichen die Liste mit der Gruppe
-    ab, `BOSS_KILL` zählt einen Boss für alle Anwesenden, `PLAYER_LOGOUT` beendet alle Zeiten
-    (die gespeicherten Daten werden danach geschrieben, auch bei `/reload`). Kein Timer: Die Zeit
-    wird bei jedem Abgleich und beim Ausloggen aufaddiert; nur der Teil seit dem letzten Abgleich
-    geht bei einem Absturz verloren.
-  - Ein neues „Mal zusammen“ beginnt erst nach 30 Minuten Pause (`MEET_GAP`); ein Verbindungsabbruch
-    oder `/reload` zählt nicht doppelt.
-  - Nicht gezählt: Mitglieder, die offline sind (`UnitIsConnected`), Namen, die der Client noch nicht
-    kennt (`UNKNOWNOBJECT`), Schlachtfelder und Arenen (`IsInInstance` liefert `pvp`/`arena`).
-    Schlachtzüge zählen mit; Option `raids` (Standard an) schaltet sie ab.
-  - „Wo“ ist das Gebiet des Spielers (`GetRealZoneText`), nicht das des Mitglieds.
-- **Nur Freunde und Gilde, Aufräumen (Wunsch des Auftraggebers, 2026-11-24):** Anlass: Die Chronik
-  hört nur von Freunden und Gildenmitgliedern, die Weggefährten merkten sich jeden aus einer Gruppe.
-  Gewünscht waren eine Option dafür und ein Aufräumen für ehemalige Freunde und Gildenmitglieder.
-  Umsetzung und Texte sind Entscheidungen des Assistenten.
-  - **Option `friendsOnly`** („Nur Freunde und Gilde“, Standard aus, damit sich am bisherigen
-    Verhalten nichts ändert): Aus der Gruppe zählt dann nur, wer auf der Freundesliste steht,
-    Battle.net-Freund ist oder in der Gilde ist (`SocialService.Unit`: `C_FriendList.IsFriend(guid)`,
-    `C_BattleNet.GetAccountInfoByGUID(guid)`, `UnitIsInMyGuild(unit)`; alle drei laut API-Doku des
-    Branches `forever` vorhanden und nicht geheim; die beiden ersten laufen über `pcall`, weil
-    `IsFriend` die geladene Freundesliste verlangt). Solange die Option an ist, hört das Feature
-    zusätzlich auf `FRIENDLIST_UPDATE`, `PLAYER_GUILD_UPDATE`, `BN_FRIEND_LIST_SIZE_CHANGED` und
-    `BN_CONNECTED` (alle vier registriert auch Blizzards Freundesfenster im Forever-Quellcode,
-    `Blizzard_FriendsFrame/Camelot`): Wer in der Gruppe zum Freund oder Battle.net-Freund wird,
-    zählt ab da, wer es nicht mehr ist, ab da nicht mehr. Wer schon in der Liste steht, bleibt dort.
-    Nicht auf `BN_FRIEND_INFO_CHANGED`, das bei jeder Statusänderung eines Freundes kommt. Ohne die
-    Option fragt der Abgleich nur den BattleTag ab (`SocialService.BattleTag`), nicht, wer Freund
-    ist.
-  - **Battle.net-Freunde zählen als Freunde** (Entscheidung des Assistenten): Die Freundesliste des
-    Spiels zeigt sie mit, und der Auftraggeber hat Battle.net-Freunde (siehe Account-Aliase). Die
-    Chronik kann mit ihnen nicht sprechen, sie flüstert nur Charakternamen an. Als Battle.net-Freund
-    gilt nur, wen der Client ausdrücklich so nennt (`isFriend` oder `isBattleTagFriend` wahr; laut
-    API-Doku des Branches `forever` sind beide nie nil). Im Zweifel ist jemand kein Freund, und sein
-    BattleTag wird nicht gemerkt.
-  - **Aufräumen** (Reiter „Einstellungen“, eigene Karte unter dem Feature): entfernt alle, die
-    gerade weder auf der Freundesliste noch Battle.net-Freund noch in der Gilde sind, also auch
-    Fremde aus der Zeit ohne die Option. Entscheidung des Assistenten: „ehemalig“ lässt sich für
-    ältere Einträge nicht feststellen, weil nie gemerkt wurde, wer damals Freund war, und wer nur
-    Freunde will, will die Fremden auch nicht. Wer gerade in der Gruppe ist, bleibt, auch ein
-    Fremder, den die Option gerade nicht mitzählt (`GroupService.Members`, nicht nur die gezählten);
-    die Beispiel-Weggefährten gehen mit (sie sind niemandes Freund). Die Zeile heißt deshalb „Alle
-    außer Freunden und Gilde entfernen“ / „Remove everyone but friends and guild“; die erste
-    Fassung („Ehemalige Freunde und Gildenmitglieder entfernen“) versprach weniger, als der Knopf
-    tut (Review 2026-11-24, vom Auftraggeber zum Beheben freigegeben). Soll das Aufräumen doch nur
-    ehemalige Freunde treffen, müsste Famulus sich ab jetzt merken, wer Freund war; nachfragen.
-    Die Zeile nennt bis zu fünf Namen
-    (Alias, sonst Name) und zählt den Rest; der Knopf „Entfernen“ fragt wie „Zurücksetzen“ erst
-    („Wirklich entfernen?“, vier Sekunden). Der erste Klick merkt sich, wen die Zeile gezählt hat;
-    der zweite entfernt nur diese, und nur, wenn sie beim frischen Nachsehen noch immer fremd sind.
-    Wer dazwischen in die Liste kommt, bleibt. Geht auch bei ausgeschaltetem Feature, weil es nur
-    gespeicherte Daten betrifft. Eine Chat-Zeile sagt, wie viele es waren. Die Suche findet die
-    Zeile über ihren Namen, nicht über die Namen darin. Die Listen werden erst gelesen, wenn die
-    Zeile gezeigt wird, nicht schon beim Aufbau der Reiter (das tut die Suche bei jeder Taste für
-    alle Reiter). Technik: Zeilenart `action` in
-    `UI/Options.lua` (Knopf rechts; `item.button`, `confirm`, `armed`, `usable`, `click`, dazu
-    `item.find` für die Suche), `FellowService.Outsiders` und `RemoveOutsiders`.
-  - **Abgleich** (`SocialService.Circle`): ein Blick auf Freundesliste, Gildenliste
-    (`GetGuildRosterInfo`, 17. Wert GUID) und Battle.net-Freunde; erkannt wird nach GUID, nach Name
-    (jede Schreibweise, ohne Realm) und nach BattleTag. Offline sind Battle.net-Freunde nur am
-    BattleTag zu erkennen (der Client nennt ihren Charakter nur, solange sie online sind). Deshalb
-    merkt sich die Liste den BattleTag (`tag`), sobald jemand in der Gruppe als Battle.net-Freund
-    erkannt wird, unabhängig von der Option. Ein alter `tag` bleibt stehen und passt dann einfach
-    nicht mehr. Grenze: Wer seit dieser Version nicht mehr in der Gruppe war, hat keinen `tag`; ist so
-    jemand nur Battle.net-Freund und gerade offline, hielte das Aufräumen ihn für fremd. Die Namen in
-    der Zeile zeigen das vor dem Klick. Das widerspricht nicht der Regel, keine Battle.net-Freunde zu
-    sammeln (siehe Aliase): Gemerkt wird der BattleTag nur bei Personen, die ohnehin in der Liste
-    stehen.
-  - **Eine Liste fehlt noch** (Review 2026-11-24: vorher wartete das Aufräumen nur auf die
-    Gildenliste, eine leere Freundesliste oder ein getrenntes Battle.net hätte alle Freunde zu
-    Fremden gemacht): `SocialService.Circle` liefert dann `ready = false` und als dritten Wert,
-    worauf es wartet. Das Aufräumen zeigt den Grund statt der Namen, der Knopf ist aus:
-    - `friends`: Die Freundesliste ist leer und seit dem Login kam noch kein `FRIENDLIST_UPDATE`
-      („Deine Freundesliste wird noch geladen.“). Angefragt mit `C_FriendList.ShowFriends`. Eine
-      leere Liste gilt erst als echt, wenn der Client sie geschickt hat; hat sie Einträge, gilt sie
-      sofort.
-    - `guild`: in einer Gilde, aber `GetNumGuildMembers()` liefert 0 („Deine Gildenliste wird noch
-      geladen.“). Angefragt mit `C_GuildInfo.GuildRoster`.
-    - `battlenet`: `BNConnected()` liefert falsch; ohne Verbindung kennt der Client keine
-      Battle.net-Freunde („Battle.net ist gerade nicht verbunden …“). Gewartet wird auf
-      `BN_CONNECTED`, anfragen lässt sich nichts.
-    Angefragt wird höchstens alle 15 Sekunden; das Ereignis bleibt angemeldet, bis es kommt, dann
-    baut sich das Fenster neu (`SOCIAL_CHANGED`). Der zweite Klick sieht noch einmal frisch nach:
-    Fehlt dann eine Liste (etwa Battle.net in der Zwischenzeit weg), geht niemand, und die Zeile
-    nennt den Grund.
-  - **Im Spiel ungeprüft:** alles. Vor allem, ob die Gildenliste in Forever auch Mitglieder führt,
-    die offline sind, und mit GUID (sonst hielte das Aufräumen sie für fremd). Das meldet
-    `/fam test` (Gruppe `names`, „guild roster“ und „friends list“, nur Zahlen, keine Namen; dazu
-    Gruppe `api`). Außerdem, ob `C_BattleNet.GetAccountInfoByGUID` für Battle.net-Freunde in der
-    Gruppe antwortet (sonst zählt mit der Option kein reiner Battle.net-Freund), ob
-    `C_FriendList.ShowFriends` auch bei leerer Freundesliste ein `FRIENDLIST_UPDATE` auslöst (sonst
-    bliebe das Aufräumen bei „wird noch geladen“) und ob `BNConnected` in Forever antwortet.
-- **Secret Values (recherchiert 2026-11-23 in der API-Doku des Branches `forever`):** `UnitName`,
-  `UnitGUID` und `UnitClass` sind nur geheim, wenn die Einheit nicht spielergesteuert oder nicht in
-  der Gruppe ist (`SecretWhenUnitIdentityRestricted`); für Gruppenmitglieder also auch im Kampf
-  lesbar. `UnitLevel` ist nie geheim. Geprüft wird trotzdem jeder Wert. Den eigenen Charakter im
-  Schlachtzug erkennt der Dienst an der GUID, nicht an `UnitIsUnit` (dessen Vergleich ist auf
-  gesperrten Karten geheim). `C_FriendList.AddFriend` trägt `HasRestrictions = true`; ob ein Addon
-  es aufrufen darf, ist ungeprüft.
-- **Fenster (Neugestaltung 2026-11-24):** Der Auftraggeber fand die zwei Listen „boring“ neben der
-  Chronik. Aus vier Entwürfen (Steckbrief, Album, Begegnungsbuch, Verbundenheit; Canvas
-  „Weggefährten – Entwürfe“) hat er eine Mischung gewählt; Beschreibung und Plan:
-  `docs/superpowers/specs/2026-11-24-fellows-redesign-design.md` und
-  `docs/superpowers/plans/2026-11-24-fellows-redesign.md`. Nur gegen den Mock geprüft.
-  - Tabs „Übersicht“, „Runden“ (seit 2026-11-24, siehe „Runden“ unten) und „Einstellungen“.
-    Symbol: zwei Figuren (`people.tga`).
-  - **Übersicht** (`FellowModel` in `UI/Options.lua`, gezeichnet von `UI.FellowOverview` in
-    `UI/Fellows.lua`): links „Engste Gefährten“, die drei mit der meisten gemeinsamen Zeit als
-    Kacheln (Rang I–III, Wappen mit Ring, Name in der Buchschrift, Stufe und Klasse, Abzeichen der
-    Stufe, Zahlen, Fuß „In deiner Gruppe“ oder „Zuletzt … in …“; unter der Maus leuchten sie wie
-    eine klickbare Karte im Buch, seit 2026-11-24 auf Wunsch des Auftraggebers). Darunter „Alle weiteren · N“
-    mit Auswahl „Zuletzt gesehen“ / „Meiste gemeinsame Zeit“ (sortiert nur die Liste) und die
-    Liste mit Spaltenköpfen, höchstens 60 Zeilen (`FELLOW_ROWS`) plus „N weitere“. Bis drei
-    Personen gibt es keine Liste; ohne Personen den Hinweis, wie man anfängt.
-  - Ein Klick auf Kachel oder Zeile öffnet die Geschichte der Person (Entscheidung des
-    Auftraggebers, 2026-11-24: mit Seitenleiste wäre ein Steckbrief neben der Übersicht zu eng).
-    Die Sortierung gilt für die Sitzung.
-  - **Eure Geschichte** (`FellowStory`): links fest der **Steckbrief** (320 breit): Wappen, Name,
-    Stufe und Klasse, Online-Zeile („In deiner Gruppe“ oder „Zuletzt …“), dann die Leiste der
-    Verbundenheit, darunter die Zahlenleiste und „Kennengelernt …“, mit „auf Stufe N“ in einer eigenen
-    Zeile darunter, damit der Satz nicht umbricht (die frühere zweite Zeile
-    „Zuletzt …“ darunter ist seit 2026-11-24 entfallen, sie wiederholte die Online-Zeile; Wunsch
-    des Auftraggebers nach einem Screenshot), Knöpfe „Alias festlegen“ (`ns:EditAlias`) und „Vergessen“
-    (das Kreuz an den Zeilen ist entfallen; eine Chat-Zeile sagt es). Rechts daneben scrollt ein
-    Buch (`UI.Book`, 560 breit; Wunsch des Auftraggebers nach dem ersten Blick ins Spiel: Person
-    links, Buch rechts statt eines breiten Kopfes über einem zu breiten Buch) mit einem Kapitel je
-    Spielabend wie in der Chronik (seit 2026-11-25, vorher je Tag mit dem Gebiet als Titel), das
-    neueste zuerst: Titel nach der Tageszeit, links von–bis oder das Datum, rechts „N Std.
-    zusammen“. Gebaut wird es weiter aus dem Tagesprotokoll: Je Tag eine Karte „Unterwegs in
-    <Gebiet>“ (das letzte Gebiet des Tages; ohne Gebiet „Gemeinsam unterwegs“); ein Abend über
-    Mitternacht, den das Protokoll auf zwei Tage teilt, ist eine Karte. Grenze: Das Protokoll kennt
-    je Tag nur den ersten und letzten Moment, zwei Abende an einem Tag bleiben eine Karte; die
-    Runden könnten sie trennen. Ein Boss ohne gezählte Zeit steht um 12 Uhr seines Tages. Unter
-    der Karte (von bis; Bosse ohne Namen, etwa aus einem Schlachtzug, als Zahl
-    dahinter; die Dauer stand bis 2026-11-24 auch dort, brach um und wiederholte den
-    Kapitelkopf, deshalb auf Wunsch des Auftraggebers entfernt), je Boss mit Namen eine Karte („Archaedas bezwungen“, „in Uldaman“), „Ihr seid
-    jetzt <Stufe>“ am Tag eines Aufstiegs und „Kennengelernt“ (auf Stufe N). Liegt das Kennenlernen
-    vor dem Protokoll, steht es in einem eigenen letzten Kapitel. Seit 2026-11-24 steht dort
-    nur Gemeinsames aus dem eigenen Tagesprotokoll, nichts aus der Chronik (siehe „Chronik und
-    Weggefährten“). Hat die Chronik Einträge der Person (`ChronicleService.Who`, Name in jeder
-    Schreibweise) und ist sie eingeschaltet, trägt die Karte neben „Alias festlegen“ den Knopf
-    „In der Chronik“: Er öffnet Chronik › Freunde, gefiltert auf die Person. Statt der Tabs
-    steht „Alle Weggefährten“ oben; ein anderer Reiter, eine andere Seite oder Schließen schließt
-    die Geschichte.
-  - **Aufbau des Steckbriefs (Entscheidung des Auftraggebers, 2026-11-24, an der Leinwand
-    „Weggefährten – Personenkarte“, claude.ai-Artifact `EyiMx3kvy6qkrjnkYKV8eX`: Variante B
-    „Zahlenleiste“, mit der Leiste der Verbundenheit über den Zahlen statt darunter):** Anlass:
-    Die Karte wirkte unordentlich, die Zeit war zu groß (17 px halbfett, breiter als ihre
-    Spalte). Verworfen: A (ruhige Liste), C (großer Ring, Zeit als Satz, Weg aus zwei Punkten),
-    D (linksbündig mit Abschnitten). Die Leiste der Verbundenheit (`UI.TierBar`, ersetzt die
-    Leiter mit vier Punkten) nennt links die Stufe (Akzent ab Vertraut) und rechts die nächste,
-    darunter drei Abschnitte für die drei Schritte, gefüllt so weit, wie man gekommen ist, und
-    mittig „Noch … gemeinsam“. Die Zahlenleiste ist ein vertiefter Kasten: die Zeit auf der
-    halben Breite, Mal und Bosse auf je einem Viertel, getrennt durch Haarlinien; alle Zahlen
-    20 px halbfett, bei der Zeit „Std.“ und „Min.“ klein daneben (unter einer Stunde nur
-    Minuten, zur vollen Stunde nur Stunden). Im Spiel gesehen (Screenshot vom Auftraggeber,
-    2026-11-24, Mira aus den Beispieldaten): Leiste, Abschnitte und Zahlenleiste wie geplant,
-    „Std.“ und „Min.“ sitzen auf der Grundlinie. Danach kam die Stufe beim Kennenlernen in eine
-    eigene Zeile, weil „…, auf Stufe 29“ den Satz eng umbrach. Die Karte bleibt auf voller Höhe
-    (Entscheidung des Auftraggebers, 2026-11-24, statt sie auf ihren Inhalt zu kürzen); dafür
-    stehen zwischen Person, Verbundenheit, Zahlen und Kennenlernen je 32 px (`SECTION_GAP`,
-    vorher 18 bis 22), sodass auch ein zweizeiliges „Kennengelernt …“ gut über den Knöpfen endet.
-    Beides ist im Spiel noch nicht gesehen.
-  - Die Suche findet weiter jede Person als einfache Personenzeile (`FellowItem`, `tab.search`).
-    Unter einem Alias steht der Name in der zweiten Zeile. Die Klasse kommt aus
-    `LOCALIZED_CLASS_NAMES_MALE`, also in der Sprache des Clients.
-- **Runden (Entscheidung des Auftraggebers, 2026-11-24, an der Leinwand „Weggefährten – Verlauf“,
-  claude.ai-Artifact `L3v3BWqAv717ro24NVyQGF`: Variante B „Runden mit eigenem Protokoll“):**
-  **Name (Wahl des Auftraggebers, 2026-11-25):** Der Reiter heißt „Runden“ / „Groups“; der erste
-  Name „Verlauf“ / „Timeline“ gefiel ihm nicht („etwas unschön“). Ebenfalls vorgeschlagen:
-  „Unterwegs“, „Lagerfeuer“, „Gemeinsam“. Im Code heißt der Reiter weiter `timeline`
-  (`ui_tab_timeline`, `TimelineBook`, `TimelineRail`). Frage des Auftraggebers war, ob sich eine Ansicht lohnt, die die Geschichten aller Weggefährten
-  zeigt. Empfehlung des Assistenten: nicht alle Einzelgeschichten untereinander (das wäre ein
-  zweites Buch der Chronik), sondern wann ihr zusammen gespielt habt und mit wem. Verworfen: A,
-  ein Tagebuch aus dem vorhandenen Tagesprotokoll (je Person und Tag eine Karte; wer zusammen in
-  einer Gruppe war, ließe sich daraus nur raten, und es gibt keine Gesamtzeit in Gruppen). Nur
-  gegen den Mock geprüft, im Spiel noch nicht gesehen. Umsetzung im Einzelnen und die Abweichungen
-  von der Leinwand sind Entscheidungen des Assistenten:
-  - **Rundenprotokoll** (`FamulusDB.fellowRuns`, accountweit, außerhalb der Profile, nichts wird
-    verschickt): je Runde `f`, `l` (von, bis), `z` (die Gebiete in zeitlicher Reihenfolge,
-    höchstens sechs), `b` (Bosse) und `who = { [guid] = { f, l } }` (wer von wann bis wann dabei
-    war). Im Schlachtzug nur `raid = true` und `n` (die meisten Personen auf einmal), keine Namen,
-    dieselbe Regel wie bei den Bossen. Höchstens 30 Tage (wie das Tagesprotokoll) und 400 Runden.
-    `FellowService.Sync` schreibt mit; `Runs()` liefert die Runden und die laufende.
-  - **Eine Runde** dauert, solange jemand in der Gruppe gezählt wird. Wer später kommt oder früher
-    geht, ändert nichts an der Runde, nur an seinem `f`/`l`. Nach einer Pause von weniger als 30
-    Minuten (`MEET_GAP`) mit mindestens einem derselben Leute geht die alte Runde weiter
-    (`/reload`, Verbindungsabbruch, kurze Pause), sonst beginnt eine neue. Deshalb ist der Abend
-    der Leinwand (Uldaman, danach Tanaris mit Mimi) eine Runde „Unterwegs in Uldaman und
-    Tanaris“, weil Mimi die ganze Zeit dabei blieb; Borin und Lysa tragen „bis 22:40“.
-  - **Gebiete:** `rememberFellows` hört dafür zusätzlich auf `ZONE_CHANGED_NEW_AREA`
-    (`FellowService.Move`), nur solange das Feature an ist. Kehrt man zurück, steht das Gebiet im
-    Protokoll noch einmal, im Titel der Karte nur einmal.
-  - **Buch** (`TimelineBook` in `UI/Options.lua`, Reiter `timeline`): ein Kapitel je Spielabend
-    wie in der Chronik (`SESSION_GAP`, `SessionTitle`); Kapitelkopf mit von–bis und „N Std.
-    zusammen“. Je Runde eine Karte ohne Bild (`story.noPicture`): Titel „Unterwegs in …“ (im
-    Schlachtzug „Schlachtzug in …“), darunter von–bis, Dauer und Bosse als Zahl (im Schlachtzug
-    auch die Zahl der Personen), darunter je Person eine Plakette mit Klassensymbol und Namen
-    (`story.people`; Alias, sonst Vorname; „bis …“ oder „ab …“, wer mehr als fünf Minuten später
-    kam oder früher ging). Kehrt eine Gruppe von mindestens zwei derselben Leute wieder, sagt es
-    der Fuß in Akzentfarbe (`story.foot`): „Wieder mit Mira und Borin · 6-mal in 30 Tagen“.
-    Abweichung von der Leinwand („Zum 3. Mal mit …“): Gezählt wird nur, was das Protokoll noch
-    kennt, also 30 Tage, und das sagt der Satz; Englisch braucht so keine Ordnungszahlen. Gewählt
-    wird die Teilgruppe, die am häufigsten zusammen war, bei Gleichstand die größere; die Namen
-    stehen nach gemeinsamer Zeit. Dazwischen „Lysa kennengelernt“ (nur wer in einer gezeigten
-    Runde kennengelernt wurde) und „Du und Borin seid jetzt vertraut“ (Zeitpunkt aus den Runden,
-    ab der Zeit vor ihnen gerechnet wie `Milestones`), beide mit dem Wappen statt eines Bildes
-    (`story.crest`); ein Klick öffnet „Eure Geschichte“. Ab Vertraut ist die neue Stufe ein
-    Meilenstein (größere Karte), darunter nicht, wie beim Abzeichen. Runden unter einer Minute
-    ohne Boss und Runden, von deren Leuten niemand mehr in der Liste steht, erscheinen nicht.
-    Höchstens 50 Ereignisse, darunter „Ältere Runden bleiben gespeichert …“.
-  - **Randspalte** (`TimelineRail`): „Diese Woche“ (Zeit in Gruppen allein in ihrer Zeile, dafür
-    `wide` in `UI/Rail.lua`; Runden, Weggefährten, kennengelernt, neue Verbundenheit), „Häufigste
-    Runde“ (die Teilgruppe, die in den letzten sieben Tagen am öftesten zusammen war, ab zweimal;
-    Wappen nebeneinander, nicht überlappend wie auf der Leinwand, neue Kartenart `group`) und „Am
-    meisten zusammen“ (bis fünf Personen mit ihrer Zeit dieser Woche, ohne online/offline; ein
-    Klick öffnet „Eure Geschichte“).
-  - Nichts aus der Chronik, siehe „Chronik und Weggefährten“. „Vergessen“ und „Aufräumen“ nehmen
-    die Person auch aus den Runden; eine Runde ohne Leute fällt dann weg. Die Suche findet hier
-    nichts, die Personen findet sie in der Übersicht. Ohne Runde zeigt der Reiter, wie man anfängt.
-  - Wer vor diesem Stand schon Weggefährten hatte, sieht unter „Runden“ erst die Runden ab dem
-    Update; Tagesprotokoll und „Eure Geschichte“ bleiben, wie sie sind. Die Website zeigt die
-    Runden noch nicht.
-- **Verbundenheit (Entscheidung des Auftraggebers am Mockup, 2026-11-24):** Stufen nach gemeinsamer
-  Zeit, `FellowService.TIERS`: Begegnung unter 1 Std., Bekannt ab 1, Vertraut ab 10, Unzertrennlich
-  ab 40 (enUS: Encounter, Acquainted, Trusted, Inseparable; die englischen Namen hat der Assistent
-  gewählt). `FellowService.Tier(sekunden)` liefert Stufe, Fortschritt und Rest. Angezeigt als Ring
-  ums Wappen (`UI.Crest`), Abzeichen (`UI.TierBadge`, Akzent ab Vertraut) und Leiste
-  (`UI.TierBar`, bis 2026-11-24 die Leiter `UI.TierLadder`). Der Ring ist ein angehaltener `Cooldown`-Swipe mit `ring.tga` (ohne
-  `OnUpdate`; die höchste Stufe steht knapp vor dem Ende, weil ein abgelaufener Cooldown nichts
-  zeichnet; `noCooldownCount` hält OmniCC und Ähnliche fern); fehlt `Cooldown:Pause`, ein voller
-  Ring ohne Fortschritt. Das Klassensymbol kommt
-  aus `UI-Classes-Circles` mit `CLASS_ICON_TCOORDS`, sonst der Anfangsbuchstabe. Beides prüft
-  `/fam test` (Gruppe `media`).
-- **Tagesprotokoll (seit 2026-11-24):** je Person `days = { [JJJJMMTT] = { s, z, b, f, l, k } }`
-  (Sekunden, Gebiet zuletzt an dem Tag, Bosse, erster und letzter Moment, die Bosse mit Namen) und
-  `firstLevel` (die Stufe des Spielers beim Kennenlernen). `k = { { t, n, z } }` (Zeit, Boss,
-  Gebiet) gibt es nur in einer Gruppe, höchstens zwölf je Tag (`MAX_KILLS`); im Schlachtzug zählt
-  nur `b`, damit nicht 39 Personen jeden Boss des Abends speichern (dieselbe Regel wie `with` und
-  `others` in der Chronik). Höchstens 30 Tage, der älteste fällt zuerst. Eine
-  Strecke über Mitternacht zählt für den Tag, an dem sie endet. Aufstiegstage werden beim Aufbau
-  berechnet (`FellowService.Milestones`), ab der Zeit vor dem Protokoll (`seconds − Σ s`), damit
-  frühere Zeit keine Meilensteine erfindet. Beim Laden fallen kaputte Tage heraus.
-- **In der Chronik:** Fällt ein Boss in einer Gruppe, trägt der Eintrag `with` (die Namen, in einer
-  Gruppe bis vier) oder `others` (nur die Zahl, im Schlachtzug, damit 39 Namen je Boss die Daten
-  nicht aufblähen). Die Zeile darunter lautet „in Uldaman  ·  mit Mira und Tom“ (Alias, sonst
-  Vorname) bzw. „mit 12 anderen“. Das gilt, sobald „Meine Reise festhalten“ läuft, unabhängig vom
-  Schalter der Weggefährten. Beide Felder fehlen in `FIELDS` von `Sharing.lua` und werden also nicht
-  geteilt. Der Beispiel-Boss in `/fam chronicle demo` hat zwei Gefährten. Die Weggefährten lesen
-  `with` seit 2026-11-24 nicht mehr; sie merken sich ihre Bosse selbst (`k` im Tagesprotokoll).
-- **Beispieldaten (2026-11-24, Wunsch des Auftraggebers):** `/fam fellows demo` trägt sechs
-  erfundene Weggefährten ein (Klassen, Stufen, Gebiete; Mira und Borin wie in der Chronik),
-  `/fam fellows demo clear` entfernt nur sie (`FellowService.Demo`, `ClearDemo`). Sie tragen
-  `demo = true` und GUIDs `Player-0-FAMDEMO..`. Sprache wie bei den Beispielen der Chronik (seit
-  2026-11-24 die von Famulus); die drei anderen heißen auf Englisch Kael Thornwood, Tomas
-  Greywind und Ena Silverbrook.
-  - **Seit den Runden (2026-11-24)** entstehen sie aus elf erfundenen Abenden über drei Wochen
-    (`DEMO_RUNS`, Runden mit `demo = true`, die nie mit echten zusammenwachsen); Tage, Zeiten,
-    Bosse, Kennenlernen und Zuletzt-Zeile werden daraus berechnet, so wie die Zählung sie
-    geschrieben hätte. Vorher waren die Tage ausgedacht und passten zu keiner Runde. Der jüngste
-    Abend ist der heutige, sobald 23:20 Uhr vorbei ist, sonst der gestrige. Zeiten jetzt: Mira 32
-    Std. 20 Min., Borin 20 Std. 50 Min., Lysa 3 Std. 35 Min., Ena 3 Std. 30 Min., Kael 1 Std. 15
-    Min., Tomas 25 Min. (vorher 25 Minuten bis 31 Stunden). Mira und Borin erzählen weiter einen
-    Aufstieg (Vertraut), Bosse mit Namen gibt es in Uldaman und den Todesminen, Mira und Borin
-    sind die Stammgruppe (sechsmal in drei Wochen).
-- **Im Spiel ungeprüft:** alles. Besonders: ob `UnitName` für `party1`… Vor- und Nachname liefert
-  wie für `player`, ob `GROUP_ROSTER_UPDATE` nach dem Login von selbst kommt (sonst fängt
-  `PLAYER_ENTERING_WORLD` es auf), ob `IsInInstance` in Forever `pvp` meldet und ob `BOSS_KILL` in
-  Forever-Dungeons feuert. `/fam test` prüft die benutzten Funktionen (Gruppe `api`).
+- **The owner's decisions (2026-11-23):** an area of its own (not a
+  sub-area of aliases or chronicle; one entry in the sidebar). First version: the list (who, when, where, how often, how long)
+  and chronicle boss entries that name who was there. **Not** chosen: notes on people,
+  a hint in the tooltip, an "Add friend" button. Do not build them without asking.
+- **Structure:** category and area `fellows`, one feature `rememberFellows`
+  (`Modules/Fellows/RememberFellows.lua`, off by default because it listens to game events), data
+  via `ns.FellowService` (`Modules/Fellows/FellowService.lua`). Who is in the group right now comes from
+  `ns.GroupService` (`Core/GroupService.lua`), which the chronicle uses as well.
+- **Data:** `FamulusDB.fellows = { [guid] = { name, level, class, first, firstZone, last, zone,
+  times, seconds, bosses, tag } }`, account-wide, outside the profiles, by GUID (a name can
+  change). `tag` is the BattleTag if the person was recognised as a Battle.net friend in the group
+  (since 2026-11-24, see below). None of it is sent. At most 500 people; beyond that, whoever has
+  been absent the longest drops out (never anyone from the current group). In addition, since
+  2026-11-24, the groups in `FamulusDB.fellowRuns` (see "Groups").
+- **Counting (the assistant's decisions):**
+  - Events: `GROUP_ROSTER_UPDATE` and `PLAYER_ENTERING_WORLD` sync the list with the group,
+    `BOSS_KILL` counts a boss for everyone present, `PLAYER_LOGOUT` ends all times
+    (the saved data is written afterwards, also on `/reload`). No timer: the time
+    is added up on every sync and on logout; only the part since the last sync
+    is lost in a crash.
+  - A new "time together" starts only after a 30-minute break (`MEET_GAP`); a disconnect
+    or `/reload` does not count twice.
+  - Not counted: members who are offline (`UnitIsConnected`), names the client does not know
+    yet (`UNKNOWNOBJECT`), battlegrounds and arenas (`IsInInstance` returns `pvp`/`arena`).
+    Raids count too; option `raids` (on by default) switches them off.
+  - "Where" is the player's zone (`GetRealZoneText`), not the member's.
+- **Friends and guild only, cleanup (the owner's request, 2026-11-24):** Reason: the chronicle
+  only hears from friends and guild members, while the fellow travellers remembered everyone from
+  a group. Requested were an option for this and a cleanup for former friends and guild members.
+  Implementation and texts are the assistant's decisions.
+  - **Option `friendsOnly`** ("Only friends and guild", off by default so that nothing changes in
+    the previous behaviour): from the group, only those count who are on the friends list,
+    are a Battle.net friend or are in the guild (`SocialService.Unit`: `C_FriendList.IsFriend(guid)`,
+    `C_BattleNet.GetAccountInfoByGUID(guid)`, `UnitIsInMyGuild(unit)`; all three present and not
+    secret according to the API docs of the `forever` branch; the first two run through `pcall`,
+    because `IsFriend` requires the friends list to be loaded). While the option is on, the feature
+    additionally listens to `FRIENDLIST_UPDATE`, `PLAYER_GUILD_UPDATE`, `BN_FRIEND_LIST_SIZE_CHANGED` and
+    `BN_CONNECTED` (Blizzard's friends frame registers all four as well in the Forever source,
+    `Blizzard_FriendsFrame/Camelot`): whoever becomes a friend or Battle.net friend while in the
+    group counts from then on, whoever stops being one no longer counts from then on. Whoever is
+    already on the list stays there. Not on `BN_FRIEND_INFO_CHANGED`, which comes with every status
+    change of a friend. Without the option the sync only asks for the BattleTag
+    (`SocialService.BattleTag`), not who is a friend.
+  - **Battle.net friends count as friends** (the assistant's decision): the game's friends list
+    shows them too, and the owner has Battle.net friends (see account aliases). The
+    chronicle cannot talk to them; it only whispers character names. Only someone the client
+    explicitly calls one counts as a Battle.net friend (`isFriend` or `isBattleTagFriend` true;
+    according to the API docs of the `forever` branch both are never nil). When in doubt, someone
+    is not a friend, and their BattleTag is not remembered.
+  - **Cleanup** ("Settings" tab, its own card below the feature): removes everyone who is
+    currently neither on the friends list nor a Battle.net friend nor in the guild, so also
+    strangers from the time before the option. The assistant's decision: "former" cannot be
+    determined for older entries, because it was never noted who was a friend back then, and
+    whoever wants only friends does not want the strangers either. Whoever is in the group right
+    now stays, even a stranger the option is not counting at the moment (`GroupService.Members`,
+    not only the counted ones); the sample fellow travellers go too (they are nobody's friend).
+    That is why the row is called "Alle außer Freunden und Gilde entfernen" / "Remove everyone but
+    friends and guild"; the first version ("Remove former friends and guild members") promised
+    less than the button does (review 2026-11-24, approved for fixing by the owner). Should the
+    cleanup only hit former friends after all, Famulus would have to start remembering who was a
+    friend; ask.
+    The row names up to five names
+    (alias, otherwise name) and counts the rest; the "Remove" button asks first, like "Reset"
+    ("Really remove?", four seconds). The first click remembers whom the row counted;
+    the second removes only those, and only if a fresh look shows they are still strangers.
+    Whoever joins the list in between stays. Works even with the feature switched off, because it
+    only touches saved data. A chat line says how many there were. The search finds the
+    row by its name, not by the names in it. The lists are only read when the
+    row is shown, not already while the tabs are built (the search does that on every key for
+    all tabs). Technique: row type `action` in
+    `UI/Options.lua` (button on the right; `item.button`, `confirm`, `armed`, `usable`, `click`, plus
+    `item.find` for the search), `FellowService.Outsiders` and `RemoveOutsiders`.
+  - **Sync** (`SocialService.Circle`): one look at the friends list, guild roster
+    (`GetGuildRosterInfo`, 17th value GUID) and Battle.net friends; matching is by GUID, by name
+    (any spelling, without realm) and by BattleTag. Offline, Battle.net friends can only be
+    recognised by their BattleTag (the client names their character only while they are online).
+    That is why the list remembers the BattleTag (`tag`) as soon as someone in the group is
+    recognised as a Battle.net friend, regardless of the option. An old `tag` stays and then simply
+    no longer matches. Limit: whoever has not been in the group since this version has no `tag`; if
+    such a person is only a Battle.net friend and currently offline, the cleanup would take them for
+    a stranger. The names in the row show this before the click. This does not contradict the rule
+    of not collecting Battle.net friends (see aliases): the BattleTag is only remembered for people
+    who are on the list anyway.
+  - **A list is still missing** (review 2026-11-24: before, the cleanup only waited for the
+    guild roster; an empty friends list or a disconnected Battle.net would have turned all friends
+    into strangers): `SocialService.Circle` then returns `ready = false` and, as a third value,
+    what it is waiting for. The cleanup shows the reason instead of the names, the button is off:
+    - `friends`: the friends list is empty and no `FRIENDLIST_UPDATE` has come since login
+      ("Your friends list is still loading."). Requested with `C_FriendList.ShowFriends`. An
+      empty list counts as real only once the client has sent it; if it has entries, it counts
+      immediately.
+    - `guild`: in a guild, but `GetNumGuildMembers()` returns 0 ("Your guild roster is still
+      loading."). Requested with `C_GuildInfo.GuildRoster`.
+    - `battlenet`: `BNConnected()` returns false; without a connection the client knows no
+      Battle.net friends ("Battle.net is not connected right now …"). It waits for
+      `BN_CONNECTED`; nothing can be requested.
+    Requests go out at most every 15 seconds; the event stays registered until it comes, then
+    the window rebuilds (`SOCIAL_CHANGED`). The second click takes a fresh look once more:
+    if a list is missing then (say Battle.net went away in the meantime), nobody goes, and the row
+    names the reason.
+  - **Not checked in game:** everything. Above all, whether the guild roster in Forever also lists
+    members who are offline, and with GUID (otherwise the cleanup would take them for strangers).
+    `/fam test` reports this (group `names`, "guild roster" and "friends list", numbers only, no
+    names; plus group `api`). Also whether `C_BattleNet.GetAccountInfoByGUID` answers for Battle.net
+    friends in the group (otherwise, with the option, no pure Battle.net friend counts), whether
+    `C_FriendList.ShowFriends` fires a `FRIENDLIST_UPDATE` even with an empty friends list (otherwise
+    the cleanup would stay at "is still loading") and whether `BNConnected` answers in Forever.
+- **Secret values (researched 2026-11-23 in the API docs of the `forever` branch):** `UnitName`,
+  `UnitGUID` and `UnitClass` are only secret if the unit is not player-controlled or not in
+  the group (`SecretWhenUnitIdentityRestricted`); so for group members they are readable even in
+  combat. `UnitLevel` is never secret. Every value is checked anyway. The service recognises the
+  player's own character in a raid by GUID, not by `UnitIsUnit` (its comparison is secret on
+  restricted maps). `C_FriendList.AddFriend` carries `HasRestrictions = true`; whether an addon
+  may call it is unchecked.
+- **Window (redesign 2026-11-24):** The owner found the two lists "boring" next to the
+  chronicle. From four drafts (Profile card, Album, Encounter book, Bond; canvas
+  "Fellow travellers – drafts") the owner chose a mix; description and plan:
+  `docs/superpowers/specs/2026-11-24-fellows-redesign-design.md` and
+  `docs/superpowers/plans/2026-11-24-fellows-redesign.md`. Checked against the mock only.
+  - Tabs "Overview", "Groups" (since 2026-11-24, see "Groups" below) and "Settings".
+    Icon: two figures (`people.tga`).
+  - **Overview** (`FellowModel` in `UI/Options.lua`, drawn by `UI.FellowOverview` in
+    `UI/Fellows.lua`): on the left "Closest companions", the three with the most time together as
+    tiles (rank I–III, crest with ring, name in the book font, level and class, tier
+    badge, numbers, foot "in your group now" or "last together … in …"; under the mouse they glow
+    like a clickable card in the book, since 2026-11-24 at the owner's request). Below that
+    "Everyone else · N" with a choice of "Last seen" / "Most time together" (sorts only the list)
+    and the list with column headers, at most 60 rows (`FELLOW_ROWS`) plus "N more". Up to three
+    people there is no list; with no people, the hint on how to get started.
+  - A click on a tile or row opens the person's story (the owner's decision,
+    2026-11-24: with the sidebar, a profile card next to the overview would be too cramped).
+    The sorting applies for the session.
+  - **Your story** (`FellowStory`): fixed on the left the **profile card** (320 wide): crest, name,
+    level and class, online line ("in your group now" or "last together …"), then the bond
+    bar, below it the number bar and "met …", with "at level N" in a line of its own
+    below it so that the sentence does not wrap (the former second line
+    "last together …" below it has been dropped since 2026-11-24, it repeated the online line; the
+    owner's request after a screenshot), buttons "Set alias" (`ns:EditAlias`) and "Forget"
+    (the cross on the rows has been dropped; a chat line says so). To the right of it scrolls a
+    book (`UI.Book`, 560 wide; the owner's request after the first look in game: person
+    on the left, book on the right instead of a wide header above a book that was too wide) with
+    one chapter per play session as in the chronicle (since 2026-11-25, before that per day with
+    the zone as title), the newest first: title by time of day, on the left from–to or the date, on
+    the right "N h together". It is still built from the daily log: per day one card "On the road
+    in <zone>" (the last zone of the day; without a zone "Together on the road"); an evening across
+    midnight, which the log splits over two days, is one card. Limit: the log only knows
+    the first and last moment per day, two evenings on one day stay one card; the
+    groups could separate them. A boss without counted time stands at 12 noon of its day. Below
+    the card (from to; bosses without names, for instance from a raid, as a number
+    after it; until 2026-11-24 the duration stood there too, wrapped and repeated the
+    chapter head, so it was removed at the owner's request), one card per named boss ("Archaedas
+    defeated", "in Uldaman"), "You are
+    now <tier>" on the day of a tier-up and "Met" (at level N). If meeting lies
+    before the log, it stands in a last chapter of its own. Since 2026-11-24 it holds
+    only shared things from its own daily log, nothing from the chronicle (see "Chronicle and
+    fellow travellers"). If the chronicle has entries for the person (`ChronicleService.Who`, name
+    in any spelling) and it is switched on, the card carries, next to "Set alias", the button
+    "In the chronicle": it opens Chronicle › Friends, filtered to the person. Instead of the tabs,
+    "All fellow travellers" stands at the top; another tab, another page or closing closes
+    the story.
+  - **Layout of the profile card (the owner's decision, 2026-11-24, on the canvas
+    "Fellow travellers – person card", claude.ai artifact `EyiMx3kvy6qkrjnkYKV8eX`: variant B
+    "Number bar", with the bond bar above the numbers instead of below them):** Reason:
+    the card looked untidy, the time was too large (17 px semibold, wider than its
+    column). Rejected: A (calm list), C (large ring, time as a sentence, path of two dots),
+    D (left-aligned with sections). The bond bar (`UI.TierBar`, replaces the
+    ladder with four dots) names the tier on the left (accent from Trusted) and the next on the
+    right, below it three segments for the three steps, filled as far as one has come, and
+    centred "… more together". The number bar is a recessed box: the time on
+    half the width, times and bosses on a quarter each, separated by hairlines; all numbers
+    20 px semibold, with the time "h" and "min" small next to it (under an hour only
+    minutes, on the full hour only hours). Seen in game (screenshot from the owner,
+    2026-11-24, Mira from the sample data): bar, segments and number bar as planned,
+    "h" and "min" sit on the baseline. After that the level at meeting moved into a
+    line of its own, because "…, at level 29" wrapped the sentence tightly. The card stays at full
+    height (the owner's decision, 2026-11-24, instead of shrinking it to its content); in return
+    there are 32 px each between person, bond, numbers and meeting (`SECTION_GAP`,
+    before 18 to 22), so that even a two-line "met …" ends well above the buttons.
+    Neither has been seen in game yet.
+  - The search still finds every person as a simple person row (`FellowItem`, `tab.search`).
+    Under an alias the name stands in the second line. The class comes from
+    `LOCALIZED_CLASS_NAMES_MALE`, so in the client's language.
+- **Groups (the owner's decision, 2026-11-24, on the canvas "Fellow travellers – timeline",
+  claude.ai artifact `L3v3BWqAv717ro24NVyQGF`: variant B "Groups with their own log"):**
+  **Name (the owner's choice, 2026-11-25):** The tab is called "Runden" / "Groups"; the owner did not like
+  the first name "Verlauf" / "Timeline" ("a bit unattractive"). Also proposed:
+  "Unterwegs" (on the road), "Lagerfeuer" (campfire), "Gemeinsam" (together). In code the tab is
+  still called `timeline` (`ui_tab_timeline`, `TimelineBook`, `TimelineRail`). The owner's
+  question was whether a view that shows the stories of all fellow travellers is worth it. The
+  assistant's recommendation: not all individual stories one below the other (that would be a
+  second book of the chronicle), but when you played together and with whom. Rejected: A,
+  a diary from the existing daily log (one card per person and day; who was together in
+  a group could only be guessed from it, and there is no total time in groups). Checked
+  against the mock only, not yet seen in game. The details of the implementation and the deviations
+  from the canvas are the assistant's decisions:
+  - **Group log** (`FamulusDB.fellowRuns`, account-wide, outside the profiles, nothing is
+    sent): per group `f`, `l` (from, to), `z` (the zones in chronological order,
+    at most six), `b` (bosses) and `who = { [guid] = { f, l } }` (who was there from when to
+    when). In a raid only `raid = true` and `n` (the most people at once), no names,
+    the same rule as for the bosses. At most 30 days (like the daily log) and 400 groups.
+    `FellowService.Sync` records them; `Runs()` returns the groups and the current one.
+  - **A group** lasts as long as someone in the group is counted. Whoever comes later or leaves
+    earlier changes nothing about the group, only their own `f`/`l`. After a break of less than 30
+    minutes (`MEET_GAP`) with at least one of the same people the old group continues
+    (`/reload`, disconnect, short break), otherwise a new one starts. That is why the evening
+    on the canvas (Uldaman, then Tanaris with Mimi) is one group "On the road in Uldaman and
+    Tanaris", because Mimi stayed the whole time; Borin and Lysa carry "until 22:40".
+  - **Zones:** for this `rememberFellows` additionally listens to `ZONE_CHANGED_NEW_AREA`
+    (`FellowService.Move`), only while the feature is on. If you return, the zone appears in the
+    log a second time, in the card's title only once.
+  - **Book** (`TimelineBook` in `UI/Options.lua`, tab `timeline`): one chapter per play session
+    as in the chronicle (`SESSION_GAP`, `SessionTitle`); chapter head with from–to and "N h
+    together". Per group one card without a picture (`story.noPicture`): title "On the road in …" (in
+    a raid "Raid in …"), below it from–to, duration and bosses as a number (in a raid
+    also the number of people), below that per person a plaque with class icon and name
+    (`story.people`; alias, otherwise first name; "until …" or "from …" for whoever came more than
+    five minutes later or left earlier). If a group of at least two of the same people comes back,
+    the foot says so in the accent colour (`story.foot`): "Again with Mira and Borin · 6 times in 30
+    days". Deviation from the canvas ("For the 3rd time with …"): only what the log still
+    knows is counted, so 30 days, and the sentence says that; that way English needs no ordinals.
+    The subgroup chosen is the one that was together most often, on a tie the larger one; the
+    names are ordered by time together. In between "Met Lysa" (only whoever was met in a shown
+    group) and "You and Borin are now Trusted" (the moment taken from the groups,
+    counted from the time before them like `Milestones`), both with the crest instead of a picture
+    (`story.crest`); a click opens "Your story". From Trusted on, the new tier is a
+    milestone (larger card), below that not, as with the badge. Groups under one minute
+    without a boss and groups none of whose people are still on the list do not appear.
+    At most 50 events, below them "Older groups are kept …".
+  - **Rail** (`TimelineRail`): "This week" (time in groups alone in its row, for that
+    `wide` in `UI/Rail.lua`; groups, fellow travellers, met, new bond), "Most frequent
+    group" (the subgroup that was together most often in the last seven days, from twice;
+    crests side by side, not overlapping as on the canvas, new card type `group`) and "Most
+    time together" (up to five people with their time this week, without online/offline; a
+    click opens "Your story").
+  - Nothing from the chronicle, see "Chronicle and fellow travellers". "Forget" and "Tidy up" also
+    take the person out of the groups; a group without people then drops out. The search finds
+    nothing here; it finds the people in the overview. Without a group the tab shows how to get
+    started.
+  - Whoever already had fellow travellers before this state sees under "Groups" only the groups
+    from the update on; daily log and "Your story" stay as they are. The website does not show
+    the groups yet.
+- **Bond (the owner's decision on the mockup, 2026-11-24):** tiers by time
+  together, `FellowService.TIERS`: Begegnung under 1 h, Bekannt from 1, Vertraut from 10, Unzertrennlich
+  from 40 (German names; enUS: Encounter, Acquainted, Trusted, Inseparable; the assistant chose the
+  English names). `FellowService.Tier(seconds)` returns tier, progress and remainder. Shown as a ring
+  around the crest (`UI.Crest`), badge (`UI.TierBadge`, accent from Trusted) and bar
+  (`UI.TierBar`, until 2026-11-24 the ladder `UI.TierLadder`). The ring is a paused `Cooldown` swipe with `ring.tga` (without
+  `OnUpdate`; the highest tier stands just short of the end, because an expired cooldown draws
+  nothing; `noCooldownCount` keeps OmniCC and similar away); if `Cooldown:Pause` is missing, a full
+  ring without progress. The class icon comes
+  from `UI-Classes-Circles` with `CLASS_ICON_TCOORDS`, otherwise the initial letter. `/fam test`
+  checks both (group `media`).
+- **Daily log (since 2026-11-24):** per person `days = { [YYYYMMDD] = { s, z, b, f, l, k } }`
+  (seconds, last zone of that day, bosses, first and last moment, the named bosses) and
+  `firstLevel` (the player's level when meeting). `k = { { t, n, z } }` (time, boss,
+  zone) exists only in a group, at most twelve per day (`MAX_KILLS`); in a raid only
+  `b` counts, so that 39 people do not store every boss of the evening (the same rule as `with` and
+  `others` in the chronicle). At most 30 days, the oldest drops first. A
+  stretch across midnight counts for the day on which it ends. Tier-up days are computed when
+  building (`FellowService.Milestones`), from the time before the log (`seconds − Σ s`), so that
+  earlier time does not invent milestones. Broken days drop out on load.
+- **In the chronicle:** If a boss falls in a group, the entry carries `with` (the names, in a
+  group up to four) or `others` (only the number, in a raid, so that 39 names per boss do not
+  bloat the data). The line below reads "in Uldaman  ·  with Mira and Tom" (alias, otherwise
+  first name) or "with 12 others". This applies as soon as "Record my journey" runs, regardless of
+  the fellow travellers' switch. Both fields are missing from `FIELDS` in `Sharing.lua` and are
+  therefore not shared. The sample boss in `/fam chronicle demo` has two companions. The fellow
+  travellers no longer read `with` since 2026-11-24; they remember their bosses themselves (`k` in
+  the daily log).
+- **Sample data (2026-11-24, the owner's request):** `/fam fellows demo` adds six
+  made-up fellow travellers (classes, levels, zones; Mira and Borin as in the chronicle),
+  `/fam fellows demo clear` removes only them (`FellowService.Demo`, `ClearDemo`). They carry
+  `demo = true` and GUIDs `Player-0-FAMDEMO..`. Language as with the chronicle's samples (since
+  2026-11-24 Famulus's); the three others are called in English Kael Thornwood, Tomas
+  Greywind and Ena Silverbrook.
+  - **Since the groups (2026-11-24)** they come from eleven made-up evenings over three weeks
+    (`DEMO_RUNS`, groups with `demo = true` that never merge with real ones); days, times,
+    bosses, meeting and the last-seen line are computed from them, the way counting would have
+    written them. Before, the days were invented and matched no group. The most recent
+    evening is today's once 23:20 has passed, otherwise yesterday's. Times now: Mira 32
+    h 20 min, Borin 20 h 50 min, Lysa 3 h 35 min, Ena 3 h 30 min, Kael 1 h 15
+    min, Tomas 25 min (before, 25 minutes to 31 hours). Mira and Borin still tell a
+    tier-up (Trusted), named bosses exist in Uldaman and the Deadmines, Mira and Borin
+    are the regular group (six times in three weeks).
+- **Not checked in game:** everything. In particular: whether `UnitName` returns first and last name
+  for `party1`… as for `player`, whether `GROUP_ROSTER_UPDATE` comes by itself after login (otherwise
+  `PLAYER_ENTERING_WORLD` catches it), whether `IsInInstance` reports `pvp` in Forever and whether
+  `BOSS_KILL` fires in Forever dungeons. `/fam test` checks the functions used (group `api`).

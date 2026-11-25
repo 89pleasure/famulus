@@ -1,135 +1,135 @@
-# Prüfen und Testen
+# Checks and tests
 
-Teil des Projektwissens; Vorgaben, Regeln und die Übersicht aller Dateien stehen in
-[AGENTS.md](../AGENTS.md). Verweise der Form „siehe X“ meinen eine Überschrift oder einen fett
-gesetzten Eintrag; in welcher Datei er steht, sagt die Übersicht dort.
+Part of the project notes; requirements, rules and the index of all files are in
+[AGENTS.md](../AGENTS.md). References of the form "see X" point to a heading or a bold entry;
+the index there says which file it is in.
 
-## Tests gegen den Mock
+## Tests against the mock
 
-- `luajit tests/run.lua` lädt das Addon gegen eine nachgestellte Client-API (`tests/wowmock.lua`)
-  und prüft jedes Feature, das Fenster und die Übersetzungen. Muss vor jedem Commit grün sein.
-- Der Mock beweist die eigene Logik, nicht das Verhalten des Clients. Dafür gibt es den Selbsttest
-  im Spiel, siehe „Test im Spiel“.
-- Secret Values im Mock: `mock.SECRET` verweigert Index, Rechnen, Vergleich und Verketten.
-  Eine Wahr/Falsch-Prüfung (`not x`) lässt sich in Lua nicht abfangen; deshalb prüft der Test im
-  Quelltext, dass `ns.IsSecret(x)` vor jedem Test von `x` steht.
-- Größen im Mock: `SetWidth`/`SetHeight`/`SetSize` legen ihren Wert in `mockWidth`/`mockHeight`
-  ab, nicht in `width`/`height`. Im Client setzt `SetWidth` kein Feld am Frame; wer eine Breite als
-  Feld liest, muss sie selbst setzen (`book.width`). Vorher hat der Mock einen solchen Fehler
-  verdeckt (siehe „Fehler 2026-11-24“). Tests lesen die Größe über `GetWidth()`.
+- `luajit tests/run.lua` loads the addon against a simulated client API (`tests/wowmock.lua`)
+  and checks every feature, the window and the translations. Must be green before every commit.
+- The mock proves our own logic, not the client's behaviour. For that there is the self-test
+  in game, see "Testing in game".
+- Secret values in the mock: `mock.SECRET` refuses indexing, arithmetic, comparison and
+  concatenation. A true/false check (`not x`) cannot be intercepted in Lua; so the test checks in
+  the source that `ns.IsSecret(x)` comes before every test of `x`.
+- Sizes in the mock: `SetWidth`/`SetHeight`/`SetSize` store their value in `mockWidth`/`mockHeight`,
+  not in `width`/`height`. In the client `SetWidth` sets no field on the frame; whoever reads a
+  width as a field must set it themselves (`book.width`). Before, the mock hid such a bug
+  (see "Bug 2026-11-24"). Tests read the size via `GetWidth()`.
 
-## Stand der Prüfung im Spiel
+## State of checks in game
 
-- **Fehler 2026-11-24 (im Spiel gefunden und behoben, Behebung im Spiel bestätigt):** Das
-  Fenster öffnete sich ohne Inhalt und fast ohne Text; nach einem Klick auf „Weggefährten“ kam
-  alles zurück, ein Klick auf „Chronik“ ließ die Weggefährten markiert und schnitt sie bei 600 px
-  ab. Ursache: Der Kapitelkopf mit Route (`LayRoute` in `UI/Book.lua`) rechnete mit `head.width`,
-  das nur der Mock kannte. Der Fehler brach `Render` ab, nachdem der Inhaltsbereich schon auf
-  Buchbreite gesetzt war und bevor Seitenleiste, Kopf und Reiter beschriftet wurden. Gefunden
-  über die Fehleranzeige des Spiels (siehe „Test im Spiel“). Nach der Behebung hat der
-  Auftraggeber das Fenster im Spiel geöffnet: „Funktioniert“.
-- **Erster Selbsttest im Spiel am 2026-11-16** (Client 1.60.1, Build 70938, deDE): 54 Prüfungen ok,
-  1 Warnung, 0 fehlgeschlagen; keine blockierten Aktionen, keine Lua-Warnungen. Bestätigt:
-  - Das Addon lädt, das Fenster öffnet sich, Einstellungen und Fensterposition werden gespeichert.
-  - Alle 16 Features finden ihre benötigte API.
-  - Die vier TGA-Texturen laden (`SetTexture` liefert wahr) und sehen im Fenster richtig aus
-    (Screenshot geprüft).
-  - `Texture:SetGradient("VERTICAL", CreateColor(...), CreateColor(...))` funktioniert; der
-    Fensterrahmen zeigt den Verlauf.
-  - Speicher: 360 KB bei 6 aktiven Features und 5 Spielereignissen.
-- **Spielrunde 2026-11-16:** prüfte vor allem die inzwischen entfernten QoL-Features. Was davon
-  allgemein gilt: Blizzards Panels aus Addon-Code zu schließen birgt Taint-Risiko; der eingebaute
-  Verlauf der Chat-Eingabe (Hoch/Runter) reagiert in Forever nicht; das EventRegistry-Signal
-  `ChatFrame.OnEditBoxFocusLost` feuert, bevor Blizzard eine leere Eingabe schließt und den
-  Chat-Typ zurücksetzt.
-- **Aliase (2026-11-16, nur gegen den Mock geprüft, noch nicht im Spiel):** Kategorie `aliases` mit
-  drei Features und der Alias-Liste, siehe „Aliase“ unten.
-- **Aliase im Spiel (2026-11-18):** Der Alias erscheint im normalen Chat und in Guildy (bestätigt).
-- **Neues Fenster (2026-11-18, nur gegen den Mock geprüft, noch nicht im Spiel):** siehe „Das
-  Fenster“ unten. Die Inter-Schriften laden (siehe „Schrift“). Offen im Spiel: ob runde Ecken, Schatten und Haarlinien sauber aussehen, das Umschalten
-  der Farbwelten, die gleitende Reiter-Markierung, Verläufe und Glüheffekte.
-- **Weggefährten (2026-11-23, nur gegen den Mock geprüft, noch nicht im Spiel):** eigener Bereich,
-  siehe „Weggefährten“ unten.
-- **Weggefährten nur mit Freunden und Gilde, Aufräumen (2026-11-24, nur gegen den Mock geprüft,
-  noch nicht im Spiel):** siehe „Nur Freunde und Gilde, Aufräumen“ unter „Weggefährten“.
-- **Neuer Rahmen und Weggefährten-Übersicht (2026-11-24, nur gegen den Mock geprüft, noch nicht im
-  Spiel):** siehe „Das Fenster“ und „Weggefährten“. Offen im Spiel: Ring ums Wappen (`/fam test`,
-  Gruppe `media`, Prüfung `ring`), Klassensymbole (Prüfung `class icons`), die Seite ohne
-  Seitenleiste, der durchgehende Grund von Kopf und Seitenleiste. Auf einem Screenshot vom
-  2026-11-24 (Beispieldaten) zu sehen: Ring mit Fortschritt und Klassensymbol (Krieger) am Wappen
-  in der Geschichte einer Person.
-- **Klare Kante zwischen Chronik und Weggefährten (2026-11-24):** siehe „Chronik und
-  Weggefährten“. Im Spiel mit den Beispieldaten gesehen (Screenshots vom Auftraggeber, 2026-11-24):
-  Reiter und Randspalte „Freunde“, die Bilanz-Karten, die Filterzeile mit „Alle zeigen“ und „Eure
-  Geschichte“ in einer Zeile, auf der Karte der Person „Alias festlegen“ und „In der Chronik“
-  nebeneinander, Bosse mit Namen als eigene Karten, keine Einträge aus der Chronik in „Eure
-  Geschichte“. Offen im Spiel: ob `BOSS_KILL` in einer echten Gruppe den Bossnamen so liefert, wie
-  die Karten ihn zeigen.
-- **Klassensymbol und Charaktername in der Chronik (2026-11-24, nur gegen den Mock geprüft, noch
-  nicht im Spiel):** siehe „Klasse und Name“ unter „Chronik“. Offen im Spiel: ob die Klassensymbole
-  im Streifen (18 px) und in der Randspalte (30 px) sauber aussehen, ob `className` der
-  Freundesliste in Forever zu `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE` passt.
-- **Runden der Weggefährten (2026-11-24, nur gegen den Mock geprüft, noch nicht im Spiel):**
-  siehe „Runden“ unter „Weggefährten“. Offen im Spiel: ob eine Runde über `/reload` und
-  Verbindungsabbrüche hinweg zusammenbleibt, ob `ZONE_CHANGED_NEW_AREA` die Gebiete einer Runde
-  vollständig liefert, wie Wappen und Namensplaketten im Buch aussehen.
-- **Noch nicht im Spiel geprüft:** die übrigen Aliase (Kontextmenü, Tooltip, Eingabezeile im Fenster),
-  im Fenster das Dropdown, die Suche und das Scrollen, Verhalten im Kampf (Secret Values, Taint).
-- **Selbsttest 2026-11-19** (Client 1.60.1, Build 70959, deDE): 80 ok, 3 Warnungen, 0 fehlgeschlagen;
-  629 KB bei 8 aktiven Features und 4 Spielereignissen.
-  - Die drei Inter-Schriften laden nicht (`SetFont` liefert falsch); das Fenster nimmt die
-    Spielschrift. Ursache (per `/run` geprüft): Der Client lädt eine Schriftdatei beim ersten
-    `SetFont` im Hintergrund; dieser erste Aufruf liefert falsch, ein späterer wahr. Symlink und
-    das Kürzen der Dateien sind es nicht (Polestars ungekürztes Inter verhielt sich gleich).
-    Das Anfragen beim Login half nicht (Selbsttest 2026-11-24 weiter falsch); die Erklärung
-    steht seit 2026-11-25 unter „Schrift“: Die Warnung war ein Fehlalarm, Inter wird gezeichnet.
-  - Der Knopf unter Optionen › AddOns › Famulus schloss Blizzards Einstellungsfenster mit
-    `SettingsPanel:Close()` aus Addon-Code. Das Spiel meldete danach „Famulus wurde blockiert …“.
-    Ursache: Ohne Argument kehrt `Close` über `TransitionBackOpeningPanel` ins Spielmenü zurück und
-    ruft dabei das geschützte `ToggleGameMenu`. Jetzt `SettingsPanel:Close(true)` wie bei FlareUI
-    (Polestar: `HideUIPanel`); im Spiel bestätigt (keine Meldung, Famulus vorne). Offen lassen geht nicht: Famulus
-    liegt dann hinter Blizzards Fenster (beide `HIGH`).
-  - `devLog` hat die Blockaden doch festgehalten (beim ersten Lesen war es noch leer, vermutlich
-    vor dem Speichern gelesen): um 12:13 und 12:15 je `ADDON_ACTION_FORBIDDEN` für
-    `SpellStopCasting()`, `SpellStopTargeting()` und `UNKNOWN()`, zur Zeit der Tests mit dem alten
-    `Close()`. Seit `Close(true)` kein Eintrag mehr (Bericht 16:39).
+- **Bug 2026-11-24 (found and fixed in game, fix confirmed in game):** The window opened without
+  content and with almost no text; after a click on "Fellow travellers" everything came back, a
+  click on "Chronicle" left the fellow travellers highlighted and cut them off at 600 px. Cause:
+  the chapter head with route (`LayRoute` in `UI/Book.lua`) computed with `head.width`, which only
+  the mock knew. The error aborted `Render` after the content area had already been set to book
+  width and before the sidebar, header and tabs were labelled. Found via the game's error display
+  (see "Testing in game"). After the fix the owner opened the window in game: "Works".
+- **First self-test in game on 2026-11-16** (client 1.60.1, build 70938, deDE): 54 checks ok,
+  1 warning, 0 failed; no blocked actions, no Lua warnings. Confirmed:
+  - The addon loads, the window opens, settings and window position are saved.
+  - All 16 features find the API they need.
+  - The four TGA textures load (`SetTexture` returns true) and look right in the window
+    (screenshot checked).
+  - `Texture:SetGradient("VERTICAL", CreateColor(...), CreateColor(...))` works; the
+    window frame shows the gradient.
+  - Memory: 360 KB with 6 active features and 5 game events.
+- **Play session 2026-11-16:** mainly checked the QoL features that have since been removed. What
+  holds in general: closing Blizzard's panels from addon code carries a taint risk; the built-in
+  history of the chat input (up/down) does not react in Forever; the EventRegistry signal
+  `ChatFrame.OnEditBoxFocusLost` fires before Blizzard closes an empty input and resets the
+  chat type.
+- **Aliases (2026-11-16, checked against the mock only, not yet in game):** category `aliases` with
+  three features and the alias list, see "Aliases" below.
+- **Aliases in game (2026-11-18):** The alias appears in the normal chat and in Guildy (confirmed).
+- **New window (2026-11-18, checked against the mock only, not yet in game):** see "The
+  window" below. The Inter fonts load (see "Font"). Open in game: whether rounded corners, shadows and hairlines look clean, switching
+  the colour schemes, the sliding tab marker, gradients and glow effects.
+- **Fellow travellers (2026-11-23, checked against the mock only, not yet in game):** its own area,
+  see "Fellow travellers" below.
+- **Fellow travellers with friends and guild only, cleanup (2026-11-24, checked against the mock
+  only, not yet in game):** see "Friends and guild only, cleanup" under "Fellow travellers".
+- **New frame and fellow travellers overview (2026-11-24, checked against the mock only, not yet in
+  game):** see "The window" and "Fellow travellers". Open in game: ring around the crest (`/fam test`,
+  group `media`, check `ring`), class icons (check `class icons`), the page without
+  sidebar, the continuous background of header and sidebar. Visible on a screenshot from
+  2026-11-24 (sample data): ring with progress and class icon (warrior) on the crest
+  in a person's story.
+- **Clear line between chronicle and fellow travellers (2026-11-24):** see "Chronicle and
+  fellow travellers". Seen in game with the sample data (screenshots from the owner, 2026-11-24):
+  tab and rail "Friends", the stats cards, the filter row with "Show all" and "Your
+  story" on one line, on the person's card "Set alias" and "In the chronicle"
+  side by side, bosses with names as cards of their own, no entries from the chronicle in "Your
+  story". Open in game: whether `BOSS_KILL` in a real group delivers the boss name the way
+  the cards show it.
+- **Class icon and character name in the chronicle (2026-11-24, checked against the mock only, not
+  yet in game):** see "Class and name" under "Chronicle". Open in game: whether the class icons
+  in the strip (18 px) and in the rail (30 px) look clean, whether `className` from the
+  friends list in Forever matches `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE`.
+- **Fellow travellers' groups (2026-11-24, checked against the mock only, not yet in game):**
+  see "Groups" under "Fellow travellers". Open in game: whether a group stays together across
+  `/reload` and disconnects, whether `ZONE_CHANGED_NEW_AREA` delivers a group's zones
+  completely, how crests and name plates look in the book.
+- **Not yet checked in game:** the remaining aliases (context menu, tooltip, input row in the window),
+  in the window the dropdown, the search and scrolling, behaviour in combat (secret values, taint).
+- **Self-test 2026-11-19** (client 1.60.1, build 70959, deDE): 80 ok, 3 warnings, 0 failed;
+  629 KB with 8 active features and 4 game events.
+  - The three Inter fonts do not load (`SetFont` returns false); the window uses the
+    game font. Cause (checked via `/run`): the client loads a font file in the background on the
+    first `SetFont`; this first call returns false, a later one true. Symlink and
+    trimming the files are not the cause (Polestar's untrimmed Inter behaved the same).
+    Requesting them at login did not help (self-test 2026-11-24 still false); the explanation
+    has been under "Font" since 2026-11-25: the warning was a false alarm, Inter is drawn.
+  - The button under Options › AddOns › Famulus closed Blizzard's settings window with
+    `SettingsPanel:Close()` from addon code. The game then reported "Famulus wurde blockiert …"
+    (German client). Cause: without an argument, `Close` returns to the game menu via
+    `TransitionBackOpeningPanel` and in doing so calls the protected `ToggleGameMenu`. Now
+    `SettingsPanel:Close(true)` as in FlareUI (Polestar: `HideUIPanel`); confirmed in game (no
+    message, Famulus in front). Leaving it open does not work: Famulus
+    then sits behind Blizzard's window (both `HIGH`).
+  - `devLog` did record the blocks after all (on first reading it was still empty, probably
+    read before saving): at 12:13 and 12:15 one `ADDON_ACTION_FORBIDDEN` each for
+    `SpellStopCasting()`, `SpellStopTargeting()` and `UNKNOWN()`, at the time of the tests with the
+    old `Close()`. Since `Close(true)` no more entries (report 16:39).
 
-## Test im Spiel
+## Testing in game
 
-WoW Forever ist auf dem Entwicklungsrechner installiert: `/Applications/World of Warcraft/_forever_`.
-`Interface/AddOns/Famulus` ist dort ein Symlink auf den Ordner `Famulus/` dieses Repos, jede
-Änderung ist also nach `/reload` im Spiel. Auf dem Windows-Rechner (seit 2026-11-18) liegt das Spiel
-unter `D:\Games\World of Warcraft\_forever_`, das Repo unter `E:\Develop\wow\famulus`;
-`Interface\AddOns\Famulus` ist dort eine Verzeichnisverknüpfung (Junction) auf `Famulus\`.
+WoW Forever is installed on the development machine: `/Applications/World of Warcraft/_forever_`.
+`Interface/AddOns/Famulus` there is a symlink to this repo's `Famulus/` folder, so every
+change is in the game after `/reload`. On the Windows machine (since 2026-11-18) the game is
+at `D:\Games\World of Warcraft\_forever_`, the repo at `E:\Develop\wow\famulus`;
+`Interface\AddOns\Famulus` there is a directory junction to `Famulus\`.
 
-- `/fam test` prüft gegen den echten Client: benötigte API je Feature, die oben genannten unsicheren
-  Stellen (Texturen, Kamerazoom, Popup-Namen, Karte, Fehlertext-Globals) und die Annahmen aus
-  „WoW Forever: was man wissen muss“. Der Bericht landet in `FamulusDB.selfTest`.
-- `/fam dev` schaltet den Entwicklermodus um: Der Selbsttest läuft dann drei Sekunden nach jedem
-  Login, und blockierte Aktionen (`ADDON_ACTION_BLOCKED`/`_FORBIDDEN`) sowie `LUA_WARNING` des Addons
-  werden in `FamulusDB.devLog` gesammelt. Standard ist aus; dann kostet das nichts.
-- Das Spiel setzt beim Start alle Dateien im Addon-Ordner auf Modus 777, durch den Symlink also
-  auch im Repo. Deshalb ist hier lokal `git config core.fileMode false` gesetzt; nach einem neuen
-  Clone wieder setzen, sonst erscheinen alle Dateien als geändert.
-- Das Spiel schreibt die Daten erst bei `/reload` oder beim Ausloggen auf die Platte. Danach liest
-  `luajit tools/read_selftest.lua` den Bericht (mit `--all` auch die bestandenen Prüfungen).
-- Ablauf einer Runde: Der Auftraggeber startet das Spiel, loggt ein und macht `/reload`; der
-  Assistent liest den Bericht. Der Assistent kann das Spiel nicht selbst bedienen, und Eingaben ins
-  Spiel zu automatisieren ist tabu (Nutzungsbedingungen).
-- Lua-Fehler schreibt Blizzards Fehlerbehandlung über `C_Log.LogErrorMessage` in die Client-Logs
-  unter `_forever_/Logs/`; in welche Datei, ist noch unbestätigt. `AddLuaErrorHandler` ist nur für
-  sicheren Code (`assert(issecure())`), `seterrorhandler` ersetzen wir nicht.
-- **Lua-Fehler sieht man im Spiel nur mit `/console scriptErrors 1`** (danach `/reload`). Auf dem
-  Windows-Rechner war die Anzeige aus (kein `scriptErrors` in `WTF/Config.wtf`), und der Fehler vom
-  2026-11-24 stand in keiner Datei unter `Logs/`. Sieht das Fenster halb aufgebaut aus, zuerst
-  danach fragen; Meldung mit Stack und Zeile kommt dann als Fenster im Spiel.
-- **BugGrabber und BugSack** sind auf dem Windows-Rechner installiert (Stand 2026-11-24, dazu
-  `scriptErrors 1` in `WTF/Account/<Konto>/config-cache.wtf`). Sie fangen Lua-Fehler ab, bevor
-  das Spiel sie als Fenster zeigt; im Spiel meldet sich dann nur BugSack. Gespeichert sind die
-  Fehler nach `/reload` in `SavedVariables/!BugGrabber.lua` (`BugGrabberDB.errors`, mit Stack).
-  Dort zuerst nachsehen, bevor man einen Fehler ausschließt.
-- Screenshots des Spiels liegen in `_forever_/Screenshots/` und sind die Grundlage für
-  Layout-Arbeit.
-- Was der Selbsttest nicht abdeckt: ob die Chronik die richtigen Ereignisse festhält und ob das
-  Teilen zwischen Spielern ankommt. Das zeigt nur das Spielen selbst (für das Teilen mit zwei
-  Accounts).
+- `/fam test` checks against the real client: the API each feature needs, the uncertain spots
+  named above (textures, camera zoom, popup names, map, error text globals) and the assumptions from
+  "WoW Forever: what you need to know". The report ends up in `FamulusDB.selfTest`.
+- `/fam dev` toggles developer mode: the self-test then runs three seconds after every
+  login, and blocked actions (`ADDON_ACTION_BLOCKED`/`_FORBIDDEN`) as well as the addon's
+  `LUA_WARNING` are collected in `FamulusDB.devLog`. Off by default; then it costs nothing.
+- At startup the game sets all files in the addon folder to mode 777, and through the symlink
+  also in the repo. That is why `git config core.fileMode false` is set locally here; set it again
+  after a fresh clone, otherwise all files show up as changed.
+- The game only writes the data to disk on `/reload` or on logout. After that
+  `luajit tools/read_selftest.lua` reads the report (with `--all` also the passed checks).
+- Course of a round: the owner starts the game, logs in and does `/reload`; the
+  assistant reads the report. The assistant cannot operate the game itself, and automating input
+  into the game is off limits (terms of use).
+- Lua errors are written by Blizzard's error handling via `C_Log.LogErrorMessage` to the client logs
+  under `_forever_/Logs/`; which file is not yet confirmed. `AddLuaErrorHandler` is only for
+  secure code (`assert(issecure())`), we do not replace `seterrorhandler`.
+- **Lua errors are only visible in game with `/console scriptErrors 1`** (then `/reload`). On the
+  Windows machine the display was off (no `scriptErrors` in `WTF/Config.wtf`), and the bug from
+  2026-11-24 was in no file under `Logs/`. If the window looks half built, ask about this
+  first; the message with stack and line then appears as a window in game.
+- **BugGrabber and BugSack** are installed on the Windows machine (as of 2026-11-24, plus
+  `scriptErrors 1` in `WTF/Account/<account>/config-cache.wtf`). They catch Lua errors before
+  the game shows them as a window; in game only BugSack then reports. The errors are saved
+  after `/reload` in `SavedVariables/!BugGrabber.lua` (`BugGrabberDB.errors`, with stack).
+  Look there first before ruling out an error.
+- Screenshots of the game are in `_forever_/Screenshots/` and are the basis for
+  layout work.
+- What the self-test does not cover: whether the chronicle records the right events and whether
+  sharing between players arrives. Only playing itself shows that (for sharing, with two
+  accounts).
