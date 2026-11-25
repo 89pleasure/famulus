@@ -9,6 +9,7 @@ local mock = {
     frames = {}, -- every frame created
     state = {}, -- per-test game state
     undefinedGlobals = {},
+    unloadedFonts = {}, -- font path -> true: SetFont answers false, as before the client loaded the file
     now = 0,
 }
 
@@ -43,7 +44,7 @@ for name in
     SetPoint ClearAllPoints SetAllPoints SetFrameStrata SetFrameLevel SetToplevel
     SetClampedToScreen SetMovable RegisterForDrag RegisterForClicks
     StartMoving StopMovingOrSizing SetColorTexture SetTexture SetTexCoord
-    SetVertexColor SetFont SetShadowOffset SetShadowColor SetTextColor
+    SetVertexColor SetShadowOffset SetShadowColor SetTextColor
     SetJustifyH SetJustifyV SetWordWrap SetSpacing SetAutoFocus SetMaxLetters
     EnableMouseWheel SetScrollChild AddMessage AddLine
     AddDoubleLine SetOwner
@@ -117,6 +118,15 @@ function Widget:SetText(text)
     if self.widgetType == "EditBox" and self.scripts.OnTextChanged then
         self.scripts.OnTextChanged(self, false)
     end
+end
+-- Like the client: a file not loaded yet answers false and keeps the old font.
+function Widget:SetFont(path, size)
+    if mock.unloadedFonts[path] then
+        return false
+    end
+    self.font, self.fontSize = path, size
+    self.fontSets = (self.fontSets or 0) + 1
+    return true
 end
 function Widget:GetText()
     return self.text or ""

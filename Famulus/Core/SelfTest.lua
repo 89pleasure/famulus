@@ -234,12 +234,17 @@ local function CheckFonts()
     end
     table.sort(names)
     for i = 1, #names do
+        -- The client loads a font only for visible text, so this hidden probe
+        -- says yes only once the window has used the file.
+        local path = ns.UI.fonts[names[i]]
         local text = probeFrame:CreateFontString()
-        local loaded = text:SetFont(ns.UI.fonts[names[i]], 12, "")
-        if loaded then
+        local state = ns.UI.fontLoaded and ns.UI.fontLoaded[path]
+        if state or text:SetFont(path, 12, "") then
             Add("media", "font " .. names[i], "ok", "loaded")
+        elseif state == false then
+            Add("media", "font " .. names[i], "warn", "the window asked for it, but the client has not loaded it; the window uses the game's font")
         else
-            Add("media", "font " .. names[i], "warn", "SetFont returned " .. Describe(loaded) .. "; the window uses the game's font")
+            Add("media", "font " .. names[i], "ok", "not used yet; open the window, then run /fam test again to check it")
         end
     end
 end

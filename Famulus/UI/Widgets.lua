@@ -348,10 +348,59 @@ end
 -- cannot load the file or has not loaded it yet (see the LOGIN handler in
 -- UI/Theme.lua); a font string without a font would raise errors on
 -- SetText, so it then gets the game's font instead.
-function UI.SetFont(region, size, weight)
-    if region:SetFont(UI.FontPath(weight), size, "") == false then
-        region:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, "")
+-- Fonts load lazily (as FlareUI found out): the client reads a font file
+-- only when visible text asks for it; until then SetFont returns false and
+-- the string keeps its old font (a new one has none, and SetText on it
+-- throws). Once the file is in, the string switches by itself, but text
+-- drawn before can stay blank; setting the same font again does nothing, a
+-- size change and back draws it anew. So a string waits on the game's font
+-- and is asked again until the client says yes, then redrawn.
+local RETRY_SECONDS, RETRY_TICKS = 0.5, 120
+local pending = setmetatable({}, { __mode = "k" }) -- font string -> { path, size }
+local retryTicker, retryTicks
+-- path -> true once the client said yes, false while strings wait (self-test)
+UI.fontLoaded = {}
+
+local function RetryFonts()
+    retryTicks = retryTicks + 1
+    for region, want in pairs(pending) do
+        if region:SetFont(want.path, want.size, "") ~= false then
+            pending[region] = nil
+            UI.fontLoaded[want.path] = true
+            region:SetFont(want.path, want.size + 1, "")
+            region:SetFont(want.path, want.size, "")
+        end
     end
+    if not next(pending) or retryTicks >= RETRY_TICKS then
+        retryTicker:Cancel()
+        retryTicker = nil
+    end
+end
+
+-- Asks again for strings still waiting, e.g. when the window opens after
+-- the retries gave up (a hidden string's request loads nothing).
+function UI.RetryFonts()
+    if next(pending) and not retryTicker then
+        retryTicks = 0
+        retryTicker = C_Timer.NewTicker(RETRY_SECONDS, RetryFonts)
+    end
+end
+
+local function ApplyFont(region, path, size)
+    pending[region] = nil
+    if region:SetFont(path, size, "") ~= false then
+        UI.fontLoaded[path] = true
+        return
+    end
+    region:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, "")
+    region:SetFont(path, size, "")
+    pending[region] = { path = path, size = size }
+    UI.fontLoaded[path] = UI.fontLoaded[path] or false
+    UI.RetryFonts()
+end
+
+function UI.SetFont(region, size, weight)
+    ApplyFont(region, UI.FontPath(weight), size)
 end
 
 -- The game's own storybook font (the one of quest titles), for headings of
@@ -360,7 +409,9 @@ end
 function UI.SetDisplayFont(region, size)
     local source = QuestTitleFont
     local path = source and source.GetFont and source:GetFont()
-    if type(path) ~= "string" or region:SetFont(path, size, "") == false then
+    if type(path) == "string" then
+        ApplyFont(region, path, size)
+    else
         UI.SetFont(region, size, "semibold")
     end
 end
