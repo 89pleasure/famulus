@@ -4,9 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Famulus – an addon for playing together in WoW Forever</title>
-  <meta name="description" content="Famulus is an addon for World of Warcraft: Forever. It records your shared journey as a picture book, remembers who you travelled with and gives your friends the names you know them by.">
+  <meta name="description" content="Famulus, an addon for World of Warcraft: Forever, records your shared journey as a picture book, remembers who you played with and names your friends.">
   <meta name="theme-color" content="#0a0f10">
+  <meta name="color-scheme" content="dark">
+  <!-- Link previews (Discord, Reddit, messengers). Their crawlers run no scripts, so these stay
+       English. og:url, og:image and a canonical link need absolute URLs: add them with the domain. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Famulus">
+  <meta property="og:title" content="Famulus – an addon for playing together in WoW Forever">
+  <meta property="og:description" content="Famulus, an addon for World of Warcraft: Forever, records your shared journey as a picture book, remembers who you played with and names your friends.">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="de_DE">
+  <meta name="twitter:card" content="summary">
+  <!-- favicon.ico for browsers without SVG icons; sizes keeps the others on the SVG. -->
+  <link rel="icon" href="favicon.ico" sizes="32x32">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="preload" href="assets/fonts/Inter-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="preload" href="assets/fonts/Inter-SemiBold.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="styles.css">
@@ -40,7 +53,7 @@
     <symbol id="i-horseshoe" viewBox="0 0 32 32"><path d="M12 23.1A9.5 9.5 0 1 1 20 23.1"/><circle cx="8.6" cy="12" r="1.1"/><circle cx="23.4" cy="12" r="1.1"/></symbol>
   </svg>
 
-  <nav class="nav" id="nav" aria-label="Main">
+  <nav class="nav" id="nav" aria-label="Main" data-i18n-attr="aria-label:nav_main">
     <a class="nav__brand" href="#top" aria-label="Famulus">
       <img src="assets/logo.svg" width="30" height="30" alt="">
       <span>Famulus</span>

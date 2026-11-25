@@ -235,10 +235,22 @@ owner.
   not a direct file link (the assistant's recommendation, the owner agreed): it always shows the
   newest file, offers the CurseForge app as well as the zip, and a file link would change with
   every upload.
+- **Head and link previews (2026-11-25, the owner's request to check the metadata; details the
+  assistant's decisions):** The description is at most about 155 characters in both languages
+  (Google cuts longer ones). Open Graph and `twitter:card` (`summary`) tags make a card in
+  Discord, Reddit and messengers; their crawlers run no scripts, so these tags stay English while
+  title and description switch with the language. `favicon.ico` (32 px, for browsers without SVG
+  icons) and `apple-touch-icon.png` (180 px) lie at the root of `website/`, scaled with `sips`
+  from `docs/curseforge/logo.png`; the SVG logo stays the main icon. `<meta name="color-scheme">`
+  keeps the page dark before the CSS loads. **Once the domain exists:** add
+  `<link rel="canonical">`, `og:url`, `og:image` (needs an absolute URL and a preview image,
+  1200 × 630) and `hreflang` alternates for `?lang=de`; until then search engines see only the
+  English page.
 - **Deliberately not included yet:** Guildy (only once the PR there is accepted), more screenshots from the
   game (so far only the window in the header), legal notice and privacy policy (needed before
   publishing), the domain (the owner gets it), a preview image for shared
-  links, WOFF2 fonts (the TTFs from the addon are loaded, ~100 KB each).
+  links (see "Head and link previews"), WOFF2 fonts (the TTFs from the addon are loaded, ~100 KB
+  each).
 - **Checked** in the app's built-in browser (Chromium): at 1440 and 375 px width all
   sections, at 1024 and 680 px by spot checks; German and English; the colour schemes Lemon,
   Mint, Rose and Lilac; the three demos used; no messages in the console. Not checked:
