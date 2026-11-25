@@ -395,14 +395,17 @@ picture-book look are built and checked against the mock only.
     greeting is still news.
   - **Reacting from the live feed:** a friend's card in the feed carries a button at the band's
     right end (32 px, the kind's reaction icon; `story.reaction` in `UI/Feed.lua`, built by
-    `Reaction` in `LiveFeed.lua`). It does what a click on the card in the book does
-    (`ChronicleService.React`, sent by `Sharing.lua` as before): muted until given, then accent
-    icon on `accentDeep`; a second click takes it back; tooltip "Click to react" / "You
-    reacted …" (without the "will see it" line: the friend has just sent the entry, so they are
-    online). Only while reactions are on (`ChronicleService.ReactionsOn`, shared with the book);
-    no button on the player's own cards, on reaction cards or on `friendLevel`. `/fam feed test`
-    shows the button on its sample card too; there it only lights up and sends nothing, so the
-    look can be checked with one account. Checked against the mock only, not yet seen in game.
+    `Reaction` in `LiveFeed.lua`). A click gives the reaction as a click on the card in the book
+    does (`ChronicleService.React`, sent by `Sharing.lua` as before): the button lights up
+    (accent icon on `accentDeep`), and the card closes a second later (`CLOSE`), whether the
+    mouse is still on it or not. The feed only gives: a reaction is taken back in the
+    chronicle, so a lit button does nothing more. Tooltip "Click to react" / "You reacted. You
+    can take it back in the chronicle." (`c_react_feed_given`; no "will see it" line: the
+    friend has just sent the entry, so they are online). Only while reactions are on
+    (`ChronicleService.ReactionsOn`, shared with the book); no button on the player's own
+    cards, on reaction cards or on `friendLevel`. `/fam feed test` shows the button on its
+    sample card too; there it only lights up and closes the card and sends nothing, so the look
+    can be checked with one account.
   - **Data:** on a friend's entry `mine` (the player's reaction) and `told` (what the friend was
     last told); on an own entry `r = { [<name>] = <reaction> }`. Never sent with the entry
     (`FIELDS` in `Sharing.lua` leaves them out); they go with the entry when `Trim` drops it.
@@ -471,7 +474,7 @@ picture-book look are built and checked against the mock only.
     catch the mouse, so clicks go through to the world; only the reaction button does (see
     "Reacting from the live feed"). While the mouse is on it the card stays past its time, a
     card already fading comes back, and once the mouse has left it goes 1.5 seconds later
-    (`LINGER`).
+    (`LINGER`). After a reaction the card goes anyway (see there).
   - **Shape "crest on the banner" (chosen by the owner on the mockup, 2026-11-19, draft B1):**
     The picture is a square crest (72 px, corners 14, border two pixels in the colour of the kind)
     and sits centred on a banner (56 px tall), 14 px from the left end of the banner; it sticks

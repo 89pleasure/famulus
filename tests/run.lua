@@ -1602,18 +1602,31 @@ do
     button.scripts.OnEnter(button)
     check(GameTooltip:GetText() == ns.L.c_react, "pointing at it says what it does")
     button.scripts.OnClick(button)
-    check(boss.mine == "strong" and button.ground.fill.token == "accentDeep" and GameTooltip:GetText() == ns.L.c_react_given,
-        "a click reacts with the kind's reaction, lights the button up and says how to take it back")
-    mock.Advance(3)
-    check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. at .. "~boss~strong~" and boss.told == "strong",
-        "and it goes to the friend as from the chronicle: " .. sent())
-    mock.sent = {}
+    check(boss.mine == "strong" and button.ground.fill.token == "accentDeep" and GameTooltip:GetText() == ns.L.c_react_feed_given,
+        "a click reacts with the kind's reaction, lights the button up and says where to take it back")
     button.scripts.OnClick(button)
-    check(boss.mine == nil and button.ground.fill.token == "control" and GameTooltip:GetText() == ns.L.c_react,
-        "a second click takes it back")
+    check(boss.mine == "strong", "a second click takes nothing back: that is the chronicle's")
+    mock.Advance(0.8)
+    check(Feed.Shown()[1] == card and card:IsShown() and card:GetAlpha() == 1, "the card stays a moment, to see the reaction")
+    mock.Advance(1)
+    check(#Feed.Shown() == 0 and not card:IsShown(), "then it closes, though the mouse is still on it")
+    mock.Advance(1.5)
+    check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. at .. "~boss~strong~" and boss.told == "strong",
+        "and the reaction goes to the friend as from the chronicle: " .. sent())
+    mock.sent = {}
+    Chronicle.React(boss, false) -- as a second click on the card in the chronicle
     mock.Advance(3)
-    check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. at .. "~boss~~", "and tells her so: " .. sent())
-    mock.Advance(5)
+    check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. at .. "~boss~~", "taken back in the chronicle, she is told so: " .. sent())
+
+    -- While the mouse is on the button the card stays.
+    mock.sent = {}
+    at = time() - 1
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~level~level=21;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
+    card = Feed.Shown()[1]
+    button = card.react
+    check(button:IsShown() and find("level", at) ~= nil, "a friend's level-up has the button as well")
+    button.scripts.OnEnter(button)
+    mock.Advance(8)
     check(Feed.Shown()[1] == card and card:IsShown() and card:GetAlpha() == 1,
         "while the mouse is on the button, the card stays beyond its time")
     button.scripts.OnLeave(button)
@@ -1622,13 +1635,12 @@ do
     mock.Advance(1.2)
     check(#Feed.Shown() == 0 and not card:IsShown() and not button.over, "then it goes")
 
-    -- A card that is already fading comes back under the mouse.
-    mock.sent = {}
-    at = time() - 1
-    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~level~level=21;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
+    -- A card that is already fading comes back under the mouse. (Another
+    -- second: two level-ups of one person in one second count as one.)
+    at = time() - 2
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~level~level=22;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
     card = Feed.Shown()[1]
     button = card.react
-    check(button:IsShown() and find("level", at) ~= nil and button.icon ~= nil, "a friend's level-up has the button as well")
     mock.Advance(7.2)
     check(card:IsShown() and card:GetAlpha() < 1, "(the card is fading)")
     button.scripts.OnEnter(button)
@@ -1653,8 +1665,9 @@ do
     button = card.react
     check(button:IsShown(), "/fam feed test shows the button to react")
     button.scripts.OnClick(button)
+    check(button.ground.fill.token == "accentDeep", "on the sample card it lights up")
     mock.Advance(3)
-    check(button.ground.fill.token == "accentDeep" and #mock.sent == 0, "on the sample card it lights up and sends nothing: " .. sent())
+    check(#Feed.Shown() == 0 and #mock.sent == 0, "and the card closes; nothing is sent: " .. sent())
     Feed.Clear()
     mock.Advance(10)
     mock.sent = {}
