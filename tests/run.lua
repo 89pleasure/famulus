@@ -1736,8 +1736,10 @@ do
     check(#Feed.Shown() == 0 and not card:IsShown() and not button.over, "then it goes")
 
     -- A card that is already fading comes back under the mouse. (Another
-    -- second: two level-ups of one person in one second count as one.)
-    at = time() - 2
+    -- second: two level-ups of one person in one second count as one. One
+    -- before the last, not by the clock: time() is the real one, and a new
+    -- second between the two could make both the same.)
+    at = at - 1
     mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~level~level=22;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
     card = Feed.Shown()[1]
     button = card.react
