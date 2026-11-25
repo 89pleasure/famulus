@@ -1,6 +1,6 @@
 # Publishes the website (the folder website/, served as it is, no build step) on GitHub Pages
-# whenever a push to main changes it, and whenever a version tag is pushed, so that the page names
-# the new release. Commits that only touch the addon do not trigger it.
+# whenever a push to main changes it, and after every release uploaded to CurseForge, so that the
+# page names the new release. Commits that only touch the addon do not trigger it.
 #
 # Once per repository: Settings > Pages > Build and deployment > Source "GitHub Actions".
 # The custom domain is set there too (Settings > Pages > Custom domain); with this workflow no
@@ -14,9 +14,13 @@ on:
     paths:
       - "website/**"
       - ".github/workflows/website.yml"
-    # Path filters do not apply to tags: every version tag publishes the page again.
-    tags:
-      - "v*"
+  # After a release rather than on its tag: the github-pages environment lets only main deploy,
+  # and a workflow_run always runs on main.
+  workflow_run:
+    workflows:
+      - Release
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -31,16 +35,19 @@ concurrency:
 
 jobs:
   deploy:
+    # After a release only if it succeeded and uploaded (a tag push, not a dry run by hand).
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # Always main, also when a tag started the run; the full history so that the tags are there.
+      # The full history, so that the tags are there.
       - name: Check out the repository
         uses: actions/checkout@v7
         with:
-          ref: main
           fetch-depth: 0
 
       - name: Check that Pages is set up
