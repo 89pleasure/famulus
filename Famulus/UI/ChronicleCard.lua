@@ -1,5 +1,5 @@
 -- What a card of the chronicle's book holds (UI/Book.lua): whose event it
--- is in a row of its own at the top (none for the player's own), below it
+-- is in a sunken strip at the top (none for the player's own), below it
 -- the picture, and beside that the text and the time and place in the
 -- foot. The card is as high as
 -- that needs; the event's weight sets the picture, the room above and
@@ -18,8 +18,9 @@
 local _, ns = ...
 local UI = ns.UI
 
-local LINE, LINE_GAP = 14, 4 -- the head and the foot; the foot's distance from the text
-local HEAD_GAP = 8 -- between the head's row and the picture
+local LINE, LINE_GAP = 14, 4 -- the foot, and its distance from the text
+local STRIP = 28 -- the sunken strip at the top that names whose event it is
+local CHIP = 18 -- the class icon or initial in it
 local SIDE = 14 -- left of the picture's column and right of the text
 local TEXT_GAP = 12 -- between the picture and the text, whatever its size
 
@@ -33,15 +34,28 @@ local WEIGHTS = {
 
 local function Build(part)
     UI.BookPicture(part)
-    part.chipDot = UI.Icon(part, "circle", LINE, "accentSoft")
-    part.chipInitial = UI.Text(part, 9, "accent", "semibold")
+    -- The strip is sunken like an option under its feature, round at the
+    -- card's top corners, with a fine line below.
+    local pixel = UI.Pixel(part)
+    local strip = CreateFrame("Frame", nil, part)
+    part.strip = strip
+    strip:SetHeight(STRIP)
+    strip:SetPoint("TOPLEFT")
+    strip:SetPoint("TOPRIGHT")
+    UI.Round(strip, "sunken", 9, { inset = pixel, square = { BOTTOMLEFT = true, BOTTOMRIGHT = true } })
+    local stripLine = UI.Line(strip)
+    stripLine:SetPoint("BOTTOMLEFT", pixel, 0)
+    stripLine:SetPoint("BOTTOMRIGHT", -pixel, 0)
+    part.chipDot = UI.Icon(strip, "circle", CHIP, "accentSoft")
+    part.chipDot:SetPoint("LEFT", strip, "LEFT", SIDE, 0)
+    part.chipInitial = UI.Text(strip, 10, "accent", "semibold")
     part.chipInitial:SetPoint("CENTER", part.chipDot, "CENTER")
     part.chipInitial:SetJustifyH("CENTER")
     -- Where the class is known, its icon instead of the initial.
-    part.chipClass = UI.ClassIcon(part, LINE)
+    part.chipClass = UI.ClassIcon(strip, CHIP)
     part.chipClass:SetPoint("CENTER", part.chipDot, "CENTER")
-    part.chipText = UI.Text(part, 11, "textDim", "medium")
-    part.chipText:SetPoint("LEFT", part.chipDot, "RIGHT", 5, 0)
+    part.chipText = UI.Text(strip, 11, "textMuted")
+    part.chipText:SetPoint("LEFT", part.chipDot, "RIGHT", 6, 0)
     part.chipText:SetWordWrap(false)
     part.title = UI.Text(part, 13, "text", "medium")
     part.title:SetSpacing(1)
@@ -65,12 +79,13 @@ function UI.ChronicleCard(part, story, width)
     -- The head: whose event it is.
     local chip = story.chip
     local classShown = UI.SetClass(part.chipClass, chip and chip.class)
+    part.strip:SetShown(chip ~= nil)
     part.chipDot:SetShown(chip ~= nil and not classShown)
     part.chipInitial:SetShown(chip ~= nil and not classShown)
     part.chipText:SetShown(chip ~= nil)
     if chip then
         part.chipInitial:SetText(chip.initial or "")
-        part.chipText:SetWidth(width - SIDE * 2 - LINE - 5)
+        part.chipText:SetWidth(width - SIDE * 2 - CHIP - 6)
         part.chipText:SetText(chip.text or "")
     end
 
@@ -92,17 +107,15 @@ function UI.ChronicleCard(part, story, width)
     part.footer:SetWidth(textWidth)
     part.footer:SetText(story.footer or "")
 
-    -- The head's row above, then picture and text side by side, both
-    -- centred on the taller of the two.
-    local headHeight = chip and LINE + HEAD_GAP or 0
+    -- The strip above, then picture and text side by side, both centred
+    -- on the taller of the two.
+    local headHeight = chip and STRIP or 0
     local blockHeight = textHeight + LINE_GAP + LINE
     local bodyHeight = math.max(size, blockHeight)
     local height = math.floor(pad * 2 + headHeight + bodyHeight + 0.5)
     local body = pad + headHeight
     local left = SIDE + size + TEXT_GAP
     local top = body + math.floor((bodyHeight - blockHeight) / 2 + 0.5)
-    part.chipDot:ClearAllPoints()
-    part.chipDot:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE, -pad)
     part.picture:ClearAllPoints()
     part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE, -(body + math.floor((bodyHeight - size) / 2 + 0.5)))
     part.title:ClearAllPoints()

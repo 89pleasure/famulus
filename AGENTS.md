@@ -574,7 +574,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   - **Aufbau neben dem Bild:** Kopf, Inhalt, Fuß. Der Kopf nennt die Person (Klassensymbol, sonst
     Anfangsbuchstabe, und `ChronicleService.Label`); bei eigenen Ereignissen gibt es ihn nicht.
     Seit 2026-11-25 (Wunsch des Auftraggebers) steht er als eigene Reihe über Bild und Text,
-    bündig mit dem Bild, nicht mehr über dem Text rechts vom Bild.
+    bündig mit dem Bild, nicht mehr über dem Text rechts vom Bild; die Reihe ist ein vertiefter
+    Streifen über die ganze Kartenbreite wie früher der Name unten (`sunken`, oben rund, unten
+    eine feine Linie, 28 px hoch, Klassensymbol 18 px).
     Der Fuß nennt immer Uhrzeit und Ort („21:14 · Dunkelküste“, ohne Ort nur die Uhrzeit).
   - **Höhe nach Inhalt, gleiche Kanten (Wunsch des Auftraggebers nach dem ersten Screenshot,
     2026-11-25):** Die erste Fassung hielt die Kopfzeile auch ohne Namen und immer zwei Zeilen
