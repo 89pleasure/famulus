@@ -38,7 +38,9 @@ local UI = ns.UI
 
 local AXIS = 44 -- width of the column the line runs through
 local GAP = 14 -- between two events
-local DOT, GLOW = 6, 18 -- the glowing dot on the line, and its halo
+-- The glowing dot on the line, by the card's weight (without one: medium,
+-- a milestone high); its halo is three times as large.
+local DOTS = { low = 5, medium = 7, high = 9 }
 local PHOTO_INSET = 2 -- an icon of the game fills its frame but for a fine line
 local DOT_GAP = 34 -- between the dots of two events on the line
 -- How wide a card is, by its weight: a share of its side of the book. A
@@ -340,12 +342,11 @@ local function CreateEvent(book)
 
     -- The dot that sits on the line (the line itself belongs to the chapter).
     -- A glowing dot in the accent, like what is active elsewhere in the window.
-    event.dot = UI.Icon(event, "circle", DOT, "accent", "ARTWORK")
-    event.glow = UI.Halo(event, event.dot, GLOW, "accentGlow", "BORDER")
+    event.dot = UI.Icon(event, "circle", DOTS.medium, "accent", "ARTWORK")
+    event.glow = UI.Halo(event, event.dot, DOTS.medium * 3, "accentGlow", "BORDER")
     -- A short line from the dot to its card, so that with cards on both
     -- sides it is plain which dot belongs to which.
     event.tick = event:CreateTexture(nil, "BACKGROUND")
-    event.tick:SetSize(AXIS / 2 - DOT / 2, UI.Pixel(event))
     UI.Paint(event.tick, "accentLine")
     local card = CreateFrame("Frame", nil, event)
     event.card = card
@@ -388,6 +389,10 @@ local function EventSet(event, story, onLeft, width)
     event.story = story
     event.onLeft = onLeft
     local column = math.floor((width - AXIS) / 2 * (WIDTHS[story.weight] or 1) + 0.5)
+    local dot = DOTS[story.weight] or story.big and DOTS.high or DOTS.medium
+    event.dot:SetSize(dot, dot)
+    event.glow:SetSize(dot * 3, dot * 3)
+    event.tick:SetSize(AXIS / 2 - dot / 2, UI.Pixel(event))
     local card = event.card
 
     -- What the card holds is the feature's: its builder fills a frame of

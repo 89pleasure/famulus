@@ -585,8 +585,10 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     links steht das Klassensymbol, wo die Klasse bekannt ist, sonst beginnt der Name am Rand
     (Entscheidung des Assistenten: wörtlich „das Initial-Icon kann weg“, das Klassensymbol
     bleibt). Die Punkte auf der Linie sind leuchtende Punkte in Akzentfarbe wie früher die
-    Anzeige „x von y aktiv“ (6 px, `UI.Halo` mit `accentGlow`, 18 px), in allen Büchern, also
-    auch bei den Weggefährten (Book-Design).
+    Anzeige „x von y aktiv“ (`UI.Halo` mit `accentGlow`, dreimal so groß wie der Punkt), in
+    allen Büchern, also auch bei den Weggefährten (Book-Design). Die Größe legt das Book nach
+    Gewicht fest (`DOTS`: leicht 5, mittel 7, schwer 9 px; ohne Gewicht mittel, mit `big`
+    schwer; Wunsch des Auftraggebers, die Größen hat der Assistent gewählt).
     Der Fuß nennt immer Uhrzeit und Ort („21:14 · Dunkelküste“, ohne Ort nur die Uhrzeit).
   - **Höhe nach Inhalt, gleiche Kanten (Wunsch des Auftraggebers nach dem ersten Screenshot,
     2026-11-25):** Die erste Fassung hielt die Kopfzeile auch ohne Namen und immer zwei Zeilen

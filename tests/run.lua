@@ -1765,8 +1765,10 @@ check(events[4].card:GetWidth() < events[2].card:GetWidth() and events[2].card:G
     "the book sets a card's width by its weight, and a narrower card keeps to the line")
 check(events[1].strip:IsShown() and events[2].strip:IsShown() and events[1].picture.mockPoint[5] <= -28
     and events[1].kindIcon:IsShown() and events[1].kindIcon.mockPoint[1] == "RIGHT" and events[1].mark == nil
-    and events[1].dot:IsShown() and events[1].glow:IsShown(),
-    "the name stands in a sunken strip above the picture, the icon of the kind at its right; on the line a glowing dot")
+    and events[1].dot:IsShown() and events[1].glow:IsShown()
+    and events[4].dot:GetWidth() < events[2].dot:GetWidth() and events[2].dot:GetWidth() < events[1].dot:GetWidth()
+    and events[1].glow:GetWidth() == events[1].dot:GetWidth() * 3,
+    "the name stands in a sunken strip above the picture, the icon of the kind at its right; on the line a glowing dot, larger with the weight")
 do
     local level = true
     for index = 1, 6 do
