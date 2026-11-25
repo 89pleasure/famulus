@@ -586,7 +586,10 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     (`SIDE`), das Bild steht linksbündig, und der Text hält immer denselben Abstand zum Bild
     (`TEXT_GAP`; drei Größen 40/48/56, linksbündig und fester Abstand auf Wunsch des
     Auftraggebers, 2026-11-25; eine Bildspalte in der Breite des größten Bildes ließ bei
-    leichten Karten zu viel Platz). Die Textkante wandert also mit der Bildgröße.
+    leichten Karten zu viel Platz). Die Textkante wandert also mit der Bildgröße. Bild und Text
+    beginnen auf derselben Höhe, der Fuß endet mit dem Bild, falls das Bild höher ist (Wunsch
+    des Auftraggebers, 2026-11-25; vorher standen beide mittig zueinander und hatten
+    verschiedene Abstände zum oberen Rand).
   - **Breite nach Gewicht, vom Book festgelegt (Wunsch des Auftraggebers, 2026-11-25):** Das
     Feature gibt nur `story.weight` mit; `UI.Book` macht daraus die Breite der Karte (`WIDTHS`
     in `UI/Book.lua`: leicht 80 %, mittel 90 %, schwer 100 % ihrer Buchseite; die Anteile sind

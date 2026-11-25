@@ -107,20 +107,19 @@ function UI.ChronicleCard(part, story, width)
     part.footer:SetWidth(textWidth)
     part.footer:SetText(story.footer or "")
 
-    -- The strip above, then picture and text side by side, both centred
-    -- on the taller of the two.
+    -- The strip above, then picture and text side by side: both begin at
+    -- the same height, and the foot ends with the taller of the two.
     local headHeight = chip and STRIP or 0
     local blockHeight = textHeight + LINE_GAP + LINE
     local bodyHeight = math.max(size, blockHeight)
     local height = math.floor(pad * 2 + headHeight + bodyHeight + 0.5)
     local body = pad + headHeight
     local left = SIDE + size + TEXT_GAP
-    local top = body + math.floor((bodyHeight - blockHeight) / 2 + 0.5)
     part.picture:ClearAllPoints()
-    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE, -(body + math.floor((bodyHeight - size) / 2 + 0.5)))
+    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE, -body)
     part.title:ClearAllPoints()
-    part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -top)
+    part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -body)
     part.footer:ClearAllPoints()
-    part.footer:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(top + blockHeight - LINE))
+    part.footer:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(body + bodyHeight - LINE))
     return height
 end

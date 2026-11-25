@@ -1766,6 +1766,13 @@ check(events[4].card:GetWidth() < events[2].card:GetWidth() and events[2].card:G
 check(events[1].strip:IsShown() and events[1].chipDot.mockPoint[4] == events[1].picture.mockPoint[4]
     and events[1].picture.mockPoint[5] <= -28 and not events[2].strip:IsShown(),
     "a companion's name stands in a sunken strip of its own above the picture; the player's own have none")
+do
+    local level = true
+    for index = 1, 6 do
+        level = level and events[index].picture.mockPoint[5] == events[index].title.mockPoint[5]
+    end
+    check(level, "picture and text begin at the same height")
+end
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
     and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"
     and events[4].detail:GetText() == "at level 13" and events[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil
