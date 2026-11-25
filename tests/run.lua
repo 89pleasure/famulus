@@ -558,6 +558,14 @@ check(chatLine(1) == "[Guild] [Mira Stormfeather]: I'll bring torches." and not 
     and chatLine(3) == "[Party] [Lysa Morningdew]: I'm in, give me five minutes."
     and chatLine(4) == "Dad has come online." and select(2, chatLine(4)),
     "the chronicle's sample people chat; one of them under an alias, marked, also in the online notice: " .. chatLine(2))
+local nameAnchor = chatScene.lines[4][2].mockPoint
+check(nameAnchor[1] == "TOPLEFT" and nameAnchor[2] == chatScene.lines[4][1] and nameAnchor[3] == "TOPRIGHT",
+    "the parts of a line meet top to top, so a name at its start stays in its line")
+local twinkling = 0
+for _, group in ipairs(chatScene.animations) do
+    twinkling = twinkling + (group:IsPlaying() and 1 or 0)
+end
+check(twinkling > 0 and twinkling == #chatScene.animations, "behind it a night sky whose stars twinkle while it shows")
 ns:SetOption("chatAliases", "style", "both")
 mock.Advance(0.1)
 check(chatLine(2) == "[Guild] [Dad (Borin Ironbeard)]: Who's coming to Uldaman?" and chatLine(4) == "Dad (Borin Ironbeard) has come online.",
@@ -1284,6 +1292,7 @@ do -- the live feed: what was just written down appears on screen for a while
     check(card.crest:GetHeight() < card:GetHeight() and card.crest:GetWidth() < card:GetWidth()
         and card:GetWidth() >= 230 and card.mark:IsShown() and card.grain ~= nil,
         "the picture is a crest inside its band; a milestone carries the mark of an active card")
+    check(card.bar:IsShown() and card.barGroup:IsPlaying(), "a line along its foot runs out while it stays")
     Chronicle.Add("zone", { zone = "Nowhere", t = time() - 21, probe = true })
     Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 3600, probe = true })
     check(#Feed.Shown() == 1, "a kind that is switched off and old news stay off screen")
@@ -1307,7 +1316,7 @@ do -- the live feed: what was just written down appears on screen for a while
     mock.Advance(6.5)
     check(#Feed.Shown() == 3, "a card stays for its time")
     mock.Advance(2)
-    check(#Feed.Shown() == 0 and not card:IsShown(), "then it fades out and is gone")
+    check(#Feed.Shown() == 0 and not card:IsShown() and not card.barGroup:IsPlaying(), "then it fades out and is gone")
     Chronicle.Add("level", { level = 15, who = "Jaina Proudmoore", t = time() - 23, probe = true })
     check(#Feed.Shown() == 1 and Feed.Shown()[1].number:IsShown() and Feed.Shown()[1].number:GetText() == "15",
         "a companion's level-up appears with its number")

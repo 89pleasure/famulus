@@ -477,6 +477,12 @@ picture-book look are built and checked against the mock only.
     "Reacting from the live feed"). While the mouse is on it the card stays past its time, a
     card already fading comes back, and once the mouse has left it goes 1.5 seconds later
     (`LINGER`). After a reaction the card goes anyway (see there).
+  - **Running-out line (since 2026-11-25):** along the card's foot (2 px, 10 px in from its
+    ends, accent gradient) a line shrinks to the left over the duration plus the fade-out, so it
+    is gone when the card is (`card.bar`, a `Scale` animation of the client; hidden when it ends,
+    stopped when the card goes). A card the mouse holds on its reaction button stays past
+    its line. The picture of the feed in its settings loops it. Checked against the mock only,
+    not yet seen in game.
   - **Shape "crest on the banner" (chosen by the owner on the mockup, 2026-11-19, draft B1):**
     The picture is a square crest (72 px, corners 14, border two pixels in the colour of the kind)
     and sits centred on a banner (56 px tall), 14 px from the left end of the banner; it sticks

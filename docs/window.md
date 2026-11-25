@@ -171,16 +171,23 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     (`UI.Previews.Focus`, the option's key). What moves does so by the client's animations,
     stopped while the scene is hidden. Without a scene the detail starts with the page's name.
     - `feed`: the live feed's own cards (`UI.Feed.Card`, `UI.Feed.Fill`; never on screen) with
-      Mira's level and Borin's boss over a night sky, a line along their foot that runs out over
-      the chosen duration, below them "Visible for 7 seconds". Pointed at a kind, a card of that
-      kind (reactions via `liveFeed.ReactionStory`), faint while the kind or the feature is off.
+      Mira's level and Borin's boss over the night sky, their running-out line (see "Live feed"
+      in `docs/chronicle.md`) looping over the chosen duration, below them "Visible for 7
+      seconds". Pointed at a kind, a card of that kind (reactions via
+      `liveFeed.ReactionStory`), faint while the kind or the feature is off.
     - `chat`: four lines in the game's chat font (`UI.SetChatFont`, `ChatFontNormal`) and its
       default colours (tokens `chatGuild`, `chatParty`, `chatSystem`); Borin under the alias
       "Dad"/"Papa" as `AliasService.Format` writes it with the chosen style, framed in the
       accent, also in the online notice. Switched off: his name.
-    - The night sky (`World`): a rounded gradient (`sceneSky` into `sceneLand`), haze, moon and
-      two dark hills from `shadow.tga` and `circle.tga`; the hills stay clear of the rounded
-      corners. Tokens `scene*` are fixed, the same in every scheme.
+    - The night sky (`World`), after the website's (`website/scene.js`, `styles.css`): a rounded
+      gradient (`skyTop` into `skyLow`, a dusk with a little accent), 46 seeded stars of which
+      about a fifth twinkle (alpha animations), and Azeroth's two moons: a large one at the right
+      (rim `moonRim`, brighter towards the top left `moonMid`, `moonCore`, glow `moonHalo`,
+      `moonGlow`) and a small blue one at the top left (`moonBlue`). All from `circle.tga` and
+      `shadow.tga`; the tokens follow the colour scheme, as on the website. Stars and glows stay
+      clear of the rounded corners (the stage clips square).
+    - The chat's three texts of a line meet top to top: anchored by their middles, an empty text in
+      front (the online notice starts with the name) pulled the name into the line above.
     - The mockup has scenes for every entry (tooltip, context menu, Guildy, Battle.net, minimap,
       book cards, fellow traveller, colour schemes, embers, window size and more); not built.
       Checked against the mock only, not yet seen in game.

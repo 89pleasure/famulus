@@ -185,13 +185,8 @@ local washes = {
     warning = hex("f5b14c"),
     danger = hex("f06a6a"),
     -- The pictures of the settings (UI/Previews.lua) show the game, not the
-    -- window: a night sky over the land, and the chat in the game's colours.
-    sceneSky = hsl(205, 0.34, 0.17),
-    sceneLand = hsl(190, 0.28, 0.07),
-    sceneHill = hsl(170, 0.24, 0.05),
-    sceneHaze = { 0.45, 0.62, 0.74, 0.22 },
-    sceneMoon = { 1, 0.965, 0.86, 0.85 },
-    sceneMoonGlow = { 1, 0.94, 0.78, 0.16 },
+    -- window: the chat in the game's colours. Their night sky follows the
+    -- scheme (see Compose).
     sceneCaption = { 0, 0, 0, 0.42 },
     chatBox = { 0, 0, 0, 0.38 },
     chatGuild = { 0.25, 1, 0.25, 1 },
@@ -250,6 +245,19 @@ local function Compose(accent)
     colors.accentTrail = alpha(base, 0.28) -- the line the chronicle's events hang on
     colors.accentNone = alpha(base, 0) -- where an accent line fades out
     colors.cardActive = alpha(base, 0.26) -- border of a card that stands out (a milestone, the chosen one)
+    -- The night sky of the settings' pictures, as on the website (styles.css:
+    -- --sky-top, --sky-low on a dusk, --moon-mid, --moon-rim, --moon-blue).
+    local hue, saturation = scheme.hue, scheme.saturation
+    colors.skyTop = hsl(hue, math.min(1, saturation * 1.9), 0.04)
+    colors.skyLow = mix(hsl(hue, math.min(1, saturation * 2), 0.17), base, 0.12)
+    colors.star = alpha(hsl(hue, math.min(1, saturation * 0.9), 0.945), 1) -- animations set its opacity
+    colors.moonRim = mix(base, WHITE, 0.38)
+    colors.moonMid = mix(bright, WHITE, 0.5)
+    colors.moonCore = { 1, 1, 1, 0.75 }
+    colors.moonHalo = alpha(bright, 0.3)
+    colors.moonGlow = alpha(base, 0.16)
+    colors.moonBlue = hsl(hue + 18, 0.46, 0.78)
+    colors.moonBlueHalo = alpha(colors.moonBlue, 0.35)
     return true
 end
 Compose(DEFAULT_ACCENT)

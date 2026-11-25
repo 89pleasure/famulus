@@ -45,32 +45,74 @@ end
 -- Pieces of a scene
 ---------------------------------------------------------------------------
 
--- A soft spot of a colour (shadow.tga), centred on a point of the scene.
-local function Soft(scene, token, width, height, point, x, y, sublevel)
+-- A round spot centred on a point of the scene, measured from its top
+-- left: a disc (circle.tga) or a soft glow (shadow.tga).
+local function Spot(scene, media, token, size, x, y, sublevel)
     local spot = scene:CreateTexture(nil, "BACKGROUND", nil, sublevel)
-    spot:SetTexture(UI.media.shadow)
-    spot:SetSize(width, height)
-    spot:SetPoint("CENTER", scene, point, x, y)
+    spot:SetTexture(UI.media[media])
+    spot:SetSize(size, size)
+    spot:SetPoint("CENTER", scene, "TOPLEFT", x, -y)
     UI.Tint(spot, token)
     return spot
 end
 
--- The game world at night, behind what the game shows on screen: a sky
--- that darkens towards the land, the moon with its glow, low hills. Haze
--- and hills fade out before the rounded corners, which the stage's square
--- clipping would otherwise show.
+-- Own little generator, as for the sparks: the stars stand in the same
+-- places every time.
+local function Random(seed)
+    local state = seed
+    return function()
+        state = (state * 16807) % 2147483647
+        return state / 2147483647
+    end
+end
+
+local STARS, STAR_SEED, TWINKLE = 46, 4111, 5
+-- The moons stand beside the feed's cards, which take the middle at the top.
+local MOON = { x = -62, y = 62, r = 26 } -- x from the right edge
+local SMALL_MOON = { x = 58, y = 32, r = 5 } -- x from the left edge
+
+-- The night sky of the website (website/scene.js): a sky that lightens
+-- towards the horizon, stars, some of which twinkle, and Azeroth's two
+-- moons, a large one lit from the top left in a wide glow and a small blue
+-- one. Everything stays clear of the rounded corners, which the stage's
+-- square clipping would otherwise show.
 local function World(scene, width, height)
-    local sky = UI.Round(scene, "sceneSky", RADIUS)
-    sky:SetGradient("VERTICAL", "sceneSky", "sceneLand", width, height)
-    Soft(scene, "sceneHaze", 300, 180, "TOPRIGHT", -150, -70, 2)
-    Soft(scene, "sceneHill", 320, 140, "BOTTOMLEFT", width * 0.3, -20, 3)
-    Soft(scene, "sceneHill", 300, 120, "BOTTOMRIGHT", -width * 0.3, -26, 3)
-    Soft(scene, "sceneMoonGlow", 96, 96, "TOPRIGHT", -78, -40, 4)
-    local moon = scene:CreateTexture(nil, "BACKGROUND", nil, 5)
-    moon:SetTexture(UI.media.circle)
-    moon:SetSize(30, 30)
-    moon:SetPoint("CENTER", scene, "TOPRIGHT", -78, -40)
-    UI.Tint(moon, "sceneMoon")
+    local sky = UI.Round(scene, "skyTop", RADIUS)
+    sky:SetGradient("VERTICAL", "skyTop", "skyLow", width, height)
+
+    local random = Random(STAR_SEED)
+    for _ = 1, STARS do
+        -- More of them high up, as on the website.
+        local x = 8 + random() * (width - 16)
+        local y = 8 + random() ^ 1.5 * (height * 0.8)
+        local star = Spot(scene, "circle", "star", 1 + random() * random() * 2, x, y, 1)
+        UI.SetLevel(star, 0.15 + random() * 0.6)
+        if random() < 0.2 then
+            -- Fades almost out and back, each in its own rhythm.
+            local group = star:CreateAnimationGroup()
+            group:SetLooping("REPEAT")
+            for order, ends in ipairs({ { 1, 0.15 }, { 0.15, 1 } }) do
+                local fade = group:CreateAnimation("Alpha")
+                fade:SetFromAlpha(ends[1])
+                fade:SetToAlpha(ends[2])
+                fade:SetDuration(TWINKLE / 2 + random() * 2)
+                fade:SetSmoothing("IN_OUT")
+                fade:SetOrder(order)
+            end
+            scene.animations[#scene.animations + 1] = group
+        end
+    end
+
+    local mx, my, r = width + MOON.x, MOON.y, MOON.r
+    Spot(scene, "shadow", "moonHalo", r * 6.4, mx, my, 2)
+    Spot(scene, "shadow", "moonGlow", r * 3.2, mx, my, 2)
+    local sx, sy, sr = SMALL_MOON.x, SMALL_MOON.y, SMALL_MOON.r
+    Spot(scene, "shadow", "moonBlueHalo", sr * 5.2, sx, sy, 2)
+    Spot(scene, "circle", "moonBlue", sr * 2, sx, sy, 3)
+    -- The large moon: its rim, brighter towards the top left, a white core.
+    Spot(scene, "circle", "moonRim", r * 2, mx, my, 4)
+    Spot(scene, "shadow", "moonMid", r * 1.5, mx - r * 0.18, my - r * 0.2, 5)
+    Spot(scene, "shadow", "moonCore", r * 0.9, mx - r * 0.24, my - r * 0.26, 6)
 end
 
 -- A short line on a dark pill: what the picture shows right now.
@@ -138,20 +180,10 @@ SCENES.feed = {
         scene.cards = {}
         for index = 1, 2 do
             local card = UI.Feed.Card(scene)
-            -- How long it stays: a line along its foot that runs out.
-            local bar = card:CreateTexture(nil, "OVERLAY")
-            bar:SetHeight(2)
-            bar:SetPoint("BOTTOMLEFT", 10, 2)
-            bar:SetPoint("BOTTOMRIGHT", -10, 2)
-            UI.Shade(bar, "HORIZONTAL", "accent", "accent2")
-            local group = bar:CreateAnimationGroup()
-            group:SetLooping("REPEAT")
-            local run = group:CreateAnimation("Scale")
-            run:SetScaleFrom(1, 1)
-            run:SetScaleTo(0.001, 1)
-            run:SetOrigin("LEFT", 0, 0)
-            card.bar, card.run = bar, run
-            scene.animations[#scene.animations + 1] = group
+            -- The line along its foot that shows how long it stays runs out
+            -- here again and again.
+            card.barGroup:SetLooping("REPEAT")
+            scene.animations[#scene.animations + 1] = card.barGroup
             scene.cards[index] = card
         end
         scene.caption = Caption(scene)
@@ -179,7 +211,7 @@ SCENES.feed = {
                 widest = math.max(widest, card:GetWidth())
                 card:SetAlpha(faint and 0.38 or 1)
                 card.bar:SetShown(not faint)
-                card.run:SetDuration(seconds)
+                card.barRun:SetDuration(seconds)
             end
         end
         -- Left edges in line, as on screen; the stack in the middle.
@@ -223,10 +255,13 @@ SCENES.chat = {
                 text:SetShadowOffset(1, -1)
                 text:SetShadowColor(0, 0, 0, 1)
                 text:SetWordWrap(false)
+                -- Top to top: an empty text in front (the online notice
+                -- starts with the name) has no height, and its middle
+                -- would pull the name up into the line above.
                 if part == 1 then
                     text:SetPoint("TOPLEFT", box, "TOPLEFT", 10, -(CHAT_PAD + (index - 1) * CHAT_LINE))
                 else
-                    text:SetPoint("LEFT", line[part - 1], "RIGHT")
+                    text:SetPoint("TOPLEFT", line[part - 1], "TOPRIGHT")
                 end
                 line[part] = text
             end

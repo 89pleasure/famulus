@@ -62,6 +62,7 @@ local MIN_WIDTH, MAX_WIDTH = 230, 460
 local GROUND_INSET = 3 -- keeps grain and dusk inside the rounded corners
 local GRAIN_TEXELS = 128 -- size of grain.tga, as in UI.Grain
 local GAP = 10 -- between two bands
+local BAR_INSET = 10 -- the running-out line's distance from the band's ends
 local MAX_CARDS = 3
 local FADE_IN, FADE_OUT = 0.25, 0.5
 local DEFAULT_SECONDS = 7
@@ -251,6 +252,25 @@ local function NewCard(parent)
     card.detail:SetWordWrap(false)
     card.detail:SetPoint("TOPLEFT", card.title, "BOTTOMLEFT", 0, -4)
     card.react = NewReactButton(card)
+
+    -- How long it stays: a line along its foot that runs out by the time the
+    -- card has faded. The client's animation shrinks it, no Lua per frame.
+    -- A card held by the mouse on its button stays past it.
+    card.bar = card:CreateTexture(nil, "OVERLAY")
+    card.bar:SetHeight(2)
+    card.bar:SetPoint("BOTTOMLEFT", BAR_INSET, 2)
+    card.bar:SetPoint("BOTTOMRIGHT", -BAR_INSET, 2)
+    UI.Shade(card.bar, "HORIZONTAL", "accent", "accent2")
+    card.bar:Hide()
+    card.barGroup = card.bar:CreateAnimationGroup()
+    card.barRun = card.barGroup:CreateAnimation("Scale")
+    card.barRun:SetScaleFrom(1, 1)
+    card.barRun:SetScaleTo(0.001, 1)
+    card.barRun:SetOrigin("LEFT", 0, 0)
+    -- At its end the client would draw it whole again.
+    card.barGroup:SetScript("OnFinished", function()
+        card.bar:Hide()
+    end)
     card.turn, card.leaves = 0, 0
     return card
 end
@@ -383,6 +403,7 @@ local function Release(card, inTween)
     card.reaction = nil
     card.react.over = false
     card.react.hover:Hide()
+    card.barGroup:Stop()
     card:Hide()
     pool[#pool + 1] = card
     Layout()
@@ -417,6 +438,10 @@ function Feed.Show(story, seconds)
     UI.Tween(card, FADE_IN, function(progress)
         card:SetAlpha(progress)
     end)
+    card.barGroup:Stop()
+    card.barRun:SetDuration((seconds or DEFAULT_SECONDS) + FADE_OUT)
+    card.bar:Show()
+    card.barGroup:Play()
     -- A card that was taken off and used again must not be hidden by the
     -- timer of its earlier life. One the mouse is on waits until it leaves.
     C_Timer.After(seconds or DEFAULT_SECONDS, function()
