@@ -33,6 +33,17 @@ local BLOCK_GAP, BLOCK_TITLE = 22, 24
 local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
 local WINDOW_SCALES = { 80, 90, 100, 110, 120, 130, 140 }
 local AREA_ICONS = { aliases = "tag", chronicle = "flag", fellows = "people" }
+-- Icons of the addon's own settings in their entries (features: feature.icon).
+local GENERAL_ICONS = {
+    language = "globe",
+    chatOutput = "chat",
+    minimapButton = "compass",
+    charProfile = "person",
+    accent = "drop",
+    embers = "sparkle",
+    windowScale = "resize",
+    chronicleNames = "tag",
+}
 
 -- Rows that stand for a person: an avatar with an initial in front, a
 -- button to remove them behind. A click calls item.open, the button
@@ -72,6 +83,7 @@ local function FeatureItem(feature)
         kind = "toggle",
         id = feature.id,
         section = feature.id,
+        icon = feature.icon or AREA_ICONS[feature.category] or "sparkle",
         -- A picture of what the feature does, shown above it in its
         -- settings tab: a texture path on the feature (feature.picture).
         picture = function()
@@ -167,6 +179,7 @@ local function GeneralItem(key, kind, values)
         kind = kind,
         id = "general." .. key,
         section = "general",
+        icon = GENERAL_ICONS[key] or "gear",
         key = key,
         default = function()
             return ns:GetDefault("general", key)
@@ -193,6 +206,7 @@ local function CategoryItem(category)
         kind = "toggle",
         id = "categories." .. category,
         section = "categories",
+        icon = AREA_ICONS[category] or "sparkle",
         key = category,
         default = function()
             return ns:GetDefault("categories", category)
@@ -2109,6 +2123,7 @@ local function TidyItem()
     return {
         kind = "action",
         id = "tidy",
+        icon = "trash",
         label = function()
             return L.ui_fellow_tidy
         end,
@@ -2538,6 +2553,7 @@ do
     local LIST_W, SPLIT_GAP = 296, 20
     local DETAIL_W = CONTENT_W - LIST_W - SPLIT_GAP
     local ENTRY_H, ENTRY_GAP, ENTRY_TITLE = 56, 4, 24
+    local ICON_TILE, ENTRY_TEXT = 30, 54 -- the icon's tile; where the name begins
     local DETAIL_PAD, PICTURE_H = 24, 196
     local CHIP_H, CHIP_GAP, CHIP_COLUMNS = 34, 8, 3
 
@@ -2612,9 +2628,16 @@ do
             frame.dot:SetVertexColor(UI.AccentSwatch(item.get()))
             right = 14
         end
-        local width = LIST_W - 28 - (right > 0 and right + 12 or 0)
+        local width = LIST_W - ENTRY_TEXT - 14 - (right > 0 and right + 12 or 0)
         frame.label:SetWidth(width)
         frame.sub:SetWidth(width)
+
+        -- Its icon, in the accent while it runs.
+        local on = kind == "toggle" and item.get() == true and alpha == 1
+        frame.icon:SetTexture(UI.media[item.icon] or UI.media.sparkle)
+        UI.Tint(frame.icon, on and "accent" or "textMuted")
+        frame.tile:SetColor(on and "accentSoft" or "control")
+        frame.icon:SetAlpha(alpha)
 
         -- The chosen entry lies on a card, with the accent mark at its left.
         frame.ground.border:SetShown(frame.chosen)
@@ -2638,8 +2661,16 @@ do
         entry.mark:SetWidth(2)
         UI.Paint(entry.mark, "accent")
 
+        -- The icon on a small tile in front of the name.
+        local tile = CreateFrame("Frame", nil, entry)
+        tile:SetSize(ICON_TILE, ICON_TILE)
+        tile:SetPoint("LEFT", 12, 0)
+        entry.tile = UI.Round(tile, "control", 8)
+        entry.icon = UI.Icon(tile, "sparkle", 16, "textMuted")
+        entry.icon:SetPoint("CENTER")
+
         entry.label = UI.Text(entry, 13, "text", "medium")
-        entry.label:SetPoint("TOPLEFT", 14, -11)
+        entry.label:SetPoint("TOPLEFT", ENTRY_TEXT, -11)
         entry.label:SetWordWrap(false)
         entry.sub = UI.Text(entry, 11, "textMuted")
         entry.sub:SetPoint("TOPLEFT", entry.label, "BOTTOMLEFT", 0, -5)
@@ -2791,6 +2822,13 @@ do
             y = DETAIL_PAD + PICTURE_H + 20
         end
 
+        -- Above the name, where it belongs: the page's name.
+        detail.crumb:ClearAllPoints()
+        detail.crumb:SetPoint("TOPLEFT", body, "TOPLEFT", DETAIL_PAD, -y)
+        detail.crumb:SetWidth(width)
+        detail.crumb:SetText(pages[currentPage].title())
+        y = y + 20
+
         -- The control sits on the middle of the name's first line.
         local control, controlWidth = DetailControl(detail, item.kind)
         detail.title:ClearAllPoints()
@@ -2926,6 +2964,8 @@ do
         detail.picture:SetSize(DETAIL_W - 2 * DETAIL_PAD, PICTURE_H)
         detail.picture:Hide()
 
+        detail.crumb = UI.Text(body, 12, "textMuted")
+        detail.crumb:SetWordWrap(false)
         detail.title = UI.Text(body, 17, "text", "semibold")
         detail.toggle = UI.Toggle(body)
         detail.switch = CreateFrame("Button", nil, body)

@@ -11,6 +11,7 @@ local AliasService = ns.AliasService
 local tooltipAliases = ns:NewFeature({
     id = "tooltipAliases",
     category = "aliases",
+    icon = "tooltip", -- its entry in the settings (UI.media)
     default = true,
     requires = {
         "TooltipDataProcessor.AddTooltipPostCall",

@@ -16,6 +16,7 @@ local OWNER = "Famulus"
 local guildyAliases = ns:NewFeature({
     id = "guildyAliases",
     category = "aliases",
+    icon = "shield", -- its entry in the settings (UI.media)
     default = true,
     addon = "Guildy",
     requires = {

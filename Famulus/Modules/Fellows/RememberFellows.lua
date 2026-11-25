@@ -12,6 +12,7 @@ local Fellows = ns.FellowService
 local rememberFellows = ns:NewFeature({
     id = "rememberFellows",
     category = "fellows",
+    icon = "people", -- its entry in the settings (UI.media)
     default = false,
     requires = { "GetNumGroupMembers", "UnitGUID", "UnitName" },
     options = {

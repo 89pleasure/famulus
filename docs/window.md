@@ -118,14 +118,17 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   General and Appearance) shows, instead of cards of rows (`Render` → `RenderSplit`):
   - **On the left the entries** (`LIST_W` 296 px, scrolls on its own): one per item that is no
     option of another (features, master switches, the addon's own options, tidying up), 56 px
-    tall: the name, below it "On · 11 options" for a switch, what it does for the other kinds, or
-    why it cannot run; at the right the switch (with a hit area of its own), the chosen value of a
-    select or the colour scheme's dot. A block's title ("Features", "Display", "Tidy up") stands as
+    tall: its icon on a small tile (30 px, lit in the accent while a switch is on), the name,
+    below it "On · 11 options" for a switch, what it does for the other kinds, or why it cannot
+    run; at the right the switch (with a hit area of its own), the chosen value of a select or the
+    colour scheme's dot. A block's title ("Features", "Display", "Tidy up") stands as
     a heading above its entries. The chosen entry lies on a card with the accent mark at its left;
     a click on another one chooses it. The choice is kept per tab (`chosenEntries`), at first the
     first entry.
   - **On the right the chosen entry in full** (a card of 584 px, scrolls on its own): its
-    picture if it has one, the name with its control at the right (switch, dropdown, swatches or
+    picture if it has one, above the name the page's name ("Chronicle"; added on 2026-11-25 after
+    the owner's first look in game, as in the mockup), the name with its control at the right
+    (switch, dropdown, swatches or
     button), pills with the state ("On" in the accent) and the default ("Default: on",
     `UI.Pill`), the whole text, then its options: plain ones as rows with their help text in a
     recessed card below "Options"; the options of a group (`option.group`) as chips (`UI.Chip`,
@@ -139,9 +142,17 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     `FeatureBlocks` and the accent mark on feature cards are gone.
   - **Pictures:** a feature or an option may carry `picture` (a texture path); the detail then
     shows it above the name (536 × 196 px, inside the padding). None has one yet; without a
-    picture the detail starts with the name. Icons in the entries, as in the mockup, are not
-    built: the media are drawn by `tools/make_media.py`, and the Windows machine has no Python
-    (as of 2026-11-25).
+    picture the detail starts with the page's name.
+  - **Icons of the entries** (added on 2026-11-25 after the owner's first look in game: "the
+    icons are missing"): a feature names its own (`icon` in `ns:NewFeature`, a name from
+    `UI.media`; the test checks that every feature has one the window knows), the addon's own
+    settings theirs in `GENERAL_ICONS` (`UI/Options.lua`), the master switches the area's icon,
+    tidying up `trash`. Thirteen new line icons, drawn like the others in `tools/make_media.py`
+    (`ICONS` there): share, bell, chat, shield (Guildy), tooltip, menu, link (Battle.net), trash,
+    globe (language), compass (minimap), person (character profile), drop (colour scheme), resize.
+    The Windows machine has no Python; the TGAs were written by a temporary port of the drawing to
+    LuaJIT (not in the repo), which redraws `tag`, `people` and `reset` byte for byte as the
+    Python script wrote them. Shapes and choice of icons: the assistant's decisions.
   - Unchanged: the search (rows in cards, grouped per tab), reset per tab, the notice of a
     switched-off area, the tabs without settings.
   - The assistant's decisions within variant B: sizes, the wording of pills and of the line below

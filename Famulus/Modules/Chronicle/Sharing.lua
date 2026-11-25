@@ -71,6 +71,7 @@ local IsPlainText = ns.ChatService.IsPlainText
 local sharing = ns:NewFeature({
     id = "sharing",
     category = "chronicle",
+    icon = "share", -- its entry in the settings (UI.media)
     default = false,
     requires = {
         "C_ChatInfo.SendAddonMessage",

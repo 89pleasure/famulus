@@ -522,6 +522,14 @@ check(#entries == 5 and entries[1].label:GetText() == ns.L.f_chatAliases and ent
     "the display tab lists its five features, the first one chosen (got " .. #entries .. ")")
 check(not window.scroll:IsShown() and window.list:GetWidth() == 296 and detail:IsVisible() and detail.title:GetText() == ns.L.f_chatAliases
     and detail.desc:GetText() == ns.L.f_chatAliases_desc, "on the right the chosen feature in full: its name and what it does")
+check(detail.crumb:GetText() == "Aliases", "above the name the page it belongs to")
+check(entries[1].entry.item.icon == "chat" and entries[1].icon:IsShown() and entries[1].tile.token == "accentSoft"
+    and entries[5].entry.item.icon == "shield", "every entry has its feature's icon, on a lit tile while it runs")
+local iconsKnown = true
+for _, feature in ipairs(ns.featureList) do
+    iconsKnown = iconsKnown and feature.icon ~= nil and ns.UI.media[feature.icon] ~= nil
+end
+check(iconsKnown, "every feature names an icon the window has")
 check(entries[1].mark:IsShown() and not entries[2].mark:IsShown() and entries[1].ground.fill.parts[1]:IsShown(),
     "the chosen entry lies on a card with the accent mark")
 check(entries[1].sub:GetText() == "On  ·  1 option" and entries[3].sub:GetText() == "On" and entries[1].toggle.on,
@@ -553,7 +561,7 @@ check(optionRow:IsVisible() and optionRow.disabled and optionRow.dropdown:IsShow
 check(detail.off:IsShown() and detail.off:GetText() == "Switch on \"Aliases in chat\" to change its options.",
     "and the detail says why: " .. tostring(detail.off:GetText()))
 check(entries[1].sub:GetText() == "Off  ·  1 option" and not entries[1].toggle.on and detail.pills[1].text:GetText() == "Off"
-    and not detail.toggle.on, "entry and detail show that it is off")
+    and not detail.toggle.on and entries[1].tile.token == "control", "entry and detail show that it is off")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
 check(not navButton("Aliases").pill:IsShown(), "the sidebar counts nothing")
 ns:SetOption("chatAliases", "style", "both")
@@ -866,6 +874,12 @@ local generalRows = visibleEntries()
 check(#generalRows == 7, "the three main features, language, chat feedback, minimap button and character profile (got " .. #generalRows .. ")")
 check(generalRows[4].value:IsShown() and generalRows[4].value:GetText() == ns.L.lang_auto and not generalRows[4].toggle:IsShown(),
     "a choice shows its value in the entry instead of a switch")
+local generalIcons = {}
+for index, entry in ipairs(generalRows) do
+    generalIcons[index] = entry.entry.item.icon
+end
+check(table.concat(generalIcons, " ") == "flag people tag globe chat compass person" and generalRows[4].tile.token == "control",
+    "the addon's own settings have icons as well; only a running switch lights its tile: " .. table.concat(generalIcons, " "))
 mock.Click(generalRows[4]) -- language
 check(detail.title:GetText() == "Language" and detail.dropdown:IsShown() and not detail.toggle:IsShown()
     and detail.pills[1].text:GetText() == "Default: " .. ns.L.lang_auto and not detail.pills[2]:IsShown(),

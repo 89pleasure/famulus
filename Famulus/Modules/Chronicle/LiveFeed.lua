@@ -39,6 +39,7 @@ end
 local feed = ns:NewFeature({
     id = "liveFeed",
     category = "chronicle",
+    icon = "bell", -- its entry in the settings (UI.media)
     default = true,
     options = options,
 })
