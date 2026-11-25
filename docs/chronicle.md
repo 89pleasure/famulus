@@ -1,0 +1,485 @@
+# Chronicle
+
+Part of the project notes; requirements, rules and the index of all files are in
+[AGENTS.md](../AGENTS.md). References of the form "see X" point to a heading or a bold entry;
+the index there says which file it is in.
+
+The owner's idea (2026-11-19): record the journey of the player and their companions
+(level-ups, deaths, achievements and more), presented graphically "like a picture book", ideally
+with live notifications. Status: recording, sharing between players, the notification and the
+picture-book look are built and checked against the mock only.
+
+- **Structure:** area and category `chronicle`, data via `ns.ChronicleService`
+  (`Modules/Chronicle/ChronicleService.lua`) in `FamulusDB.chronicle` (account-wide, outside the
+  profiles, at most 2000 entries, kind and values instead of text). Tabs "Everyone", "My journey",
+  "Friends" (until 2026-11-24 "Companions", see "Chronicle and fellow travellers") and "Settings"
+  (until 2026-11-23 "Recording") (`layouts.chronicle`). In the project notes from before then, the
+  chronicle's people are often still called "companions"; in the window they are "Friends".
+- **Book with rail (the owner's decision, 2026-11-23, chosen on the HTML mockup "Famulus
+  Chronicle": variant A with "Bundle repeats" and "Chapter head on one line"):**
+  The trigger was the first screenshot in the 1180 window: cards 428 px wide with about 170 px of
+  text, four identical deaths one below the other, chapter heads over 100 px tall. Rejected: B, a
+  wide book with cards up to 360 px and the player's own level-ups as a banner above the line.
+  Checked against the mock only, not yet seen in game.
+  - On the three story tabs the book is 600 px wide (`BOOK_W`, the size before the window was
+    rebuilt); to its right, 28 px apart, a rail of 272 px (`UI.Rail`, `UI/Rail.lua`; a tab
+    provides it via `tab.rail`). It does not scroll with the book but on its own, in case it is
+    taller than the window. During a search and on "Settings" there is no rail; rows and cards
+    then take the full width (`RowSetItem` is passed the width).
+  - "Everyone": card "This week" (level with number of level-ups, deaths, newly discovered zones,
+    professions and milestones; only the character being played, last seven days, first name on
+    the right) and card "Friends" (alias, last event with time or day, level, online/offline).
+    "My journey": "This week" and "Professions" with points and bars. "Friends": one card per
+    person with their "Stats" (until 2026-11-24 "Profile"; level, online, the four shared
+    numbers), without shared numbers "No stats shared yet."; these cards no longer stand above
+    the book.
+  - Companions are everyone with an entry or a profile (`ChronicleService.Companions`), most
+    recently heard from first. Level: the higher of the last level entry and the profile. Online:
+    `ChronicleService.OnlineCheck` looks into the friends list and guild roster once per build;
+    the state applies when the window is built and is not updated when someone comes online.
+  - A click on a companion (list or stats) shows only their events in the book; above it stands
+    "Only events of …" with "Show all", a second click lifts the filter. Another tab, another page
+    or closing the window forgets the choice (`chronicleWho`). If the fellow travellers know the
+    person (`FellowService.Find`, name in any spelling) and are switched on, "Your story" also
+    stands there and opens their story.
+  - **Bundle repeats:** If deaths in the same zone or level-ups of the same companion follow
+    each other directly in the book, they share one card (`SameRun`, `ChronicleRun` in
+    `UI/Options.lua`; sentence from `ChronicleService.TextRun`): "Fallen 3 times in Darkshore" with
+    the number in the corner of the picture, "Reached levels 21 to 22" with the highest level in
+    the picture. Until 2026-11-25 all times stood below the line as small badges; since then the
+    card's foot names the first and the last ("20:02 – 21:14 · Darkshore", see "Weighting").
+    The player's own level-ups stay single. The number of
+    events in the chapter head still counts every entry.
+  - **Chapter head on one line:** the time on the left (until 2026-11-24 the day), in the middle
+    the title in the book font (22 px; until 2026-11-24 the zone), levels and number of events on
+    the right, on the outside a line on each side that fades out towards the edge. About 36 px
+    tall instead of over 100, with the route below it 30 px more. The ornament with the ember is
+    gone.
+- **A chapter is a play session (the owner's decision, 2026-11-24, on the canvas
+  "Famulus Chronicle – Chapters", claude.ai artifact `Sp9tF6ba6wfgKroNqejVoT`: variant C):**
+  Trigger: a chapter per day was named after the zone most of its entries named ("Today ·
+  Feralas"), yet while playing you pass through several zones. The friends' zones were counted
+  too, and midnight split a play session. Rejected: A (day with route), B (waypoints on the line;
+  "the place matters less than the events themselves"), D (the most important moment as the
+  title), E (levels as chapters). Checked against the mock only, not seen in game.
+  - A new chapter begins after a break of two hours between two shown entries (`SESSION_GAP` in
+    `UI/Options.lua`). What counts is what the tab shows, so in the filtered book only the
+    person's entries. There is no query of login and logout; a long break splits the
+    session.
+  - **Title** by the time of day the session began (`SessionTitle`): morning from 5, midday
+    from 11, afternoon from 14, evening from 18, night from 23 o'clock. Until 5 in the morning the
+    night counts towards the day before (`NIGHT_SHIFT`), so that a session until 2 o'clock stays
+    "Last night" and is not called "Tonight". "This evening", "Yesterday afternoon"; older ones
+    are named after the weekday ("Sunday night", the German "Sonntagnacht") and carry the date on
+    the left instead of the time. Texts `c_when_<today|yesterday|day>_<part>`, `c_weekday_0` to
+    `_6` (own weekday names, because it is unclear whether Forever knows
+    `CALENDAR_WEEKDAY_NAMES`).
+  - On the left from–to (`c_ch_span`), with only one time just that one.
+  - **Route** below the head: the zones of the player's own entries in chronological order, as
+    badges with arrows (`chevron.tga`, rotated); a zone appears again when you return to it.
+    Friends' zones do not count. If the row is wider than the book, the oldest zones give way to
+    a "…". The route only knows zones in which something was recorded (whoever only rides
+    through does not appear); recording every zone change would be possible but has not been
+    asked for.
+  - In game the route hit a bug the first time (`head.width`, see "Bug 2026-11-24"); fixed,
+    after that the chronicle ran in game ("Works").
+  - Since 2026-11-25 also in "Your story" with the fellow travellers (see there). The chapter
+    head (`SessionHead`) and the division of the fellow travellers' books (`SessionChapters`, for
+    "Groups" and "Your story") each exist once in `UI/Options.lua`; everything is drawn by
+    `UI.Book`. Open: the website still shows the old chapter head.
+- **Picture book (2026-11-19):** The owner found the HTML draft "pretty cool already" and had it
+  built that way. The three story tabs no longer show rows but a book
+  (`UI.Book`, `UI/Book.lua`; a tab provides it via `tab.book`, `Render` places it below the
+  cards): per day (since 2026-11-24 per play session) a chapter with a heading, below it a
+  line in the middle on which the events hang alternately left and right as cards, with a
+  picture, a dot on the line and the time on the opposite side. The assistant's decisions, not
+  yet seen in game:
+  - A chapter was named after the zone in which most of its events take place; since
+    2026-11-24 it is a play session with its own title (see above). There is no chapter number
+    as in the draft (only the last 50 events are shown, so a count would not be
+    stable).
+  - Pictures are own icons (`skull.tga`, `swords.tga`, `peaks.tga`, `star.tga`, 64 px) or, for
+    levels, the number; death and boss have fixed hues of their own, the rest follows the colour
+    scheme. The player's own level-up is the milestone: larger card, accent border, accent mark
+    on the left (the glow has been gone since the alignment with the options cards).
+  - Events of companions and of the player's own other characters carry a mark with the
+    initial; since 2026-11-24 the class icon as soon as the class is known (see
+    "Class and name" below).
+  - Headings and the level number are in the game's book font, read from the font object
+    `QuestTitleFont` (`UI.SetDisplayFont`), so that every language gets its file; if the object
+    is missing, the window uses Inter. `QuestTitleFont` exists in the Forever client
+    (screenshot 2026-11-23, deDE: chapter headings in the book font). Italic type as in the
+    draft does not exist.
+- **Rework after the first screenshot (2026-11-19, four proposals by the assistant, all accepted
+  by the owner):**
+  1. **Name in the strip:** The heading of a companion event no longer names them in the book
+     ("Received: Schlafsack" instead of "Mira receives: Schlafsack"); the name (or alias) stands
+     with the initial in the sunken strip at the bottom (since 2026-11-25 in the card's head, see
+     "Weighting"). `ChronicleService.Text(entry, true)` returns
+     the heading without the name; the live feed has no strip and uses `story.fullTitle`.
+     Since 2026-11-24 with class icon and "Alias (character name)", see "Class and name".
+  2. **Icons fill the frame:** The frame now has only slightly rounded corners (5 px), the icon
+     sits two pixels from the edge and is cropped more (10 % per side), so that the black
+     built-in border of the game icons disappears.
+  3. **Columns run independently:** The cards still alternate sides, but each side continues on
+     its own, so that the sides interlock (before, each event took a row of its own). Only the
+     dots on the line keep a distance (`DOT_GAP`) and stay in chronological order. The line now
+     belongs to the chapter (`book.trails`); the time no longer stands freely on the opposite
+     side (see below).
+  4. **Number on icon:** Levels and profession milestones show their number on a darkened
+     game icon (level: `UI.gameIcons.level`, profession: the profession icon) instead of on a
+     flat tile.
+  Seen in game (second screenshot): all game icons load, including the fixed ones for
+  level, boss, zone and the riding icon from the spell. Improved afterwards (the assistant's
+  decisions, not yet confirmed): the time stands at the end of the line below the heading
+  ("in Tanaris  ·  22:07") instead of in the card's corner, where it took width from the heading;
+  the dots on the line are smaller (22 px) and have a short stroke to their card, because with
+  interlocking columns it is otherwise unclear which dot belongs to which side; the
+  darkening under a number is stronger; sample entries do not name a chapter that has real
+  entries.
+- **The picture frame in the book was the same size for every event** (54 px; the owner's
+  requirement, 2026-11-19). Since 2026-11-25 it has its own size per weight in the chronicle's
+  book (40, 48, 56 px), see "Weighting"; the fellow travellers keep 54 px.
+- **Weighting and structure of the cards (the owner's request, 2026-11-25; checked against the
+  mock only, not yet seen in game):** Applies only to the chronicle's book. Every event there
+  has a weight (`story.weight`, table `WEIGHT` in `UI/Options.lua`, sizes in `WEIGHTS` in
+  `UI/ChronicleCard.lua`):
+  - **Light** (`low`): deaths, arrivals in new zones. Picture 40 px, heading 12 px.
+  - **Medium** (`medium`): profession milestones and everything the owner has not classified
+    (challenges, items, abilities, profession learned; the assistant's decision). Picture 48 px,
+    heading 13 px.
+  - **Heavy** (`high`): bosses and level-ups, plus whatever the tables mark with `big`
+    (riding). Picture 56 px. The previous milestone look: accent border, accent mark on the left,
+    heading 15 px semibold. Implemented literally by kind: level-ups and bosses of friends
+    are heavy too (before, only the player's own level-up).
+  - **Structure next to the picture:** head, content, foot. The head names the person (class
+    icon, otherwise initial, and `ChronicleService.Label`); for the player's own events there is
+    none. Since 2026-11-25 (the owner's request) it is a row of its own above picture and text,
+    flush with the picture, no longer above the text to the right of the picture; the row is a
+    sunken strip across the full card width like the name at the bottom used to be (`sunken`,
+    rounded at the top, a fine line at the bottom, 28 px tall, class icon 18 px).
+  - **Strip with type icon, dots without icon (the owner's request, 2026-11-25):** Since then
+    the strip stands on every card of the chronicle, for the player's own events with the name
+    of their own character (`ChronicleService.Character`, class from `ChronicleService.Class`;
+    set in `ChronicleRun`). Right-aligned in it the icon of the kind (`mark` from
+    `UI.BookPictures`, or `story.icon` such as the horseshoe), 13 px in accent colour; before, it
+    stood on the dot on the line. The circle with the initial to the left of the name is gone:
+    on the left stands the class icon where the class is known, otherwise the name starts at the
+    edge (the assistant's decision: literally "the initial icon can go", the class icon
+    stays). The dots on the line are glowing dots in accent colour like the former
+    "x of y active" display (`UI.Halo` with `accentGlow`, three times the size of the dot), in
+    all books, so also with the fellow travellers (book design). The book sets the size by
+    weight (`DOTS`: light 5, medium 7, heavy 9 px; without weight medium, with `big`
+    heavy; the owner's request, the assistant chose the sizes).
+    The foot always names time and place ("21:14 · Darkshore", without a place only the time).
+  - **Height by content, equal edges (the owner's request after the first screenshot,
+    2026-11-25):** The first version kept the head row free even without a name and always kept
+    two lines of text free, and tied padding and picture size to the weight; in game that looked
+    hollow and restless (empty areas, picture and text in a different place per weight). Since
+    then the card is as tall as picture or text plus padding at top and bottom. At the sides all
+    cards have the same padding (`SIDE`), the picture is left-aligned, and the text always keeps
+    the same distance from the picture (`TEXT_GAP`; three sizes 40/48/56, left-aligned and fixed
+    distance at the owner's request, 2026-11-25; a picture column as wide as the largest picture
+    left too much space on light cards). So the text edge moves with the picture size. Picture
+    and text start at the same height, the foot ends with the picture if the picture is taller
+    (the owner's request, 2026-11-25; before, both were centred on each other and had
+    different distances from the top edge).
+  - **Width by weight, set by the book (the owner's request, 2026-11-25):** The
+    feature only passes `story.weight`; `UI.Book` turns it into the card's width (`WIDTHS`
+    in `UI/Book.lua`: light 80 %, medium 90 %, heavy 100 % of its book page; the shares are
+    the assistant's decision). A narrower card hangs on the line, so that the
+    stroke from the dot reaches it. Without weight (fellow travellers) the card is as wide as
+    before. The content is passed the width and adapts to it. The weight only affects picture
+    size, padding at top and bottom, heading and accent. Since 2026-11-25 (the owner's request
+    after a screenshot: with HIGH the distance to the name bar was larger than with MEDIUM and
+    LOW) the book sets the inner padding, `UI.BookPad` (14 px), the same on all sides, for every
+    weight and below the name bar. Measured from the outer edge; because the hairline and the
+    highlight edge at the top inside each take about one pixel and the name bar's line lies
+    inside the bar, the top gets one pixel more (`UI.BookPadTop`) and below the name bar
+    one less. Re-measured on the screenshot of 2026-11-25 (visible before: below the
+    bar 32, at the sides 30, at the top 27 screen pixels); the weight now only affects width,
+    picture size, heading and accent. A light card with two lines of text can therefore be taller
+    than a medium one with one. The fellow travellers have kept their own padding (12, for
+    milestones 15 px). The assistant's decisions in detail; not yet seen
+    in game. The sunken strip with the name below the card
+    is gone; the fellow travellers keep their strip (`story.foot`).
+  - **The place never stands in the text:** The book reads the sentences with the zone hidden
+    (`Placeless` in `UI/Options.lua`): "Fallen" instead of "Fallen in Darkshore", "Discovered a
+    new zone" (`c_zone_nowhere`) instead of "Arrived in Feralas", "in Uldaman" drops out of the
+    line below a boss, "with Mira and Tom" stays. The live feed has no foot and
+    still names the place.
+  - **The book sets the design, each feature the content of its cards** (the owner's
+    requirement, 2026-11-25, after the first version had also rebuilt the boss cards in "Your
+    story": "that way each feature can decide for itself what the card's content is, but we
+    always have the same book design"). `UI.Book` only knows
+    chapters, line, dots and the card's style (background, hairline, highlight edge, glow under
+    the mouse, accent via `story.big`, click). The content is built by `story.content(part, story,
+    width)` into a frame of its own in the card and returns its height; the card grows with it.
+    Per builder function each card has its own frame, which is reused (hence
+    the same function for all cards of a kind, no new closure per story). Contents:
+    `UI.ChronicleCard` (`UI/ChronicleCard.lua`, set in `ChronicleRun`) and `UI.FellowCard`
+    (`UI/Fellows.lua`, set in `SessionChapters`; look as before, in the mock card by card
+    the same height as on `main`). Shared building block: the picture frame (`UI.BookPicture`,
+    `UI.SetBookPicture` in `UI/Book.lua`: game icon, own icon, number, count badge,
+    tooltip). `ChronicleEvent` still only supplies the data, also for the live feed, which is
+    unchanged.
+
+- **Pictures are game icons (the owner's request, 2026-11-19):** They are square and there are
+  very many; the own drawings (`skull.tga` etc.) now only appear small in the card's strip
+  (until 2026-11-25 on the dot of the timeline) and as a fallback. Order (`EntryTexture` in `UI/Options.lua`):
+  1. the icon stored with the entry (`entry.icon`, a file ID): for professions
+     from `GetProfessionInfo`, for challenges from `GetAchievementInfo`; it is shared;
+  2. the icon of the item (`C_Item.GetItemIconByID`) or of the spell of an ability
+     (`C_Spell.GetSpellTexture`);
+  3. the icon of the kind from `UI.gameIcons` (`UI/Theme.lua`): death, boss, zone, challenge,
+     profession, ability, item.
+  The names in `UI.gameIcons` are icons from Vanilla and not checked in game in the Forever
+  client; `/fam test` reports per kind (group `media`, "icon …") whether the client has the file.
+  The icons are not tinted and do not follow the colour scheme; the frame around them does.
+- **`ownJourney`:** `PLAYER_LEVEL_UP`, `PLAYER_DEAD`, `BOSS_KILL`, `ACHIEVEMENT_EARNED` and
+  `ZONE_CHANGED_NEW_AREA`. A zone leaves exactly one "arrival" per character
+  (`FamulusCharDB.zones`), and only when the character newly discovers it (the owner's request,
+  2026-11-19):
+  - When switched on, the feature reads the world map and pre-marks every zone with an explored
+    part as known (`C_Map.GetMapChildrenInfo` below the top map,
+    `C_MapExplorationInfo.GetExploredMapTextures`). If that fails (for example in an instance),
+    the next zone change tries again. If the API is missing, "for the first time since the
+    chronicle has been running" applies as before. Whether both functions answer like this in
+    the Forever client and whether the map names match `GetRealZoneText` is not checked in game.
+  - On a flight (`UnitOnTaxi`) nothing is written and nothing is marked as seen. After
+    landing (`PLAYER_CONTROL_GAINED`, one second later) the landing place is checked like a zone
+    change.
+  - **Professions (the owner's request, 2026-11-19):** `SKILL_LINES_CHANGED` with
+    `GetProfessions` and `GetProfessionInfo` (both in the Forever client's UI source code, folder
+    `Camelot`; not checked in game). Kinds `profession` (profession learned, picture: hammer
+    `hammer.tga`) and `skill` (milestone every 75 points, picture: the number). The last state per
+    profession is in `FamulusCharDB.skills`. A profession that shows up for the first time with
+    75 or more points already existed before the chronicle and is only remembered; switching on
+    creates no entry. Both kinds are shared (`FIELDS` in `Sharing.lua`); the profession name
+    travels in the sender's language. This includes the two main professions, First Aid, Fishing
+    and Cooking.
+    A click on the card opens the profession window (the owner's request):
+    `C_TradeSkillUI.OpenTradeSkill(skillLine)`, not in combat (`story.onClick` in `UI/Book.lua`,
+    the card glows under the mouse). For companions the click opens their recipe book following
+    Guildy's pattern (`Game/TradeSkill.lua`, `OpenBook`): the profession link can be built
+    directly, `trade:<guid>:<spell>:<skill>`, and `SetItemRef(link, text, "LeftButton")` opens
+    Blizzard's window. The GUID comes from the friends list or guild roster at the time of the
+    click (`ChronicleService.BookLink`), the spell per profession from `LINK_SPELL` (Mining:
+    Smelting; Herbalism, Skinning and Fishing have no book and are not clickable). Only works
+    while the person is online (according to Guildy also only on the same shard); otherwise a
+    chat line says so. Professions of the player's own other characters are not clickable. The
+    assistant's earlier statement that other players' professions could only be opened via a
+    posted link was wrong.
+    Not checked in game.
+  - **Abilities (the owner's request, 2026-11-19):** What the character learns and can be
+    recognised by its spell is in a table: `ChronicleService.abilities` with `id`, `spell`
+    (main detection via `IsPlayerSpell`, the owner's decision), optionally `skill`
+    (`{ line, rank }`, fallback via `C_SkillInfo.GetSkillLineInfoByID`), `picture` (name in
+    `UI.media`) and `big` (milestone in the book). `ownJourney` checks the table in a loop
+    on `SPELLS_CHANGED` and `SKILL_LINES_CHANGED` (`CheckAbilities`). One kind `ability` for all:
+    entry `{ ability = "<id>", name = <spell name>, level }`, state in
+    `FamulusCharDB.abilities`; what is already learned when switching on is only remembered.
+    - **A new ability** is one row in the table plus `c_ability_<id>` and
+      `c_their_ability_<id>` in both languages (the test checks sentences and picture per row).
+    - So far: `riding` (spell 33388) and `ridingFast` (33391), both with horseshoe
+      (`horseshoe.tga`) and as a milestone, fallback via skill 762 from 75 or 150 points.
+      The IDs come from Retail and Classic; whether Forever uses them the same way is not
+      checked in game.
+    - If a version does not know a companion's `id` (newer addon), it shows the
+      spell name sent along ("… learns Swimming").
+    - **No spell service and no profession service (checked 2026-11-19):** Only `ownJourney`
+      queries spells (`IsPlayerSpell`). Professions need no table, because the client lists them
+      itself; since 2026-11-23 `ChronicleService.Professions` reads them (name, icon, points,
+      maximum, skill line) for `ownJourney` and the rail. A `SpellService` or
+      `ProfessionService` pays off as soon as a feature outside the chronicle needs the same data
+      (for example durability or profession helpers); then move the queries there.
+  - **Special items (the owner's request, 2026-11-19):** the same principle via the
+    item ID. Table `ChronicleService.items` with `item` (ID), optionally `picture` (default:
+    chest, `chest.tga`) and `big`. `ownJourney` checks on `BAG_UPDATE_DELAYED` with
+    `C_Item.GetItemCount(id, true)` (bags and bank) and only queries items the
+    character has never had (`FamulusCharDB.items`); once they have all of them, the event costs
+    nothing. Kind `item`: `{ item = <ID>, name, level, zone }`. The sentence names the item the
+    way the reader's client names it (`C_Item.GetItemNameByID`), otherwise with the name sent
+    along; there are no sentences of their own per item. **A new item is one row in the
+    table.** What is already in the bags when switching on is only remembered. So far: 211527
+    (the German "Schlafsack", a sleeping bag; ID from the owner). In the book an item shows the
+    icon the game gives it (the owner's request; `C_Item.GetItemIconByID`, `story.texture` in
+    `UI/Book.lua`): in its own colours, so without `UI.Tint`, with a cropped edge in the round
+    frame. The small icon (in the strip, formerly on the dot of the timeline) stays the chest; if
+    the client knows no icon, the chest also stands in the picture. This is
+    the only place where the book shows a game texture instead of an own icon.
+    The mouse over the picture shows the game's tooltip (the owner's request): for
+    items `GameTooltip:SetItemByID`, for abilities from the table `SetSpellByID`
+    (`story.item`, `story.spell`). Only such pictures catch the mouse; others do not. An
+    ability this version does not know has no tooltip (the spell ID does not travel along).
+    Not checked in game; an item that is used up immediately on receipt
+    or never reaches the bags is not detected this way.
+  - Two entries of the same kind in the same second count as a duplicate, unless they differ
+    in `skill`, `rank`, `ability` or `item`.
+- **Sample entries (2026-11-19):** `/fam chronicle demo` writes 21 made-up entries over three
+  days (own ones and from two made-up companions, every kind at least once; since 2026-11-23 also
+  three deaths in a row and two levels of a companion, so that the bundling can be seen; since
+  2026-11-24 at the owner's request also a third companion, Lysa, and profiles with
+  level and statistics for Mira, Borin and Lysa, so that the "Companions" tab shows something; a
+  real profile of the same name is not overwritten), `/fam chronicle demo clear`
+  removes them again (`ChronicleService.Demo`, `ClearDemo`). They carry `demo = true` and
+  never leave the client: neither the live sending nor the catch-up nor the relaying
+  sends them. Meant for looking at the book and for screenshots.
+  **Language (2026-11-24, the owner's request, for English screenshots):** Zones, names
+  and people of the samples follow Famulus's language (`ns:GetLocaleCode()` in
+  `Core/Locale.lua`), no longer that of the client (`GetLocale()`). In English the people are
+  called Mira Stormfeather, Borin Ironbeard and Lysa Morningdew (German: Sturmfeder, Eisenbart,
+  Morgentau), the same in both services, so that the references between chronicle and fellow
+  travellers work. After a language change, write the samples again; the old ones stay in their
+  language. What the client names itself stays in its language: items
+  (`C_Item.GetItemNameByID`, "Schlafsack") and classes (`LOCALIZED_CLASS_NAMES_MALE`, "Magier").
+  So for a fully English picture the client must be set to English. The test checks both
+  languages on a German client. Checked against the mock only.
+- **`companions`:** on `FRIENDLIST_UPDATE` compares the levels in the friends list with the last
+  remembered state (by GUID). Shows companions under their alias.
+- **`sharing` (the owner's decision, 2026-11-19):** Famulus talks to Famulus via
+  whispered addon messages to friends and guild; protocol, relaying, statistics and
+  queue are in [sharing.md](sharing.md).
+- **Rejected:** reading other players' statistics via the game's achievement comparison, as
+  Guildy does. That only works for the targeted unit within sight and has led to disconnects
+  with Guildy.
+- **Live feed (`liveFeed`, the owner's request, 2026-11-19):** What the chronicle is recording
+  right now appears as a card in the HUD, stays for a while and fades out
+  (`Modules/Chronicle/LiveFeed.lua`, display `UI/Feed.lua`). Tried out in game by the owner
+  (2026-11-19, "works perfectly", following the instructions: sample card, moving
+  with `/fam feed`, Edit Mode, settings); which real events were triggered in the process is
+  not recorded.
+  - The feature listens to the internal signal `CHRONICLE_CHANGED`, not to the game: no
+    game event, no timer of its own. That is why it is **on by default** (it does not act on
+    the player's behalf and shows nothing without sharing). Only what is at most 120
+    seconds old is shown: fresh events of companions (on request also own ones, see below),
+    nothing caught up and no sample entries.
+  - **Companions, own events only on request (the owner's request, 2026-11-24):** By default the
+    feed only shows what companions experience. The option `own` ("My own events too",
+    default off) adds the player's own. The former switch `companions` (events of
+    companions, default on) was dropped for it, the assistant's decision: the companions are
+    now the core of the feature, switching them off would mean switching the feature off, and
+    with both switches off the feature would be on but show nothing. Whoever wants one of the two
+    cases (own events only) can no longer have it; if that is missed, ask. With default values
+    something only appears once "Share with friends" (`sharing`) or "Follow my friends"
+    (`companions`) is running. A stored value of the old switch stays unused in the profile until
+    "Reset" removes it. Checked against the mock only.
+  - Switches per event kind (`level`, `death`, `boss`, `achievement`, `ability`, `item`,
+    `profession`, `skill`, `zone`); only `zone` is off by default (the owner's requirement:
+    zones rather not, level-ups yes). Plus `own` (own events too, default off)
+    and `duration` (4, 7 or 12 seconds). A kind without a switch (newer version at the companion's
+    end) stays invisible. A new kind needs an entry in `KINDS` and its two texts.
+  - The card uses the book's pictures (`UI.BookPictures`, `UI.ChronicleStory`): icon, number
+    or item icon. At most three cards one below the other, the newest on top; they do not catch
+    the mouse.
+  - **Shape "crest on the banner" (chosen by the owner on the mockup, 2026-11-19, draft B1):**
+    The picture is a square crest (72 px, corners 14, border two pixels in the colour of the kind)
+    and sits centred on a banner (56 px tall), 14 px from the left end of the banner; it sticks
+    out 8 px at the top and bottom. The owner's requirements: the picture is larger than the area behind
+    the text, banner remains visible to the left of the crest, and the banner must not be too
+    narrow compared with the crest. Rejected: medallion (round, text slides out from under it),
+    banner (picture centred above centred text), a crest that only sticks out upwards (B2), and
+    the first crest with a 40 px tall banner without margin on the left. The banner is as wide as
+    its text needs (230 to 460 px); the cards stand left-aligned one above the other (the owner's
+    requirement), not centred; milestones (`story.big`) carry an accent border and mark (see
+    below). The crest was seen in game (the owner then asked for left-aligned cards).
+  - **Crest in the banner (the owner's decision, 2026-11-19, after looking in game):** The
+    crest no longer sticks out beyond the banner but sits inside it (banner 64 px tall, crest
+    48 px); the gap of 14 px to the left of the crest stays. Seen and confirmed in game ("that's
+    good like this"). The details on the overhang in the paragraph
+    above are therefore outdated.
+  - **Look like the options cards (the owner's request, 2026-11-19):** The card of an
+    event in the book and the banner of the feed are built like the card of a feature in the
+    window (`CreateCard` in `UI/Options.lua`): background `card` with hairline and highlight
+    edge; what stands out (there a running feature, here a milestone) has the accent border
+    `cardActive` and the accent mark on the left. The glow behind milestones was dropped for it.
+    In the book additionally: heading 13 px medium like the rows, the glow under the mouse
+    (`hover`) on clickable cards, and "whose event" stands in a sunken strip at the bottom
+    (`sunken`, like an option below its feature) instead of as a mark in the text. The feed
+    also carries the window's background: grain that fades out towards the bottom (`UI.Grain`),
+    and the darkening towards the bottom (`dusk`). What "take cues from the options boxes" was
+    meant to mean exactly was interpreted this way by the assistant; not yet seen in game by the
+    owner.
+  - **The player's own level-up is not shown in the feed** (the owner's decision,
+    2026-11-19): the game shows it large itself. It still stands in the chronicle; the switch
+    "Level-ups" only applies to companions. That stays so, even when `own` is on.
+  - **Open (2026-11-19):** On reaching level 20 the owner did not see a card
+    ("I think"). The entry was correctly in the saved data, the feed was on,
+    duration 4 seconds, position right of centre. Whether the card did not come or was overlooked
+    is unresolved. Since then the feature writes one line per card into the `devLog` in developer
+    mode (`FEED`, "shown: <kind>" or "failed: …"; `ns:DevLog`), without names or text.
+  - **Position:** default top centre; saved account-wide in `FamulusDB.feed` like the
+    window position. Moving in the game's Edit Mode or with `/fam feed`
+    (`/fam feed reset` resets it, `/fam feed test` shows a sample card): then a highlighted area
+    shows the position and can be dragged. The role model is FlareUI, which brings a fork of
+    LibEditMode for this (`Libs/FlareEditMode`). Famulus only adopts the core: `HookScript` on
+    `OnShow`/`OnHide` of `EditModeManagerFrame`, via `feature:HookScript`. Not adopted: snapping
+    to the grid, settings dialog in Edit Mode, position per Blizzard layout; for those the library
+    calls methods of the manager and notes taint itself in the process. Whether the hook stays
+    without a warning in the Forever client is not checked in game.
+- **Class and name (the owner's request, 2026-11-24; checked against the mock only):** Next to
+  a friend's name stood a circle with the initial; now the game's class icon stands there
+  (`UI-Classes-Circles`, `UI.ClassIcon`/`UI.SetClass` in `UI/Widgets.lua`, which the fellow
+  travellers' crest also uses): in the head of a card in the book and in the rail (list
+  "Friends", stats cards). If the class is unknown, the rail keeps the letter; in the book only
+  the name stands there since 2026-11-25. After an alias the character name stands in brackets,
+  "Papa (Borin Eisenbart)" (`ChronicleService.Label`), everywhere the chronicle names the
+  person: strip, rail, filter line "Only events of …" and the sentences of the live feed. Without
+  an alias only the name stands there.
+  - **Option** "Character name behind the alias" (`general.chronicleNames`, default on) as its
+    own card "Display" under Chronicle › Settings, below the features. Off: only the alias. The
+    option only applies to the brackets; the class icon has no switch (confirmed by the owner,
+    2026-11-24).
+  - **The character name no longer stands in the line below the heading** ("Jaina Proudmoore ·
+    in Duskwood" was the former place below an alias). The assistant's decision: with the
+    option on it would otherwise appear twice, and whoever switches the option off does not want
+    to see it. It is likewise dropped as the second line of the stats cards.
+  - **Where the class comes from** (`FamulusDB.chronicle.classes = { [name] = "MAGE" }`, via
+    `ChronicleService.Class`): friends with Famulus send their class with the stats (`1~S~…`,
+    see "sharing"); "Follow my friends" picks it up from the friends list when it records a
+    level-up (`className` in the client's language, translated back via
+    `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE`, `SocialService.ClassFromName`); the player's own
+    characters enter their class with every own entry and at login (only if the
+    chronicle already exists). The sample data have classes as with the fellow travellers (Mira
+    mage, Borin warrior, Lysa priest). Only stored for people with an entry or stats; the
+    rest drops out on loading. The fellow travellers' data are deliberately not read (see
+    "Chronicle and fellow travellers": each area stands on its own).
+  - **Guild roster and friends list as a source (the owner's request, 2026-11-24, separate PR;
+    checked against the mock only):** When the window shows the chronicle's "Everyone" or
+    "Friends", it looks once into the friends list and guild roster (`SocialService.Classes`,
+    built like `SocialService.Online`) and remembers the classes of the chronicle's people
+    (`ChronicleService.LearnClasses`). The guild roster names the class of every member, even
+    offline, already in the form `MAGE` (eleventh value of `GetGuildRosterInfo`, passed on by
+    `SocialService.EachGuildMember` as the fifth value); the friends list only for
+    friends who are online. Online/offline in the rail still comes from
+    `ChronicleService.OnlineCheck`; that is two looks into the lists per build, deliberately not
+    merged, so that `SocialService` stays at one question per function. This happens while
+    building the tab, before book and rail, so the
+    class is visible right away. No game event, no timer: without an open window nothing
+    runs for it. Only remembered for people with an entry or stats; "My journey" does not
+    look. Not checked in game: whether the client loads the guild roster by itself after login
+    (otherwise only once "Share with friends" requests it or the guild window was open).
+  - **Gaps:** A friend with an older Famulus, not in the guild, who has neither levelled up
+    since the update nor been online while the window was open, still shows the letter.
+  - The website still shows initials in the chronicle's book.
+- **The three recording features are off by default**, because the test fixes that with default
+  values no game event is registered. Whether the chronicle should record by default is an
+  open decision for the owner.
+- **What the client provides (researched 2026-11-19 in the UI source code, branch `forever`, and
+  in the wiki; none of it checked in game):**
+  - Without the friend's involvement only level, zone and online status are visible (friends
+    list, Battle.net, guild roster). Other players' deaths, bosses, loot and achievements are not.
+  - Addon messages exist (`C_ChatInfo.SendAddonMessage`, 255 bytes, throttled). According to
+    the measurements of the addon BFF, WHISPER and PARTY arrive on Forever, CHANNEL does not. In
+    boss fights and locked maps nothing is sent and anything received is discarded; nothing is
+    delivered later if someone was offline.
+  - The combat log is locked for addons: there is no cause of death.
+  - Achievements are called "Legacy Challenges" in Forever; `ACHIEVEMENT_EARNED` and
+    `GetAchievementInfo` exist.
+  - Death of a group member via `UnitIsDeadOrGhost`, not via `UnitHealth` (secret).
+  - Pictures: class and race icons, item icons, map art; portrait and 3D model
+    only for units present; no screenshots in the window.
+- **Similar addons:** "BFF – Best Friends in Forever" already has a friends feed with
+  level-ups and deaths via a whisper network between the addons; "Guild Chronicle" a
+  guild death book with a parchment look. So the data alone are not a unique selling point; the
+  opportunity lies in the presentation and in the connection with the aliases.
