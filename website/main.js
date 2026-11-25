@@ -1501,11 +1501,12 @@
 
   renderers.push(() => refresh(false));
 
-  // ?lang=de forces a language; anything unknown there is passed over.
+  // English unless the reader chose otherwise: ?lang=de forces a language,
+  // a language switched to before is remembered. The browser's language is
+  // not consulted. Anything unknown is passed over.
   const known = code => (code && I18N[code.toLowerCase()] ? code.toLowerCase() : null);
   const asked = known(new URLSearchParams(location.search).get('lang'));
-  const fromBrowser = (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en';
-  setLanguage(asked || known(store.get('famulus-lang')) || fromBrowser, false);
+  setLanguage(asked || known(store.get('famulus-lang')) || 'en', false);
 
   kindle();
   Scene.parallax(hero);

@@ -199,9 +199,10 @@ owner.
     English too; the addon's English samples have had different names since 2026-11-24 (see
     above).
 - **Languages:** English is in the HTML (`data-i18n="key"`), German in `i18n.js`; what
-  scripts put together is there in both languages. The language follows the browser, can be
-  switched and can be forced with `?lang=de`. If a language lacks a key, the console
-  warns.
+  scripts put together is there in both languages. **English is the default** (the owner's
+  request, 2026-11-25; before that the page followed the browser's language, so a German
+  browser got German). German only comes up when the reader switches to it (remembered in
+  `localStorage`) or with `?lang=de`. If a language lacks a key, the console warns.
 - **Hosting (2026-11-24):** The owner's request: straight from GitHub, without a server of our own
   and without manual work, with a custom domain. Because the repo is public, GitHub Pages (free):
   `.github/workflows/website.yml` publishes the folder `website/` unchanged as soon as a
