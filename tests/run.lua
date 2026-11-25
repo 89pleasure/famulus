@@ -1742,11 +1742,13 @@ check(events[1].number:IsShown() and events[1].number:GetText() == "20" and not 
 check(events[6].story.weight == "high" and events[6].bar:IsShown() and events[6].number:GetText() == "13"
     and events[3].story.kind == "boss" and events[3].story.weight == "high" and events[3].bar:IsShown()
     and events[2].story.weight == "medium" and not events[2].bar:IsShown()
-    and events[6].card:GetHeight() > events[2].card:GetHeight() and events[6].picture:GetWidth() == events[2].picture:GetWidth(),
+    and events[6].card:GetHeight() > events[2].card:GetHeight() and events[6].picture:GetWidth() > events[2].picture:GetWidth(),
     "level-ups and bosses weigh high: a larger card with the mark of an active card")
 check(events[4].story.kind == "death" and events[4].story.weight == "low" and events[5].story.weight == "low"
-    and events[4].card:GetHeight() < events[2].card:GetHeight() and events[4].picture:GetWidth() < events[2].picture:GetWidth(),
-    "deaths and new zones weigh low: a lower card, a smaller picture")
+    and events[4].card:GetHeight() < events[2].card:GetHeight()
+    and events[4].picture:GetWidth() < events[2].picture:GetWidth() and events[2].picture:GetWidth() < events[6].picture:GetWidth()
+    and events[4].picture.mockPoint[4] == events[6].picture.mockPoint[4],
+    "deaths and new zones weigh low: a lower card; the picture grows with the weight and stands at the left")
 do
     local edge = events[1].title.mockPoint[4]
     local same = true

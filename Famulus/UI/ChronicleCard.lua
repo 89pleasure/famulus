@@ -19,15 +19,15 @@ local UI = ns.UI
 
 local LINE, LINE_GAP = 14, 4 -- the head and the foot, and their distance from the text
 local SIDE = 14 -- left of the picture's column and right of the text
-local COLUMN = 54 -- the picture's column; a smaller picture stands in its middle
+local COLUMN = 56 -- the picture's column, as wide as the largest; a smaller one stands at its left
 local TEXT_GAP = 12 -- between the picture's column and the text
 
 -- How much an event weighs: its picture, the room above and below, and the
 -- headline. A heavy one is also a milestone (story.big, the book's accent).
 local WEIGHTS = {
     low = { pad = 8, picture = 40, title = 12, font = "medium", number = 18 },
-    medium = { pad = 12, picture = COLUMN, title = 13, font = "medium", number = 24 },
-    high = { pad = 15, picture = COLUMN, title = 15, font = "semibold", number = 24 },
+    medium = { pad = 12, picture = 48, title = 13, font = "medium", number = 22 },
+    high = { pad = 15, picture = COLUMN, title = 15, font = "semibold", number = 26 },
 }
 
 local function Build(part)
@@ -97,8 +97,7 @@ function UI.ChronicleCard(part, story, width)
     local left = SIDE + COLUMN + TEXT_GAP
     local top = math.floor((height - blockHeight) / 2 + 0.5)
     part.picture:ClearAllPoints()
-    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE + math.floor((COLUMN - size) / 2 + 0.5),
-        -math.floor((height - size) / 2 + 0.5))
+    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE, -math.floor((height - size) / 2 + 0.5))
     part.chipDot:ClearAllPoints()
     part.chipDot:SetPoint("TOPLEFT", part, "TOPLEFT", left, -top)
     part.title:ClearAllPoints()

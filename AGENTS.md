@@ -556,8 +556,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   Abdunklung unter einer Zahl ist kräftiger; Beispieleinträge benennen kein Kapitel, das echte
   Einträge hat.
 - **Der Bildrahmen war im Buch bei jedem Ereignis gleich groß** (54 px; Vorgabe des Auftraggebers,
-  2026-11-19). Seit 2026-11-25 ist er bei leichten Ereignissen kleiner (40 px), siehe
-  „Gewichtung“; mittlere und schwere behalten 54 px.
+  2026-11-19). Seit 2026-11-25 hat er im Buch der Chronik je Gewicht eine eigene Größe (40, 48,
+  56 px), siehe „Gewichtung“; die Weggefährten behalten 54 px.
 - **Gewichtung und Aufbau der Karten (Wunsch des Auftraggebers, 2026-11-25; nur gegen den Mock
   geprüft, im Spiel noch nicht gesehen):** Gilt nur für das Buch der Chronik. Jedes Ereignis dort
   hat ein Gewicht (`story.weight`, Tabelle `WEIGHT` in `UI/Options.lua`, Maße in `WEIGHTS` in
@@ -566,9 +566,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Überschrift 12 px.
   - **Mittel** (`medium`): Berufs-Meilensteine und alles, was der Auftraggeber nicht eingeordnet
     hat (Herausforderungen, Gegenstände, Fähigkeiten, Beruf erlernt; Entscheidung des
-    Assistenten). Bild 54 px, oben und unten 12 px, Überschrift 13 px.
+    Assistenten). Bild 48 px, oben und unten 12 px, Überschrift 13 px.
   - **Schwer** (`high`): Bosse und Stufenaufstiege, dazu was die Tabellen mit `big` markieren
-    (Reiten). Das bisherige Meilenstein-Aussehen: Akzentrand, Akzentmarke links, Überschrift
+    (Reiten). Bild 56 px. Das bisherige Meilenstein-Aussehen: Akzentrand, Akzentmarke links, Überschrift
     15 px halbfett, oben und unten 15 px. Wörtlich nach Art umgesetzt: Auch Stufen und Bosse von Freunden
     sind schwer (vorher nur der eigene Aufstieg).
   - **Aufbau neben dem Bild:** Kopf, Inhalt, Fuß. Der Kopf nennt die Person (Klassensymbol, sonst
@@ -579,8 +579,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Text frei und hängte Rand und Bildgröße ans Gewicht; im Spiel sah das hohl und unruhig aus
     (leere Flächen, Bild und Text je Gewicht an anderer Stelle). Seitdem ist die Karte so hoch
     wie Bild oder Text plus Rand oben und unten. Seitlich haben alle Karten denselben Rand
-    (`SIDE`), das Bild steht in einer Spalte von 54 px (`COLUMN`), ein kleineres mittig darin,
-    und der Text beginnt überall an derselben Kante. Das Gewicht wirkt nur auf Bildgröße, Rand
+    (`SIDE`), das Bild steht linksbündig in einer Spalte so breit wie das größte (`COLUMN`, 56 px;
+    drei Größen 40/48/56 und linksbündig auf Wunsch des Auftraggebers, 2026-11-25), und der Text
+    beginnt überall an derselben Kante. Das Gewicht wirkt nur auf Bildgröße, Rand
     oben und unten, Überschrift und Akzent. Entscheidungen des Assistenten im Einzelnen; im
     Spiel noch nicht gesehen. Der vertiefte Streifen mit dem Namen unter der Karte
     ist entfallen; die Weggefährten behalten ihren Streifen (`story.foot`).
