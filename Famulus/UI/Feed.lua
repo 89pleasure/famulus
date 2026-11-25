@@ -214,12 +214,6 @@ local function NewCard(parent)
     dusk:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -GROUND_INSET, GROUND_INSET)
     UI.Shade(dusk, "VERTICAL", "clear", "dusk")
     card.grain = UI.Grain(card, GROUND_INSET, GROUND_INSET, GROUND_INSET, GROUND_INSET, WIDTH, HEIGHT, true)
-    -- Mark of a milestone, as on the card of a feature that is switched on.
-    card.mark = card:CreateTexture(nil, "BORDER")
-    card.mark:SetPoint("TOPLEFT", 0, -12)
-    card.mark:SetPoint("BOTTOMLEFT", 0, 12)
-    card.mark:SetWidth(2)
-    UI.Paint(card.mark, "accent")
 
     -- The crest: a frame of its own above the band, with a border two
     -- pixels strong in the colour of its kind.
@@ -322,7 +316,8 @@ local function FillPeople(card, people)
 end
 
 -- The crest follows the book's pictures: an icon, a number, or the game's
--- own texture of an item. A milestone has an accent border and a mark.
+-- own texture of an item. A milestone has an accent border; no mark at its
+-- left, the running-out line along its foot is accent enough.
 local function Fill(card, story)
     local textLeft = FillPeople(card, story.people)
     local looks = UI.BookPictures
@@ -331,7 +326,6 @@ local function Fill(card, story)
     card.crestFill:SetColor(look.fill)
     local big = story.big and true or false
     card.shape.border:SetColor(big and "cardActive" or "cardBorder")
-    card.mark:SetShown(big)
     local photo = story.texture
     local icon = not photo and look.icon and (story.icon or look.icon) or nil
     local number = not icon and story.number

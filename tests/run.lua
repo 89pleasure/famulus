@@ -1290,8 +1290,8 @@ do -- the live feed: what was just written down appears on screen for a while
         file:close()
     end
     check(card.crest:GetHeight() < card:GetHeight() and card.crest:GetWidth() < card:GetWidth()
-        and card:GetWidth() >= 230 and card.mark:IsShown() and card.grain ~= nil,
-        "the picture is a crest inside its band; a milestone carries the mark of an active card")
+        and card:GetWidth() >= 230 and card.shape.border.token == "cardActive" and card.mark == nil and card.grain ~= nil,
+        "the picture is a crest inside its band; a milestone has the accent border, no mark at its left")
     check(card.bar:IsShown() and card.barGroup:IsPlaying(), "a line along its foot runs out while it stays")
     Chronicle.Add("zone", { zone = "Nowhere", t = time() - 21, probe = true })
     Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 3600, probe = true })
@@ -1305,7 +1305,7 @@ do -- the live feed: what was just written down appears on screen for a while
         and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
     check(not Feed.Shown()[1].react:IsShown() and not Feed.Shown()[2].react:IsShown() and not Feed.Shown()[1].mouseEnabled,
         "without sharing there is no button to react, and the cards let the mouse through")
-    check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and not Feed.Shown()[1].mark:IsShown(),
+    check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and Feed.Shown()[1].shape.border.token == "cardBorder",
         "a band is as wide as its text needs; a companion's event is no milestone")
     check(sounds() == heard + 1, "cards that come together bring one sound")
     for skill = 1, 3 do

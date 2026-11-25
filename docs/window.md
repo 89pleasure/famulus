@@ -190,7 +190,6 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
       front (the online notice starts with the name) pulled the name into the line above.
     - The mockup has scenes for every entry (tooltip, context menu, Guildy, Battle.net, minimap,
       book cards, fellow traveller, colour schemes, embers, window size and more); not built.
-      Checked against the mock only, not yet seen in game.
   - **Icons of the entries** (added on 2026-11-25 after the owner's first look in game: "the
     icons are missing"): a feature names its own (`icon` in `ns:NewFeature`, a name from
     `UI.media`; the test checks that every feature has one the window knows), the addon's own
