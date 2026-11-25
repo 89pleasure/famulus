@@ -27,8 +27,14 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
   is set. Only then do the tests run, and only if they are green does the packager build and upload.
 - **Course of a release:** write a section in `CHANGELOG.md` (English, becomes the changelog of the
   file on CurseForge), bring it to `main` via pull request, then on the merged state of
-  `main` `git tag v0.1.0` and `git push origin v0.1.0`.
-  Check beforehand: `bash tools/release_check.sh v0.1.0`. Started by hand (Actions › Release › Run
+  `main` (`git switch main`, `git pull`) `git tag v0.1.0` and `git push origin v0.1.0`.
+  Check beforehand: `bash tools/release_check.sh v0.1.0`.
+  Pull requests are squash-merged, so the branch's own commit never reaches `main`.
+  `v0.1.0-alpha.4` (2026-11-25) was set on it anyway: uploaded correctly (same files as the
+  merge), but the website still showed alpha.3 (see "Version on the page"). The tag was left
+  there, because pushing it again would have uploaded the file a second time. Since then the job
+  `check` of the Release workflow stops before tests and upload if the tagged commit is not on
+  `main` (`git merge-base --is-ancestor`, with the full history), and says how to remove the tag. Started by hand (Actions › Release › Run
   workflow) the workflow builds the zip without upload and attaches it to the run for a week.
 - **Version:** The `.toc` carries `@project-version@` in a `#@non-debug@` block, the packager
   inserts the tag. The working copy (junction) reads `## Version: dev` from the `#@debug@` block;
