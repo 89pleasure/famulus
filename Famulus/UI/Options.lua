@@ -681,6 +681,15 @@ local function SessionTitle(timestamp, now)
     return L["c_when_day_" .. part]:format(L["c_weekday_" .. date("%w", day)]), DayTitle(key)
 end
 
+-- Names a chapter for the session from `from` to `to`: its title, and
+-- left of it the date of an older one, else the times.
+local function SessionHead(chapter, from, to, now)
+    local title, day = SessionTitle(from, now)
+    local first, last = date("%H:%M", from), date("%H:%M", to)
+    chapter.title = title
+    chapter.small = day or (first == last and first or L.c_ch_span:format(first, last))
+end
+
 -- Heading of a chapter: when the session was and from when to when, the
 -- levels gained and the number of events, and below it the player's route
 -- through the zones, in the order of time.
@@ -706,10 +715,7 @@ local function TitleChapter(chapter, now)
             end
         end
     end
-    local first, last = date("%H:%M", entries[#entries].t), date("%H:%M", entries[1].t)
-    local title, day = SessionTitle(entries[#entries].t, now)
-    chapter.title = title
-    chapter.small = day or (first == last and first or L.c_ch_span:format(first, last))
+    SessionHead(chapter, entries[#entries].t, entries[1].t, now)
     chapter.route = #route > 0 and route or nil
     local parts = {}
     if low and low ~= high then
@@ -1189,11 +1195,37 @@ local function Span(from, to)
     return L.ui_fellow_span:format(date("%H:%M", from), date("%H:%M", to))
 end
 
--- A fellow traveller's story as a book: one chapter per day together, the
--- newest first, and the first meeting. It tells only what you did together,
--- from the fellow travellers' own records; what the person did on their
--- own is the chronicle's to tell. Returns the person (as in the overview)
--- and the chapters, or nil if they are gone.
+-- The fellow travellers' books, one chapter per session of play as in the
+-- chronicle. events: the newest first, each from `from` to `t`; their
+-- `seconds` add up to the time together in the heading. Returns the
+-- chapters and true if events beyond `limit` were left out.
+local function SessionChapters(events, now, limit)
+    local chapters, chapter = {}, nil
+    for index, event in ipairs(events) do
+        if limit and index > limit then
+            break
+        end
+        if not chapter or chapter.start - event.t >= SESSION_GAP then
+            chapter = { events = {}, start = event.from, finish = event.t, seconds = 0 }
+            chapters[#chapters + 1] = chapter
+        end
+        chapter.events[#chapter.events + 1] = event
+        chapter.start = math.min(chapter.start, event.from)
+        chapter.seconds = chapter.seconds + (event.seconds or 0)
+    end
+    for _, each in ipairs(chapters) do
+        SessionHead(each, each.start, each.finish, now)
+        each.sub = each.seconds > 0 and L.ui_fellow_day_time:format(Duration(each.seconds) or L.ui_fellow_minutes:format(0)) or nil
+        each.start, each.finish, each.seconds = nil, nil, nil
+    end
+    return chapters, limit ~= nil and #events > limit
+end
+
+-- A fellow traveller's story as a book: one chapter per session of play,
+-- the newest first, down to the first meeting. It tells only what you did
+-- together, from the fellow travellers' own records; what the person did
+-- on their own is the chronicle's to tell. Returns the person (as in the
+-- overview) and the chapters, or nil if they are gone.
 local function FellowStory(guid)
     local Fellows = ns.FellowService
     local person
@@ -1206,40 +1238,41 @@ local function FellowStory(guid)
         return nil
     end
     local now = time()
-    local today, yesterday = DayKey(now), DayKey(now - 86400)
     local milestones = Fellows.Milestones(guid, person, now)
+    local events = {}
     local first = tonumber(person.first)
-    local firstKey = first and Fellows.DayKey(first)
-    local met = first and {
-        kind = "bond",
-        big = true,
-        title = L.ui_fellow_met,
-        detail = person.firstLevel and L.ui_fellow_met_detail:format(person.firstLevel) or nil,
-        when = date("%H:%M", first),
-        t = first,
-    }
+    if first then
+        events[1] = {
+            kind = "bond",
+            big = true,
+            title = L.ui_fellow_met,
+            detail = person.firstLevel and L.ui_fellow_met_detail:format(person.firstLevel) or nil,
+            when = date("%H:%M", first),
+            t = first,
+            from = first,
+        }
+    end
 
-    local chapters = {}
+    -- A stretch together per day; a session over midnight is one stretch.
+    -- shortcut: the day log keeps only a day's first and last moment, so two sessions on one day stay one; read the groups (FellowService.Runs) to tell them apart.
+    local stretch
     for _, day in ipairs(Fellows.Days(person)) do
-        local events = {}
+        -- A boss counted before any time: noon of its day.
+        local noon = time({ year = math.floor(day.key / 10000), month = math.floor(day.key / 100) % 100, day = day.key % 100, hour = 12 })
+        local from, to = day.f or noon, day.l or noon
         -- Named bosses get a card each; the others (a raid, or more than a
-        -- day keeps) are counted on the day's line.
+        -- day keeps) are counted on the stretch's line.
         local unnamed = math.max(0, day.b - #day.k)
-        local bosses = unnamed == 1 and L.ui_fellow_boss or unnamed > 1 and L.ui_fellow_bosses:format(unnamed) or nil
-        if day.f and day.l then
-            -- How long, the chapter's heading already says.
-            local span = Span(day.f, day.l)
-            events[#events + 1] = { kind = "fellow", title = L.ui_fellow_together,
-                detail = bosses and (span .. "  ·  " .. bosses) or span, t = day.f }
+        if stretch and stretch.timed and day.l and stretch.from - day.l < SESSION_GAP then
+            stretch.from, stretch.seconds, stretch.unnamed = from, stretch.seconds + day.s, stretch.unnamed + unnamed
+        else
+            stretch = { kind = "fellow", from = from, t = to, seconds = day.s, unnamed = unnamed, zone = day.z, timed = day.f ~= nil }
+            events[#events + 1] = stretch
         end
         for _, kill in ipairs(day.k) do
             local event = ChronicleEvent({ k = "boss", name = kill.n, zone = kill.z, t = kill.t })
-            event.t = kill.t
+            event.t, event.from = kill.t, kill.t
             events[#events + 1] = event
-        end
-        if #events == 0 then
-            -- Counted a boss, but no time yet: still a day together.
-            events[1] = { kind = "fellow", title = L.ui_fellow_together, detail = bosses, t = 0 }
         end
         local tier = milestones[day.key]
         if tier then
@@ -1247,33 +1280,25 @@ local function FellowStory(guid)
                 kind = "bond",
                 big = true,
                 title = L.ui_fellow_tier_up:format(string.lower(L["ui_bond_" .. tier])),
-                t = day.l or day.f or 0,
+                t = to,
+                from = to,
             }
         end
-        if met and day.key == firstKey then
-            events[#events + 1], met = met, nil
+    end
+    for _, event in ipairs(events) do
+        if event.kind == "fellow" then
+            local unnamed = event.unnamed
+            local bosses = unnamed == 1 and L.ui_fellow_boss or unnamed > 1 and L.ui_fellow_bosses:format(unnamed) or nil
+            local span = event.timed and Span(event.from, event.t) or nil
+            event.title = event.zone and L.ui_run_title:format(event.zone) or L.ui_fellow_together
+            event.detail = span and bosses and (span .. "  ·  " .. bosses) or span or bosses
+            event.unnamed, event.zone, event.timed = nil, nil, nil
         end
-        table.sort(events, function(a, b)
-            return (a.t or 0) > (b.t or 0)
-        end)
-        -- The day's own date; a day without a zone is named by it alone.
-        local dayTitle = DayTitle(string.format("%04d-%02d-%02d", math.floor(day.key / 10000), math.floor(day.key / 100) % 100, day.key % 100),
-            today, yesterday)
-        chapters[#chapters + 1] = {
-            small = day.z and dayTitle or nil,
-            title = day.z or dayTitle,
-            sub = L.ui_fellow_day_time:format(Duration(day.s) or L.ui_fellow_minutes:format(0)),
-            events = events,
-        }
     end
-    -- Met before the day log, or the day fell out of it: a chapter of its own.
-    if met then
-        chapters[#chapters + 1] = {
-            small = DayTitle(DayKey(first), today, yesterday),
-            title = type(person.firstZone) == "string" and person.firstZone or DayTitle(DayKey(first), today, yesterday),
-            events = { met },
-        }
-    end
+    table.sort(events, function(a, b)
+        return a.t > b.t
+    end)
+    local chapters = SessionChapters(events, now)
     local shown = FellowPerson(guid, person, now)
     -- Their own events are the chronicle's; the card leads there if it has any.
     shown.chronicle = ns:IsCategoryEnabled("chronicle") and ns.ChronicleService.Who(person.name) or nil
@@ -1594,6 +1619,7 @@ local function RunEvent(each, data)
         foot = foot,
         t = finish,
         from = run.f,
+        seconds = finish - run.f,
         rank = 1,
     }
 end
@@ -1672,30 +1698,7 @@ local function TimelineBook()
         end
         return a.title < b.title
     end)
-    local chapters, chapter, more = {}, nil, false
-    for index, event in ipairs(events) do
-        if index > TIMELINE_ROWS then
-            more = true
-            break
-        end
-        if not chapter or chapter.start - event.t >= SESSION_GAP then
-            chapter = { events = {}, start = event.from, finish = event.t, seconds = 0 }
-            chapters[#chapters + 1] = chapter
-        end
-        chapter.events[#chapter.events + 1] = event
-        chapter.start = math.min(chapter.start, event.from)
-        if event.kind == "fellow" then
-            chapter.seconds = chapter.seconds + (event.t - event.from)
-        end
-    end
-    for _, each in ipairs(chapters) do
-        local title, day = SessionTitle(each.start, data.now)
-        local first, last = date("%H:%M", each.start), date("%H:%M", each.finish)
-        each.title = title
-        each.small = day or (first == last and first or L.c_ch_span:format(first, last))
-        each.sub = each.seconds > 0 and L.ui_fellow_day_time:format(Duration(each.seconds) or L.ui_fellow_minutes:format(0)) or nil
-        each.start, each.finish, each.seconds = nil, nil, nil
-    end
+    local chapters, more = SessionChapters(events, data.now, TIMELINE_ROWS)
     return chapters, more and L.ui_run_more or nil
 end
 

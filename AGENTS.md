@@ -476,8 +476,10 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     ist aber nicht beauftragt.
   - Im Spiel lief die Route beim ersten Mal auf einen Fehler (`head.width`, siehe „Fehler
     2026-11-24“); behoben, danach lief die Chronik im Spiel („Funktioniert“).
-  - Offen: „Eure Geschichte“ bei den Weggefährten hat weiter ein Kapitel je Tag, benannt nach
-    dem Gebiet des Tages, und die Website zeigt noch den alten Kapitelkopf.
+  - Seit 2026-11-25 auch in „Eure Geschichte“ bei den Weggefährten (siehe dort). Kapitelkopf
+    (`SessionHead`) und die Einteilung der Weggefährten-Bücher (`SessionChapters`, für „Runden“
+    und „Eure Geschichte“) stehen je einmal in `UI/Options.lua`; gezeichnet wird alles von
+    `UI.Book`. Offen: Die Website zeigt noch den alten Kapitelkopf.
 - **Bilderbuch (2026-11-19):** Der Auftraggeber fand den HTML-Entwurf „schon ganz cool“ und ließ
   ihn so umsetzen. Die drei Erzähl-Reiter zeigen keine Zeilen mehr, sondern ein Buch
   (`UI.Book`, `UI/Book.lua`; ein Reiter liefert es über `tab.book`, `Render` legt es unter die
@@ -1211,13 +1213,19 @@ nicht (siehe oben), und die Funktion braucht beim anderen kein Famulus.
     des Auftraggebers nach einem Screenshot), Knöpfe „Alias festlegen“ (`ns:EditAlias`) und „Vergessen“
     (das Kreuz an den Zeilen ist entfallen; eine Chat-Zeile sagt es). Rechts daneben scrollt ein
     Buch (`UI.Book`, 560 breit; Wunsch des Auftraggebers nach dem ersten Blick ins Spiel: Person
-    links, Buch rechts statt eines breiten Kopfes über einem zu breiten Buch) mit einem Kapitel je Tag im
-    Tagesprotokoll, das neueste zuerst: Gebiet des Tages, „N Std. zusammen“; Ereignisse
-    „Gemeinsam unterwegs“ (von bis; Bosse ohne Namen, etwa aus einem Schlachtzug, als Zahl
+    links, Buch rechts statt eines breiten Kopfes über einem zu breiten Buch) mit einem Kapitel je
+    Spielabend wie in der Chronik (seit 2026-11-25, vorher je Tag mit dem Gebiet als Titel), das
+    neueste zuerst: Titel nach der Tageszeit, links von–bis oder das Datum, rechts „N Std.
+    zusammen“. Gebaut wird es weiter aus dem Tagesprotokoll: Je Tag eine Karte „Unterwegs in
+    <Gebiet>“ (das letzte Gebiet des Tages; ohne Gebiet „Gemeinsam unterwegs“); ein Abend über
+    Mitternacht, den das Protokoll auf zwei Tage teilt, ist eine Karte. Grenze: Das Protokoll kennt
+    je Tag nur den ersten und letzten Moment, zwei Abende an einem Tag bleiben eine Karte; die
+    Runden könnten sie trennen. Ein Boss ohne gezählte Zeit steht um 12 Uhr seines Tages. Unter
+    der Karte (von bis; Bosse ohne Namen, etwa aus einem Schlachtzug, als Zahl
     dahinter; die Dauer stand bis 2026-11-24 auch dort, brach um und wiederholte den
     Kapitelkopf, deshalb auf Wunsch des Auftraggebers entfernt), je Boss mit Namen eine Karte („Archaedas bezwungen“, „in Uldaman“), „Ihr seid
-    jetzt <Stufe>“ am Tag eines Aufstiegs und „Kennengelernt“ (auf Stufe N). Fehlt der erste Tag
-    im Protokoll, bekommt das Kennenlernen ein eigenes letztes Kapitel. Seit 2026-11-24 steht dort
+    jetzt <Stufe>“ am Tag eines Aufstiegs und „Kennengelernt“ (auf Stufe N). Liegt das Kennenlernen
+    vor dem Protokoll, steht es in einem eigenen letzten Kapitel. Seit 2026-11-24 steht dort
     nur Gemeinsames aus dem eigenen Tagesprotokoll, nichts aus der Chronik (siehe „Chronik und
     Weggefährten“). Hat die Chronik Einträge der Person (`ChronicleService.Who`, Name in jeder
     Schreibweise) und ist sie eingeschaltet, trägt die Karte neben „Alias festlegen“ den Knopf
