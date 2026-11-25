@@ -15,6 +15,8 @@ local L = ns.L
 
 local REPORT_SCHEMA = 1
 local MAX_LOG_ENTRIES = 100
+local MAX_TRACE_ENTRIES = 500
+local FOLD_SECONDS = 2 -- the same trace line again within this counts up the last one
 local MAX_CHAT_LINES = 8
 
 -- Client API the project notes (AGENTS.md) claim to exist or to be removed.
@@ -468,6 +470,45 @@ function ns:IsDevMode()
     return ns.global ~= nil and ns.global.dev == true
 end
 
+-- The trace: what the addon does step by step, where a feature cannot be
+-- followed otherwise (sharing: every message sent and received, and why one
+-- was ignored). Kept only in developer mode, at most MAX_TRACE_ENTRIES, in
+-- FamulusDB.devTrace; tools/read_selftest.lua prints it. The same line again
+-- within FOLD_SECONDS counts up the last one (twenty entries caught up are
+-- one line), and each session begins with a line of its own. Never pass names
+-- or other text of the player here.
+local traceStarted, lastTraceAt = false, nil
+
+local function TraceLine(trace, kind, text)
+    if #trace >= MAX_TRACE_ENTRIES then
+        table.remove(trace, 1)
+    end
+    trace[#trace + 1] = { time = date and date("%Y-%m-%d %H:%M:%S") or "?", kind = kind, text = text }
+end
+
+function ns:DevTrace(kind, text)
+    if not self:IsDevMode() then
+        return
+    end
+    local trace = ns.global.devTrace
+    if type(trace) ~= "table" then
+        trace = {}
+        ns.global.devTrace = trace
+    end
+    if not traceStarted then
+        traceStarted = true
+        TraceLine(trace, "SESSION", "login or reload, Famulus " .. tostring(ns.version))
+    end
+    local now = GetTime()
+    local last = trace[#trace]
+    if last and last.kind == kind and last.text == text and lastTraceAt and now - lastTraceAt <= FOLD_SECONDS then
+        last.n = (last.n or 1) + 1
+    else
+        TraceLine(trace, kind, text)
+    end
+    lastTraceAt = now
+end
+
 function ns:SetDevMode(enabled)
     enabled = enabled and true or false
     if not ns.global or enabled == self:IsDevMode() then
@@ -475,7 +516,8 @@ function ns:SetDevMode(enabled)
     end
     ns.global.dev = enabled or nil
     if not enabled then
-        ns.global.devLog = nil
+        ns.global.devLog, ns.global.devTrace = nil, nil
+        traceStarted, lastTraceAt = false, nil
     end
     SetDevEvents(enabled)
     ns:Print(enabled and L.msg_dev_on or L.msg_dev_off)

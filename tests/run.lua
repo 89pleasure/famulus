@@ -1664,6 +1664,63 @@ mock.sent = {}
 mock.Advance(150)
 check(sentTo("Garrosh Hellscream") and sentTo("Garrosh Hellscream").text:find("^1~H~") ~= nil and kindsTo("Many110 Test").H == 1,
     "with the first lane full, hellos still get in, the one back to a first contact too")
+
+-- In developer mode every step of the exchange goes into the trace, a
+-- person as a tag, never by name.
+enable("sharing", false)
+check(FamulusDB.devTrace == nil, "without developer mode nothing is traced")
+ns:SetDevMode(true)
+setState({ friends = {}, zone = "Westfall", level = 13, units = { player = { name = "Boris", surname = "Bloom" } },
+    guild = {}, statistics = { [60] = "13" } })
+enable("sharing")
+mock.state.guild = { { name = "Boris Bloom-Forever", online = true }, { name = "Arisa Werkatz-Forever", online = true } }
+mock.Fire("GUILD_ROSTER_UPDATE")
+mock.Advance(2)
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~P", "GUILD", "Boris Bloom-Forever")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~P", "GUILD", "Arisa Werkatz-Forever")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Some Stranger")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~1~level", "GUILD", "Arisa Werkatz-Forever")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "2~H~0", "WHISPER", "Arisa Werkatz")
+mock.Advance(2)
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Arisa Werkatz")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~S~14~60=29~DRUID", "WHISPER", "Arisa Werkatz")
+mock.Advance(30)
+do
+    local arisa, stranger = sharing.Tag(sharing.Key("Arisa Werkatz")), sharing.Tag(sharing.Key("Some Stranger"))
+    local lines, named = {}, false
+    for _, line in ipairs(FamulusDB.devTrace or {}) do
+        lines[#lines + 1] = line
+        named = named or line.text:find("Arisa", 1, true) or line.text:find("Werkatz", 1, true)
+            or line.text:find("Stranger", 1, true) or line.text:find("Bloom", 1, true)
+    end
+    local function traced(text, minimum)
+        for _, line in ipairs(lines) do
+            if line.text == text and (line.n or 1) >= (minimum or 1) then
+                return true
+            end
+        end
+        return false
+    end
+    check(arisa:find("^AW%-%x%x%x$") ~= nil and arisa == sharing.Tag(sharing.Key("Arisa Werkatz-Forever")),
+        "a person is traced as initials and a number from their name, the same in any spelling: " .. arisa)
+    check(lines[1] and lines[1].kind == "SESSION" and traced("switched on"), "the trace begins with the session")
+    check(traced("guild roster: 0 members, 0 online (empty, though in a guild)") and traced("guild roster: 2 members, 2 online"),
+        "it notes the guild roster when it changes, an empty one too")
+    check(traced("guild greeting queued") and traced("sent P to guild") and traced("own guild greeting came back from the guild channel"),
+        "the guild greeting is traced from the queue to its echo")
+    check(traced("got P from " .. arisa) and traced("hello to " .. arisa .. " queued: their guild greeting") and traced("sent H to " .. arisa),
+        "a guild greeting received is traced with the hello it is answered with")
+    check(traced("ignored H from " .. stranger .. ": neither a friend online nor in the guild")
+        and traced("ignored E from " .. arisa .. ": came by GUILD") and traced("ignored H from " .. arisa .. ": version 2"),
+        "what is ignored is traced with the reason")
+    check(traced("first contact with " .. arisa .. ": linked") and traced("got S from " .. arisa),
+        "the first contact and what arrives are traced")
+    check(traced("sent E to " .. arisa, 2) and traced("catching up " .. arisa .. " after the start: 20 own entries, more follow"),
+        "the same line in a row counts up instead of repeating, and catching up says how far")
+    check(not named, "no name of a player is stored in the trace")
+end
+ns:SetDevMode(false)
+check(FamulusDB.devTrace == nil, "switching developer mode off clears the trace")
 mock.addonThrottle = false
 enable("sharing", false)
 enable("ownJourney", false)

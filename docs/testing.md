@@ -107,12 +107,18 @@ at `D:\Games\World of Warcraft\_forever_`, the repo at `E:\Develop\wow\famulus`;
   "WoW Forever: what you need to know". The report ends up in `FamulusDB.selfTest`.
 - `/fam dev` toggles developer mode: the self-test then runs three seconds after every
   login, and blocked actions (`ADDON_ACTION_BLOCKED`/`_FORBIDDEN`) as well as the addon's
-  `LUA_WARNING` are collected in `FamulusDB.devLog`. Off by default; then it costs nothing.
+  `LUA_WARNING` are collected in `FamulusDB.devLog`. Since 2026-11-25 sharing also writes every
+  step of the exchange into `FamulusDB.devTrace` (see "Trace" under "Sharing"). Off by default;
+  then it costs nothing. Switching it off clears log and trace.
 - At startup the game sets all files in the addon folder to mode 777, and through the symlink
   also in the repo. That is why `git config core.fileMode false` is set locally here; set it again
   after a fresh clone, otherwise all files show up as changed.
 - The game only writes the data to disk on `/reload` or on logout. After that
-  `luajit tools/read_selftest.lua` reads the report (with `--all` also the passed checks).
+  `luajit tools/read_selftest.lua` reads the report (with `--all` also the passed checks), the
+  `devLog` and the trace. On the Windows machine pass the game folder:
+  `luajit tools/read_selftest.lua "D:/Games/World of Warcraft/_forever_"`. Until 2026-11-25 the
+  tool found nothing on Windows (it ran `ls` and `grep` through `cmd.exe`); now PowerShell finds
+  the newest file there and `findstr` the client logs.
 - Course of a round: the owner starts the game, logs in and does `/reload`; the
   assistant reads the report. The assistant cannot operate the game itself, and automating input
   into the game is off limits (terms of use).

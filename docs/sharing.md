@@ -154,6 +154,46 @@ guild channel), only known fields; `|` and control characters are removed.
     "Chronicle").
 - Fresh news appears on screen through the live feed (`liveFeed`, see
   below); the former option `toast` and `UI.Toast` are gone.
+- **Trace (since 2026-11-25, the owner's request after "Mel not linked" below: without a log
+  neither the owner nor the assistant can follow such errors):** In developer mode (`/fam dev`)
+  `Sharing.lua` writes every step of the exchange into the trace (`ns:DevTrace` in
+  `Core/SelfTest.lua`, `FamulusDB.devTrace`, at most 500 lines, cleared when developer mode is
+  switched off; each session begins with a line `SESSION`):
+  - switched on and off; the guild roster and the friends list whenever their counts change
+    (`guild roster: 42 members, 7 online`, an empty roster while in a guild is marked);
+  - the guild greeting from the queue to its echo (`guild greeting queued`, `sent P to guild`,
+    `own guild greeting came back from the guild channel`);
+  - every message sent (`sent H to AW-799`), refused, dropped (not online, the client said
+    offline) or turned away (queue full), with the client's answer by name;
+  - every message received with the decision: `got S from AW-799`, or `ignored … :` neither a
+    friend online nor in the guild, came by another channel, another version, a kind this
+    version does not know, sender or text unreadable (secret);
+  - hellos queued with the reason (a friend online, their guild greeting, first contact), first
+    contact, catching up (from when, how many), offers and passed-on entries not taken and why,
+    an own entry and to how many linked it goes, loading screens, chat lockdown.
+  The same line again within two seconds counts up the last one (`sent E to AW-799`, 20 times).
+  A person is a tag (`Tag`): initials and three hex digits from the name key, the same on every
+  client and in every session, so the traces of two players can be laid side by side. Names are
+  not stored (the rule of `ns:DevLog`). `tools/read_selftest.lua` prints the trace after the
+  report and the `devLog`. Outside developer mode the trace costs one check per step. The lines
+  and their wording are the assistant's decisions. Checked against the mock only.
+- **Open (2026-11-25): Mel not linked until the owner's `/reload`.** Mel (Battle.net friend of
+  the owner and in the same guild, not on the character friends list; Ori is the same) switched
+  on sharing during the session while the owner's client was running with sharing on. She did not
+  appear under "Friends" until the owner's `/reload`, then at once. The owner's saved data from
+  just before that reload had no `link` for her: before it, not a single message from her was
+  accepted. Between the two only the guild greeting `P` works (Battle.net friends do not count
+  for sharing). After the reload the owner's `P` reached her and she answered; in the other
+  direction her single `P` (or the owner's answer to it) was lost. The code is the same in both
+  directions and the mock connects them. Candidates, none proven: the game delivers an empty
+  guild roster for a moment (Guildy saw that in Forever on 2026-11-09 and keeps the last roster;
+  Famulus then empties its guild list, sends no `P` on switching on and takes a `P` it receives
+  as from a stranger), a loading screen or chat lockdown on the receiving side, names that are
+  secret in instances. `P` goes only once per session, nothing repeats it. Next time: `/fam dev`
+  before, `/reload` afterwards, then read the trace (if possible on both sides). Proposed, not
+  commissioned: keep the last guild roster when an empty one comes, and count Battle.net friends
+  who play Forever as friends (then a hello goes by whisper and the guild greeting is no longer
+  the only way).
 - **Not checked in game:** whether whispered addon messages arrive the way name and sender
   are written (`Firstname Lastname` versus `Firstname-Lastname`), whether a whisper to someone
   who just went offline leaves an error message in the chat, and whether the statistic IDs
