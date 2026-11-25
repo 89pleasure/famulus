@@ -649,7 +649,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     (sendet dort). Namen: Gildenliste und Absender können `Vorname Nachname-Realm` liefern
     (so liest Guildy sie); der Schlüssel schneidet das ab.
   - **Weiterreichen (Wunsch des Auftraggebers, 2026-11-19):** Neuigkeiten von jemandem, der offline
-    ist, kommen über einen verbundenen Gefährten, der sie hat. Auf den ersten Gruß einer Sitzung
+    ist, kommen über einen verbundenen Gefährten, der sie hat. Auf einen Gruß
     folgen bis zu 20 Angebote `1~O~<wer>~<zeit>` (seit 2026-11-25 nur über Leute, die gerade nicht
     online sind); wer daraus Neues erwartet, fragt mit `1~W~<wer>~<seit>` und bekommt
     bis zu 20 Einträge als `1~R~<wer>~<zeit>~<art>~…`. Regel: Erfragt und angenommen wird nur über
@@ -668,8 +668,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     (Statistiken und seit 2026-11-24 die Klasse, etwa `MAGE`; ältere Versionen schicken sie nicht
     und übergehen das Feld beim Empfang).
   - Ein Gruß geht an jeden Freund, der online kommt. Wer antwortet, gilt für die Sitzung als
-    verbunden und bekommt die eigenen Meilensteine live. Auf einen Gruß folgen bis zu 20 verpasste
-    Einträge und die Statistiken.
+    verbunden und bekommt die eigenen Meilensteine live. Auf einen Gruß folgen alle verpassten
+    eigenen Einträge (in Runden zu 20, siehe „Warteschlange“) und die Statistiken.
   - **Statistiken nach eigenen Ereignissen (seit 2026-11-25):** Fünf Sekunden nach einem eigenen
     Eintrag, der live rausgeht, gehen auch die Statistiken an alle Verbundenen (`STATS_DELAY`,
     `SendStatisticsSoon` in `Sharing.lua`), einmal für mehrere Ereignisse in diesen fünf
@@ -694,7 +694,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     - **Takt wie der Client:** Famulus zählt die Erlaubnis des Clients mit (`ALLOWANCE` 10 auf
       einmal, `REFILL` 1 je Sekunde). Meldet `SendAddonMessage` trotzdem `AddonMessageThrottle`,
       `ChannelThrottle` oder `AddOnMessageLockdown`, bleibt die Nachricht vorn in der Reihe und
-      geht später noch einmal (wie ChatThrottleLib ab v29). Bei `TargetOffline` geht an die
+      geht später noch einmal (wie ChatThrottleLib ab v29). Ein schlichtes `false` (ältere
+      Clients) gilt ebenso als abgelehnt, aber nur fünfmal (`MAX_REFUSED`), weil es auch eine
+      bleibende Ablehnung sein kann. Bei `TargetOffline` geht an die
       Person nichts mehr (`gone`), bis sie selbst wieder etwas schickt oder die Listen sie als
       offline und wieder online zeigen. Die Werte kommen aus `Enum.SendAddonMessageResult`, sonst
       aus festen Zahlen; `/fam test` prüft, ob es die drei Namen gibt (Gruppe `api`). Im
@@ -705,15 +707,28 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
       Angebote und weitergereichte Einträge. Eigene Einträge stehen bewusst vorn und in Reihe:
       Der Stand beim Gefährten („deine Neuigkeiten habe ich bis …“) darf nie über einen Eintrag
       springen, den er nicht hat, sonst bekäme er ihn nie. Ein Live-Eintrag wartet deshalb hinter
-      dem Nachholen. Eigene Einträge werden nie abgewiesen; je Gefährte und Gruß kommen höchstens
-      20 dazu, keiner, der schon wartet. Für den Rest gelten 100 (vorn) und 200 (hinten) Plätze.
+      dem Nachholen. Eigene Einträge werden nie abgewiesen. Für den Rest gelten 100 (vorn) und
+      200 (hinten) Plätze; Grüße werden nie abgewiesen, sonst bliebe ein erster Kontakt ohne
+      Gruß zurück.
+    - **Nachholen in Runden (seit 2026-11-25, nach dem Review von PR #13):** Ein Gruß bekommt die
+      ältesten 20 eigenen Einträge, die fehlen, und den Rest ihrer letzten Sekunde
+      (`ChronicleService.OwnSince`; vorher die neuesten 20, darüber hinaus Verpasstes war für
+      immer weg). Ist der letzte einer vollen Runde raus, folgt die nächste (`CatchUp`, Marke
+      `more`). Eine Runde nimmt die eigenen Einträge für diesen Gefährten aus der Reihe, die noch
+      warten und neuer sind als sein Stand, und reiht sie in zeitlicher Folge neu ein (`skip`).
+      So geht ein Live-Eintrag, der vor dem Gruß schon in der Reihe stand, nicht vor den älteren
+      raus. Bekannte Grenze (schon vorher so): Der Stand ist eine Sekunde; hat der Gefährte von
+      zwei Einträgen derselben Sekunde nur einen, fehlt ihm der andere.
     - **Doppelter Gruß:** Beide Seiten grüßen meist zweimal (beim Online-Kommen und beim ersten
       Kontakt). Der Stand im Gruß wird erst beim Abschicken gelesen, je Person wartet höchstens
-      ein Gruß, und auf einen Gruß gehen nur Einträge raus, die nicht schon in der Reihe stehen.
+      ein Gruß, und ein zweiter Gruß ersetzt die noch wartenden Einträge, statt sie zu verdoppeln.
       Der zweite Gruß kostet so meist nur sich selbst und eine Bilanz.
-    - **Angebote** gehen je Gefährte einmal pro Sitzung raus und nur über Leute, die gerade nicht
-      online sind (die sagen es selbst). Eine Frage `W` gilt erst als gestellt, wenn sie in der
-      Reihe steht.
+    - **Angebote** gehen nur über Leute, die gerade nicht online sind (die sagen es selbst), und
+      nicht noch einmal, solange frühere an denselben Gefährten warten. Ein Gruß nach einem
+      `/reload` des Gefährten bekommt sie also wieder (vorher einmal je Sitzung; ein Freund grüßt
+      nicht per `P` und bekam nach seinem `/reload` keine mehr). Eine Frage `W` gilt erst als
+      gestellt, wenn sie in der Reihe steht; geht der Gefragte offline oder meldet der Client
+      `TargetOffline`, ist die Person wieder frei und wird beim nächsten Angebot erfragt (`Unask`).
     - **Gruß `P` nach `/reload`:** wird immer beantwortet, auch wenn der Absender noch als verbunden
       gilt (`P` geht einmal je Sitzung raus, der Absender kennt danach niemanden). Vorher blieb ein
       Gildenmitglied nach `/reload` unverbunden, und seine Meilensteine gingen an niemanden.

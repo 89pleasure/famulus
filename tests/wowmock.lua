@@ -626,7 +626,13 @@ C_ChatInfo = {
     SendAddonMessage = function(prefix, text, chatType, target)
         local message = { prefix = prefix, text = text, chatType = chatType, target = target }
         mock.attempts[#mock.attempts + 1] = message
-        local result = mock.addonResult and mock.addonResult(message) or 0
+        local result = 0
+        if mock.addonResult then
+            local answer = mock.addonResult(message)
+            if answer ~= nil then
+                result = answer -- false too, like older clients
+            end
+        end
         if result == 0 and mock.addonThrottle then
             addonAllowance = math.min(10, addonAllowance + (mock.now - (addonRefilled or mock.now)))
             addonRefilled = mock.now
