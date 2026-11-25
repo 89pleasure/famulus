@@ -144,8 +144,14 @@ guild channel), only known fields; `|` and control characters are removed.
   - **Limit of whispering:** Each message goes to each person separately, per the wiki at about 7
     per second (budget by bytes), and if Forever does throttle whispers after all, at one. For
     large guilds the route via the guild channel: issue #12 (live entries, stats and offers
-    once to the guild; open are older versions and the order). It also notes that
-    `MAX_ENTRIES` (2000) applies to own and others' entries together.
+    once to the guild; open are older versions and the order). Closed as "not planned" on
+    2026-11-25 (the owner's decision after the assistant's check): its numbers assumed that
+    whispers count 10 plus 1; with the budget by bytes a live entry to 40 members takes about
+    four seconds, the wait at login is the catching up, which goes to each companion
+    separately anyway, and offers to the guild would reach every member on every login over
+    the slower channel. Worth reopening if the `devLog` in game shows "whisper throttled".
+    The limit for others' entries the issue also raised is in place (see "Limit" under
+    "Chronicle").
 - Fresh news appears on screen through the live feed (`liveFeed`, see
   below); the former option `toast` and `UI.Toast` are gone.
 - **Not checked in game:** whether whispered addon messages arrive the way name and sender

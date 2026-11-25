@@ -32,6 +32,7 @@ ns.ChronicleService = ChronicleService
 local IsPlainText = ns.ChatService.IsPlainText
 
 local MAX_ENTRIES = 2000
+local MAX_OTHERS = 1000 -- of them, news of others
 local CLOCK_SLACK = 300 -- seconds a companion's clock may run ahead of ours
 local MAX_AGE = 90 * 86400 -- older news is filed under "now"
 
@@ -273,6 +274,30 @@ local function Store(create)
     return chronicle
 end
 
+-- Keeps at most MAX_ENTRIES, of them at most MAX_OTHERS of others, dropping
+-- the oldest: in a big guild the news of others would otherwise push the
+-- player's own journey out within days.
+local function Trim(entries)
+    local others = 0
+    for _, entry in ipairs(entries) do
+        if entry.who then
+            others = others + 1
+        end
+    end
+    while #entries > MAX_ENTRIES or others > MAX_OTHERS do
+        local oldest = 1
+        if others > MAX_OTHERS then
+            while not entries[oldest].who do
+                oldest = oldest + 1
+            end
+        end
+        if entries[oldest].who then
+            others = others - 1
+        end
+        table.remove(entries, oldest)
+    end
+end
+
 -- Writes an event down. kind: see `kinds`; entry: its values. Strings that
 -- are secret or empty are dropped. An entry with `who` tells of a companion.
 function ChronicleService.Add(kind, entry)
@@ -324,9 +349,7 @@ function ChronicleService.Add(kind, entry)
         end
     end
     table.insert(entries, index, entry)
-    if #entries > MAX_ENTRIES then
-        table.remove(entries, 1)
-    end
+    Trim(entries)
     ns:Fire("CHRONICLE_CHANGED", entry)
     return true
 end
@@ -944,9 +967,7 @@ ns:On("DATABASE_READY", function()
             kept[#kept + 1] = entry
         end
     end
-    while #kept > MAX_ENTRIES do
-        table.remove(kept, 1)
-    end
+    Trim(kept)
     chronicle.entries = kept
     PruneClasses(chronicle)
 end)
