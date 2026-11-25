@@ -3,7 +3,7 @@
 -- events appear only if asked for (option "own", off from the start): the
 -- feed is about the others. A friend's card has a button to react to it, as
 -- a click on their card in the chronicle does, while reactions are on
--- (option "reactions" of Sharing.lua).
+-- (option "reactions" of Sharing.lua); the card then closes.
 --
 -- It listens to the chronicle, not to the game: no event, no timer of its
 -- own. The cards can be moved in the game's Edit Mode or with /fam feed.
@@ -90,9 +90,9 @@ local function Show(kind, story)
     feed:Chime()
 end
 
--- The button to react to a friend's event: it gives the reaction of its
--- kind, and a second click takes it back (ChronicleService.React). Sharing.lua
--- tells the friend, as for a click in the chronicle.
+-- The button to react to a friend's event: it gives the reaction of its kind
+-- (ChronicleService.React), and Sharing.lua tells the friend, as for a click
+-- in the chronicle. Taking it back is the chronicle's.
 local function Reaction(entry)
     local Chronicle = ns.ChronicleService
     local reaction = Chronicle.Reaction(entry)
@@ -104,14 +104,11 @@ local function Reaction(entry)
         given = function()
             return entry.mine ~= nil
         end,
-        toggle = function()
+        give = function()
             -- Reactions may have been switched off since the card came.
             if Chronicle.ReactionsOn() then
-                Chronicle.React(entry, entry.mine == nil)
+                Chronicle.React(entry, true)
             end
-        end,
-        tooltip = function(tip)
-            tip:SetText(entry.mine and ns.L.c_react_given or ns.L.c_react)
         end,
     }
 end

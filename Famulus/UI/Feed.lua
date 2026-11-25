@@ -7,14 +7,14 @@
 --
 --   story.reaction = {             -- optional: a button at the band's right
 --       icon = "cheer",            -- end that reacts to a friend's event
---       given = function() return true end, -- whether the player has
---       toggle = function() end,   -- gives the reaction or takes it back
---       tooltip = function(tip) end,
+--       given = function() return true end, -- whether the player has reacted
+--       give = function() end,     -- reacts
 --   }
 --
 -- Only that button catches the mouse; the rest of a card lets clicks through
 -- to the world. While the mouse is on it the card stays, and goes a moment
--- after the mouse has left. The place is saved account-wide in
+-- after the mouse has left. A reaction closes the card shortly after; it is
+-- taken back in the chronicle, not here. The place is saved account-wide in
 -- FamulusDB.feed, like the window's.
 
 local _, ns = ...
@@ -44,6 +44,7 @@ local REACT_ICON = 18
 local REACT_RIGHT = 16 -- from the band's right end
 local REACT_GAP = 12 -- between the text and the button
 local LINGER = 1.5 -- seconds a card stays once the mouse has left its button
+local CLOSE = 1 -- seconds a card stays after a reaction, to see it lit
 
 local anchor
 local pool, shown = {}, {} -- shown: the newest first
@@ -97,24 +98,11 @@ local function PaintReaction(button)
     UI.Tint(button.icon, given and "accent" or button.over and "text" or "textMuted")
 end
 
-local function ReactionTooltip(button)
-    local reaction = button.card.reaction
-    if reaction and reaction.tooltip then
-        GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
-        reaction.tooltip(GameTooltip)
-        GameTooltip:Show()
-    end
-end
-
-local function HideTooltip(button)
-    if GameTooltip.IsOwned and GameTooltip:IsOwned(button) then
-        GameTooltip:Hide()
-    end
-end
-
--- The button to react. While the mouse is on it the card stays, and one that
--- is fading comes back; once the mouse has left, a card whose time is up
--- goes LINGER later.
+-- The button to react, without a tooltip: the click and the lit button say
+-- enough. While the mouse is on it the card stays, and one that is fading
+-- comes back; once the mouse has left, a card whose time is up goes LINGER
+-- later. A click reacts, and the card goes CLOSE later whatever the mouse
+-- does; a reaction given is taken back in the chronicle only.
 local function NewReactButton(card)
     local button = CreateFrame("Button", nil, card)
     button.card = card
@@ -130,15 +118,18 @@ local function NewReactButton(card)
     button:SetScript("OnEnter", function(self)
         self.over = true
         card.held = true
-        if card.fading then
+        if card.fading and not card.closing then
             UI.CancelTween(card)
             card.fading = false
             card.due = true
             card:SetAlpha(1)
         end
-        self.hover:Fade(true)
+        -- Once given there is nothing more to click.
+        local reaction = card.reaction
+        if reaction and not reaction.given() then
+            self.hover:Fade(true)
+        end
         PaintReaction(self)
-        ReactionTooltip(self)
     end)
     button:SetScript("OnLeave", function(self)
         self.over = false
@@ -146,8 +137,7 @@ local function NewReactButton(card)
         card.leaves = card.leaves + 1
         self.hover:Fade(false)
         PaintReaction(self)
-        HideTooltip(self)
-        if card.due then
+        if card.due and not card.closing then
             local turn, leave = card.turn, card.leaves
             C_Timer.After(LINGER, function()
                 if card.turn == turn and card.leaves == leave and card.due and not card.held then
@@ -158,15 +148,22 @@ local function NewReactButton(card)
     end)
     button:SetScript("OnClick", function(self)
         local reaction = card.reaction
-        if not reaction then
+        if not reaction or card.closing or reaction.given() then
             return
         end
-        reaction.toggle()
-        PaintReaction(self)
-        -- What the tooltip said no longer holds.
-        if self.over then
-            ReactionTooltip(self)
+        reaction.give()
+        if not reaction.given() then
+            return -- (reactions were switched off since the card came)
         end
+        self.hover:Fade(false)
+        PaintReaction(self)
+        card.closing = true
+        local turn = card.turn
+        C_Timer.After(CLOSE, function()
+            if card.turn == turn and not card.fading then
+                FadeOut(card)
+            end
+        end)
     end)
     button:Hide()
     return button
@@ -313,8 +310,7 @@ local function Release(card, inTween)
     if not inTween then
         UI.CancelTween(card)
     end
-    HideTooltip(card.react)
-    card.held, card.due, card.fading = false, false, false
+    card.held, card.due, card.fading, card.closing = false, false, false, false
     card.reaction = nil
     card.react.over = false
     card.react.hover:Hide()

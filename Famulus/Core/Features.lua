@@ -356,11 +356,8 @@ SlashCmdList.FAMULUS = function(input)
                 given = function()
                     return given
                 end,
-                toggle = function()
-                    given = not given
-                end,
-                tooltip = function(tip)
-                    tip:SetText(given and L.c_react_given or L.c_react)
+                give = function()
+                    given = true
                 end,
             } or nil
             Feed.Show({ kind = "level", title = L.c_level:format(level), number = level, big = true, reaction = reaction },
