@@ -1599,11 +1599,13 @@ do
         and button.ground.fill.token == "control",
         "a friend's card on screen has a button to react; only the button catches the mouse")
     check(card.title:GetWidth() <= card:GetWidth() - 76 - 16 - 32, "the text keeps clear of the button")
+    GameTooltip:Hide()
+    GameTooltip:SetText("")
     button.scripts.OnEnter(button)
-    check(GameTooltip:GetText() == ns.L.c_react, "pointing at it says what it does")
     button.scripts.OnClick(button)
-    check(boss.mine == "strong" and button.ground.fill.token == "accentDeep" and GameTooltip:GetText() == ns.L.c_react_feed_given,
-        "a click reacts with the kind's reaction, lights the button up and says where to take it back")
+    check(boss.mine == "strong" and button.ground.fill.token == "accentDeep",
+        "a click reacts with the kind's reaction and lights the button up")
+    check(not GameTooltip:IsShown() and GameTooltip:GetText() == "", "the button has no tooltip: the click and its light say enough")
     button.scripts.OnClick(button)
     check(boss.mine == "strong", "a second click takes nothing back: that is the chronicle's")
     mock.Advance(0.8)

@@ -399,9 +399,8 @@ picture-book look are built and checked against the mock only.
     does (`ChronicleService.React`, sent by `Sharing.lua` as before): the button lights up
     (accent icon on `accentDeep`), and the card closes a second later (`CLOSE`), whether the
     mouse is still on it or not. The feed only gives: a reaction is taken back in the
-    chronicle, so a lit button does nothing more. Tooltip "Click to react" / "You reacted. You
-    can take it back in the chronicle." (`c_react_feed_given`; no "will see it" line: the
-    friend has just sent the entry, so they are online). Only while reactions are on
+    chronicle, so a lit button does nothing more. No tooltip: the click and the lit button say
+    enough (an earlier version had one; it was too much text). Only while reactions are on
     (`ChronicleService.ReactionsOn`, shared with the book); no button on the player's own
     cards, on reaction cards or on `friendLevel`. `/fam feed test` shows the button on its
     sample card too; there it only lights up and closes the card and sends nothing, so the look
