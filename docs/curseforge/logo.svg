@@ -3,7 +3,7 @@
     Project logo for CurseForge: the flame of Famulus/Media/logo.tga (same outlines and colours as
     tools/make_media.py and website/assets/logo.svg) on the dark ground of logo-round.tga, as a full
     square because CurseForge crops and rounds the avatar itself. Rendered to logo.png with headless
-    Chrome; the command is in AGENTS.md under "Veröffentlichung auf CurseForge".
+    Chrome; the command is in docs/release.md.
   -->
   <defs>
     <radialGradient id="ground" gradientUnits="userSpaceOnUse" cx="64" cy="78" r="100">

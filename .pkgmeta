@@ -14,6 +14,8 @@ manual-changelog:
 ignore:
   - AGENTS.md
   - CLAUDE.md
+  # Notes for AI assistants in subfolders (Famulus/UI/CLAUDE.md and so on); * matches "/" here.
+  - Famulus/*CLAUDE.md
   - README.md
   - CHANGELOG.md
   - dist
