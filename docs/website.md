@@ -225,8 +225,14 @@ owner.
   (`0.1.0-alpha.2`), only so that the local preview is right. A new text with the version must
   keep the form "Version <x>". The assistant's decision; the replacement ran on GitHub on
   2026-11-25 ("Version 0.1.0-alpha.2"), a run started by a tag has not happened yet.
-- **Deliberately not included yet:** a download (publishing is open; the button says
-  "Download coming soon"), Guildy (only once the PR there is accepted), more screenshots from the
+- **Download (2026-11-25, the owner's request):** The buttons in the navigation and the header
+  say "Download" instead of "Install"/"Installation" and, like the button in the release box,
+  lead straight to `www.curseforge.com/wow/addons/famulus` (project verified on CurseForge, not
+  yet listed publicly as of 2026-11-25). The section "Installation" stays. The project page,
+  not a direct file link (the assistant's recommendation, the owner agreed): it always shows the
+  newest file, offers the CurseForge app as well as the zip, and a file link would change with
+  every upload.
+- **Deliberately not included yet:** Guildy (only once the PR there is accepted), more screenshots from the
   game (so far only the window in the header), legal notice and privacy policy (needed before
   publishing), the domain (the owner gets it), a preview image for shared
   links, WOFF2 fonts (the TTFs from the addon are loaded, ~100 KB each).
