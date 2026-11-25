@@ -456,6 +456,11 @@ function ChronicleService.Companions()
     return list
 end
 
+-- The character's own statistics that friends see in their stats, by the
+-- game's IDs: deaths, creatures killed, quests completed, dungeons entered.
+-- Sharing sends them, the window shows them; a label is c_stat_<id>.
+ChronicleService.STATISTICS = { 60, 107, 98, 932 }
+
 function ChronicleService.Character()
     return character
 end

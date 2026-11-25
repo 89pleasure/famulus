@@ -1408,6 +1408,159 @@ mock.Advance(2)
 check(#mock.sent == 1 and mock.sent[1].text == "1~R~Varian Wrynn~" .. relayedAt .. "~death~level=30;zone=Duskwood",
     "asked for someone's news, it passes on what it has; nobody gets their own back")
 jaina.connected = true
+
+-- The queue keeps to the client's allowance, lets what happens now go first,
+-- sends again what the client refused and stops whispering to someone the
+-- client calls offline.
+enable("sharing", false)
+local mira = { name = "Mira Stormfeather", level = 30, area = "Westfall", guid = "Player-1-MIRA", connected = true }
+local tom = { name = "Tom Greywind", level = 30, area = "Westfall", guid = "Player-1-TOM", connected = true }
+local queuedAt = time()
+for i = 1, 25 do
+    Chronicle.Add("zone", { t = queuedAt - 3000 + i, zone = "Place " .. i, level = 13 })
+end
+Chronicle.Add("death", { t = queuedAt - 100, who = "Tom Greywind", level = 30, zone = "Duskwood" })
+setState({ friends = { mira, tom }, zone = "Westfall", level = 13, units = { player = { name = "Boris", surname = "Bloom" } },
+    guild = { { name = "Boris Bloom-Forever", online = true }, { name = "Thrall Hellscream-Forever", online = true } },
+    statistics = { [60] = "13" } })
+mock.Advance(10) -- the client's allowance is full again
+mock.sent, mock.attempts, mock.addonThrottle = {}, {}, true
+enable("sharing")
+mock.Advance(1)
+check(#mock.sent == 3, "switched on, it greets the guild and both friends")
+local function kindsTo(target, messages)
+    local kinds = {}
+    for _, message in ipairs(messages or mock.sent) do
+        if message.target == target then
+            local kind = message.text:match("^1~(%a)")
+            kinds[kind] = (kinds[kind] or 0) + 1
+        end
+    end
+    return kinds
+end
+local function refused()
+    local count = 0
+    for _, message in ipairs(mock.attempts) do
+        if message.result ~= 0 then
+            count = count + 1
+        end
+    end
+    return count
+end
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Mira Stormfeather")
+mock.Advance(0.5)
+check(#mock.sent >= 5 and #mock.sent <= 10, "an answer of 24 messages starts with no more than the client lets through at once (" .. #mock.sent .. ")")
+-- Her own hello back carries the newest of the entries that reached her.
+local miraHas = 0
+for _, message in ipairs(mock.sent) do
+    miraHas = math.max(miraHas, tonumber(message.text:match("^1~E~(%d+)")) or 0)
+end
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~" .. miraHas, "WHISPER", "Mira Stormfeather")
+mock.Advance(1)
+Chronicle.Add("item", { item = 4242, name = "Lucky Coin", level = 13 }) -- an own event, as it happens
+mock.Advance(60)
+do
+    local last, inOrder, liveAt, lastOffer = 0, true, nil, nil
+    for i, message in ipairs(mock.sent) do
+        local entryTime = tonumber(message.text:match("^1~E~(%d+)"))
+        if entryTime then
+            inOrder = inOrder and entryTime >= last
+            last = entryTime
+            if message.text:find("~item~item=4242", 1, true) then
+                liveAt = i
+            end
+        elseif message.text:find("^1~O~") then
+            lastOffer = i
+        end
+    end
+    check(inOrder and liveAt and lastOffer and liveAt < lastOffer,
+        "the own entries arrive in order, the live one after those caught up, and before the offers still waiting")
+end
+local toMira = kindsTo("Mira Stormfeather")
+check(toMira.E == 21 and toMira.H == 1, "a second hello while the first is answered sends nothing twice (" .. tostring(toMira.E) .. " entries)")
+check(toMira.S == 3, "the statistics go with each answer and once after the live entry")
+check(toMira.O == 2 and not sentTo("Mira Stormfeather", "1~O~Tom Greywind~" .. (queuedAt - 100)),
+    "offers go once per session, and not about someone who is online")
+check(refused() == 0 and sharing.ticker == nil, "the client refused nothing, and the queue is empty")
+
+local refusedOnce = false
+mock.addonResult = function()
+    if not refusedOnce then
+        refusedOnce = true
+        return Enum.SendAddonMessageResult.AddonMessageThrottle
+    end
+end
+mock.sent, mock.attempts = {}, {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~W~Varian Wrynn~0", "WHISPER", "Mira Stormfeather")
+mock.Advance(3)
+check(#mock.attempts == 2 and #mock.sent == 1 and mock.sent[1].text:find("^1~R~Varian Wrynn~") ~= nil,
+    "a message the client refuses waits and goes again")
+
+mock.addonResult = function(message)
+    if message.target == "Tom Greywind" then
+        return Enum.SendAddonMessageResult.TargetOffline
+    end
+end
+mock.sent, mock.attempts = {}, {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Tom Greywind")
+mock.Advance(30)
+check(#mock.attempts == 1 and mock.attempts[1].target == "Tom Greywind",
+    "after the client says someone is offline, nothing more is whispered to them")
+mock.addonResult = nil
+mock.sent, mock.attempts = {}, {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~" .. queuedAt, "WHISPER", "Tom Greywind")
+mock.Advance(10)
+check(kindsTo("Tom Greywind").S == 1, "until they speak again")
+
+local ena = { name = "Ena Silverbrook", level = 20, area = "Westfall", guid = "Player-1-ENA", connected = true }
+mock.state.friends = { mira, tom, ena }
+mock.sent = {}
+mock.Fire("FRIENDLIST_UPDATE")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. (queuedAt - 5) .. "~death~level=20;zone=Westfall", "WHISPER", "Ena Silverbrook")
+mock.Advance(1)
+check(kindsTo("Ena Silverbrook").H == 1 and sentTo("Ena Silverbrook").text == "1~H~" .. (queuedAt - 5),
+    "one hello waits per friend, and its mark is read when it goes out")
+mock.sent = {}
+Chronicle.Add("item", { item = 4243, name = "Lucky Charm", level = 13 }) -- live, to everyone linked
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~" .. (queuedAt - 2000), "WHISPER", "Ena Silverbrook")
+mock.Advance(30)
+check((kindsTo("Ena Silverbrook").E or 0) > 1, "a hello that comes after a live entry still gets what it missed before it")
+
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~P", "GUILD", "Thrall Hellscream-Forever")
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~S~40~60=1", "WHISPER", "Thrall Hellscream")
+mock.Advance(3)
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~P", "GUILD", "Thrall Hellscream-Forever")
+mock.Advance(1)
+check(sentTo("Thrall Hellscream") and sentTo("Thrall Hellscream").text:find("^1~H~") ~= nil,
+    "a guild member who reloads and greets again is answered, though still linked")
+-- Six friends catching up at once: their entries fill the first lane, and
+-- the hellos back still get in.
+local crowd = { mira, tom, ena }
+for i = 1, 6 do
+    crowd[#crowd + 1] = { name = "Friend" .. i .. " Test", level = 20, area = "Westfall", guid = "Player-1-CROWD" .. i, connected = true }
+end
+mock.state.friends = crowd
+mock.Fire("FRIENDLIST_UPDATE")
+mock.Advance(10)
+mock.sent = {}
+for i = 1, 6 do
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Friend" .. i .. " Test")
+end
+mock.Advance(200)
+do
+    local greeted = 0
+    for i = 1, 6 do
+        local kinds = kindsTo("Friend" .. i .. " Test")
+        if kinds.H == 1 and kinds.E == 20 then
+            greeted = greeted + 1
+        end
+    end
+    check(greeted == 6, "with many entries waiting, every friend still gets the entries and a hello back (" .. greeted .. " of 6)")
+end
+mock.addonThrottle = false
 enable("sharing", false)
 enable("ownJourney", false)
 check(ns:CountRegisteredEvents() == eventsBeforeSharing and sharing.ticker == nil, "switched off, it neither listens nor sends")

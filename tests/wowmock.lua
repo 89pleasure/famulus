@@ -491,6 +491,7 @@ GuildyAPI = {
 
 Enum = {
     TooltipDataType = { Unit = 2 },
+    SendAddonMessageResult = { Success = 0, AddonMessageThrottle = 3, ChannelThrottle = 8, AddOnMessageLockdown = 11, TargetOffline = 12 },
 }
 C_Item = {
     -- mock.state.owned = { [itemID] = <count> }; mock.state.itemNames = { [itemID] = "<name>" }
@@ -610,16 +611,36 @@ C_BattleNet = {
         return nil
     end,
 }
--- Addon messages: what was sent is collected in mock.sent.
+-- Addon messages: every call lands in mock.attempts, what the client accepted
+-- in mock.sent. mock.addonResult(message) may answer with a result code in
+-- place of the client. With mock.addonThrottle the client refuses like the
+-- real one (warcraft.wiki.gg): ten at once, then one more per second.
 mock.sent = {}
+mock.attempts = {}
+local addonAllowance, addonRefilled = 10, nil
 C_ChatInfo = {
     RegisterAddonMessagePrefix = function(prefix)
         record("C_ChatInfo.RegisterAddonMessagePrefix", prefix)
         return true
     end,
     SendAddonMessage = function(prefix, text, chatType, target)
-        mock.sent[#mock.sent + 1] = { prefix = prefix, text = text, chatType = chatType, target = target }
-        return 0
+        local message = { prefix = prefix, text = text, chatType = chatType, target = target }
+        mock.attempts[#mock.attempts + 1] = message
+        local result = mock.addonResult and mock.addonResult(message) or 0
+        if result == 0 and mock.addonThrottle then
+            addonAllowance = math.min(10, addonAllowance + (mock.now - (addonRefilled or mock.now)))
+            addonRefilled = mock.now
+            if addonAllowance < 1 then
+                result = Enum.SendAddonMessageResult.AddonMessageThrottle
+            else
+                addonAllowance = addonAllowance - 1
+            end
+        end
+        message.result = result
+        if result == 0 then
+            mock.sent[#mock.sent + 1] = message
+        end
+        return result
     end,
     InChatMessagingLockdown = function()
         return mock.state.lockdown == true

@@ -649,8 +649,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     (sendet dort). Namen: Gildenliste und Absender können `Vorname Nachname-Realm` liefern
     (so liest Guildy sie); der Schlüssel schneidet das ab.
   - **Weiterreichen (Wunsch des Auftraggebers, 2026-11-19):** Neuigkeiten von jemandem, der offline
-    ist, kommen über einen verbundenen Gefährten, der sie hat. Auf einen Gruß folgen bis zu 20
-    Angebote `1~O~<wer>~<zeit>`; wer daraus Neues erwartet, fragt mit `1~W~<wer>~<seit>` und bekommt
+    ist, kommen über einen verbundenen Gefährten, der sie hat. Auf den ersten Gruß einer Sitzung
+    folgen bis zu 20 Angebote `1~O~<wer>~<zeit>` (seit 2026-11-25 nur über Leute, die gerade nicht
+    online sind); wer daraus Neues erwartet, fragt mit `1~W~<wer>~<seit>` und bekommt
     bis zu 20 Einträge als `1~R~<wer>~<zeit>~<art>~…`. Regel: Erfragt und angenommen wird nur über
     Gildenmitglieder und über Leute, deren Addon in den letzten 30 Tagen direkt geantwortet hat
     (`FamulusDB.chronicle.links`; eine direkte Antwort kommt nur von jemandem, der den Spieler auf
@@ -683,9 +684,62 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Mock geprüft.
   - Geteilte Statistiken (IDs des Spiels): 60 Tode, 107 besiegte Kreaturen, 98 Quests, 932 betretene
     Dungeons. Sie stehen als „Bilanz“ je Person in der Randspalte des Reiters „Freunde“
-    (`FamulusDB.chronicle.profiles`; im Code heißen sie weiter `profile`).
-  - Alles läuft über eine Warteschlange mit Ticker (eine Nachricht je halbe Sekunde, nur solange
-    etwas wartet). Während der Chat-Sperre (Bosskampf, gesperrte Karte) bleibt sie stehen.
+    (`FamulusDB.chronicle.profiles`; im Code heißen sie weiter `profile`). Die Liste steht seit
+    2026-11-25 in `ChronicleService.STATISTICS` (vorher am Feature, das Fenster griff dafür in
+    `ns.features.sharing`).
+  - **Warteschlange (seit 2026-11-25, Freigabe des Auftraggebers nach der Analyse unten; die
+    Umsetzung im Einzelnen hat der Assistent entschieden):** Alles geht über eine Warteschlange
+    mit Ticker (alle 0,5 Sekunden, nur solange etwas wartet). Während der Chat-Sperre (Bosskampf,
+    gesperrte Karte) bleibt sie stehen. Das Leitungsformat ist unverändert.
+    - **Takt wie der Client:** Famulus zählt die Erlaubnis des Clients mit (`ALLOWANCE` 10 auf
+      einmal, `REFILL` 1 je Sekunde). Meldet `SendAddonMessage` trotzdem `AddonMessageThrottle`,
+      `ChannelThrottle` oder `AddOnMessageLockdown`, bleibt die Nachricht vorn in der Reihe und
+      geht später noch einmal (wie ChatThrottleLib ab v29). Bei `TargetOffline` geht an die
+      Person nichts mehr (`gone`), bis sie selbst wieder etwas schickt oder die Listen sie als
+      offline und wieder online zeigen. Die Werte kommen aus `Enum.SendAddonMessageResult`, sonst
+      aus festen Zahlen; `/fam test` prüft, ob es die drei Namen gibt (Gruppe `api`). Im
+      Entwicklermodus steht je Sitzung und Art eine Zeile im `devLog` (`SHARE`, „throttled“,
+      „lockdown“, „offline“), ohne Namen. So lässt sich im Spiel sehen, ob Forever drosselt.
+    - **Zwei Spuren:** vorn die eigenen Einträge (live und nachgeholt, in zeitlicher Folge), Grüße,
+      Fragen `W` und die Bilanz nach einem Live-Eintrag; hinten die Bilanz in einer Antwort,
+      Angebote und weitergereichte Einträge. Eigene Einträge stehen bewusst vorn und in Reihe:
+      Der Stand beim Gefährten („deine Neuigkeiten habe ich bis …“) darf nie über einen Eintrag
+      springen, den er nicht hat, sonst bekäme er ihn nie. Ein Live-Eintrag wartet deshalb hinter
+      dem Nachholen. Eigene Einträge werden nie abgewiesen; je Gefährte und Gruß kommen höchstens
+      20 dazu, keiner, der schon wartet. Für den Rest gelten 100 (vorn) und 200 (hinten) Plätze.
+    - **Doppelter Gruß:** Beide Seiten grüßen meist zweimal (beim Online-Kommen und beim ersten
+      Kontakt). Der Stand im Gruß wird erst beim Abschicken gelesen, je Person wartet höchstens
+      ein Gruß, und auf einen Gruß gehen nur Einträge raus, die nicht schon in der Reihe stehen.
+      Der zweite Gruß kostet so meist nur sich selbst und eine Bilanz.
+    - **Angebote** gehen je Gefährte einmal pro Sitzung raus und nur über Leute, die gerade nicht
+      online sind (die sagen es selbst). Eine Frage `W` gilt erst als gestellt, wenn sie in der
+      Reihe steht.
+    - **Gruß `P` nach `/reload`:** wird immer beantwortet, auch wenn der Absender noch als verbunden
+      gilt (`P` geht einmal je Sitzung raus, der Absender kennt danach niemanden). Vorher blieb ein
+      Gildenmitglied nach `/reload` unverbunden, und seine Meilensteine gingen an niemanden.
+  - **Kein eigener Service für den Austausch** (Entscheidung des Auftraggebers, 2026-11-25),
+    solange nur `sharing` Nachrichten schickt. Kommt ein zweites Feature dazu: Transport
+    (Präfix, Warteschlange, Annahmeregeln) und „wer ist da“ (online, verbunden, Gruß an die Gilde)
+    in einen Service unter `Core/`, das Chronik-Protokoll bleibt in `Sharing.lua`. Das
+    Leitungsformat bleibt dabei gleich (Alphas sind draußen); ein neues Feature bekommt neue
+    Buchstaben statt einer neuen Version, alte Versionen übergehen unbekannte Arten.
+  - **Viele Nutzer (Analyse 2026-11-25, im Mock simuliert):** Ein Client loggt sich ein, N
+    Gildenmitglieder mit Famulus sind online, zehn weitere offline, die anderen haben seine
+    Neuigkeiten bis gestern; 30 Sekunden nach dem Login steigt er auf. Die Drosselung ist wie im
+    Wiki nachgebaut. Die Simulation ist ein Skript außerhalb des Repos; die Gefährten darin
+    antworten ohne eigene Drosselung, die Zahlen sind also eher zu günstig.
+    - **Vorher:** Famulus schickte zwei Nachrichten je Sekunde und wertete die Rückgabe nicht aus,
+      was der Client ablehnte, war weg. Verloren beim Login: bei N = 1 13 von 46 Nachrichten, bei
+      3 55 von 128, ab 10 lief die Reihe (200 Plätze) zusätzlich über. Der Aufstieg erreichte bei
+      3 zwei, bei 5 zwei, bei 10 acht, bei 20 fünf Gefährten, der letzte nach bis zu 169 Sekunden.
+      Angebote machten bei N = 10 zwei Drittel des Verkehrs aus.
+    - **Nachher:** Nichts geht durch die Drosselung verloren. Der Aufstieg erreicht alle: bei 5
+      nach 7, bei 10 nach 42, bei 20 nach 112, bei 40 nach 252 Sekunden. Ab 20 weist die hintere
+      Spur Angebote und doppelte Bilanzen ab (bei 40: 220 und 60).
+    - **Grenze des Flüsterns:** Jede Nachricht geht einzeln an jeden, bei einer je Sekunde. Für
+      große Gilden der Weg über den Gildenkanal: Issue #12 (Live-Einträge, Bilanz und Angebote
+      einmal an die Gilde; offen sind ältere Versionen und die Reihenfolge). Dort steht auch, dass
+      `MAX_ENTRIES` (2000) für eigene und fremde Einträge zusammen gilt.
   - Frische Neuigkeiten erscheinen am Bildschirm über die Live-Einblendung (`liveFeed`, siehe
     unten); die frühere Option `toast` und `UI.Toast` sind entfallen.
   - **Ungeprüft im Spiel:** ob geflüsterte Addon-Nachrichten so ankommen, wie Name und Absender

@@ -28,9 +28,22 @@
 -- in their guild), so nothing arrives about strangers. Each person is asked
 -- of one companion per session, so news does not arrive once per companion.
 --
--- The client refuses addon messages during boss fights and on restricted
--- maps and limits how fast they may go out, so everything passes through a
--- queue that a ticker empties; the ticker runs only while something waits.
+-- Sending: the client refuses addon messages during boss fights and on
+-- restricted maps, and it lets each prefix send ten messages at once and
+-- gives back one per second (warcraft.wiki.gg, retail since 10.2.7; Forever
+-- unconfirmed). What it refuses is lost, so everything passes through a queue
+-- that keeps the same count and a ticker empties; the ticker runs only while
+-- something waits. A message the client refuses anyway waits and goes again.
+-- The queue has two lanes. The own entries, live or caught up, go first and
+-- in order, with greetings, questions and the statistics after a live
+-- entry; a companion's mark ("I have your news up to <time>") must never
+-- pass over an entry they have not got. The statistics in an answer, offers
+-- and passed-on entries wait behind them. Both sides often greet twice
+-- (when the other comes online and on the first contact); the mark in a
+-- hello is read when it goes out, and a hello that arrives while the answer
+-- to an earlier one still waits gets only what is not queued yet, so the
+-- second costs little. Offers go to each companion once per session, only
+-- about people who are not online themselves.
 
 local _, ns = ...
 local Chronicle = ns.ChronicleService
@@ -50,8 +63,11 @@ local sharing = ns:NewFeature({
 
 local PREFIX = "Famulus"
 local VERSION = "1"
-local SEND_INTERVAL = 0.5 -- seconds between two messages
-local MAX_QUEUE = 200
+local SEND_INTERVAL = 0.5 -- seconds between two looks at the queue
+local ALLOWANCE = 10 -- messages the client lets a prefix send at once
+local REFILL = 1 -- messages it gives back per second
+local MAX_NOW = 100 -- messages waiting in the first lane, own entries not counted
+local MAX_LATER = 200 -- messages waiting in the second lane
 local CATCH_UP = 20 -- entries sent to someone who was away
 local MAX_OFFERS = 20 -- people whose news is offered on a hello
 local LINK_AGE = 30 * 86400 -- how long a direct answer vouches for someone
@@ -73,17 +89,15 @@ local FIELDS = {
     skill = { skill = "n", name = "s", rank = "n", icon = "n" },
 }
 
--- The character's own statistics that are shared, by the game's IDs: deaths,
--- creatures killed, quests completed, dungeons entered.
-sharing.STATISTICS = { 60, 107, 98, 932 }
-
 local friends = {} -- key -> name: friends who are online
 local guild = {} -- key -> name: guild members, online or not
 local guildOnline = {} -- key -> name: guild members who are online
 local online = {} -- key -> name: friends and guild members who are online
 local linked = {} -- key -> name: whose addon answered this session
 local asked = {} -- key of someone offline -> key of the companion asked about them
-local queue, queueHead = {}, 1
+local offered = {} -- key -> true: got our offers this session
+local gone = {} -- key -> true: the client said they are offline, the lists not yet
+local helloWaiting = {} -- key -> true: a hello to them waits in the queue
 local registered = false
 local greetedGuild = false
 local statsPending = false -- the statistics will go out to the linked shortly
@@ -163,10 +177,11 @@ local function DecodeFields(text, fields)
     return values
 end
 
--- The character's own statistics: { [id] = number } for the shared IDs.
+-- The character's own statistics: { [id] = number } for the shared IDs
+-- (ChronicleService.STATISTICS).
 local function OwnStatistics()
     local wanted, values = {}, {}
-    for _, id in ipairs(sharing.STATISTICS) do
+    for _, id in ipairs(Chronicle.STATISTICS) do
         wanted[id] = true
     end
     if not (GetStatisticsCategoryList and GetCategoryNumAchievements and GetStatistic) then
@@ -206,9 +221,39 @@ end
 -- Sending
 ---------------------------------------------------------------------------
 
-local function SendNext()
-    if queueHead > #queue then
-        queue, queueHead = {}, 1
+-- What SendAddonMessage answers, as the client names it.
+local RESULT = Enum and Enum.SendAddonMessageResult or {}
+local THROTTLED = RESULT.AddonMessageThrottle or 3 -- too fast for this prefix
+local CHANNEL_THROTTLED = RESULT.ChannelThrottle or 8
+local LOCKDOWN = RESULT.AddOnMessageLockdown or 11 -- boss fight, restricted map
+local OFFLINE = RESULT.TargetOffline or 12
+
+-- A lane of the queue: first come, first served. others: how many of the
+-- waiting messages carry no own entry; only they count against max.
+local function NewLane(max)
+    return { head = 1, tail = 0, max = max, others = 0 }
+end
+
+local nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
+local allowance, refilled = ALLOWANCE, nil -- our count of the client's, and when it was last topped up
+
+local function Waiting(lane)
+    return lane.tail - lane.head + 1
+end
+
+-- What the client said, in the developer log, once per session and kind.
+local noted = {}
+local function Note(what)
+    if not noted[what] then
+        noted[what] = true
+        ns:DevLog("SHARE", what)
+    end
+end
+
+-- Sends what waits, as far as the allowance goes: the first lane first.
+local function Flush()
+    if Waiting(nowLane) + Waiting(laterLane) <= 0 then
+        nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
         sharing:StopTicker()
         return
     end
@@ -216,47 +261,127 @@ local function SendNext()
     if ns.ChatService.InLockdown() then
         return
     end
-    local item = queue[queueHead]
-    queue[queueHead] = false
-    queueHead = queueHead + 1
-    if item.channel then
-        C_ChatInfo.SendAddonMessage(PREFIX, item.text, item.channel)
-    -- Someone who went offline in the meantime gets nothing: whispering
-    -- into the void would print an error in the player's chat.
-    elseif online[item.key] then
-        C_ChatInfo.SendAddonMessage(PREFIX, item.text, "WHISPER", online[item.key])
+    local clock = GetTime()
+    allowance = math.min(ALLOWANCE, allowance + (clock - (refilled or clock)) * REFILL)
+    refilled = clock
+    while allowance >= 1 do
+        local lane = Waiting(nowLane) > 0 and nowLane or laterLane
+        local item = lane[lane.head]
+        if not item then
+            return
+        end
+        local result
+        -- Someone who went offline in the meantime gets nothing: whispering
+        -- into the void would print an error in the player's chat.
+        if item.channel or (online[item.key] and not gone[item.key]) then
+            local text = item.text
+            if type(text) == "function" then
+                text = text()
+            end
+            result = C_ChatInfo.SendAddonMessage(PREFIX, text, item.channel or "WHISPER", online[item.key])
+            if ns.IsSecret(result) then
+                result = nil
+            end
+            if result == THROTTLED or result == CHANNEL_THROTTLED or result == LOCKDOWN then
+                -- Refused, so not sent: the message stays first in line and
+                -- waits until the client lets more through.
+                Note(result == LOCKDOWN and "lockdown" or "throttled")
+                allowance = 0
+                return
+            end
+            allowance = allowance - 1
+            if result == OFFLINE and item.key then
+                Note("offline")
+                gone[item.key] = true
+            end
+        end
+        if item.hello then
+            helloWaiting[item.key] = nil
+        end
+        if not item.t then
+            lane.others = lane.others - 1
+        end
+        lane[lane.head] = nil
+        lane.head = lane.head + 1
     end
 end
 
--- To someone by key, or with channel to everyone there.
-local function Send(key, text, channel)
-    if not text or #text > 255 or #queue - queueHead + 1 >= MAX_QUEUE then
+-- Queues a message for someone by key, or with channel for everyone there.
+-- text: the message, or a function that writes it when it goes out. urgent:
+-- the first lane. entryTime: the time of the own entry it carries; such a
+-- message is never turned away, or the companion's mark would pass over it.
+-- A hello adds at most CATCH_UP of them per companion, none that wait
+-- already (Queued), and each own event one.
+local function Queue(key, text, channel, urgent, entryTime)
+    local lane = urgent and nowLane or laterLane
+    if not text or (type(text) == "string" and #text > 255) or (not entryTime and lane.others >= lane.max) then
         return
     end
-    queue[#queue + 1] = { key = key, text = text, channel = channel }
-    if not sharing.ticker then
-        sharing:StartTicker(SEND_INTERVAL, SendNext)
+    if not entryTime then
+        lane.others = lane.others + 1
     end
+    local item = { key = key, text = text, channel = channel, t = entryTime }
+    lane.tail = lane.tail + 1
+    lane[lane.tail] = item
+    if not sharing.ticker then
+        sharing:StartTicker(SEND_INTERVAL, Flush)
+    end
+    return item
 end
 
+local function Send(key, text, urgent, entryTime)
+    return Queue(key, text, nil, urgent, entryTime)
+end
+
+-- The own entries still waiting to go to key, as their messages.
+local function Queued(key)
+    local queued = {}
+    for _, lane in ipairs({ nowLane, laterLane }) do
+        for i = lane.head, lane.tail do
+            local item = lane[i]
+            if item.key == key and item.t then
+                queued[item.text] = true
+            end
+        end
+    end
+    return queued
+end
+
+-- The mark is read when the hello goes out: what arrives until then need
+-- not be sent again, and one waiting hello is enough.
 local function SendHello(key)
-    Send(key, table.concat({ VERSION, "H", string.format("%d", Chronicle.NewestFrom(online[key])) }, "~"))
+    if helloWaiting[key] then
+        return
+    end
+    local item = Send(key, function()
+        return table.concat({ VERSION, "H", string.format("%d", Chronicle.NewestFrom(online[key])) }, "~")
+    end, true)
+    if item then
+        item.hello, helloWaiting[key] = true, true
+    end
 end
 
 -- Offers the news of others this client knows, newest first, except of the
--- one who receives the offer.
+-- one who receives the offer and of people who are online and can tell it
+-- themselves. Once per companion and session.
 local function SendOffers(key)
-    local entries, offered, count = Chronicle.Entries(), {}, 0
+    if offered[key] then
+        return
+    end
+    offered[key] = true
+    local entries, seen, count = Chronicle.Entries(), {}, 0
     for i = #entries, 1, -1 do
         local who = entries[i].who
         if who and FIELDS[entries[i].k] and not entries[i].demo then
             local whoKey = Key(who)
-            if whoKey ~= key and not offered[whoKey] then
-                offered[whoKey] = true
-                count = count + 1
-                Send(key, table.concat({ VERSION, "O", Clean(who), string.format("%d", entries[i].t) }, "~"))
-                if count == MAX_OFFERS then
-                    return
+            if whoKey ~= key and not seen[whoKey] then
+                seen[whoKey] = true
+                if not online[whoKey] then
+                    count = count + 1
+                    Send(key, table.concat({ VERSION, "O", Clean(who), string.format("%d", entries[i].t) }, "~"))
+                    if count == MAX_OFFERS then
+                        return
+                    end
                 end
             end
         end
@@ -277,7 +402,7 @@ local function SendStatisticsSoon()
         if next(linked) then
             local text = EncodeStatistics()
             for key in pairs(linked) do
-                Send(key, text)
+                Send(key, text, true)
             end
         end
     end)
@@ -291,7 +416,7 @@ local function OnChronicleChanged(entry)
     end
     local text = EncodeEntry(entry)
     for key in pairs(linked) do
-        Send(key, text)
+        Send(key, text, true, entry.t)
     end
     if next(linked) then
         SendStatisticsSoon()
@@ -319,19 +444,25 @@ end
 
 local handlers = {}
 
--- "I am here", to the guild: greet them, they answer with their news.
+-- "I am here", to the guild: greet them, they answer with their news. It
+-- goes out once per session, after a login or a reload: whoever sends it
+-- knows nobody yet, even if they are still linked here.
 function handlers.P(key)
-    if not linked[key] then
-        SendHello(key)
-    end
+    offered[key] = nil
+    SendHello(key)
 end
 
 -- "I have your news up to <time>": send what is newer, the statistics and
--- what we know of others.
+-- what we know of others. What still waits in the queue for them is not
+-- queued twice: a second hello often comes while the first is being
+-- answered.
 function handlers.H(key, since)
-    since = tonumber(since) or 0
-    for _, entry in ipairs(Chronicle.OwnSince(since, CATCH_UP)) do
-        Send(key, EncodeEntry(entry))
+    local queued = Queued(key)
+    for _, entry in ipairs(Chronicle.OwnSince(tonumber(since) or 0, CATCH_UP)) do
+        local text = EncodeEntry(entry)
+        if not queued[text] then
+            Send(key, text, true, entry.t)
+        end
     end
     Send(key, EncodeStatistics())
     SendOffers(key)
@@ -362,9 +493,8 @@ function handlers.O(key, who, newest)
         return
     end
     local since = Chronicle.NewestFrom(name, true)
-    if (tonumber(newest) or 0) > since then
+    if (tonumber(newest) or 0) > since and Send(key, table.concat({ VERSION, "W", Clean(name), string.format("%d", since) }, "~"), true) then
         asked[whoKey] = key
-        Send(key, table.concat({ VERSION, "W", Clean(name), string.format("%d", since) }, "~"))
     end
 end
 
@@ -432,6 +562,7 @@ function sharing:CHAT_MSG_ADDON(_, prefix, text, channel, sender)
     if not online[key] then
         return -- neither a friend nor in the guild: ignored
     end
+    gone[key] = nil -- whoever speaks is online, whatever the client said before
     local handler = handlers[kind]
     if not handler then
         return
@@ -450,7 +581,7 @@ function sharing:CHAT_MSG_ADDON(_, prefix, text, channel, sender)
     end
     handler(key, a, b, c, d)
     if firstContact then
-        SendHello(key) -- after the handler: it knows what just arrived
+        SendHello(key)
     end
 end
 
@@ -468,9 +599,10 @@ local function Refresh()
     for key, name in pairs(friends) do
         now[key] = name
     end
+    -- Whoever went offline starts afresh when they come back.
     for key in pairs(online) do
         if not now[key] then
-            linked[key] = nil
+            linked[key], offered[key], gone[key] = nil, nil, nil
         end
     end
     local previous = online
@@ -508,7 +640,7 @@ function sharing:GUILD_ROSTER_UPDATE()
     -- and are taken only from members.
     if not greetedGuild and next(guild) then
         greetedGuild = true
-        Send(nil, VERSION .. "~P", "GUILD")
+        Queue(nil, VERSION .. "~P", "GUILD", true)
     end
 end
 
@@ -533,8 +665,9 @@ end
 
 function sharing:OnDisable()
     friends, guild, guildOnline, online, linked, asked = {}, {}, {}, {}, {}, {}
+    offered, gone, helloWaiting = {}, {}, {}
     greetedGuild, statsPending = false, false -- a pending After lapses with the feature
-    queue, queueHead = {}, 1
+    nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
 end
 
 -- For the tests.
