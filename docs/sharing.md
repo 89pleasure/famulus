@@ -34,7 +34,32 @@ guild channel), only known fields; `|` and control characters are removed.
 - Messages, fields separated by `~`: `1~H~<time>` (greeting: "I have your news up to
   <time>"), `1~E~<time>~<kind>~k=v;k=v` (an entry), `1~S~<level>~id=n;id=n~<class>`
   (statistics and, since 2026-11-24, the class, e.g. `MAGE`; older versions do not send it
-  and skip the field on receipt).
+  and skip the field on receipt), `1~X~<time>~<kind>~<reaction>~k=v` (a reaction, see
+  "Reactions" below).
+- **Reactions (the owner's request, 2026-11-25; checked against the mock only, not yet in
+  game):** A click on a friend's card in the chronicle reacts to it (see "Reactions" under
+  "Chronicle"). The message `1~X~<time>~<kind>~<reaction>~k=v` goes by whisper to the person
+  whose entry it is; `<reaction>` is `cheer`, `strong`, `sad` or `clap`, empty when taken back.
+  The entry is found by time and kind; `k=v` carries `skill`, `rank`, `ability` and `item`
+  where the entry has them (`ChronicleService.MARKS`), the same fields that tell two entries
+  of one second apart in `Add`. No new version: older versions ignore the unknown letter.
+  - **When it goes:** two seconds after the click (`REACT_DELAY`), so that on and off again
+    sends nothing; then at once if the person is linked (first lane), otherwise at their next
+    greeting `H` (`TellReactions`, the owner's requirement: "if both are online, it should go
+    out at once"). Only what went out counts as told (`told` on the entry; the queue calls
+    `item.done(sent)` when a message leaves it), so a reaction to someone who went offline
+    in the meantime waits for the next greeting. Several clicks to one entry while a message
+    waits send the newest state afterwards.
+  - **Received:** only from friends and guild members online (as every message), only to the
+    playing character's own entries, only for kinds with a reaction. A reaction this version
+    does not know (a newer one's) counts as the kind's own. Option `reactions` of `sharing`
+    (default on, because nothing goes out without a click); off: nothing is sent or taken,
+    the cards show no reactions. Sample entries never send.
+  - **Who sees what (stage 1, the owner was unsure, 2026-11-25):** the person whose entry it is
+    sees who reacted; the one who reacted sees their own reaction. Others see nothing.
+    Proposed for later (stage 2, not commissioned): the person whose entry it is sends the
+    count to everyone linked, others see the number without names (they often do not know the
+    people who reacted). The message `X` stays the same for it.
 - A greeting goes to every friend who comes online. Whoever answers counts as connected for the
   session and gets one's own milestones live. A greeting is followed by all missed
   own entries (in rounds of 20, see "Queue") and the statistics.

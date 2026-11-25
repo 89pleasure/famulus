@@ -17,9 +17,17 @@
 --   1~O~<who>~<time>      offer: "I have news of <who> up to <time>"
 --   1~W~<who>~<time>      want: "send me what you have of <who> after <time>"
 --   1~R~<who>~<time>~<kind>~k=v;k=v   one entry of <who>, passed on
+--   1~X~<time>~<kind>~<reaction>~k=v  the sender's reaction to an entry of
+--                         the receiver's ("cheer"; empty: taken back); k=v
+--                         tells two entries of one second apart
 -- A hello is answered with the entries the other side lacks, the statistics
 -- and the offers. Whoever answered is "linked" for the session and gets the
 -- live entries, and a moment after them the statistics once more.
+--
+-- Reactions (option "reactions"): a click on a companion's card gives one
+-- (ChronicleService.React). It goes to them REACT_DELAY later, so that a
+-- click on and off again sends nothing; to someone not linked it waits for
+-- their next hello. Only what went out counts as told.
 --
 -- Passing on: news of someone who is offline comes from a linked companion
 -- who has it. It is asked for and taken only about people the player shares
@@ -70,6 +78,10 @@ local sharing = ns:NewFeature({
         "C_FriendList.GetNumFriends",
         "C_FriendList.GetFriendInfoByIndex",
     },
+    -- Sent only on a click, so on from the start once sharing is.
+    options = {
+        { key = "reactions", type = "toggle", default = true },
+    },
 })
 
 local PREFIX = "Famulus"
@@ -96,6 +108,9 @@ local MAX_TEXT = 60 -- bytes of a name or place in a message
 -- Seconds from an own event to the statistics that follow it: the game counts
 -- a death a moment later, and events in a row share one message.
 local STATS_DELAY = 5
+-- Seconds from a click on a reaction to its message: on and off again in
+-- that time sends nothing.
+local REACT_DELAY = 2
 
 -- What may travel, per kind: field -> "n" (number) or "s" (text).
 local FIELDS = {
@@ -122,6 +137,9 @@ local offeredAt = {} -- key -> GetTime() of the last offers queued for them
 local registered = false
 local greetedGuild = false
 local statsPending = false -- the statistics will go out to the linked shortly
+local reactionsDue = {} -- entry -> true: clicked on, to be told after REACT_DELAY
+local reactionsPending = false -- that telling is on its way
+local reactionWaiting = {} -- entry -> true: a reaction to it waits in the queue
 local tracedRoster, tracedFriends, tracedLockdown = nil, nil, false -- what the trace last said
 
 -- A name without the realm the client may add, and one spelling for it
@@ -209,12 +227,9 @@ local function Clean(text)
     return text
 end
 
--- An entry as "1~E~..." or, with who, as "1~R~<who>~...".
-local function EncodeEntry(entry, who)
-    local fields = FIELDS[entry.k]
-    if not fields then
-        return nil
-    end
+-- The values of an entry as "k=v;k=v", those named in fields only: field
+-- -> "n" (number) or "s" (text).
+local function EncodeFields(entry, fields)
     local parts = {}
     for field, kind in pairs(fields) do
         local value = entry[field]
@@ -225,8 +240,23 @@ local function EncodeEntry(entry, who)
         end
     end
     table.sort(parts)
+    return table.concat(parts, ";")
+end
+
+-- An entry as "1~E~..." or, with who, as "1~R~<who>~...".
+local function EncodeEntry(entry, who)
+    local fields = FIELDS[entry.k]
+    if not fields then
+        return nil
+    end
     local head = who and (VERSION .. "~R~" .. Clean(who)) or (VERSION .. "~E")
-    return table.concat({ head, string.format("%d", entry.t), entry.k, table.concat(parts, ";") }, "~")
+    return table.concat({ head, string.format("%d", entry.t), entry.k, EncodeFields(entry, fields) }, "~")
+end
+
+-- The player's reaction to a companion's entry, as it is now, as "1~X~...".
+local function EncodeReaction(entry)
+    return table.concat({ VERSION, "X", string.format("%d", entry.t), entry.k, entry.mine or "",
+        EncodeFields(entry, Chronicle.MARKS) }, "~")
 end
 
 -- "k=v;k=v" -> table, keeping only the fields that kind allows.
@@ -380,7 +410,7 @@ local function Flush()
         if not item then
             return
         end
-        local result, continueFrom
+        local result, continueFrom, sent = nil, nil, false
         -- Someone who went offline in the meantime gets nothing: whispering
         -- into the void would print an error in the player's chat. A skipped
         -- item was replaced by a later round of catching up.
@@ -431,6 +461,7 @@ local function Flush()
                     continueFrom = item.t
                 end
                 if result == nil or result == true or result == SUCCESS then
+                    sent = true
                     Trace("sent %s to %s", KindOf(text), Tag(item.key))
                 else
                     Trace("sent %s to %s: %s", KindOf(text), Tag(item.key), ResultName(result))
@@ -450,6 +481,10 @@ local function Flush()
         lane.head = lane.head + 1
         if continueFrom then
             CatchUp(item.key, continueFrom)
+        end
+        -- Whoever queued it hears whether it went out.
+        if item.done then
+            item.done(sent)
         end
     end
 end
@@ -585,6 +620,63 @@ local function SendStatisticsSoon()
     end)
 end
 
+-- Tells the companion whose entry it is the player's reaction as it is now,
+-- if they are linked and have yet to be told. It counts as told once it went
+-- out; a change while it waited goes after it. To someone who is not linked
+-- it waits for their next hello (TellReactions).
+local function TellReaction(entry)
+    local key = entry.who and Key(entry.who)
+    if not key or not linked[key] or reactionWaiting[entry] or not sharing:Get("reactions")
+        or not Chronicle.ReactionUntold(entry) then
+        return
+    end
+    local reaction = entry.mine
+    local item = Send(key, EncodeReaction(entry), true)
+    if not item then
+        return
+    end
+    reactionWaiting[entry] = true
+    item.done = function(sent)
+        reactionWaiting[entry] = nil
+        if sent then
+            Chronicle.ReactionTold(entry, reaction)
+            TellReaction(entry)
+        end
+    end
+    Trace("reaction to %s queued: %s", Tag(key), reaction and "given" or "taken back")
+end
+
+-- The reactions a companion has yet to be told, when they say hello.
+local function TellReactions(key)
+    local entries = Chronicle.Entries()
+    for i = #entries, 1, -1 do
+        local entry = entries[i]
+        if entry.who and Chronicle.ReactionUntold(entry) and Key(entry.who) == key then
+            TellReaction(entry)
+        end
+    end
+end
+
+-- A click on a reaction: told REACT_DELAY later, with the clicks that
+-- follow it until then.
+local function OnReacted(entry)
+    if not sharing.enabled or type(entry) ~= "table" then
+        return
+    end
+    reactionsDue[entry] = true
+    if reactionsPending then
+        return
+    end
+    reactionsPending = true
+    sharing:After(REACT_DELAY, function()
+        local due = reactionsDue
+        reactionsDue, reactionsPending = {}, false
+        for each in pairs(due) do
+            TellReaction(each)
+        end
+    end)
+end
+
 -- A fresh entry of the player's own goes to every linked companion, and the
 -- statistics after it.
 local function OnChronicleChanged(entry)
@@ -631,11 +723,30 @@ function handlers.P(key)
 end
 
 -- "I have your news up to <time>": send what is newer, the statistics and
--- what we know of others.
+-- what we know of others, and the reactions to their news they missed.
 function handlers.H(key, since)
     CatchUp(key, tonumber(since) or 0)
     Send(key, EncodeStatistics())
     SendOffers(key)
+    TellReactions(key)
+end
+
+-- A reaction to one of the player's own entries ("1~X~<time>~<kind>~<reaction>~k=v").
+-- One this version does not know (a newer one's) counts as the kind's own.
+function handlers.X(key, when, kind, reaction, marks)
+    local own = Chronicle.REACTIONS[kind or ""]
+    if not sharing:Get("reactions") or not own then
+        Trace("reaction from %s not taken: %s", Tag(key), own and "reactions are off" or "a kind without reactions")
+        return
+    end
+    if reaction == "" or reaction == nil then
+        reaction = nil
+    elseif not Chronicle.IsReaction(reaction) then
+        reaction = own
+    end
+    local entry = Chronicle.Receive(tonumber(when), kind, DecodeFields(marks, Chronicle.MARKS), online[key], reaction)
+    Trace("reaction from %s %s: %s", Tag(key), reaction and "given" or "taken back",
+        entry and "to an own entry" or "no such own entry, not taken")
 end
 
 function handlers.E(key, when, kind, fields)
@@ -873,6 +984,7 @@ function sharing:OnEnable()
         registered = true
         C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
         ns:On("CHRONICLE_CHANGED", OnChronicleChanged)
+        ns:On("CHRONICLE_REACTED", OnReacted)
     end
     self:RegisterEvent("CHAT_MSG_ADDON")
     self:RegisterEvent("FRIENDLIST_UPDATE")
@@ -895,6 +1007,7 @@ function sharing:OnDisable()
     tracedRoster, tracedFriends, tracedLockdown = nil, nil, false
     whispersCounted = false
     greetedGuild, statsPending = false, false -- a pending After lapses with the feature
+    reactionsDue, reactionsPending, reactionWaiting = {}, false, {} -- what is untold waits for a hello
     nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
 end
 

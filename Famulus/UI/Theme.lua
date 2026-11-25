@@ -49,6 +49,11 @@ UI.media = {
     hammer = MEDIA .. "hammer.tga",
     horseshoe = MEDIA .. "horseshoe.tga",
     chest = MEDIA .. "chest.tga",
+    -- Reactions to a friend's event (ChronicleService.REACTIONS).
+    sad = MEDIA .. "sad.tga",
+    cheer = MEDIA .. "cheer.tga",
+    strong = MEDIA .. "strong.tga",
+    clap = MEDIA .. "clap.tga",
     shadow = MEDIA .. "shadow.tga",
     grain = MEDIA .. "grain.tga",
     logo = MEDIA .. "logo.tga",

@@ -1263,6 +1263,13 @@ do -- sample entries for looking at the book
     check(lysa >= 3, "and a third companion tells some of the story")
     check(Chronicle.Class("Mira Stormfeather") == "MAGE" and Chronicle.Class("Borin Ironbeard") == "WARRIOR"
         and Chronicle.Class("Lysa Morningdew") == "PRIEST", "the sample companions come with their classes")
+    local received, given = 0, nil
+    for _, entry in ipairs(Chronicle.Entries()) do
+        received = received + #Chronicle.Reactions(entry)
+        given = given or (entry.mine and entry)
+    end
+    check(received >= 3 and given and given.who == "Borin Ironbeard" and not Chronicle.ReactionUntold(given),
+        "friends reacted to some sample events, and the player to one of Borin's, which is never sent")
     SlashCmdList.FAMULUS("chronicle demo clear")
     check(#Chronicle.Entries() == count, "/fam chronicle demo clear removes them and nothing else")
     check(Chronicle.Class("Mira Stormfeather") == nil, "and their classes")
@@ -1386,6 +1393,96 @@ mock.Fire("FRIENDLIST_UPDATE")
 mock.Fire("BOSS_KILL", 5, "Hogger")
 mock.Advance(1)
 check(#mock.sent == 0, "a friend who went offline gets no whisper")
+
+-- Reactions: a click on a friend's card gives one, which goes to them while
+-- they are online; one to someone offline waits for their next hello.
+check(sharing:Get("reactions") == true, "reactions are on with sharing")
+check(Chronicle.Reaction(theirs) == "sad" and Chronicle.REACTIONS.level == "cheer" and Chronicle.REACTIONS.boss == "strong"
+    and Chronicle.REACTIONS.skill == "clap" and Chronicle.REACTIONS.item == "cheer" and Chronicle.REACTIONS.zone == nil,
+    "each kind has its reaction; arriving in a zone has none")
+check(Chronicle.Reaction({ k = "friendLevel", who = "Jaina Proudmoore", t = 1 }) == nil and Chronicle.Reaction({ k = "level", t = 1 }) == nil,
+    "neither a level seen on the friends list nor one of the player's own can be reacted to")
+Chronicle.React(theirs, true)
+mock.Advance(3)
+check(theirs.mine == "sad" and Chronicle.ReactionUntold(theirs) and #mock.sent == 0,
+    "a reaction to a friend who is offline is kept, untold")
+jaina.connected = true -- she comes back
+mock.Fire("FRIENDLIST_UPDATE")
+mock.Advance(1)
+mock.sent = {}
+mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~" .. time(), "WHISPER", "Jaina Proudmoore")
+mock.Advance(2)
+do
+    local told
+    for _, message in ipairs(mock.sent) do
+        told = told or (message.target == "Jaina Proudmoore" and message.text == "1~X~" .. sharedNow .. "~death~sad~")
+    end
+    check(told and theirs.told == "sad" and not Chronicle.ReactionUntold(theirs),
+        "at her hello it goes out, and counts as told")
+end
+mock.sent = {}
+Chronicle.React(theirs, false)
+mock.Advance(1)
+Chronicle.React(theirs, true)
+mock.Advance(3)
+check(#mock.sent == 0, "taken back and given again within two seconds, nothing goes out")
+Chronicle.React(theirs, false)
+mock.Advance(1)
+check(#mock.sent == 0, "a click goes out two seconds later")
+mock.Advance(2)
+check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. sharedNow .. "~death~~" and theirs.told == nil and theirs.mine == nil,
+    "taking it back tells her so, at once while she is online: " .. tostring(mock.sent[1] and mock.sent[1].text))
+do -- two entries of one second are told apart
+    mock.sent = {}
+    local mining = { who = "Jaina Proudmoore", skill = 186, name = "Mining", rank = 150, t = sharedNow - 5 }
+    Chronicle.Add("skill", mining)
+    Chronicle.React(mining, true)
+    mock.Advance(3)
+    check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. (sharedNow - 5) .. "~skill~clap~rank=150;skill=186",
+        "a reaction names what tells the entry apart: " .. tostring(mock.sent[1] and mock.sent[1].text))
+end
+
+-- Received: a friend's reaction to one of the player's own entries.
+do
+    local ownLevel
+    for _, entry in ipairs(Chronicle.Entries()) do
+        if entry.k == "level" and not entry.who and entry.level == 14 then
+            ownLevel = entry
+        end
+    end
+    local function react(text, sender)
+        mock.Fire("CHAT_MSG_ADDON", "Famulus", text, "WHISPER", sender or "Jaina Proudmoore")
+    end
+    local at = ownLevel and ownLevel.t or 0
+    ns.UI.Feed.Clear()
+    react("1~X~" .. at .. "~level~cheer~")
+    check(ownLevel and ownLevel.r and ownLevel.r["Jaina Proudmoore"] == "cheer" and Chronicle.Reactions(ownLevel)[1] == "Jaina Proudmoore",
+        "a friend's reaction to an own entry is kept with it, by name")
+    local card = ns.UI.Feed.Shown()[1]
+    check(card and card.title:GetText() == "Jaina Proudmoore celebrates with you" and card.detail:GetText():find("Reached level 14", 1, true) == 1
+        and card.icon:IsShown(), "and appears on screen: who, and to what")
+    react("1~X~" .. at .. "~level~cheer~", "Some Stranger")
+    react("1~X~" .. (at + 1) .. "~level~cheer~")
+    react("1~X~" .. at .. "~zone~cheer~")
+    check(#Chronicle.Reactions(ownLevel) == 1, "not from strangers, not to an entry that is not there, not to a kind without reactions")
+    react("1~X~" .. at .. "~level~fireworks~")
+    check(ownLevel.r["Jaina Proudmoore"] == "cheer", "a reaction this version does not know counts as the kind's own")
+    react("1~X~" .. at .. "~level~~")
+    check(ownLevel.r == nil, "taken back, it is gone")
+    sharing:Set("reactions", false)
+    react("1~X~" .. at .. "~level~cheer~")
+    check(ownLevel.r == nil, "with reactions switched off, none is taken")
+    sharing:Set("reactions", true)
+    -- Two own entries of one second: the reaction finds the one it names.
+    local tailoring = { skill = 197, name = "Tailoring", rank = 75, t = at - 2 }
+    local mining = { skill = 186, name = "Mining", rank = 75, t = at - 2 }
+    Chronicle.Add("skill", tailoring)
+    Chronicle.Add("skill", mining)
+    react("1~X~" .. (at - 2) .. "~skill~clap~rank=75;skill=186")
+    check(mining.r and mining.r["Jaina Proudmoore"] == "clap" and tailoring.r == nil, "of two entries in one second, the one named")
+    mock.Advance(10)
+    mock.sent = {}
+end
 jaina.connected = true
 
 -- Passing on: news of someone offline comes from a companion who has it, only
@@ -2187,6 +2284,81 @@ do -- an item is shown with the game's icon of it, in its own colours
     check(mock.links and #mock.links == 2 and mock.links[1] == "trade:Player-1-JAINA:2656:186"
         and mock.links[2] == "trade:Player-1-GJAINA:2656:186" and #mock.opened == 1,
         "online, as a friend or in the guild, the book opens from a link built for them")
+    -- With reactions (sharing on): a click on a friend's card reacts and the
+    -- recipe book moves to the picture; the player's own cards show who reacted.
+    enable("sharing")
+    local ownLevel = { level = 15, t = time() - 30 }
+    Chronicle.Add("level", ownLevel)
+    Chronicle.Receive(ownLevel.t, "level", {}, "Jaina Proudmoore", "cheer")
+    Chronicle.Receive(ownLevel.t, "level", {}, "Mira Stormfeather", "cheer")
+    mock.Advance(0.1)
+    local function storyOf(test)
+        for _, each in ipairs(bookFrames("story")) do
+            if test(each.story) then
+                return each
+            end
+        end
+    end
+    local function theirSkill()
+        return storyOf(function(story) return story.kind == "skill" and story.chip.text == "Jaina Proudmoore" end)
+    end
+    local function mySkill()
+        return storyOf(function(story) return story.kind == "skill" and story.chip.text ~= "Jaina Proudmoore" end)
+    end
+    local function myLevel()
+        return storyOf(function(story) return story.kind == "level" and story.number == 15 end)
+    end
+    local theirEntry
+    for _, entry in ipairs(Chronicle.Entries()) do
+        if entry.k == "skill" and entry.who == "Jaina Proudmoore" then
+            theirEntry = entry
+        end
+    end
+    local said, lines = nil, {}
+    local setText, addLine = GameTooltip.SetText, GameTooltip.AddLine
+    GameTooltip.SetText = function(_, text)
+        said, lines = text, {}
+    end
+    GameTooltip.AddLine = function(_, text)
+        lines[#lines + 1] = text
+    end
+    theirs = theirSkill()
+    check(theirs.reaction:IsShown() and not theirs.reactionCount:IsShown() and theirs.story.reaction.icon == "clap"
+        and not theirs.story.reaction.lit and theirs.card.mouseEnabled and theirs.picture.mouseEnabled,
+        "a friend's card shows its reaction, muted; card and picture can be clicked")
+    theirs.card.scripts.OnEnter(theirs.card)
+    check(said == "Click to react", "the card says what a click does")
+    theirs.picture.scripts.OnEnter(theirs.picture)
+    theirs.picture.scripts.OnMouseUp(theirs.picture, "LeftButton")
+    check(said == "Open the recipe book" and #mock.links == 3 and theirEntry.mine == nil, "the picture opens the recipe book")
+    theirs.card.scripts.OnMouseUp(theirs.card, "LeftButton")
+    mock.Advance(0.1)
+    theirs = theirSkill()
+    check(theirEntry.mine == "clap" and theirs.story.reaction.lit and #mock.links == 3, "a click on the card reacts, and the reaction lights up")
+    theirs.card.scripts.OnEnter(theirs.card)
+    check(said == "You reacted. Click again to take it back." and lines[1] == "Jaina Proudmoore will see it as soon as you are both online.",
+        "until she is told, the card says she will be")
+    theirs.card.scripts.OnMouseUp(theirs.card, "LeftButton")
+    mock.Advance(0.1)
+    check(theirEntry.mine == nil and not theirSkill().story.reaction.lit, "a second click takes it back")
+    local own = mySkill()
+    own.card.scripts.OnMouseUp(own.card, "LeftButton")
+    check(not own.reaction:IsShown() and #mock.opened == 2, "the player's own profession has no reaction and still opens on a click")
+    local level = myLevel()
+    check(level and level.reaction:IsShown() and level.reactionCount:IsShown() and level.reactionCount:GetText() == "2"
+        and level.story.reaction.icon == "cheer" and level.story.reaction.lit and level.card.mouseEnabled,
+        "the player's own event shows how many reacted")
+    level.card.scripts.OnEnter(level.card)
+    check(said == "Reactions from" and lines[1] == "Jaina Proudmoore" and lines[2] == "Mira Stormfeather",
+        "and who, on the mouse")
+    sharing:Set("reactions", false)
+    mock.Advance(0.1)
+    check(not theirSkill().reaction:IsShown() and theirSkill().story.onPicture == nil and theirSkill().picture.mouseEnabled == false
+        and not myLevel().reaction:IsShown() and myLevel().card.mouseEnabled == false,
+        "with reactions switched off, the cards are as before")
+    GameTooltip.SetText, GameTooltip.AddLine = setText, addLine
+    sharing:Set("reactions", true)
+    enable("sharing", false)
     check(not Chronicle.HasBook(182) and Chronicle.BookLink("Jaina Proudmoore", 182) == nil, "a gathering profession has no book")
     mock.state.friends, mock.state.guild = friendsBefore, guildBefore
     mock.state.itemIcons = nil
@@ -2205,10 +2377,10 @@ do -- an item is shown with the game's icon of it, in its own colours
 end
 mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
-check(#visibleRows() == 16 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
+check(#visibleRows() == 18 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
     and not window.railScroll:IsShown() and visibleRows()[1]:GetWidth() == 900,
-    "recording: the four switches, the feed's eleven options and how people are named; no book, no rail (got " .. #visibleRows() .. ")")
-check(visibleRows()[16].item.key == "chronicleNames" and visibleRows()[16].toggle ~= nil and visibleRows()[16].item.get() == true,
+    "recording: the four switches, the reactions of sharing, the feed's twelve options and how people are named; no book, no rail (got " .. #visibleRows() .. ")")
+check(visibleRows()[18].item.key == "chronicleNames" and visibleRows()[18].toggle ~= nil and visibleRows()[18].item.get() == true,
     "the character name behind an alias is a switch of its own, on from the start")
 Chronicle.Clear()
 mock.Advance(0.1)

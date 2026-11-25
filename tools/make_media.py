@@ -156,11 +156,12 @@ write_tga("people.tga", 32, stroke(PEOPLE, PEN, [(11, 12.5, 4.4), (23, 10.5, 3.4
 
 
 # Pictures of the chronicle: drawn in a 32 px box like the icons, but written
-# at twice the size, because they are shown larger.
-def picture(name, paths, circles=()):
+# at twice the size, because they are shown larger. pen: the line's width at
+# that size.
+def picture(name, paths, circles=(), pen=3.6):
     paths = [[(x * 2, y * 2) for x, y in path] for path in paths]
     circles = [(cx * 2, cy * 2, r * 2) for cx, cy, r in circles]
-    write_tga(name, 64, stroke(paths, 3.6, circles))
+    write_tga(name, 64, stroke(paths, pen, circles))
 
 
 # A skull: the dome, the jaw with two teeth, the eyes.
@@ -212,6 +213,57 @@ picture("chest.tga", CHEST, [(16, 17, 2.2)])
 
 # A horseshoe with two nail holes: learned to ride.
 picture("horseshoe.tga", [arc(16, 14.5, 9.5, 115, 425)], [(8.6, 12, 1.1), (23.4, 12, 1.1)])
+
+
+# Reactions to a friend's event, one per kind (ChronicleService.REACTIONS).
+# They are shown small (18 px at the foot of a card), so their lines are
+# stronger and their shapes plain. No two points of a path may be the same:
+# a segment needs a length.
+REACTION_PEN = 5
+
+
+def turn(points, degrees, cx, cy):
+    """Points turned about (cx, cy); positive degrees turn clockwise on screen."""
+    a = math.radians(degrees)
+    c, s = math.cos(a), math.sin(a)
+    return [(cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c) for x, y in points]
+
+
+# A sad face with a tear: a death.
+picture(
+    "sad.tga",
+    [arc(14.5, 25.5, 4.5, 220, 320), [(21.5, 16.3)] + arc(21.5, 19.5, 1.3, -30, 210) + [(21.5, 16.3)]],
+    [(16, 16, 11.5), (11.5, 13, 0.6), (20, 13, 0.6)],
+    REACTION_PEN,
+)
+
+# A party popper with confetti flying out of it: a level, a special event.
+CHEER = [
+    [(4.5, 27.5), (8.5, 14.5), (17.5, 23.5), (4.5, 27.5)],
+    [(19.5, 12.5), (25, 7)],
+    [(12.5, 10.5), (14, 7.5), (12, 5), (13, 2.5)],
+    [(21.5, 18), (24.5, 16.5), (27, 18.5), (29.5, 17)],
+]
+picture("cheer.tga", CHEER, [(19.5, 3.8, 0.5), (28.2, 11.5, 0.5), (6.2, 8, 0.5)], REACTION_PEN)
+
+# A flexed arm with its fist: a boss.
+STRONG = [
+    [(3, 28), (20, 28)] + arc(20, 21, 7, 90, 0, 12)[1:] + [(27, 14.5)]
+    + arc(21.5, 9.5, 5.5, 25, -200, 24) + [(17.5, 13), (20.8, 14.5), (20.6, 16.8)]
+    + arc(12.5, 20.5, 7.5, -25, -170, 20) + [(3, 20)],
+]
+picture("strong.tga", STRONG, (), REACTION_PEN)
+
+# Two palms meeting, with the burst of the clap above them: a profession.
+PALM = turn([(8.5, 29)] + arc(12, 15.5, 3.5, 180, 360, 14) + [(15.5, 25.5), (14, 29)], 20, 15.5, 12)
+CLAP = [
+    PALM,
+    [(32 - x, y) for x, y in PALM],
+    [(16, 7), (16, 2.5)],
+    [(9.5, 8), (7, 4.5)],
+    [(22.5, 8), (25, 4.5)],
+]
+picture("clap.tga", CLAP, (), REACTION_PEN)
 
 
 # Soft drop shadow, used in nine pieces around a window or menu. The centre

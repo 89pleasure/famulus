@@ -10,7 +10,8 @@ local _, ns = ...
 
 -- The kinds of events with a switch, in the order of the window. An arrival
 -- in a zone is off from the start: it happens often and is rarely news.
-local KINDS = { "level", "death", "boss", "achievement", "ability", "item", "profession", "skill", "zone" }
+-- "reaction": a friend reacted to one of the player's events (Sharing.lua).
+local KINDS = { "level", "death", "boss", "achievement", "ability", "item", "profession", "skill", "zone", "reaction" }
 local OFF_BY_DEFAULT = { zone = true }
 
 local options = {
@@ -33,6 +34,22 @@ feed.SECONDS = { short = 4, normal = 7, long = 12 }
 
 local FRESH = 120 -- seconds; older news (caught up on, passed on) is not announced
 local listening = false
+
+-- Shows the card story() makes. In developer mode the log says whether it
+-- came up, so that "it did not appear" can be told from "it was overlooked".
+local function Show(kind, story)
+    local UI = ns.UI
+    if not (UI and UI.Feed) then
+        return
+    end
+    local ok, problem = pcall(function()
+        UI.Feed.Show(story(), feed.SECONDS[feed:Get("duration")] or feed.SECONDS.normal)
+    end)
+    ns:DevLog("FEED", ok and ("shown: " .. tostring(kind)) or ("failed: " .. tostring(kind) .. ": " .. tostring(problem)))
+    if not ok then
+        error(problem, 0)
+    end
+end
 
 local function OnChronicleChanged(entry)
     if not feed.enabled or type(entry) ~= "table" or entry.demo then
@@ -58,21 +75,32 @@ local function OnChronicleChanged(entry)
     if not (UI and UI.Feed and UI.ChronicleStory) then
         return
     end
-    -- In developer mode the log says whether the card came up, so that "it
-    -- did not appear" can be told from "it was overlooked".
-    local ok, problem = pcall(function()
-        UI.Feed.Show(UI.ChronicleStory(entry), feed.SECONDS[feed:Get("duration")] or feed.SECONDS.normal)
+    Show(kind, function()
+        return UI.ChronicleStory(entry)
     end)
-    ns:DevLog("FEED", ok and ("shown: " .. tostring(kind)) or ("failed: " .. tostring(kind) .. ": " .. tostring(problem)))
-    if not ok then
-        error(problem, 0)
+end
+
+-- A friend reacted to one of the player's events: who, and to what.
+local function OnReaction(entry, who, reaction)
+    if not feed.enabled or type(entry) ~= "table" or feed:Get("reaction") ~= true then
+        return
     end
+    local Chronicle, L = ns.ChronicleService, ns.L
+    Show("reaction", function()
+        return {
+            kind = "reaction",
+            icon = reaction,
+            fullTitle = L["c_reacted_" .. reaction]:format(Chronicle.Label({ who = who })),
+            detail = (Chronicle.Text(entry)),
+        }
+    end)
 end
 
 function feed:OnEnable()
     if not listening then
         listening = true
         ns:On("CHRONICLE_CHANGED", OnChronicleChanged)
+        ns:On("CHRONICLE_REACTION", OnReaction)
     end
     -- In the game's Edit Mode the feed shows where it appears and can be
     -- dragged, like the game's own elements.

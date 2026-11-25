@@ -21,6 +21,9 @@
 --
 -- An entry about a companion carries `who` (their character name) instead
 -- of `c`, and `via` (who passed it on) when it did not come from them.
+-- Reactions (see REACTIONS): on a companion's entry the player's own is
+-- `mine`, and `told` what the companion was last told of it; on an own entry
+-- `r` = { ["<character name>"] = "<reaction>" } holds those received.
 -- Nothing is sent from here; Modules/Chronicle/Sharing.lua does that.
 
 local _, ns = ...
@@ -440,6 +443,122 @@ function ChronicleService.ProfileNames()
     if chronicle and type(chronicle.profiles) == "table" then
         for who, profile in pairs(chronicle.profiles) do
             if type(who) == "string" and type(profile) == "table" then
+                names[#names + 1] = who
+            end
+        end
+        table.sort(names)
+    end
+    return names
+end
+
+---------------------------------------------------------------------------
+-- Reactions: a friend celebrates an event of the player's, or mourns a
+-- death with them. Each kind has one (a picture in UI.media); a kind
+-- without one cannot be reacted to, such as arriving in a zone, which
+-- happens all the time. The player gives one with a click on a companion's
+-- card; Sharing.lua tells the companion while both are online, else at
+-- their next hello.
+---------------------------------------------------------------------------
+
+ChronicleService.REACTIONS = {
+    level = "cheer",
+    achievement = "cheer",
+    ability = "cheer",
+    item = "cheer",
+    boss = "strong",
+    death = "sad",
+    skill = "clap",
+    profession = "clap",
+}
+
+-- What tells two entries of one kind in one second apart, as for the same
+-- event twice in Add: field -> "n" (number) or "s" (text).
+ChronicleService.MARKS = { skill = "n", rank = "n", ability = "s", item = "n" }
+
+-- Whether a reaction is one this version knows.
+function ChronicleService.IsReaction(reaction)
+    for _, known in pairs(ChronicleService.REACTIONS) do
+        if known == reaction then
+            return true
+        end
+    end
+    return false
+end
+
+-- The reaction a companion's entry can get, or nil. The player's own
+-- entries get none from the player, and neither does a level seen on the
+-- friends list: its time is this client's, the friend's own entry has another.
+function ChronicleService.Reaction(entry)
+    if type(entry) ~= "table" or not entry.who then
+        return nil
+    end
+    return ChronicleService.REACTIONS[entry.k]
+end
+
+-- Gives (on) or takes back the player's reaction to a companion's entry.
+function ChronicleService.React(entry, on)
+    local reaction = ChronicleService.Reaction(entry)
+    if not reaction or (entry.mine ~= nil) == (on and true or false) then
+        return
+    end
+    entry.mine = on and reaction or nil
+    ns:Fire("CHRONICLE_CHANGED")
+    ns:Fire("CHRONICLE_REACTED", entry)
+end
+
+-- Whether the companion has yet to be told the player's reaction as it is
+-- now. Sample entries never are.
+function ChronicleService.ReactionUntold(entry)
+    return (entry.mine or "") ~= (entry.told or "") and not entry.demo
+end
+
+-- The companion was told `reaction` (nil: that there is none).
+function ChronicleService.ReactionTold(entry, reaction)
+    entry.told = reaction
+end
+
+-- A friend's reaction (nil: taken back) to one of the playing character's
+-- entries: the one of `kind` at `when`, told apart by `marks` (see MARKS).
+-- Returns the entry, or nil if there is none such.
+function ChronicleService.Receive(when, kind, marks, who, reaction)
+    if type(when) ~= "number" or not IsPlainText(who) then
+        return nil
+    end
+    local entries = ChronicleService.Entries()
+    for i = #entries, 1, -1 do
+        local entry = entries[i]
+        if entry.t < when then
+            break
+        end
+        local same = entry.t == when and entry.k == kind and entry.who == nil and entry.c == character and not entry.demo
+        for field in pairs(ChronicleService.MARKS) do
+            if same and marks[field] ~= nil and marks[field] ~= entry[field] then
+                same = false
+            end
+        end
+        if same then
+            local received = type(entry.r) == "table" and entry.r or {}
+            local before = received[who]
+            received[who] = reaction
+            entry.r = next(received) and received or nil
+            if before ~= reaction then
+                ns:Fire("CHRONICLE_CHANGED")
+                if reaction then
+                    ns:Fire("CHRONICLE_REACTION", entry, who, reaction)
+                end
+            end
+            return entry
+        end
+    end
+    return nil
+end
+
+-- Who reacted to an own entry, by name, sorted.
+function ChronicleService.Reactions(entry)
+    local names = {}
+    if type(entry.r) == "table" then
+        for who, reaction in pairs(entry.r) do
+            if type(who) == "string" and type(reaction) == "string" then
                 names[#names + 1] = who
             end
         end
@@ -884,8 +1003,8 @@ function ChronicleService.Demo()
         { 2 * day + 3.5 * hour, "death", { zone = zone[1], level = 37 } },
         -- Repeated right away, these share a card in the book.
         { 2 * day + 3.4 * hour, "death", { zone = zone[1], level = 37 } },
-        { 2 * day + 3.2 * hour, "death", { zone = zone[1], level = 37 } },
-        { 2 * day + 3 * hour, "level", { level = 38, zone = zone[1] } },
+        { 2 * day + 3.2 * hour, "death", { zone = zone[1], level = 37, r = { [borin] = "sad" } } },
+        { 2 * day + 3 * hour, "level", { level = 38, zone = zone[1], r = { [mira] = "cheer" } } },
         { 2 * day + 2.2 * hour, "level", { level = 39, zone = zone[3], who = mira } },
         { 2 * day + 2 * hour, "level", { level = 40, zone = zone[3], who = mira } },
         { 2 * day + 1 * hour, "achievement", { id = 1, name = name.challenge } },
@@ -899,10 +1018,12 @@ function ChronicleService.Demo()
         { day + 3 * hour, "skill", { skill = 197, name = name.tailoring, rank = 75 } },
         { day + 2 * hour, "ability", { ability = "riding", level = 40, who = mira } },
         { 3 * hour, "zone", { zone = zone[4], level = 39 } },
-        { 2.5 * hour, "level", { level = 40, zone = zone[4] } },
-        { 2 * hour, "ability", { ability = "riding", level = 40 } },
+        -- Friends reacted to some of the player's events, and the player to
+        -- one of Borin's.
+        { 2.5 * hour, "level", { level = 40, zone = zone[4], r = { [mira] = "cheer", [borin] = "cheer", [lysa] = "cheer" } } },
+        { 2 * hour, "ability", { ability = "riding", level = 40, r = { [lysa] = "cheer" } } },
         { 1.5 * hour, "item", { item = 211527, name = name.bag, level = 40, zone = zone[4] } },
-        { 1 * hour, "boss", { id = 2, name = name.boss, zone = zone[2], who = borin } },
+        { 1 * hour, "boss", { id = 2, name = name.boss, zone = zone[2], who = borin, mine = "strong" } },
         { 0.5 * hour, "item", { item = 211527, name = name.bag, zone = zone[3], who = mira } },
         { 0.2 * hour, "achievement", { id = 1, name = name.challenge, who = lysa } },
     }
@@ -964,6 +1085,9 @@ ns:On("DATABASE_READY", function()
     for i = 1, #entries do
         local entry = entries[i]
         if type(entry) == "table" and type(entry.t) == "number" and kinds[entry.k] then
+            if type(entry.r) ~= "table" then
+                entry.r = nil
+            end
             kept[#kept + 1] = entry
         end
     end

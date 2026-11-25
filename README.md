@@ -18,7 +18,7 @@ other players. English and German, no libraries, no dependencies.
 - **Chronicle:** tells what happened as a picture book, one chapter per session of play: level-ups,
   deaths, bosses, challenges, discovered zones, professions, abilities and special items. It can
   share this with friends and guild members who use Famulus too, and shows their news live as a
-  card on screen.
+  card on screen. A click on a friend's card celebrates it with them, or mourns a death.
 - **Fellow travellers:** remembers who you grouped with: when, where, how often, for how long, and
   which bosses you beat together. Your closest companions and your bond with them, from Encounter to
   Inseparable. Optionally friends and guild only. Nothing of this is sent anywhere.
