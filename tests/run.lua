@@ -1750,14 +1750,14 @@ check(events[4].story.kind == "death" and events[4].story.weight == "low" and ev
     and events[4].picture.mockPoint[4] == events[6].picture.mockPoint[4],
     "deaths and new zones weigh low: a lower card; the picture grows with the weight and stands at the left")
 do
-    local edge = events[1].title.mockPoint[4]
     local same = true
     for index = 1, 6 do
-        same = same and events[index].title.mockPoint[4] == edge
+        local picture, title = events[index].picture, events[index].title
+        same = same and title.mockPoint[4] - picture.mockPoint[4] - picture:GetWidth()
+            == events[1].title.mockPoint[4] - events[1].picture.mockPoint[4] - events[1].picture:GetWidth()
     end
-    check(same and edge > events[4].picture.mockPoint[4] + events[4].picture:GetWidth()
-        and not events[2].chipText:IsShown() and events[2].title.mockPoint[5] > events[1].title.mockPoint[5],
-        "the text begins at the same edge on every card; without a name the card has no head line")
+    check(same and not events[2].chipText:IsShown() and events[2].title.mockPoint[5] > events[1].title.mockPoint[5],
+        "the text keeps the same distance from the picture on every card; without a name the card has no head line")
 end
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
     and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"

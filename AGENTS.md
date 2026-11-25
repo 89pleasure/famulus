@@ -579,9 +579,10 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Text frei und hängte Rand und Bildgröße ans Gewicht; im Spiel sah das hohl und unruhig aus
     (leere Flächen, Bild und Text je Gewicht an anderer Stelle). Seitdem ist die Karte so hoch
     wie Bild oder Text plus Rand oben und unten. Seitlich haben alle Karten denselben Rand
-    (`SIDE`), das Bild steht linksbündig in einer Spalte so breit wie das größte (`COLUMN`, 56 px;
-    drei Größen 40/48/56 und linksbündig auf Wunsch des Auftraggebers, 2026-11-25), und der Text
-    beginnt überall an derselben Kante. Das Gewicht wirkt nur auf Bildgröße, Rand
+    (`SIDE`), das Bild steht linksbündig, und der Text hält immer denselben Abstand zum Bild
+    (`TEXT_GAP`; drei Größen 40/48/56, linksbündig und fester Abstand auf Wunsch des
+    Auftraggebers, 2026-11-25; eine Bildspalte in der Breite des größten Bildes ließ bei
+    leichten Karten zu viel Platz). Die Textkante wandert also mit der Bildgröße. Das Gewicht wirkt nur auf Bildgröße, Rand
     oben und unten, Überschrift und Akzent. Entscheidungen des Assistenten im Einzelnen; im
     Spiel noch nicht gesehen. Der vertiefte Streifen mit dem Namen unter der Karte
     ist entfallen; die Weggefährten behalten ihren Streifen (`story.foot`).
