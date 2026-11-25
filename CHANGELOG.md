@@ -3,6 +3,14 @@
 Every release has a section `## <version>` (the tag without the `v`, for example `## 0.2.0-beta.1`).
 That section becomes the changelog of the file on CurseForge.
 
+## 0.1.0-alpha.4
+
+### Chronicle
+- Developer mode (`/fam dev`) now also records every step of sharing: what was sent to and
+  received from friends and the guild, and why a message was ignored. This is to find out why a
+  friend who switches sharing on sometimes only appears after a `/reload`. People appear as short
+  tags, never by name; switching developer mode off deletes the record.
+
 ## 0.1.0-alpha.3
 
 ### Chronicle
