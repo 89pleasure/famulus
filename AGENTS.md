@@ -562,14 +562,13 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   geprüft, im Spiel noch nicht gesehen):** Gilt nur für das Buch der Chronik. Jedes Ereignis dort
   hat ein Gewicht (`story.weight`, Tabelle `WEIGHT` in `UI/Options.lua`, Maße in `WEIGHTS` in
   `UI/ChronicleCard.lua`):
-  - **Leicht** (`low`): Tode, Ankünfte in neuen Gebieten. Bild 40 px, oben und unten 8 px,
-    Überschrift 12 px.
+  - **Leicht** (`low`): Tode, Ankünfte in neuen Gebieten. Bild 40 px, Überschrift 12 px.
   - **Mittel** (`medium`): Berufs-Meilensteine und alles, was der Auftraggeber nicht eingeordnet
     hat (Herausforderungen, Gegenstände, Fähigkeiten, Beruf erlernt; Entscheidung des
-    Assistenten). Bild 48 px, oben und unten 12 px, Überschrift 13 px.
+    Assistenten). Bild 48 px, Überschrift 13 px.
   - **Schwer** (`high`): Bosse und Stufenaufstiege, dazu was die Tabellen mit `big` markieren
     (Reiten). Bild 56 px. Das bisherige Meilenstein-Aussehen: Akzentrand, Akzentmarke links, Überschrift
-    15 px halbfett, oben und unten 15 px. Wörtlich nach Art umgesetzt: Auch Stufen und Bosse von Freunden
+    15 px halbfett. Wörtlich nach Art umgesetzt: Auch Stufen und Bosse von Freunden
     sind schwer (vorher nur der eigene Aufstieg).
   - **Aufbau neben dem Bild:** Kopf, Inhalt, Fuß. Der Kopf nennt die Person (Klassensymbol, sonst
     Anfangsbuchstabe, und `ChronicleService.Label`); bei eigenen Ereignissen gibt es ihn nicht.
@@ -596,7 +595,13 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     eine Entscheidung des Assistenten). Eine schmalere Karte hängt an der Linie, damit der
     Strich vom Punkt sie erreicht. Ohne Gewicht (Weggefährten) ist die Karte so breit wie
     bisher. Der Inhalt bekommt die Breite übergeben und richtet sich danach. Das Gewicht wirkt nur auf Bildgröße, Rand
-    oben und unten, Überschrift und Akzent. Entscheidungen des Assistenten im Einzelnen; im
+    oben und unten, Überschrift und Akzent. Seit 2026-11-25 (Wunsch des Auftraggebers nach einem
+    Screenshot: bei HIGH war der Abstand zur Namensleiste größer als bei MEDIUM und LOW) legt
+    das Book den Innenabstand fest, `UI.BookPad` (14 px), gleich an allen Seiten, für jedes
+    Gewicht und unter der Namensleiste; das Gewicht wirkt nur noch auf Breite, Bildgröße,
+    Überschrift und Akzent. Eine leichte Karte mit zwei Zeilen Text kann deshalb höher sein
+    als eine mittlere mit einer. Die Weggefährten haben ihren eigenen Rand behalten (12, bei
+    Meilensteinen 15 px). Entscheidungen des Assistenten im Einzelnen; im
     Spiel noch nicht gesehen. Der vertiefte Streifen mit dem Namen unter der Karte
     ist entfallen; die Weggefährten behalten ihren Streifen (`story.foot`).
   - **Der Ort steht nie im Text:** Das Buch liest die Sätze mit ausgeblendetem Gebiet

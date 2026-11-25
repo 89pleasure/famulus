@@ -1745,10 +1745,9 @@ check(events[6].story.weight == "high" and events[6].bar:IsShown() and events[6]
     and events[6].card:GetHeight() > events[2].card:GetHeight() and events[6].picture:GetWidth() > events[2].picture:GetWidth(),
     "level-ups and bosses weigh high: a larger card with the mark of an active card")
 check(events[4].story.kind == "death" and events[4].story.weight == "low" and events[5].story.weight == "low"
-    and events[4].card:GetHeight() < events[2].card:GetHeight()
     and events[4].picture:GetWidth() < events[2].picture:GetWidth() and events[2].picture:GetWidth() < events[6].picture:GetWidth()
     and events[4].picture.mockPoint[4] == events[6].picture.mockPoint[4],
-    "deaths and new zones weigh low: a lower card; the picture grows with the weight and stands at the left")
+    "deaths and new zones weigh low; the picture grows with the weight and stands at the left")
 do
     local same = true
     for index = 1, 6 do
@@ -1771,7 +1770,9 @@ do
     for index = 1, 6 do
         level = level and events[index].picture.mockPoint[5] == events[index].title.mockPoint[5]
     end
-    check(level, "picture and text begin at the same height")
+    check(level and events[2].picture.mockPoint[4] == ns.UI.BookPad and events[2].picture.mockPoint[5] == -ns.UI.BookPad
+    and events[6].picture.mockPoint[5] == -ns.UI.BookPad and events[1].picture.mockPoint[5] == -(28 + ns.UI.BookPad),
+    "picture and text begin at the same height; the room inside the edge and below the strip is the book's, the same for every weight")
 end
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
     and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"

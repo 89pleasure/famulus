@@ -29,7 +29,8 @@
 -- belongs to this content alone, and returns the height it needs; the card
 -- grows with it. Use the same function for every card of one kind (not a
 -- new closure per story), so that its frames are used again. Shared parts
--- of the book's look: UI.BookPicture and UI.SetBookPicture.
+-- of the book's look: the room inside a card's edge (UI.BookPad), and the
+-- picture (UI.BookPicture and UI.SetBookPicture).
 --
 -- Frames are created as needed and reused; nothing runs per frame.
 
@@ -44,6 +45,10 @@ local DOT_GAP = DOT + 12 -- between the dots of two events on the line
 -- How wide a card is, by its weight: a share of its side of the book. A
 -- narrower card keeps to the line.
 local WIDTHS = { low = 0.8, medium = 0.9, high = 1 }
+-- The room between a card's edge and what it holds, the same on every side
+-- and every card; contents use it as UI.BookPad.
+local PAD = 14
+UI.BookPad = PAD
 local HEAD_TOP, HEAD_BOTTOM = 6, 16 -- room above and below a chapter's heading
 local HEAD_GAP = 16 -- between the place and the words beside it
 local CHAPTER_GAP = 16 -- below a chapter's last card
