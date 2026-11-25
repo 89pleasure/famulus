@@ -3718,7 +3718,7 @@ local function BuildSidebar()
     GroundCorner("BOTTOMLEFT", pixel, pixel, 0, 0.5, 0.5, 1)
     -- Below the head a line parts the sidebar from the content; the head
     -- itself runs on to the right on the same ground.
-    local edge = UI.VLine(sidebar, "cardBorder")
+    local edge = UI.VLine(sidebar, "windowBorder")
     edge:SetPoint("TOPRIGHT", 0, -HEAD)
     edge:SetPoint("BOTTOMRIGHT")
 
@@ -3808,7 +3808,7 @@ local function BuildSidebar()
             top = top + NAV_ROW + 2
         end
     end
-    local line = UI.Line(sidebar, "cardBorder")
+    local line = UI.Line(sidebar, "windowBorder")
     line:SetPoint("BOTTOMLEFT", 20, bottom + 6)
     line:SetPoint("BOTTOMRIGHT", -20, bottom + 6)
     window.sidebar = sidebar
@@ -3825,7 +3825,7 @@ local function BuildHead()
     GroundCorner("TOPLEFT", pixel, -pixel, 0, 0.5, 0, 0.5)
     GroundCorner("TOPRIGHT", -pixel, -pixel, 0.5, 1, 0, 0.5)
 
-    local line = UI.Line(window, "cardBorder")
+    local line = UI.Line(window, "windowBorder")
     line:SetPoint("TOPLEFT", pixel, -HEAD)
     line:SetPoint("TOPRIGHT", -pixel, -HEAD)
 
@@ -3879,7 +3879,7 @@ local function Build()
     window:Hide()
     ApplyScale()
     UI.Shadow(window, 32, RADIUS, 10)
-    UI.Card(window, "window", "cardBorder", RADIUS)
+    UI.Card(window, "window", "windowBorder", RADIUS)
 
     -- Light catching the top edge, across sidebar and content alike. Its
     -- own frame, so that it lies above the sidebar's ground.

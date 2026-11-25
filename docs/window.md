@@ -77,6 +77,27 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   an accent as a colour pair (`accent` → `accent2`) for gradients. Available: `lemon` (default),
   `mint`, `rose`, `lilac`, `amber`. Seen and confirmed in game by the owner is `lemon`;
   the other four come from the mockup.
+- **Lines darker than the ground (2026-11-25, the owner's request: the lines were "too
+  bright", try a colour darker than the background so they look softer):** Rule: a line is
+  a little darker than the darker of the two grounds it parts, never lighter. Before, all
+  line tones lay above the grounds (`cardBorder` 0.185, `controlBorder` 0.230, `divider`
+  0.160). A first try put them all near black (0.045–0.072); in game the owner found it "a
+  bit too dark, it should only differ slightly". Since then, with the scheme's full
+  saturation:
+
+  | Token | Lightness | Where | Ground below it |
+  |---|---|---|---|
+  | `windowBorder` (new) | 0.054 | window outline, line below the head, sidebar edge, line above "Settings" | sidebar/head 0.070 |
+  | `cardBorder` | 0.074 | card borders, menus, line below the tabs | window 0.092 |
+  | `controlBorder` | 0.105 | secondary buttons, dropdowns, pictures in the book, crests in the feed | card 0.125 |
+  | `fieldBorder` (new) | 0.045 | text fields, search, the plates in book and fellow travellers | field 0.055 |
+  | `divider` | 0.090 | lines inside a card (option rows, lists, also in the rail since then) | card 0.125, option row ~0.105 |
+
+  Unchanged: the light top edge (`sheen`, `sheenSoft`), the accent border of an active card
+  (`cardActive`), `track`. The values are the assistant's choice; the owner confirmed the
+  second try in game ("Passt so", 2026-11-25). The website (`--card-border`,
+  `--control-border`, `--divider` in `website/styles.css`) still has the light lines; whether it
+  follows is open.
 - **No light mode (the owner's decision, 2026-11-19):** The window is always dark.
   Removed are the light palette, the option `general.theme`, the button at the top right, the icons
   sun and moon, and the toggle control built only for it (`UI.Segmented`, row type `segment`).
