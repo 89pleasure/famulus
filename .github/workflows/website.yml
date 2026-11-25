@@ -1,5 +1,6 @@
 # Publishes the website (the folder website/, served as it is, no build step) on GitHub Pages
-# whenever a push to main changes it. Commits that only touch the addon do not trigger it.
+# whenever a push to main changes it, and whenever a version tag is pushed, so that the page names
+# the new release. Commits that only touch the addon do not trigger it.
 #
 # Once per repository: Settings > Pages > Build and deployment > Source "GitHub Actions".
 # The custom domain is set there too (Settings > Pages > Custom domain); with this workflow no
@@ -13,6 +14,9 @@ on:
     paths:
       - "website/**"
       - ".github/workflows/website.yml"
+    # Path filters do not apply to tags: every version tag publishes the page again.
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -32,8 +36,12 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Always main, also when a tag started the run; the full history so that the tags are there.
       - name: Check out the repository
         uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Check that Pages is set up
         uses: actions/configure-pages@v6
@@ -41,6 +49,18 @@ jobs:
       # Notes for AI assistants live next to the site's code but are not part of the site.
       - name: Leave out CLAUDE.md
         run: rm -f website/CLAUDE.md
+
+      # The texts name the version as "Version <x>" (fact_version, in_rel_d in both languages);
+      # the newest tag on main replaces it, so the page never lags behind a release.
+      - name: Name the current release
+        run: |
+          version=$(git describe --tags --abbrev=0 --match 'v*')
+          version=${version#v}
+          sed -E -i "s/Version [0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?/Version $version/g" website/index.html website/i18n.js
+          for file in website/index.html website/i18n.js; do
+            grep -q "Version $version" "$file" || { echo "::error::$file does not name Version $version."; exit 1; }
+          done
+          echo "Version $version"
 
       - name: Pack the website
         uses: actions/upload-pages-artifact@v5

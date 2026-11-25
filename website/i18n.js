@@ -145,7 +145,7 @@ window.FAMULUS_I18N = {
     hero_lead: 'Famulus hält eure gemeinsame Reise als Bilderbuch fest, merkt sich, mit wem du unterwegs warst, und gibt deinen Freunden die Namen, unter denen du sie kennst.',
     hero_cta: 'Funktionen ansehen',
     hero_cta2: 'Installation',
-    fact_version: 'Version 0.1.0',
+    fact_version: 'Version 0.1.0-alpha.2',
     fact_game: 'WoW Forever 1.60',
     fact_lang: 'Deutsch und Englisch',
     fact_libs: 'Keine Bibliotheken',
@@ -363,7 +363,7 @@ window.FAMULUS_I18N = {
     in_s3_t: 'Fenster öffnen',
     in_s3_d: '<code>/fam</code> öffnet Famulus. Die Flamme an der Minikarte tut dasselbe.',
     in_rel_t: 'Famulus ist noch im Bau.',
-    in_rel_d: 'Version 0.1.0 ist ein früher Stand. Der Download folgt mit der ersten öffentlichen Version.',
+    in_rel_d: 'Version 0.1.0-alpha.2 ist ein früher Stand. Der Download folgt mit der ersten öffentlichen Version.',
     in_rel_btn: 'Download folgt',
 
     ft_legal: 'Famulus ist ein Fanprojekt und steht in keiner Verbindung zu Blizzard Entertainment. World of Warcraft ist eine Marke von Blizzard Entertainment, Inc. Schrift: Inter, SIL Open Font License 1.1.',
