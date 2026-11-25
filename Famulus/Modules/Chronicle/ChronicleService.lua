@@ -194,7 +194,7 @@ local kinds = {
             if e.who then
                 return L.c_their_zone:format(Label(e), Place(e) or "?")
             end
-            return L.c_zone:format(Place(e) or "?")
+            return Place(e) and L.c_zone:format(Place(e)) or L.c_zone_nowhere
         end,
         detail = function(e)
             return e.level and L.c_at_level:format(tonumber(e.level) or 0) or nil

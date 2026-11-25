@@ -584,12 +584,23 @@ local function EntryTexture(entry, kind, special)
     return UI.gameIcons[kind == "skill" and "profession" or kind]
 end
 
+-- How much an event weighs in the book (UI/Book.lua): the size and look
+-- of its card. Other kinds are "medium"; what the tables mark as great is "high".
+local WEIGHT = { death = "low", zone = "low", skill = "medium", boss = "high", level = "high" }
+
+-- An entry as the book tells it: the place is not in the text, the foot of
+-- the card names it.
+local function Placeless(entry)
+    return setmetatable({ zone = false }, { __index = entry })
+end
+
 -- An entry as the book shows it (see UI/Book.lua).
 local function ChronicleEvent(entry)
     local Chronicle = ns.ChronicleService
-    -- The book says whose event it is in the strip below the card, so its
-    -- headline does not; the live feed has no strip and names them.
-    local title, detail = Chronicle.Text(entry, true)
+    -- The book says whose event it is in the head of the card and where in
+    -- its foot, so its text does not; the live feed names both.
+    local title, detail = Chronicle.Text(Placeless(entry), true)
+    local fullTitle, fullDetail = Chronicle.Text(entry)
     local kind = entry.k == "friendLevel" and "level" or entry.k
     local own, other = Chronicle.IsOwn(entry), Chronicle.OtherCharacter(entry)
     -- An ability or an item from the service's tables may bring a picture.
@@ -604,11 +615,12 @@ local function ChronicleEvent(entry)
     return {
         kind = kind,
         title = title,
-        fullTitle = (Chronicle.Text(entry)),
+        fullTitle = fullTitle,
         detail = detail,
+        fullDetail = fullDetail,
         when = date("%H:%M", entry.t),
+        where = type(entry.zone) == "string" and entry.zone or nil,
         number = kind == "level" and tonumber(entry.level) or kind == "skill" and tonumber(entry.rank) or nil,
-        -- The player's own level-ups and what the tables mark as great are the milestones of the book.
         icon = special and special.picture or nil,
         -- The picture is an icon of the game.
         texture = EntryTexture(entry, kind, special),
@@ -619,7 +631,7 @@ local function ChronicleEvent(entry)
         -- For the game's tooltip on the picture.
         item = kind == "item" and tonumber(entry.item) or nil,
         spell = kind == "ability" and special and special.spell or nil,
-        big = own and not other and (kind == "level" or (special and special.big) or false),
+        weight = special and special.big and "high" or WEIGHT[kind] or "medium",
         chip = chip,
     }
 end
@@ -643,20 +655,25 @@ local function SameRun(a, b)
 end
 
 -- A run of entries as one event of the book: the look of the newest, one
--- sentence for all, and each one's time, the earliest first.
+-- sentence for all, the time from the first to the last.
 local function ChronicleRun(run)
     local event = ChronicleEvent(run[1])
     if #run == 1 then
         return event
     end
     local Chronicle = ns.ChronicleService
-    event.title, event.detail = Chronicle.TextRun(run, true)
-    event.fullTitle = (Chronicle.TextRun(run))
-    event.count = #run
-    event.times = {}
-    for index = #run, 1, -1 do
-        event.times[#event.times + 1] = date("%H:%M", run[index].t)
+    local told, zone = {}, event.where
+    for index, entry in ipairs(run) do
+        told[index] = Placeless(entry)
+        if entry.zone ~= zone then
+            zone = nil
+        end
     end
+    event.title, event.detail = Chronicle.TextRun(told, true)
+    event.fullTitle, event.fullDetail = Chronicle.TextRun(run)
+    event.count = #run
+    event.when = L.c_ch_span:format(date("%H:%M", run[#run].t), event.when)
+    event.where = zone
     return event
 end
 

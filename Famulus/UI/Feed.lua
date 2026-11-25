@@ -137,7 +137,7 @@ local function Fill(card, story)
     local look = looks[story.kind] or looks.zone
     card.crestBorder:SetColor(look.border)
     card.crestFill:SetColor(look.fill)
-    local big = story.big and true or false
+    local big = story.big or story.weight == "high"
     card.shape.border:SetColor(big and "cardActive" or "cardBorder")
     card.mark:SetShown(big)
     local photo = story.texture
@@ -160,7 +160,7 @@ local function Fill(card, story)
     end
 
     -- Text: two lines centred on the band, or one.
-    local detail = story.detail
+    local detail = story.fullDetail or story.detail
     card.title:SetWidth(0)
     card.detail:SetWidth(0)
     card.title:SetText(story.fullTitle or story.title or "")

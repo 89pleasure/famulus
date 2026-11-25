@@ -1721,17 +1721,26 @@ check(events[2].top > events[1].top and events[2].top < events[1].top + events[1
     and events[2].top + events[2].cardHeight / 2 >= events[1].top + events[1].cardHeight / 2 + 30,
     "each side runs on by itself: a card reaches into the height of the one across, the dots keep apart")
 check(events[1].story.chip and events[1].story.chip.text == "Jaina Proudmoore" and events[1].story.chip.initial == "J"
-    and events[1].chipText:IsShown() and not events[2].chipText:IsShown(), "a companion's event names them in the strip below, not in the headline")
+    and events[1].chipText:IsShown() and not events[2].chipText:IsShown() and not events[1].foot:IsShown(),
+    "a companion's event names them in the head of the card, not in the headline; the player's own leaves it empty")
 check(events[1].number:IsShown() and events[1].number:GetText() == "20" and not events[1].icon:IsShown()
     and events[1].photo:IsShown() and events[1].dim:IsShown() and events[1].story.texture == ns.UI.gameIcons.level
-    and not events[1].story.big and not events[1].bar:IsShown() and events[1].foot:IsShown() and not events[2].foot:IsShown(),
-    "a level shows its number on an icon of the game; a companion's is no milestone")
-check(events[6].story.big and events[6].bar:IsShown() and events[6].number:GetText() == "13"
-    and events[6].card:GetHeight() > events[5].card:GetHeight() and events[6].picture:GetWidth() == events[5].picture:GetWidth(),
-    "the player's own level-up is a milestone: a larger card with the mark of an active card, its picture as large as any")
-check(events[4].story.kind == "death" and events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
-    and events[4].story.texture == ns.UI.gameIcons.death and events[4].detail:GetText():match("%d%d:%d%d$") ~= nil,
-    "other events show an icon of the game and their time")
+    and events[1].story.weight == "high" and events[1].bar:IsShown(),
+    "a level shows its number on an icon of the game; a companion's weighs high too")
+check(events[6].story.weight == "high" and events[6].bar:IsShown() and events[6].number:GetText() == "13"
+    and events[3].story.kind == "boss" and events[3].story.weight == "high" and events[3].bar:IsShown()
+    and events[2].story.weight == "medium" and not events[2].bar:IsShown()
+    and events[6].card:GetHeight() > events[2].card:GetHeight() and events[6].picture:GetWidth() == events[2].picture:GetWidth(),
+    "level-ups and bosses weigh high: a larger card with the mark of an active card")
+check(events[4].story.kind == "death" and events[4].story.weight == "low" and events[5].story.weight == "low"
+    and events[4].card:GetHeight() < events[2].card:GetHeight() and events[4].picture:GetWidth() < events[2].picture:GetWidth(),
+    "deaths and new zones weigh low: a lower card, a smaller picture")
+check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
+    and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"
+    and events[4].detail:GetText() == "at level 13" and events[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil
+    and events[5].story.title == "Discovered a new zone" and events[1].footer:GetText():match("^%d%d:%d%d  ·  Duskwood$") ~= nil
+    and not events[1].detail:IsShown() and events[2].footer:GetText():match("^%d%d:%d%d$") ~= nil,
+    "other events show an icon of the game; the foot always tells the time and the place, the text never the place")
 check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 40,
     "the page is as long as its book")
 check(heads[1].small:IsShown() and heads[1].sub:IsShown() and heads[1].left:IsShown() and heads[1].right:IsShown()
@@ -1838,12 +1847,13 @@ do -- what repeats right away shares a card
     end
     check(#bookFrames("story") == 8 and bookFrames("chapter")[1].chapter.sub:find("11 events", 1, true) ~= nil,
         "five entries, two cards; the chapter still counts every event")
-    check(deaths and deaths.story.title == "Fallen 3 times in Duskwood" and deaths.story.detail == "at levels 12 to 13"
-        and deaths.badge:IsShown() and deaths.badgeText:GetText() == "3" and deaths.plateCount == 3
-        and deaths.plates[1].text:GetText() == date("%H:%M", now - 52) and not deaths.detail:GetText():find(":", 1, true),
-        "deaths in one place: one card, how often in the corner, every time below")
+    check(deaths and deaths.story.title == "Fallen 3 times" and deaths.story.detail == "at levels 12 to 13"
+        and deaths.story.fullTitle == "Fallen 3 times in Duskwood"
+        and deaths.badge:IsShown() and deaths.badgeText:GetText() == "3"
+        and deaths.footer:GetText() == date("%H:%M", now - 52) .. " – " .. date("%H:%M", now - 50) .. "  ·  Duskwood",
+        "deaths in one place: one card, how often in the corner, from the first time to the last in the foot")
     check(levels and levels.story.title == "Reached levels 21 to 22" and levels.number:GetText() == "22"
-        and not levels.badge:IsShown() and levels.plateCount == 2 and levels.story.fullTitle == "Jaina Proudmoore reaches levels 21 to 22",
+        and not levels.badge:IsShown() and levels.story.fullTitle == "Jaina Proudmoore reaches levels 21 to 22",
         "a companion's levels in a row: one card from the first to the last")
     local entries = Chronicle.Entries()
     for index = #entries, 1, -1 do
@@ -2570,7 +2580,8 @@ for _, event in ipairs(bookFrames("story")) do
 end
 check(spans == 2 and found["On the road in Uldaman"] and found["On the road in Badlands"],
     "a stretch together says where and when")
-check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss" and found["Archaedas defeated"].detail == "in Uldaman"
+check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss" and found["Archaedas defeated"].detail == nil
+    and found["Archaedas defeated"].where == "Uldaman"
     and found["Archaedas defeated"].chip == nil, "bosses defeated together, from the fellow travellers' own day log")
 check(raidLine and partyLine, "bosses without a name (a raid) are counted on the day's line, named ones are not")
 check(partyLine and partyLine:match("^%d%d:%d%d to %d%d:%d%d$") and raidLine:match("^%d%d:%d%d to %d%d:%d%d  ·  2 bosses$"),

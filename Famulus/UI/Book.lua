@@ -13,10 +13,13 @@
 --                                       -- heading, the zones in the order of time
 --       events = { {
 --           kind = "level",             -- see PICTURES
---           title = "Reached level 24", detail = "in Lakeshire" or nil,
+--           title = "Reached level 24", detail = "with Mira" or nil,
 --           when = "21:14",
---           times = { "20:02", "21:14" }, -- instead of `when`: an event that
---           count = 2,                  -- happened several times (a bundle)
+--           weight = "low" or "medium" or "high", -- a chronicle's card: head
+--                                       -- (chip), two lines of text, foot
+--                                       -- (when and where); see WEIGHTS
+--           where = "Lakeshire",        -- with a weight: the place, in the foot
+--           count = 2,                  -- a bundle: how often, in the corner
 --           number = 24,                -- shown in the picture of a level
 --           icon = "horseshoe",         -- optional: a picture of its own (UI.media)
 --           onClick = function() end,   -- optional: what a click on the card does
@@ -24,8 +27,9 @@
 --                                       -- tooltip of this item or spell
 --           texture = 134400,           -- optional: a texture of the game's instead
 --                                       -- (an item's icon), shown in its own colours
---           big = true,                 -- a milestone: larger, accent border and mark
+--           big = true,                 -- without a weight: as heavy as "high"
 --           chip = { initial = "A", text = "Companion", class = "MAGE" or nil } or nil,
+--                                       -- whose event it is, in the head
 --           -- The fellow travellers' timeline adds:
 --           noPicture = true,           -- the text takes the card's whole width
 --           crest = { name = "Mira Stormfeather", class = "MAGE", progress = 0.4 },
@@ -45,18 +49,26 @@ local AXIS = 44 -- width of the column the line runs through
 local GAP = 14 -- between two events
 local PICTURE = 54 -- the same for every event, whatever the size of its card
 local DOT = 22
-local FOOT = 30 -- the sunken strip that says whose event it is
+local FOOT = 30 -- the sunken strip below a fellow traveller's card
 local PHOTO_INSET = 2 -- an icon of the game fills its frame but for a fine line
 local DOT_GAP = DOT + 12 -- between the dots of two events on the line
 local HEAD_TOP, HEAD_BOTTOM = 6, 16 -- room above and below a chapter's heading
 local HEAD_GAP = 16 -- between the place and the words beside it
 local CHAPTER_GAP = 16 -- below a chapter's last card
-local CHIP_H, CHIP_GAP, CHIP_PAD = 18, 4, 6 -- the times of a bundle
-local MAX_TIMES = 10 -- plates for times; more are counted on the last one
+local CHIP_GAP = 4 -- between two plates of people
+local HEAD_LINE, LINE_GAP = 14, 4 -- a chronicle's card: head and foot line, and the gap to the text
 local ROUTE_GAP, ROUTE_H, ROUTE_PAD = 8, 22, 9 -- the route below a heading
 local ROUTE_ARROW = 10 -- the arrow between two zones of the route
 local ROUTE_STEP = 6 -- between a plate and an arrow
 local PERSON_H, PERSON_ICON = 22, 16 -- a person's plate
+
+-- How much an event weighs (story.weight): the card's padding, its
+-- picture and headline. A heavy one is a milestone: accent border and mark.
+local WEIGHTS = {
+    low = { pad = 8, picture = 40, title = 12, font = "medium", number = 18 },
+    medium = { pad = 12, picture = PICTURE, title = 13, font = "medium", number = 24 },
+    high = { pad = 15, picture = PICTURE, title = 15, font = "semibold", number = 24 },
+}
 
 -- Per kind: the picture's icon (none: the number), its colours, and the
 -- icon on the line.
@@ -339,23 +351,25 @@ local function CreateEvent(book)
     event.badgeText:SetJustifyH("CENTER")
     event.badgeText:SetJustifyV("MIDDLE")
     event.badge:Hide()
-    event.plates = {} -- the times of a bundle
 
     event.title = UI.Text(card, 13, "text", "medium")
     event.title:SetSpacing(1)
     event.detail = UI.Text(card, 12, "textMuted")
     event.detail:SetSpacing(2)
-    event.chipDot = UI.Icon(foot, "circle", 18, "accentSoft")
-    event.chipDot:SetPoint("LEFT", foot, "LEFT", 12, 0)
-    event.chipInitial = UI.Text(foot, 10, "accent", "semibold")
+    -- The head of a chronicle's card: whose event it is (empty for the
+    -- player's own), the class icon, else the initial.
+    event.chipDot = UI.Icon(card, "circle", HEAD_LINE, "accentSoft")
+    event.chipInitial = UI.Text(card, 9, "accent", "semibold")
     event.chipInitial:SetPoint("CENTER", event.chipDot, "CENTER")
     event.chipInitial:SetJustifyH("CENTER")
-    -- Where the class is known, its icon instead of the initial.
-    event.chipClass = UI.ClassIcon(foot, 18)
+    event.chipClass = UI.ClassIcon(card, HEAD_LINE)
     event.chipClass:SetPoint("CENTER", event.chipDot, "CENTER")
-    event.chipText = UI.Text(foot, 11, "textMuted")
-    event.chipText:SetPoint("LEFT", event.chipDot, "RIGHT", 6, 0)
+    event.chipText = UI.Text(card, 11, "textDim", "medium")
+    event.chipText:SetPoint("LEFT", event.chipDot, "RIGHT", 5, 0)
     event.chipText:SetWordWrap(false)
+    -- And its foot: time and place.
+    event.footer = UI.Text(card, 11, "textMuted")
+    event.footer:SetWordWrap(false)
     -- Or the strip says something about the event itself, in the accent.
     event.footIcon = UI.Icon(foot, "people", 13, "accent")
     event.footIcon:SetPoint("LEFT", foot, "LEFT", 12, 0)
@@ -367,48 +381,6 @@ local function CreateEvent(book)
 end
 
 UI.BookPictures = PICTURES
-
--- The times of a bundle as small plates, row after row within `width`.
--- Notes each plate's place below the first one (plate.x, plate.y) and
--- returns the height they take; without times, hides them.
-local function LayTimes(event, times, width)
-    local list = times or {}
-    if #list > MAX_TIMES then
-        list = {}
-        for i = 1, MAX_TIMES - 1 do
-            list[i] = times[i]
-        end
-        list[MAX_TIMES] = "+" .. (#times - MAX_TIMES + 1)
-    end
-    local x, y = 0, 0
-    for index, text in ipairs(list) do
-        local plate = event.plates[index]
-        if not plate then
-            plate = CreateFrame("Frame", nil, event.card)
-            plate:SetHeight(CHIP_H)
-            UI.Card(plate, "field", "cardBorder", 5)
-            plate.text = UI.Text(plate, 11, "textDim", "medium")
-            plate.text:SetPoint("CENTER")
-            plate.text:SetJustifyH("CENTER")
-            plate.text:SetJustifyV("MIDDLE")
-            event.plates[index] = plate
-        end
-        plate.text:SetText(text)
-        local plateWidth = math.floor(plate.text:GetStringWidth() + CHIP_PAD * 2 + 0.5)
-        plate:SetWidth(plateWidth)
-        if x > 0 and x + plateWidth > width then
-            x, y = 0, y + CHIP_H + CHIP_GAP
-        end
-        plate.x, plate.y = x, y
-        plate:Show()
-        x = x + plateWidth + CHIP_GAP
-    end
-    for index = #list + 1, #event.plates do
-        event.plates[index]:Hide()
-    end
-    event.plateCount = #list
-    return #list > 0 and y + CHIP_H or 0
-end
 
 -- The people of an event as plates (class icon, else the initial, the name
 -- and a note), row after row within `width`, placed like the times above.
@@ -468,9 +440,12 @@ local function EventSet(event, story, onLeft, width)
     event.story = story
     event.onLeft = onLeft
     local look = PICTURES[story.kind] or PICTURES.zone
-    local big = story.big and true or false
-    local pad = big and 15 or 12
-    local size = story.noPicture and 0 or PICTURE
+    -- A chronicle's card (it has a weight): a head, two lines of text, a foot.
+    local framed = story.weight ~= nil
+    local weight = WEIGHTS[story.weight] or story.big and WEIGHTS.high or WEIGHTS.medium
+    local big = weight == WEIGHTS.high
+    local pad = weight.pad
+    local size = story.noPicture and 0 or weight.picture
     local column = (width - AXIS) / 2
     local beside = size > 0 and size + 12 or 0 -- the text's distance from the picture's left edge
     local textWidth = column - pad * 2 - beside
@@ -488,7 +463,7 @@ local function EventSet(event, story, onLeft, width)
             event.crest:SetProgress(crest.progress)
         end
     end
-    event.picture:SetSize(PICTURE, PICTURE)
+    event.picture:SetSize(size, size)
     event.picture:EnableMouse(story.item ~= nil or story.spell ~= nil)
     event.pictureShape.border:SetColor(look.border)
     event.pictureShape.fill:SetColor(look.fill)
@@ -509,7 +484,7 @@ local function EventSet(event, story, onLeft, width)
         UI.Tint(event.icon, look.ink)
     end
     if number then
-        UI.SetDisplayFont(event.number, 24)
+        UI.SetDisplayFont(event.number, weight.number)
         UI.Ink(event.number, photo and "text" or look.ink)
         event.number:SetText(tostring(number))
     end
@@ -524,16 +499,15 @@ local function EventSet(event, story, onLeft, width)
         UI.Ink(event.badgeText, look.ink)
     end
 
-    -- Text: headline, detail, and whom it is about.
+    -- Text: headline and detail, below them the people.
     event.title:SetWidth(textWidth)
     event.title:SetText(story.title or "")
-    UI.SetFont(event.title, big and 15 or 13, big and "semibold" or "medium")
+    UI.SetFont(event.title, weight.title, weight.font)
     UI.Ink(event.title, look.title or "text")
     local textHeight = event.title:GetStringHeight()
-    -- The time closes the line below the headline; a bundle lists its
-    -- times below that line instead.
+    -- The time closes the line below the headline, unless a foot tells it.
     local detail = story.detail
-    if story.when and not story.times then
+    if story.when and not framed then
         detail = detail and (detail .. "  ·  " .. story.when) or story.when
     end
     event.detail:SetShown(detail ~= nil)
@@ -542,30 +516,42 @@ local function EventSet(event, story, onLeft, width)
         event.detail:SetText(detail)
         textHeight = textHeight + 4 + event.detail:GetStringHeight()
     end
-    local platesTop = textHeight + 6
-    local platesHeight = LayTimes(event, story.times, textWidth)
-    if platesHeight > 0 then
-        textHeight = platesTop + platesHeight
+    if framed then
+        -- Two lines are kept for the text, whether it needs them or not.
+        textHeight = math.max(textHeight, 2 * (weight.title + 4))
     end
     local peopleTop = textHeight + 8
     local peopleHeight = LayPeople(event, story.people, textWidth)
     if peopleHeight > 0 then
         textHeight = peopleTop + peopleHeight
     end
-    -- Whose event it is stands in a sunken strip below, like an option
-    -- under its feature; or, in the accent, what the event itself adds.
-    local chip = story.chip
-    local footText = not chip and story.foot or nil
+    -- A chronicle's card: whose event it is in the head (empty for the
+    -- player's own), when and where in the foot.
+    local chip = framed and story.chip or nil
     local classShown = UI.SetClass(event.chipClass, chip and chip.class)
-    event.foot:SetShown(chip ~= nil or footText ~= nil)
     event.chipDot:SetShown(chip ~= nil and not classShown)
     event.chipInitial:SetShown(chip ~= nil and not classShown)
     event.chipText:SetShown(chip ~= nil)
     if chip then
         event.chipInitial:SetText(chip.initial or "")
-        event.chipText:SetWidth(column - 12 - 18 - 6 - 12)
+        event.chipText:SetWidth(textWidth - HEAD_LINE - 5)
         event.chipText:SetText(chip.text or "")
     end
+    local footer = framed and (story.when and story.where and (story.when .. "  ·  " .. story.where)
+        or story.when or story.where) or nil
+    event.footer:SetShown(footer ~= nil)
+    if footer then
+        event.footer:SetWidth(textWidth)
+        event.footer:SetText(footer)
+    end
+    local textTop = framed and HEAD_LINE + LINE_GAP or 0
+    if framed then
+        textHeight = textTop + textHeight + LINE_GAP + HEAD_LINE
+    end
+    -- The fellow travellers' sunken strip below says, in the accent, what
+    -- the event itself adds.
+    local footText = story.foot
+    event.foot:SetShown(footText ~= nil)
     event.footIcon:SetShown(footText ~= nil)
     event.footText:SetShown(footText ~= nil)
     if footText then
@@ -574,7 +560,7 @@ local function EventSet(event, story, onLeft, width)
     end
 
     local bodyHeight = math.floor(math.max(size, textHeight) + pad * 2 + 0.5)
-    local cardHeight = bodyHeight + ((chip or footText) and FOOT or 0)
+    local cardHeight = bodyHeight + (footText and FOOT or 0)
     local card = event.card
     card:SetSize(column, cardHeight)
     card:ClearAllPoints()
@@ -593,17 +579,17 @@ local function EventSet(event, story, onLeft, width)
     end
     local left = pad + beside
     local top = math.floor((bodyHeight - textHeight) / 2 + 0.5)
+    event.chipDot:ClearAllPoints()
+    event.chipDot:SetPoint("TOPLEFT", card, "TOPLEFT", left, -top)
+    event.footer:ClearAllPoints()
+    event.footer:SetPoint("TOPLEFT", card, "TOPLEFT", left, -(top + textHeight - HEAD_LINE))
+    top = top + textTop
     event.title:ClearAllPoints()
     event.title:SetPoint("TOPLEFT", card, "TOPLEFT", left, -top)
     local last = event.title
     if detail then
         event.detail:ClearAllPoints()
         event.detail:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -4)
-    end
-    for index = 1, event.plateCount do
-        local plate = event.plates[index]
-        plate:ClearAllPoints()
-        plate:SetPoint("TOPLEFT", card, "TOPLEFT", left + plate.x, -(top + platesTop + plate.y))
     end
     for index = 1, event.peopleCount do
         local plate = event.people[index]
