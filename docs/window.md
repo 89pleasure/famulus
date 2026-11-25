@@ -161,9 +161,29 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   - **Options of a switched-off feature** stay in full but greyed out, with "Switch on "…" to
     change its options." The folding of option rows (`compact`), their dot and recessed ground,
     `FeatureBlocks` and the accent mark on feature cards are gone.
-  - **Pictures:** a feature or an option may carry `picture` (a texture path); the detail then
-    shows it above the name (536 × 196 px, inside the padding). None has one yet; without a
-    picture the detail starts with the page's name.
+  - **Pictures (`UI/Previews.lua`, since 2026-11-25 as a trial):** no screenshots but small
+    scenes drawn live, so that a change to the addon needs no new picture. A feature names its
+    scene (`preview = "feed"`); the detail shows it above the name on a stage of 536 × 196 px
+    inside the padding (`UI.Previews.Stage`, clips its scenes). A scene is built the first time it
+    is shown and kept; it uses the addon's own building blocks and the chronicle's sample people
+    (`ChronicleService.SamplePeople`, `ChronicleService.Sample(kind)`), so it follows switches,
+    options, colour scheme and language. Pointing at a chip focuses it on that option
+    (`UI.Previews.Focus`, the option's key). What moves does so by the client's animations,
+    stopped while the scene is hidden. Without a scene the detail starts with the page's name.
+    - `feed`: the live feed's own cards (`UI.Feed.Card`, `UI.Feed.Fill`; never on screen) with
+      Mira's level and Borin's boss over a night sky, a line along their foot that runs out over
+      the chosen duration, below them "Visible for 7 seconds". Pointed at a kind, a card of that
+      kind (reactions via `liveFeed.ReactionStory`), faint while the kind or the feature is off.
+    - `chat`: four lines in the game's chat font (`UI.SetChatFont`, `ChatFontNormal`) and its
+      default colours (tokens `chatGuild`, `chatParty`, `chatSystem`); Borin under the alias
+      "Dad"/"Papa" as `AliasService.Format` writes it with the chosen style, framed in the
+      accent, also in the online notice. Switched off: his name.
+    - The night sky (`World`): a rounded gradient (`sceneSky` into `sceneLand`), haze, moon and
+      two dark hills from `shadow.tga` and `circle.tga`; the hills stay clear of the rounded
+      corners. Tokens `scene*` are fixed, the same in every scheme.
+    - The mockup has scenes for every entry (tooltip, context menu, Guildy, Battle.net, minimap,
+      book cards, fellow traveller, colour schemes, embers, window size and more); not built.
+      Checked against the mock only, not yet seen in game.
   - **Icons of the entries** (added on 2026-11-25 after the owner's first look in game: "the
     icons are missing"): a feature names its own (`icon` in `ns:NewFeature`, a name from
     `UI.media`; the test checks that every feature has one the window knows), the addon's own

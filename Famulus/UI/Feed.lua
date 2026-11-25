@@ -196,8 +196,8 @@ local function NewReactButton(card)
     return button
 end
 
-local function NewCard()
-    local card = CreateFrame("Frame", nil, Anchor())
+local function NewCard(parent)
+    local card = CreateFrame("Frame", nil, parent)
     card:SetSize(WIDTH, HEIGHT)
     UI.Shadow(card, 22, 10, 6)
     -- The band is built like the card of an option in the window, and
@@ -402,7 +402,7 @@ end
 
 function Feed.Show(story, seconds)
     Anchor()
-    local card = table.remove(pool) or NewCard()
+    local card = table.remove(pool) or NewCard(anchor)
     Fill(card, story)
     table.insert(shown, 1, card)
     while #shown > MAX_CARDS do
@@ -431,6 +431,15 @@ function Feed.Show(story, seconds)
     end)
     return card
 end
+
+-- A card as the feed draws it, on another frame and never on screen by
+-- itself: the picture of the live feed in its settings (UI/Previews.lua).
+-- Feed.Fill(card, story) gives it an event; it is then as wide as its text.
+function Feed.Card(parent)
+    return NewCard(parent)
+end
+Feed.Fill = Fill
+Feed.HEIGHT = HEIGHT
 
 -- The cards on screen, the newest first.
 function Feed.Shown()

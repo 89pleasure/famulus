@@ -51,5 +51,6 @@ UI\ChronicleCard.lua
 UI\Rail.lua
 UI\Fellows.lua
 UI\Feed.lua
+UI\Previews.lua
 UI\Options.lua
 UI\MinimapButton.lua

@@ -538,8 +538,40 @@ check(detail.pills[1].text:GetText() == "On" and detail.pills[2].text:GetText() 
     "the detail says whether it is on and what its default is")
 local rows = visibleRows()
 check(#rows == 1 and rows[1].item.id == "chatAliases.style" and rows[1].dropdown:IsShown() and rows[1].desc:IsShown()
-    and detail.optionsTitle:GetText() == "Options" and not detail.picture:IsShown() and not detail.chipsTitle:IsShown(),
-    "its option is a row with its help text below \"Options\"; no picture, no chips (got " .. #rows .. ")")
+    and detail.optionsTitle:GetText() == "Options" and not detail.chipsTitle:IsShown(),
+    "its option is a row with its help text below \"Options\"; no chips (got " .. #rows .. ")")
+-- Its picture: a few lines of chat, drawn live, one friend there under an alias.
+local previewsKnown = true
+for _, feature in ipairs(ns.featureList) do
+    previewsKnown = previewsKnown and (feature.preview == nil or ns.UI.Previews.Has(feature.preview))
+end
+check(previewsKnown, "every feature's picture names a scene the window has")
+local chatScene = detail.stage.scenes.chat
+local function chatLine(index)
+    local line = chatScene.lines[index]
+    return line[1]:GetText() .. line[2]:GetText() .. line[3]:GetText(), line.outline:IsShown()
+end
+check(detail.stage:IsShown() and detail.stage.current == "chat" and chatScene:IsVisible() and detail.crumb.mockPoint[5] < -200,
+    "above the name a picture of what it does")
+check(chatLine(1) == "[Guild] [Mira Stormfeather]: I'll bring torches." and not select(2, chatLine(1))
+    and chatLine(2) == "[Guild] [Dad]: Who's coming to Uldaman?" and select(2, chatLine(2))
+    and chatLine(3) == "[Party] [Lysa Morningdew]: I'm in, give me five minutes."
+    and chatLine(4) == "Dad has come online." and select(2, chatLine(4)),
+    "the chronicle's sample people chat; one of them under an alias, marked, also in the online notice: " .. chatLine(2))
+ns:SetOption("chatAliases", "style", "both")
+mock.Advance(0.1)
+check(chatLine(2) == "[Guild] [Dad (Borin Ironbeard)]: Who's coming to Uldaman?" and chatLine(4) == "Dad (Borin Ironbeard) has come online.",
+    "the picture follows the option: " .. chatLine(2))
+ns:SetOption("chatAliases", "style", "alias")
+mock.Advance(0.1)
+check(chatLine(2) == "[Guild] [Dad]: Who's coming to Uldaman?", "and back")
+ns:SetOption("general", "language", "deDE")
+mock.Advance(0.1)
+check(chatLine(2) == "[Gilde] [Papa]: Wer kommt mit nach Uldaman?" and chatLine(1) == "[Gilde] [Mira Sturmfeder]: Ich bring Fackeln mit.",
+    "and the language: " .. chatLine(2))
+ns:SetOption("general", "language", "auto")
+mock.Advance(0.1)
+check(chatLine(2) == "[Guild] [Dad]: Who's coming to Uldaman?", "and back to English")
 check(window.resetButton:IsShown() and window.resetButton.disabled, "reset is greyed out while the tab is on its defaults")
 mock.Click(window.resetButton)
 check(window.resetButton.label:GetText() == "Reset", "and a click on it does nothing")
@@ -563,6 +595,8 @@ check(detail.off:IsShown() and detail.off:GetText() == "Switch on \"Aliases in c
 check(entries[1].sub:GetText() == "Off  ·  1 option" and not entries[1].toggle.on and detail.pills[1].text:GetText() == "Off"
     and not detail.toggle.on and entries[1].tile.token == "control", "entry and detail show that it is off")
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
+check(chatLine(2) == "[Guild] [Borin Ironbeard]: Who's coming to Uldaman?" and not select(2, chatLine(2))
+    and chatLine(4) == "Borin Ironbeard has come online.", "switched off, the picture's chat shows the name: " .. chatLine(2))
 check(not navButton("Aliases").pill:IsShown(), "the sidebar counts nothing")
 ns:SetOption("chatAliases", "style", "both")
 mock.Advance(0.3)
@@ -2617,14 +2651,49 @@ do
     mock.Advance(0.1)
     check(ns.features.liveFeed.enabled and not kinds[2].disabled and detail.scroll:GetVerticalScroll() == 30,
         "switching it off and on does not make the detail jump")
-    -- A picture of what it does, once a feature has one.
-    ns.features.liveFeed.picture = "Interface\\AddOns\\Famulus\\Media\\logo.tga"
-    mock.Click(recording[3])
-    mock.Click(recording[4])
-    check(detail.picture:IsShown() and detail.title.mockPoint[5] < -200, "a feature's picture stands above its name")
-    ns.features.liveFeed.picture = nil
+    -- Its picture: the feed's own cards with the chronicle's sample people.
+    local Sample = Chronicle.Sample
+    local feed = detail.stage.scenes.feed
+    local cards = feed.cards
+    check(detail.stage.current == "feed" and feed:IsVisible() and detail.title.mockPoint[5] < -200
+        and cards[1]:IsShown() and cards[2]:IsShown() and cards[1]:GetParent() == feed
+        and cards[1].title:GetText() == (Chronicle.Text(Sample("level"))) and cards[1].title:GetText():find("Mira Stormfeather", 1, true)
+        and cards[2].title:GetText() == (Chronicle.Text(Sample("boss"))) and cards[1].number:GetText() == "40",
+        "above the live feed its cards, as the feed draws them: Mira's level, Borin's boss: " .. cards[1].title:GetText())
+    check(feed.caption.text:GetText() == "Visible for 7 seconds" and cards[1].bar:IsShown() and feed.animations[1]:IsPlaying()
+        and cards[1]:GetAlpha() == 1, "how long a card stays, with a line that runs out")
+    check(#ns.UI.Feed.Shown() == 0, "the picture puts no card on the screen")
+    ns:SetOption("liveFeed", "duration", "long")
+    mock.Advance(0.1)
+    check(feed.caption.text:GetText() == "Visible for 12 seconds", "the picture follows the duration")
+    ns:SetOption("liveFeed", "duration", "normal")
+    mock.Advance(0.1)
+    -- Pointed at a kind: a card of that kind, faint while it is off.
+    kinds[2].scripts.OnEnter(kinds[2])
+    check(cards[1].title:GetText() == (Chronicle.Text(Sample("death"))) and not cards[2]:IsShown()
+        and feed.caption.text:GetText() == "Shown" and cards[1]:GetAlpha() == 1, "pointing at a chip shows its kind's card")
+    mock.Click(kinds[2])
+    mock.Advance(0.1)
+    check(cards[1]:GetAlpha() < 0.5 and not cards[1].bar:IsShown() and feed.caption.text:GetText() == "Not shown",
+        "a kind switched off is faint")
+    mock.Click(kinds[2])
+    mock.Advance(0.1)
+    kinds[2].scripts.OnLeave(kinds[2])
+    kinds[10].scripts.OnEnter(kinds[10])
+    check(cards[1].title:GetText() == ns.L.c_reacted_cheer:format("Mira Stormfeather"), "a reaction as the feed shows it")
+    kinds[10].scripts.OnLeave(kinds[10])
+    check(cards[2]:IsShown() and feed.caption.text:GetText() == "Visible for 7 seconds", "and back to the two cards")
+    mock.Click(detail.switch)
+    mock.Advance(0.1)
+    check(cards[1]:GetAlpha() < 0.5 and feed.caption.text:GetText() == "No cards while this is off", "switched off, the cards are faint")
+    mock.Click(detail.switch)
+    mock.Advance(0.1)
+    feed:Hide()
+    check(not feed.animations[1]:IsPlaying(), "what moves stops when the picture is hidden")
+    feed:Show()
+    check(feed.animations[1]:IsPlaying(), "and goes on when it is back")
     mock.Click(recording[1])
-    check(not detail.picture:IsShown(), "without one there is no picture")
+    check(not detail.stage:IsShown() and detail.title.mockPoint[5] > -100, "an entry without a picture starts with its name")
 end
 Chronicle.Clear()
 mock.Advance(0.1)

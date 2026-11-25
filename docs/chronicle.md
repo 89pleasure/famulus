@@ -336,6 +336,8 @@ picture-book look are built and checked against the mock only.
   removes them again (`ChronicleService.Demo`, `ClearDemo`). They carry `demo = true` and
   never leave the client: neither the live sending nor the catch-up nor the relaying
   sends them. Meant for looking at the book and for screenshots.
+  `ChronicleService.Sample(kind)` gives one entry of a kind with the same people, zones and names,
+  never stored, for the pictures of the settings (see "Settings tabs" in `docs/window.md`).
   **Language (2026-11-24, the owner's request, for English screenshots):** Zones, names
   and people of the samples follow Famulus's language (`ns:GetLocaleCode()` in
   `Core/Locale.lua`), no longer that of the client (`GetLocale()`). In English the people are

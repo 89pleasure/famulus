@@ -184,6 +184,19 @@ local washes = {
     bossInk = hex("f2c36a"),
     warning = hex("f5b14c"),
     danger = hex("f06a6a"),
+    -- The pictures of the settings (UI/Previews.lua) show the game, not the
+    -- window: a night sky over the land, and the chat in the game's colours.
+    sceneSky = hsl(205, 0.34, 0.17),
+    sceneLand = hsl(190, 0.28, 0.07),
+    sceneHill = hsl(170, 0.24, 0.05),
+    sceneHaze = { 0.45, 0.62, 0.74, 0.22 },
+    sceneMoon = { 1, 0.965, 0.86, 0.85 },
+    sceneMoonGlow = { 1, 0.94, 0.78, 0.16 },
+    sceneCaption = { 0, 0, 0, 0.42 },
+    chatBox = { 0, 0, 0, 0.38 },
+    chatGuild = { 0.25, 1, 0.25, 1 },
+    chatParty = { 0.667, 0.667, 1, 1 },
+    chatSystem = { 1, 1, 0, 1 },
 }
 
 -- hue and saturation tint the grounds; tones are the accent's base tone, its

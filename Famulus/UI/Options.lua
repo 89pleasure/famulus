@@ -85,10 +85,8 @@ local function FeatureItem(feature)
         section = feature.id,
         icon = feature.icon or AREA_ICONS[feature.category] or "sparkle",
         -- A picture of what the feature does, shown above it in its
-        -- settings tab: a texture path on the feature (feature.picture).
-        picture = function()
-            return feature.picture
-        end,
+        -- settings tab: the name of its scene (UI/Previews.lua).
+        preview = feature.preview,
         default = function()
             return ns:GetDefault(feature.id, "enabled")
         end,
@@ -129,9 +127,8 @@ local function OptionItem(feature, option)
         -- each with its icon, below a heading of their own.
         group = option.group,
         icon = option.icon,
-        picture = function()
-            return option.picture
-        end,
+        -- Pointed at, the feature's picture may show what this option does.
+        optionKey = option.key,
         default = function()
             return ns:GetDefault(feature.id, option.key)
         end,
@@ -3019,6 +3016,7 @@ do
             detail.action:SetDisabled(not item.usable())
         end
         DetailPills(detail)
+        UI.Previews.Refresh(detail.stage)
         local on, total = 0, 0
         for _, chip in ipairs(detail.chips) do
             if chip:IsShown() then
@@ -3032,16 +3030,18 @@ do
     end
 
     -- A chip switches its option; pointed at, the line below the chips
-    -- explains it.
+    -- explains it, and the picture may show it.
     local function NewChip(detail)
         local chip = UI.Chip(detail.scroll.content, function(self)
             self.option.set(not self.option.get())
         end)
         chip.onEnter = function(self)
             detail.hint:SetText(self.option.desc())
+            UI.Previews.Focus(detail.stage, self.option.optionKey)
         end
         chip.onLeave = function()
             detail.hint:SetText(detail.hintText or "")
+            UI.Previews.Focus(detail.stage, nil)
         end
         detail.chips[#detail.chips + 1] = chip
         return chip
@@ -3057,10 +3057,7 @@ do
         local width = DETAIL_W - 2 * DETAIL_PAD
         local y = DETAIL_PAD - 2
 
-        local picture = item.picture and item.picture()
-        detail.picture:SetShown(picture ~= nil)
-        if picture then
-            detail.picture:SetTexture(picture)
+        if UI.Previews.Show(detail.stage, item.preview) then
             y = DETAIL_PAD + PICTURE_H + 20
         end
 
@@ -3201,10 +3198,9 @@ do
         detail.scroll = scroll
         local body = scroll.content
 
-        detail.picture = body:CreateTexture(nil, "ARTWORK")
-        detail.picture:SetPoint("TOPLEFT", DETAIL_PAD, -DETAIL_PAD)
-        detail.picture:SetSize(DETAIL_W - 2 * DETAIL_PAD, PICTURE_H)
-        detail.picture:Hide()
+        -- The picture of what the chosen entry does, a scene drawn live.
+        detail.stage = UI.Previews.Stage(body, DETAIL_W - 2 * DETAIL_PAD, PICTURE_H)
+        detail.stage:SetPoint("TOPLEFT", DETAIL_PAD, -DETAIL_PAD)
 
         detail.crumb = UI.Text(body, 12, "textMuted")
         detail.crumb:SetWordWrap(false)

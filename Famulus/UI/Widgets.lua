@@ -416,6 +416,18 @@ function UI.SetDisplayFont(region, size)
     end
 end
 
+-- The game's chat font, for pictures of the chat (UI/Previews.lua); the
+-- client has it loaded from the start. Without it, the window's font.
+function UI.SetChatFont(region, size)
+    local source = ChatFontNormal
+    local path = source and source.GetFont and source:GetFont()
+    if type(path) == "string" then
+        ApplyFont(region, path, size)
+    else
+        UI.SetFont(region, size, "medium")
+    end
+end
+
 -- weight: "regular" (default), "medium" or "semibold".
 function UI.Text(parent, size, token, weight)
     local text = parent:CreateFontString(nil, "OVERLAY")

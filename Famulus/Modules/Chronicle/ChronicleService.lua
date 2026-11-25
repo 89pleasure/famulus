@@ -968,6 +968,40 @@ local DEMO_PEOPLE = {
     deDE = { "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau" },
 }
 
+-- The samples' three people (Mira, Borin, Lysa) in the addon's language.
+function ChronicleService.SamplePeople()
+    return unpack(DEMO_PEOPLE[ns:GetLocaleCode()] or DEMO_PEOPLE.enUS)
+end
+
+-- One made-up entry of a kind, a friend's (own: the player's), with the
+-- samples' people, zones and names. Never stored: for the pictures of the
+-- settings (UI/Previews.lua). nil for a kind without a sample.
+function ChronicleService.Sample(kind, own)
+    local locale = ns:GetLocaleCode()
+    local zone, name = DEMO_ZONES[locale] or DEMO_ZONES.enUS, DEMO_NAMES[locale] or DEMO_NAMES.enUS
+    local mira, borin, lysa = ChronicleService.SamplePeople()
+    local samples = {
+        level = { level = 40, zone = zone[3], who = mira },
+        death = { zone = zone[1], level = 31, who = borin },
+        boss = { id = 1, name = name.boss, zone = zone[2], who = borin, with = { mira } },
+        achievement = { id = 1, name = name.challenge, who = lysa },
+        ability = { ability = "riding", level = 40, who = mira },
+        item = { item = 211527, name = name.bag, zone = zone[4], who = mira },
+        profession = { skill = 186, name = name.mining, who = lysa },
+        skill = { skill = 186, name = name.mining, rank = 225, who = lysa },
+        zone = { zone = zone[4], level = 39, who = lysa },
+    }
+    local entry = samples[kind]
+    if not entry then
+        return nil
+    end
+    entry.k, entry.t, entry.demo = kind, time(), true
+    if own then
+        entry.who, entry.with = nil, nil
+    end
+    return entry
+end
+
 function ChronicleService.ClearDemo()
     local chronicle = Store(false)
     local removed = 0

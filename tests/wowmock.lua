@@ -50,6 +50,7 @@ for name in
     AddDoubleLine SetOwner
     SetGradient SetClampRectInsets SetHorizTile SetVertTile
     SetLooping SetOffset SetDuration SetFromAlpha SetToAlpha SetOrder
+    SetScaleFrom SetScaleTo SetOrigin SetClipsChildren
     ]],
         "%S+"
     )
