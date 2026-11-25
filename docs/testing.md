@@ -57,6 +57,9 @@ the index there says which file it is in.
   once and one to someone offline at their next login. With one account the sample entries
   (`/fam chronicle demo`) show the look: reactions received on the level 40, one given on
   Borin's boss.
+- **Sound of the live feed (2026-11-25, checked against the mock only, not yet in game):** see
+  "Sound" under "Live feed". Open in game: whether `click.ogg` plays after a `/reload`
+  (`/fam feed test`), whether it is too loud or too quiet next to the game's sounds.
 - **New window (2026-11-18, checked against the mock only, not yet in game):** see "The
   window" below. The Inter fonts load (see "Font"). Open in game: whether rounded corners, shadows and hairlines look clean, switching
   the colour schemes, the sliding tab marker, gradients and glow effects.

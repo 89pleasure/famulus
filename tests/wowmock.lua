@@ -445,6 +445,10 @@ end
 function InCombatLockdown()
     return mock.state.inCombat or false
 end
+function PlaySoundFile(sound, channel)
+    record("PlaySoundFile", sound, channel)
+    return true, 1
+end
 function GetBuildInfo()
     return "1.60.1", "66666", "Nov 10 2026", 16001
 end

@@ -6,7 +6,7 @@
 -- It listens to the chronicle, not to the game: no event, no timer of its
 -- own. The cards can be moved in the game's Edit Mode or with /fam feed.
 
-local _, ns = ...
+local ADDON_NAME, ns = ...
 
 -- The kinds of events with a switch, in the order of the window. An arrival
 -- in a zone is off from the start: it happens often and is rarely news.
@@ -16,6 +16,7 @@ local OFF_BY_DEFAULT = { zone = true }
 
 local options = {
     { key = "duration", type = "select", default = "normal", values = { "short", "normal", "long" } },
+    { key = "sound", type = "toggle", default = true },
     { key = "own", type = "toggle", default = false },
 }
 for _, kind in ipairs(KINDS) do
@@ -35,6 +36,26 @@ feed.SECONDS = { short = 4, normal = 7, long = 12 }
 local FRESH = 120 -- seconds; older news (caught up on, passed on) is not announced
 local listening = false
 
+-- A soft double click comes with a card (tools/make_sound.js), once for cards
+-- that come together. It plays on the game's sound effects channel, so it
+-- follows their volume and mute like the game's own notices. The game only
+-- finds a file that was in the addon folder at login or the last /reload.
+feed.SOUND = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Media\\click.ogg"
+local QUIET = 2 -- seconds; cards within this of the last sound bring none
+local sounded
+
+function feed:Chime()
+    if self:Get("sound") ~= true or not PlaySoundFile then
+        return
+    end
+    local now = GetTime()
+    if sounded and now - sounded < QUIET then
+        return
+    end
+    sounded = now
+    PlaySoundFile(feed.SOUND, "SFX")
+end
+
 -- Shows the card story() makes. In developer mode the log says whether it
 -- came up, so that "it did not appear" can be told from "it was overlooked".
 local function Show(kind, story)
@@ -49,6 +70,7 @@ local function Show(kind, story)
     if not ok then
         error(problem, 0)
     end
+    feed:Chime()
 end
 
 local function OnChronicleChanged(entry)

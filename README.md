@@ -62,7 +62,8 @@ Famulus/          the addon; Famulus.toc lists every file
   Locales/        enUS.lua (reference) and deDE.lua
   Modules/<Area>/ one file per feature; shared code is <Name>Service.lua
   UI/             window, chronicle book, fellow overview, live cards, minimap button
-  Media/          textures (tools/make_media.py) and Inter (tools/make_fonts.py, SIL OFL 1.1)
+  Media/          textures (tools/make_media.py), the feed's sound (tools/make_sound.js) and
+                  Inter (tools/make_fonts.py, SIL OFL 1.1)
 tests/            mocked client API and test run
 tools/            media and font generators, self-test reader, release check
 website/          static website, no build step: python3 -m http.server 4173 --directory website

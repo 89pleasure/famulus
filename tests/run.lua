@@ -1161,21 +1161,42 @@ do -- the live feed: what was just written down appears on screen for a while
             end
         end
     end
+    -- The sounds played so far, and the last one.
+    local function sounds()
+        local last
+        for _, call in ipairs(mock.calls) do
+            if call[1] == "PlaySoundFile" then
+                last = call
+            end
+        end
+        return mock.count("PlaySoundFile"), last
+    end
     Feed.Clear()
     check(ns.features.liveFeed.enabled and ns:GetOption("liveFeed", "zone") == false and ns:GetOption("liveFeed", "level") == true
-        and ns:GetOption("liveFeed", "own") == false,
-        "the feed is on from the start; arrivals in a zone and the player's own events are not shown")
+        and ns:GetOption("liveFeed", "own") == false and ns:GetOption("liveFeed", "sound") == true,
+        "the feed is on from the start, with its sound; arrivals in a zone and the player's own events are not shown")
+    mock.Advance(3) -- (a sound shortly before would hold back the next)
+    local heard = sounds()
     -- (Two events of a kind within a second count as one; hence the times.)
     Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 18, probe = true })
     check(#Feed.Shown() == 0, "from the start the feed is about companions: the player's own events stay off screen")
     ns:SetOption("liveFeed", "own", true)
     Chronicle.Add("level", { level = 14, t = time() - 19, probe = true })
     check(#Feed.Shown() == 0, "the player's own level-up is not shown: the game announces it itself")
+    check(sounds() == heard, "no card, no sound")
     Chronicle.Add("ability", { ability = "riding", level = 14, t = time() - 20, probe = true })
     local card = Feed.Shown()[1]
     check(#Feed.Shown() == 1 and card:IsShown() and card.title:GetText() == "Learned to ride"
         and card.photo:IsShown() and not card.icon:IsShown() and not card.number:IsShown(),
         "asked for, an event of the player's own appears as a card with an icon of the game")
+    local count, sound = sounds()
+    check(count == heard + 1 and sound[2] == ns.features.liveFeed.SOUND and sound[3] == "SFX",
+        "a card comes with a sound, on the game's sound effects channel")
+    local file = io.open("Famulus/" .. ns.features.liveFeed.SOUND:match("\\Famulus\\(.+)$"):gsub("\\", "/"), "rb")
+    check(file ~= nil and file:read(4) == "OggS", "the sound is an Ogg file in the addon folder")
+    if file then
+        file:close()
+    end
     check(card.crest:GetHeight() < card:GetHeight() and card.crest:GetWidth() < card:GetWidth()
         and card:GetWidth() >= 230 and card.mark:IsShown() and card.grain ~= nil,
         "the picture is a crest inside its band; a milestone carries the mark of an active card")
@@ -1191,6 +1212,7 @@ do -- the live feed: what was just written down appears on screen for a while
         and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
     check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and not Feed.Shown()[1].mark:IsShown(),
         "a band is as wide as its text needs; a companion's event is no milestone")
+    check(sounds() == heard + 1, "cards that come together bring one sound")
     for skill = 1, 3 do
         Chronicle.Add("skill", { skill = skill, name = "Craft " .. skill, rank = 75, probe = true })
     end
@@ -1203,6 +1225,13 @@ do -- the live feed: what was just written down appears on screen for a while
     Chronicle.Add("level", { level = 15, who = "Jaina Proudmoore", t = time() - 23, probe = true })
     check(#Feed.Shown() == 1 and Feed.Shown()[1].number:IsShown() and Feed.Shown()[1].number:GetText() == "15",
         "a companion's level-up appears with its number")
+    check(sounds() == heard + 2, "a card some time later brings its own sound")
+    Feed.Clear()
+    mock.Advance(3)
+    ns:SetOption("liveFeed", "sound", false)
+    Chronicle.Add("death", { zone = "Nowhere", who = "Jaina Proudmoore", t = time() - 26, probe = true })
+    check(#Feed.Shown() == 1 and sounds() == heard + 2, "with the sound switched off, the card comes silently")
+    ns:SetOption("liveFeed", "sound", true)
     Feed.Clear()
     ns:SetOption("liveFeed", "level", false)
     Chronicle.Add("level", { level = 16, who = "Jaina Proudmoore", t = time() - 24, probe = true })
@@ -1227,8 +1256,11 @@ do -- the live feed: what was just written down appears on screen for a while
     SlashCmdList.FAMULUS("feed reset")
     check(not Feed.IsMoving() and FamulusDB.feed == nil, "/fam feed fixes it again, /fam feed reset puts it back")
     Feed.Clear()
+    mock.Advance(3)
+    heard = sounds()
     SlashCmdList.FAMULUS("feed test")
-    check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13", "/fam feed test shows a sample card")
+    check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13" and sounds() == heard + 1,
+        "/fam feed test shows a sample card, with its sound")
     Feed.Clear()
     forget()
 end
@@ -2377,10 +2409,10 @@ do -- an item is shown with the game's icon of it, in its own colours
 end
 mock.Click(tabButton("Settings"))
 mock.Advance(0.1)
-check(#visibleRows() == 18 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
+check(#visibleRows() == 19 and visibleRows()[1].toggle ~= nil and #bookFrames("story") == 0
     and not window.railScroll:IsShown() and visibleRows()[1]:GetWidth() == 900,
-    "recording: the four switches, the reactions of sharing, the feed's twelve options and how people are named; no book, no rail (got " .. #visibleRows() .. ")")
-check(visibleRows()[18].item.key == "chronicleNames" and visibleRows()[18].toggle ~= nil and visibleRows()[18].item.get() == true,
+    "recording: the four switches, the reactions of sharing, the feed's thirteen options and how people are named; no book, no rail (got " .. #visibleRows() .. ")")
+check(visibleRows()[19].item.key == "chronicleNames" and visibleRows()[19].toggle ~= nil and visibleRows()[19].item.get() == true,
     "the character name behind an alias is a switch of its own, on from the start")
 Chronicle.Clear()
 mock.Advance(0.1)
