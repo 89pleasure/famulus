@@ -220,11 +220,14 @@ owner.
   version"):** `fact_version` and `in_rel_d` say "Version <x>" in both languages. When
   publishing, `website.yml` replaces every "Version <x.y.z[-alpha|beta.n]>" in `index.html` and
   `i18n.js` with the newest tag on `main` (`git describe --tags`, without the "v") and fails if a
-  file then does not name it. The workflow also runs on every pushed tag `v*` and then always
-  publishes `main`, not the tagged commit. In the repo the texts carry the last release by hand
+  file then does not name it. The workflow also runs after every release that succeeded and
+  uploaded (`workflow_run` of "Release", event `push`; dry runs by hand do not count) and then
+  publishes `main`. Until 2026-11-25 it ran on the tag itself; that would have failed, because the
+  environment `github-pages` lets only the branch `main` deploy (read from the repo settings).
+  In the repo the texts carry the last release by hand
   (`0.1.0-alpha.2`), only so that the local preview is right. A new text with the version must
   keep the form "Version <x>". The assistant's decision; the replacement ran on GitHub on
-  2026-11-25 ("Version 0.1.0-alpha.2"), a run started by a tag has not happened yet.
+  2026-11-25 ("Version 0.1.0-alpha.2"), a run after a release has not happened yet.
 - **Download (2026-11-25, the owner's request):** The buttons in the navigation and the header
   say "Download" instead of "Install"/"Installation" and, like the button in the release box,
   lead straight to `www.curseforge.com/wow/addons/famulus` (project verified on CurseForge, not
