@@ -3918,6 +3918,22 @@ mock.Advance(0.1)
     local tidy = choose("area_fellows", "ui_tab_record", ns.L.ui_fellow_tidy)
     check(stage.current == "tidy" and not tidy.list.rows[1].out and tidy.list.rows[3].out and tidy.list.rows[4].out
         and tidy.list.rows[3].strike:IsShown(), "tidying up: who goes is struck out")
+    -- Who is nearby: the feature's own cards on the feed's place.
+    local near = choose("area_fellows", "ui_tab_record", ns.L.f_nearbyFriends)
+    check(stage.current == "nearby" and near.cards[1].title:GetText() == "Also in Tanaris: Kael and Mira"
+        and near.cards[2].title:GetText() == ns.L.ui_near_came:format("Borin", "Tanaris") and near.cards[1]:GetAlpha() < 1,
+        "who is nearby, while it is off: its cards, faint: " .. near.cards[1].title:GetText())
+    set("nearbyFriends", "enabled", true)
+    set("nearbyFriends", "guild", false)
+    check(near.cards[1]:GetAlpha() == 1 and near.cards[1].title:GetText() == "Also in Tanaris: Mira",
+        "switched on, without the guild: only friends")
+    local cities = optionRow("cities")
+    cities.scripts.OnEnter(cities)
+    check(near.cards[1].title:GetText() == ns.L.ui_near_came:format("Mira", "Stormwind") and near.cards[1]:GetAlpha() < 1
+        and near.caption.text:GetText() == "Not in cities and inns", "pointed at \"cities\": a card in a city, faint while it would not come")
+    cities.scripts.OnLeave(cities)
+    set("nearbyFriends", "guild", true)
+    set("nearbyFriends", "enabled", false)
 
     -- Aliases: the game's own places, with the alias where the feature puts it.
     local tooltip = choose("area_aliases", "ui_tab_display", ns.L.f_tooltipAliases)

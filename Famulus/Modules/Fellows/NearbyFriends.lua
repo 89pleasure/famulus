@@ -17,6 +17,7 @@ local nearby = ns:NewFeature({
     id = "nearbyFriends",
     category = "fellows",
     icon = "compass", -- its entry in the settings (UI.media)
+    preview = "nearby", -- its picture there (UI/Previews.lua)
     default = false,
     requires = { "GetRealZoneText", "C_FriendList.GetFriendInfoByIndex" },
     options = {

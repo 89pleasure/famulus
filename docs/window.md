@@ -198,6 +198,10 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     - **Fellow travellers:** `fellows`: the overview's tiles (`UI.FellowTile`,
       `UI.FillFellowTile`, the person from `UI.FellowSample`); pointed at "raids" a list of which
       groups count, at "friendsOnly" whom it remembers. `tidy`: who stays, who goes (struck out).
+      `nearby` (Who is nearby): the feature's own cards on the feed's place
+      (`nearbyFriends.Story`, the same layout as `feed`): friends and guild where the player
+      arrives, and one who came; pointed at "guild" with or without the guild, at "cities" a
+      card in a city, faint while it would not come.
     - **Aliases:** `chat` (four lines of chat, Borin under the alias as `AliasService.Format`
       writes it, also in the online notice), `tooltip` (the line `TooltipAliases` adds), `menu`
       (the entry `AliasMenu` adds), `bnet` (a Battle.net friend under the alias, with three

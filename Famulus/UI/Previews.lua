@@ -523,64 +523,74 @@ local function IsKind(feature, key)
     return false
 end
 
-SCENES.feed = {
-    Build = function(scene, width, height)
-        World(scene, width, height)
-        scene.cards = {}
-        for index = 1, 2 do
-            local card = UI.Feed.Card(scene)
-            -- A picture: its button to react catches no mouse.
-            card.react:EnableMouse(false)
-            -- The line along its foot that shows how long it stays runs out
-            -- here again and again.
-            card.barGroup:SetLooping("REPEAT")
-            scene.animations[#scene.animations + 1] = card.barGroup
-            scene.cards[index] = card
+-- How long the feed's cards stay, in seconds (the live feed's choice).
+local function FeedSeconds()
+    local feature = ns.features.liveFeed
+    return feature.SECONDS[feature:Get("duration")] or feature.SECONDS.normal
+end
+
+-- Two of the feed's cards at the top of the night sky, and a caption.
+local function FeedCards(scene, width, height)
+    World(scene, width, height)
+    scene.cards = {}
+    for index = 1, 2 do
+        local card = UI.Feed.Card(scene)
+        -- A picture: its button to react catches no mouse.
+        card.react:EnableMouse(false)
+        -- The line along its foot that shows how long it stays runs out
+        -- here again and again.
+        card.barGroup:SetLooping("REPEAT")
+        scene.animations[#scene.animations + 1] = card.barGroup
+        scene.cards[index] = card
+    end
+    scene.caption = Caption(scene)
+end
+
+-- Fills the cards with up to two stories, faint if they would not come,
+-- the caption below them.
+local function LayFeed(scene, stories, faint, caption)
+    local seconds = FeedSeconds()
+    local widest, y = 0, FEED_TOP
+    for index, card in ipairs(scene.cards) do
+        local story = stories[index]
+        card:SetShown(story ~= nil)
+        if story then
+            UI.Feed.Fill(card, story)
+            widest = math.max(widest, card:GetWidth())
+            card:SetAlpha(faint and FAINT or 1)
+            card.bar:SetShown(not faint)
+            card.barRun:SetDuration(seconds)
         end
-        scene.caption = Caption(scene)
-    end,
+    end
+    -- Left edges in line, as on screen; the stack in the middle.
+    local left = math.floor((scene.width - widest) / 2)
+    for index, card in ipairs(scene.cards) do
+        if stories[index] then
+            card:ClearAllPoints()
+            card:SetPoint("TOPLEFT", scene, "TOPLEFT", left, -y)
+            y = y + UI.Feed.HEIGHT + FEED_GAP
+        end
+    end
+    scene.caption:Set(caption)
+    scene.caption:ClearAllPoints()
+    scene.caption:SetPoint("TOP", scene, "TOP", 0, -(y + 2))
+end
+
+SCENES.feed = {
+    Build = FeedCards,
 
     Fill = function(scene, focus)
         local feature = ns.features.liveFeed
-        local seconds = feature.SECONDS[feature:Get("duration")] or feature.SECONDS.normal
-        local stories, faint, caption
         if focus and IsKind(feature, focus) then
             local on = feature.enabled and feature:Get(focus) == true
-            stories, faint = { FeedStory(focus) }, not on
-            caption = on and L.ui_preview_feed_shown or L.ui_preview_feed_hidden
+            LayFeed(scene, { FeedStory(focus) }, not on, on and L.ui_preview_feed_shown or L.ui_preview_feed_hidden)
         elseif focus == "own" then
             local on = feature.enabled and feature:Get("own") == true
-            stories, faint = { FeedStory("ability", true) }, not on
-            caption = on and L.ui_preview_feed_own_on or L.ui_preview_feed_own_off
+            LayFeed(scene, { FeedStory("ability", true) }, not on, on and L.ui_preview_feed_own_on or L.ui_preview_feed_own_off)
         else
-            stories, faint = { FeedStory("level"), FeedStory("boss") }, not feature.enabled
-            caption = feature.enabled and L.ui_preview_feed_seconds:format(seconds) or L.ui_preview_feed_off
+            LayFeed(scene, { FeedStory("level"), FeedStory("boss") }, not feature.enabled,
+                feature.enabled and L.ui_preview_feed_seconds:format(FeedSeconds()) or L.ui_preview_feed_off)
         end
-
-        local widest, y = 0, FEED_TOP
-        for index, card in ipairs(scene.cards) do
-            local story = stories[index]
-            card:SetShown(story ~= nil)
-            if story then
-                UI.Feed.Fill(card, story)
-                widest = math.max(widest, card:GetWidth())
-                card:SetAlpha(faint and FAINT or 1)
-                card.bar:SetShown(not faint)
-                card.barRun:SetDuration(seconds)
-            end
-        end
-        -- Left edges in line, as on screen; the stack in the middle.
-        local left = math.floor((scene.width - widest) / 2)
-        for index, card in ipairs(scene.cards) do
-            if stories[index] then
-                card:ClearAllPoints()
-                card:SetPoint("TOPLEFT", scene, "TOPLEFT", left, -y)
-                y = y + UI.Feed.HEIGHT + FEED_GAP
-            end
-        end
-        scene.caption:Set(caption)
-        scene.caption:ClearAllPoints()
-        scene.caption:SetPoint("TOP", scene, "TOP", 0, -(y + 2))
     end,
 }
 
@@ -663,6 +673,41 @@ SCENES.tidy = {
         end
         scene.list:Set(rows)
         scene.caption:Set(L.ui_preview_tidy)
+    end,
+}
+
+-- Who is nearby: its cards on the feed's place, made by the feature itself
+-- (nearbyFriends.Story): friends where the player arrives, and one who
+-- came. Pointed at "guild": with or without the guild; at "cities": a card
+-- in a city, faint while it would not come.
+local function NearbyPerson(index, from)
+    local person = ns.FellowService.SamplePerson(index)
+    return { name = person.name, class = person.class, level = person.level, from = from }
+end
+
+SCENES.nearby = {
+    Build = FeedCards,
+
+    Fill = function(scene, focus)
+        local feature = ns.features.nearbyFriends
+        local Story = feature.Story
+        local zone = Samples().Sample("zone").zone
+        local on, guild = feature.enabled, feature:Get("guild") == true
+        local here = { NearbyPerson(1, "friend") }
+        if guild then
+            here[2] = NearbyPerson(4, "guild")
+        end
+        if focus == "cities" then
+            local cities = feature:Get("cities") == true
+            LayFeed(scene, { Story({ NearbyPerson(1, "friend") }, L.ui_preview_city, true) }, not (on and cities),
+                cities and L.ui_preview_nearby_cities or L.ui_preview_nearby_rest)
+        elseif focus == "guild" then
+            LayFeed(scene, { Story(here, zone, false) }, not on, guild and L.ui_preview_nearby_guild or L.ui_preview_nearby_friends)
+        else
+            local came = guild and NearbyPerson(2, "guild") or NearbyPerson(3, "battlenet")
+            LayFeed(scene, { Story(here, zone, false), Story({ came }, zone, true) }, not on,
+                on and L.ui_preview_feed_seconds:format(FeedSeconds()) or L.ui_preview_feed_off)
+        end
     end,
 }
 
