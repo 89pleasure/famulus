@@ -1,5 +1,6 @@
-# Publishes the website (the folder website/, served as it is, no build step) on GitHub Pages
-# whenever a push to main changes it. Commits that only touch the addon do not trigger it.
+# Publishes the website (the folder website/, no build step) on GitHub Pages whenever a push to
+# main changes it, and again after every release uploaded to CurseForge. Commits that only touch
+# the addon do not trigger it. The only change on the way: @version@ becomes the newest tag.
 #
 # Once per repository: Settings > Pages > Build and deployment > Source "GitHub Actions".
 # The custom domain is set there too (Settings > Pages > Custom domain); with this workflow no
@@ -13,6 +14,13 @@ on:
     paths:
       - "website/**"
       - ".github/workflows/website.yml"
+  # After a release, not on the tag itself: the Pages environment only lets main deploy, and a
+  # workflow_run always runs on main.
+  workflow_run:
+    workflows:
+      - Release
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -27,6 +35,10 @@ concurrency:
 
 jobs:
   deploy:
+    # Only a release that uploaded (a tag push) and succeeded; not the dry runs.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -34,6 +46,20 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Full name of the newest tag reachable from main, without the "v": 0.1.0-alpha.2.
+      - name: Write the version
+        run: |
+          version=$(git describe --tags --abbrev=0 --match 'v*')
+          version=${version#v}
+          sed -i "s/@version@/$version/g" website/index.html website/i18n.js
+          if grep -rn "@version@" website; then
+            echo "::error::A @version@ placeholder is left."
+            exit 1
+          fi
+          echo "Version $version"
 
       - name: Check that Pages is set up
         uses: actions/configure-pages@v6
