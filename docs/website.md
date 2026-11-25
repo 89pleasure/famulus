@@ -227,9 +227,14 @@ owner.
 - **Version on the page (2026-11-25, the owner's request: "should show the current release
   version"):** `fact_version` and `in_rel_d` say "Version <x>" in both languages. When
   publishing, `website.yml` replaces every "Version <x.y.z[-alpha|beta.n]>" in `index.html` and
-  `i18n.js` with the newest tag on `main` (`git describe --tags`, without the "v") and fails if a
-  file then does not name it. The workflow also runs after every release that succeeded and
-  uploaded (`workflow_run` of "Release", event `push`; dry runs by hand do not count) and then
+  `i18n.js` with the newest release tag by version, wherever it sits (`git tag --sort=-v:refname`
+  with `versionsort.suffix=-`, so alpha and beta come before their release; without the "v"),
+  and fails if a file then does not name it. Until 2026-11-25 it took the newest tag on `main`
+  (`git describe --tags`); `v0.1.0-alpha.4` was set on the branch of its pull request instead of
+  the squash merge, so the page went on showing alpha.3 after the release (since then the Release
+  workflow also refuses a tag that is not on `main`, see "Publishing on CurseForge"). The workflow
+  also runs after every release that succeeded and uploaded (`workflow_run` of "Release", event
+  `push`; dry runs by hand do not count) and then
   publishes `main`. Until 2026-11-25 it ran on the tag itself; that would have failed, because the
   environment `github-pages` lets only the branch `main` deploy (read from the repo settings).
   In the repo the texts carry the last release by hand
