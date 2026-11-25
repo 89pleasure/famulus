@@ -3,6 +3,25 @@
 Every release has a section `## <version>` (the tag without the `v`, for example `## 0.2.0-beta.1`).
 That section becomes the changelog of the file on CurseForge.
 
+## 0.1.0-alpha.3
+
+### Chronicle
+- Every event has a weight: boss kills and level-ups get a large card, deaths and new zones a
+  small one. Each card shows whose event it is at the top and time and place at the bottom.
+- Your friends' stats now update right after their deaths and level-ups, not only when you log in.
+- Sharing keeps to the game's limit for addon messages, so nothing gets lost when many friends or
+  guild members with Famulus are online. Your own entries always reach them in order.
+- Guild members are linked again after a `/reload`.
+- When the chronicle is full, your friends' news makes room before your own journey does.
+
+### Fellow travellers
+- A new tab, Groups: when you played together and with whom, the zones and bosses of each group,
+  and who you play with most often. It starts with this version.
+- "Your story" is told by sessions of play, like the chronicle, with the zone on each card.
+
+### Window
+- Text no longer stays blank until a `/reload` while the window's font is still loading.
+
 ## 0.1.0-alpha.2
 
 ### Chronicle
