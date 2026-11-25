@@ -232,6 +232,15 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 @keyframes fly-glow { 0%, 100% { opacity: 0.1; } 50% { opacity: 1; } }
 .is-away .bat, .is-away .bat__wings, .is-away .fly { animation-play-state: paused; }
 
+/* The owl in the old tree blinks every few seconds, both eyes shutting to a
+   slit: once, and later twice in a row. */
+.blink { transform-box: fill-box; transform-origin: center; animation: blink 12s ease-in-out -3s infinite; }
+@keyframes blink {
+  0%, 44%, 47%, 90%, 92.3%, 94.8%, 100% { transform: scaleY(1); }
+  45%, 45.5%, 91%, 91.3%, 93.3%, 93.6% { transform: scaleY(0.1); }
+}
+.is-away .blink { animation-play-state: paused; }
+
 /* ---------- Hero ---------- */
 
 /* How far the addon's window rises into the hero (.shot); the text keeps that

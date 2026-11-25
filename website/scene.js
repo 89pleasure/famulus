@@ -413,7 +413,8 @@ window.FamulusScene = (() => {
   //   ['line', points, width]   a staff, a haft, a string
   //   ['curve', d, width]       a bow
   //   ['path', d]
-  //   ['glow', x, y, r]         a light of its own: a crystal, an owl's eyes
+  //   ['glow', x, y, r, name]   a light of its own: a crystal, an owl's eyes;
+  //                             name: a class for it, to animate it (CSS)
   //   ['lit', points, opacity]  firelight inside, as in a tent
   // ---------------------------------------------------------------------------
 
@@ -465,7 +466,8 @@ window.FamulusScene = (() => {
     return ['blob', outline.map(([px, py, tip]) => [x + px * s, y + py * s, tip])];
   }
 
-  // An owl seen from the front, sitting at (x, y), with glowing eyes.
+  // An owl seen from the front, sitting at (x, y), with glowing eyes that
+  // blink now and then (CSS: .blink).
   function owl(x, y) {
     const at = points => points.map(([px, py, tip]) => [x + px, y + py, tip]);
     return [
@@ -473,8 +475,8 @@ window.FamulusScene = (() => {
       ['poly', at([[-5, -14], [-6.5, -20.5], [-2, -16]])],
       ['poly', at([[5, -14], [6.5, -20.5], [2, -16]])],
       ['poly', at([[-2, 0], [0, 4], [2, 0]])],
-      ['glow', x - 2.4, y - 12, 0.9],
-      ['glow', x + 2.4, y - 12, 0.9],
+      ['glow', x - 2.4, y - 12, 0.9, 'blink'],
+      ['glow', x + 2.4, y - 12, 0.9, 'blink'],
     ];
   }
 
@@ -687,11 +689,13 @@ window.FamulusScene = (() => {
         light.style.opacity = args[1];
         lights.append(light);
       } else {
-        const [gx, gy, r] = args;
-        lights.append(node('circle', { cx: gx, cy: gy, r: r * 4.5, fill: `url(#spark-${id})` }));
+        const [gx, gy, r, name] = args;
+        const glow = name ? node('g', { class: name }) : lights;
+        glow.append(node('circle', { cx: gx, cy: gy, r: r * 4.5, fill: `url(#spark-${id})` }));
         const core = node('circle', { cx: gx, cy: gy, r });
         core.style.fill = 'var(--accent2)';
-        lights.append(core);
+        glow.append(core);
+        if (glow !== lights) lights.append(glow);
       }
     }
     return { body, lights };
