@@ -50,6 +50,11 @@
 -- a hello is read when it goes out, so the second costs little. Offers go
 -- only about people who are not online themselves, and not again while
 -- earlier ones to the same companion still wait or went out just before.
+--
+-- Trace: in developer mode ("/fam dev") every step goes into the trace
+-- (ns:DevTrace): what was sent and received, what was dropped or ignored and
+-- why, the counts of the guild roster and the friends list, loading screens.
+-- A person appears as a tag, never by name (Tag).
 
 local _, ns = ...
 local Chronicle = ns.ChronicleService
@@ -117,6 +122,7 @@ local offeredAt = {} -- key -> GetTime() of the last offers queued for them
 local registered = false
 local greetedGuild = false
 local statsPending = false -- the statistics will go out to the linked shortly
+local tracedRoster, tracedFriends, tracedLockdown = nil, nil, false -- what the trace last said
 
 -- A name without the realm the client may add, and one spelling for it
 -- however the client writes it.
@@ -142,6 +148,50 @@ local function OwnKey()
         return nil
     end
     return Key(IsPlainText(surname) and (name .. " " .. surname) or name)
+end
+
+---------------------------------------------------------------------------
+-- Trace (developer mode)
+---------------------------------------------------------------------------
+
+-- A person in the trace: their initials and a number from their name key,
+-- "AW-1c4" for Arisa Werkatz. The same on every client and in every session,
+-- so two players' traces can be laid side by side, and no name is stored.
+-- Outside developer mode it costs nothing.
+local function Tag(key)
+    if not ns:IsDevMode() then
+        return ""
+    end
+    if not key then
+        return "guild"
+    end
+    local initials, hash = "", 0
+    for part in string.gmatch(key, "[^%-]+") do
+        initials = initials .. (string.match(part, "^[\1-\127\192-\255][\128-\191]*") or "")
+    end
+    for i = 1, #key do
+        hash = (hash * 31 + string.byte(key, i)) % 4096
+    end
+    return string.format("%s-%03x", string.upper(initials), hash)
+end
+
+-- The kind of a message, "H" for "1~H~...".
+local function KindOf(text)
+    return type(text) == "string" and string.match(text, "^%d+~(%u)") or "?"
+end
+
+local function Trace(text, ...)
+    if ns:IsDevMode() then
+        ns:DevTrace("SHARE", select("#", ...) > 0 and string.format(text, ...) or text)
+    end
+end
+
+-- A time in the trace; 0 is "the start" (nothing known yet).
+local function When(t)
+    if t == 0 then
+        return "the start"
+    end
+    return date and date("%Y-%m-%d %H:%M:%S", t) or tostring(t)
 end
 
 ---------------------------------------------------------------------------
@@ -243,6 +293,17 @@ local THROTTLED = RESULT.AddonMessageThrottle or 3 -- too fast for this prefix
 local CHANNEL_THROTTLED = RESULT.ChannelThrottle or 8
 local LOCKDOWN = RESULT.AddOnMessageLockdown or 11 -- boss fight, restricted map
 local OFFLINE = RESULT.TargetOffline or 12
+local SUCCESS = RESULT.Success or 0
+
+-- An answer of SendAddonMessage as the client names it, for the trace.
+local function ResultName(result)
+    for name, value in pairs(RESULT) do
+        if value == result then
+            return name
+        end
+    end
+    return tostring(result)
+end
 
 -- A lane of the queue: first come, first served. others: how many of the
 -- waiting messages carry no own entry; only they count against max.
@@ -302,7 +363,15 @@ local function Flush()
     end
     -- During a boss fight the client would drop the message; wait it out.
     if ns.ChatService.InLockdown() then
+        if not tracedLockdown then
+            tracedLockdown = true
+            Trace("chat lockdown: the queue waits")
+        end
         return
+    end
+    if tracedLockdown then
+        tracedLockdown = false
+        Trace("chat lockdown over")
     end
     Refill(GetTime())
     while true do
@@ -342,6 +411,7 @@ local function Flush()
                     whispersCounted = true
                 end
                 Note(result == LOCKDOWN and "lockdown" or item.channel and "throttled" or "whisper throttled")
+                Trace("refused %s to %s: %s, it waits", KindOf(text), Tag(item.key), result == false and "false" or ResultName(result))
                 allowance = 0
                 return
             end
@@ -351,11 +421,24 @@ local function Flush()
             end
             if result == OFFLINE and item.key then
                 Note("offline")
+                Trace("sent %s to %s: the client says they are offline, nothing more to them", KindOf(text), Tag(item.key))
                 gone[item.key] = true
                 Unask(item.key)
-            elseif result ~= false and item.more then
-                continueFrom = item.t
+            elseif result == false then
+                Trace("gave up %s to %s: refused %d times", KindOf(text), Tag(item.key), item.refused)
+            else
+                if item.more then
+                    continueFrom = item.t
+                end
+                if result == nil or result == true or result == SUCCESS then
+                    Trace("sent %s to %s", KindOf(text), Tag(item.key))
+                else
+                    Trace("sent %s to %s: %s", KindOf(text), Tag(item.key), ResultName(result))
+                end
             end
+        elseif not item.skip then
+            Trace("dropped %s to %s: %s", item.hello and "H" or KindOf(item.text), Tag(item.key),
+                gone[item.key] and "the client said they are offline" or "not online")
         end
         if item.hello then
             helloWaiting[item.key] = nil
@@ -379,8 +462,11 @@ end
 -- (CatchUp), and each own event one. always: never turned away either.
 local function Queue(key, text, channel, urgent, entryTime, always)
     local lane = urgent and nowLane or laterLane
-    if not text or (type(text) == "string" and #text > 255)
-        or (not (entryTime or always) and lane.others >= lane.max) then
+    if not text or (type(text) == "string" and #text > 255) then
+        return
+    end
+    if not (entryTime or always) and lane.others >= lane.max then
+        Trace("turned away %s to %s: the queue is full", KindOf(text), Tag(key))
         return
     end
     if not entryTime then
@@ -418,19 +504,24 @@ function CatchUp(key, since)
     if last and #entries >= CATCH_UP then
         last.more = true
     end
+    Trace("catching up %s after %s: %d own entries%s", Tag(key), When(since), #entries,
+        #entries >= CATCH_UP and ", more follow" or "")
 end
 
 -- The mark is read when the hello goes out: what arrives until then need
 -- not be sent again, and one waiting hello is enough. It is never turned
--- away: after a first contact nothing would send it again.
-local function SendHello(key)
+-- away: after a first contact nothing would send it again. why: for the
+-- trace.
+local function SendHello(key, why)
     if helloWaiting[key] then
+        Trace("hello to %s (%s): one waits already", Tag(key), why)
         return
     end
     local item = Send(key, function()
         return table.concat({ VERSION, "H", string.format("%d", Chronicle.NewestFrom(online[key])) }, "~")
     end, true, nil, true)
     item.hello, helloWaiting[key] = true, true
+    Trace("hello to %s queued: %s", Tag(key), why)
 end
 
 -- Whether offers to key still wait in the queue.
@@ -500,11 +591,13 @@ local function OnChronicleChanged(entry)
     if not sharing.enabled or not entry or entry.demo or entry.who or entry.c ~= Chronicle.Character() then
         return
     end
-    local text = EncodeEntry(entry)
+    local text, count = EncodeEntry(entry), 0
     for key in pairs(linked) do
         Send(key, text, true, entry.t)
+        count = count + 1
     end
-    if next(linked) then
+    Trace("own entry %s: to %d linked", tostring(entry.k), count)
+    if count > 0 then
         SendStatisticsSoon()
     end
 end
@@ -534,7 +627,7 @@ local handlers = {}
 -- goes out once per session, after a login or a reload: whoever sends it
 -- knows nobody yet, even if they are still linked here.
 function handlers.P(key)
-    SendHello(key)
+    SendHello(key, "their guild greeting")
 end
 
 -- "I have your news up to <time>": send what is newer, the statistics and
@@ -566,11 +659,16 @@ function handlers.O(key, who, newest)
     end
     local whoKey = Key(who)
     local name = Vouched(whoKey)
-    if not name or whoKey == OwnKey() or linked[whoKey] or asked[whoKey] then
+    local skip = not name and "not vouched for" or whoKey == OwnKey() and "about the player"
+        or linked[whoKey] and "linked themselves" or asked[whoKey] and "asked of someone else"
+    if skip then
+        Trace("offer from %s about %s not taken: %s", Tag(key), Tag(whoKey), skip)
         return
     end
     local since = Chronicle.NewestFrom(name, true)
-    if (tonumber(newest) or 0) > since and Send(key, table.concat({ VERSION, "W", Clean(name), string.format("%d", since) }, "~"), true) then
+    if (tonumber(newest) or 0) <= since then
+        Trace("offer from %s about %s not taken: nothing new", Tag(key), Tag(whoKey))
+    elseif Send(key, table.concat({ VERSION, "W", Clean(name), string.format("%d", since) }, "~"), true) then
         asked[whoKey] = key
     end
 end
@@ -598,6 +696,7 @@ function handlers.W(key, who, since)
     for _, entry in ipairs(found) do
         Send(key, EncodeEntry(entry, entry.who))
     end
+    Trace("%s asks about %s: %d entries to pass on", Tag(key), Tag(whoKey), #found)
 end
 
 -- One entry of <who>, passed on: only as asked for, and only about someone
@@ -609,41 +708,58 @@ function handlers.R(key, who, when, kind, fields)
     local whoKey = Key(who)
     local name = Vouched(whoKey)
     if not name or asked[whoKey] ~= key then
+        Trace("passed-on entry from %s about %s not taken: %s", Tag(key), Tag(whoKey),
+            not name and "not vouched for" or "not asked of them")
         return
     end
     Take(kind, when, fields, name, online[key])
 end
 
 function sharing:CHAT_MSG_ADDON(_, prefix, text, channel, sender)
-    if ns.IsSecret(prefix) or prefix ~= PREFIX or not IsPlainText(text) or not IsPlainText(sender) then
+    if ns.IsSecret(prefix) or prefix ~= PREFIX then
         return
     end
-    if ns.IsSecret(channel) then
+    if not IsPlainText(text) or not IsPlainText(sender) or ns.IsSecret(channel) then
+        Trace("ignored a message: sender, text or channel unreadable (secret?)")
         return
     end
     local key = Key(sender)
     local version, kind, a, b, c, d = strsplit("~", text)
-    if version ~= VERSION or key == OwnKey() then
+    local label = string.match(kind or "", "^%u$") or "?"
+    if key == OwnKey() then
+        if kind == "P" then
+            Trace("own guild greeting came back from the guild channel")
+        end
+        return
+    end
+    if version ~= VERSION then
+        Trace("ignored %s from %s: version %s", label, Tag(key), string.match(version or "", "^%d+$") or "?")
         return
     end
     -- Only the greeting goes to the guild.
     if channel ~= "WHISPER" and not (channel == "GUILD" and kind == "P") then
+        Trace("ignored %s from %s: came by %s", label, Tag(key), string.match(tostring(channel), "^%u+$") or "?")
         return
     end
     -- A guild member who speaks is online, even if the roster does not say
     -- so yet.
     if guild[key] and not online[key] then
+        Trace("%s speaks, so is online, though the roster says not", Tag(key))
         guildOnline[key] = guild[key]
         online[key] = guild[key]
     end
     if not online[key] then
-        return -- neither a friend nor in the guild: ignored
+        -- Neither a friend nor in the guild: ignored.
+        Trace("ignored %s from %s: neither a friend online nor in the guild", label, Tag(key))
+        return
     end
     gone[key] = nil -- whoever speaks is online, whatever the client said before
     local handler = handlers[kind]
     if not handler then
+        Trace("ignored %s from %s: a kind this version does not know", label, Tag(key))
         return
     end
+    Trace("got %s from %s", label, Tag(key))
     if kind == "P" then
         handler(key)
         return
@@ -654,11 +770,12 @@ function sharing:CHAT_MSG_ADDON(_, prefix, text, channel, sender)
     local firstContact = not linked[key]
     linked[key] = online[key]
     if firstContact then
+        Trace("first contact with %s: linked", Tag(key))
         Chronicle.Link(key, online[key])
     end
     handler(key, a, b, c, d)
     if firstContact then
-        SendHello(key)
+        SendHello(key, "first contact")
     end
 end
 
@@ -679,6 +796,9 @@ local function Refresh()
     -- Whoever went offline starts afresh when they come back.
     for key in pairs(online) do
         if not now[key] then
+            if linked[key] or helloWaiting[key] then
+                Trace("%s is no longer online in the lists", Tag(key))
+            end
             linked[key], gone[key] = nil, nil
             Unask(key)
         end
@@ -687,38 +807,55 @@ local function Refresh()
     online = now
     for key in pairs(friends) do
         if not previous[key] then
-            SendHello(key)
+            SendHello(key, "a friend online")
         end
     end
 end
 
 function sharing:FRIENDLIST_UPDATE()
     friends = {}
+    local count = 0
     ns.SocialService.EachFriend(function(info)
         if not ns.IsSecret(info.connected) and info.connected and IsPlainText(info.name) then
             friends[Key(info.name)] = Plain(info.name)
+            count = count + 1
         end
     end)
+    if count ~= tracedFriends then
+        tracedFriends = count
+        Trace("friends list: %d online", count)
+    end
     Refresh()
 end
 
 function sharing:GUILD_ROSTER_UPDATE()
     guild, guildOnline = {}, {}
+    local members, present = 0, 0
     ns.SocialService.EachGuildMember(function(name, isOnline, isMobile)
         if name then
             local key = Key(name)
             guild[key] = Plain(name)
+            members = members + 1
             if isOnline and not isMobile then
                 guildOnline[key] = guild[key]
+                present = present + 1
             end
         end
     end)
+    local roster = members .. "/" .. present
+    if roster ~= tracedRoster then
+        tracedRoster = roster
+        local inGuild = IsInGuild and IsInGuild()
+        Trace("guild roster: %d members, %d online%s", members, present,
+            members == 0 and not ns.IsSecret(inGuild) and inGuild and " (empty, though in a guild)" or "")
+    end
     Refresh()
     -- Greet the guild once its roster is known: the answers come by whisper
     -- and are taken only from members.
     if not greetedGuild and next(guild) then
         greetedGuild = true
         Queue(nil, VERSION .. "~P", "GUILD", true)
+        Trace("guild greeting queued")
     end
 end
 
@@ -727,9 +864,11 @@ end
 function sharing:PLAYER_ENTERING_WORLD()
     Refill(GetTime())
     bytes, settleUntil = 0, GetTime() + SETTLE
+    Trace("loading screen: sending starts slowly for %d seconds", SETTLE)
 end
 
 function sharing:OnEnable()
+    Trace("switched on")
     if not registered then
         registered = true
         C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
@@ -750,8 +889,10 @@ function sharing:OnEnable()
 end
 
 function sharing:OnDisable()
+    Trace("switched off")
     friends, guild, guildOnline, online, linked, asked = {}, {}, {}, {}, {}, {}
     gone, helloWaiting, offeredAt = {}, {}, {}
+    tracedRoster, tracedFriends, tracedLockdown = nil, nil, false
     whispersCounted = false
     greetedGuild, statsPending = false, false -- a pending After lapses with the feature
     nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
@@ -760,3 +901,4 @@ end
 -- For the tests.
 sharing.EncodeEntry = EncodeEntry
 sharing.Key = Key
+sharing.Tag = Tag
