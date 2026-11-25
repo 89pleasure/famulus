@@ -30,8 +30,6 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
   `main` `git tag v0.1.0` and `git push origin v0.1.0`.
   Check beforehand: `bash tools/release_check.sh v0.1.0`. Started by hand (Actions › Release › Run
   workflow) the workflow builds the zip without upload and attaches it to the run for a week.
-  After a successful upload the website is published again with the new version (see "Version
-  from the tag").
 - **Version:** The `.toc` carries `@project-version@` in a `#@non-debug@` block, the packager
   inserts the tag. The working copy (junction) reads `## Version: dev` from the `#@debug@` block;
   window and self-test then show "dev". `ns.version` drops the "v" of the tag.

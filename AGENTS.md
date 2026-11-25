@@ -269,8 +269,8 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
   and checks every feature, the window and the translations. **Must be green before every
   commit.** What the mock simulates and what it does not is in `docs/testing.md`.
 - For a new version: a section in `CHANGELOG.md`, then set the tag (see "Publishing on
-  CurseForge"). The website takes the version from the tag by itself (see "Version from the
-  tag"); the README has named no version since 2026-11-24. The `.toc` gets the version from the packager; a zip built by hand (above) says
+  CurseForge"). The website names the newest tag by itself (see "Version on the page"); the
+  README has named no version since 2026-11-24. The `.toc` gets the version from the packager; a zip built by hand (above) says
   `dev`.
 - Add new Lua files to the `.toc`; the test fails if a file in the addon folder is missing there.
   It also counts the features (`total == 10`); adjust the number with a new feature.

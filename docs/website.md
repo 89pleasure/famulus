@@ -204,7 +204,7 @@ owner.
   warns.
 - **Hosting (2026-11-24):** The owner's request: straight from GitHub, without a server of our own
   and without manual work, with a custom domain. Because the repo is public, GitHub Pages (free):
-  `.github/workflows/website.yml` publishes the folder `website/` (only the version filled in) as soon as a
+  `.github/workflows/website.yml` publishes the folder `website/` unchanged as soon as a
   push to `main` changes something in it; manually via Actions › Website › Run workflow. Once per
   repository: Settings › Pages › Source "GitHub Actions". The owner gets the domain;
   it is entered under Settings › Pages › Custom domain (with the workflow no `CNAME` file is
@@ -212,6 +212,15 @@ owner.
   `www`, a CNAME to `89pleasure.github.io` for `www`. Without a domain the page is at
   `89pleasure.github.io/famulus/`; that works because all paths are relative. GitHub sees the
   visitors' IP addresses, that belongs in the privacy policy. Never run on GitHub yet.
+- **Version on the page (2026-11-25, the owner's request: "should show the current release
+  version"):** `fact_version` and `in_rel_d` say "Version <x>" in both languages. When
+  publishing, `website.yml` replaces every "Version <x.y.z[-alpha|beta.n]>" in `index.html` and
+  `i18n.js` with the newest tag on `main` (`git describe --tags`, without the "v") and fails if a
+  file then does not name it. The workflow also runs on every pushed tag `v*` and then always
+  publishes `main`, not the tagged commit. In the repo the texts carry the last release by hand
+  (`0.1.0-alpha.2`), only so that the local preview is right. A new text with the version must
+  keep the form "Version <x>". The assistant's decision; the replacement was checked locally,
+  never run on GitHub.
 - **Download (2026-11-25, the owner's request):** The buttons in the navigation and the header
   say "Download" instead of "Install"/"Installation" and, like the button in the release box,
   lead straight to `www.curseforge.com/wow/addons/famulus` (project verified on CurseForge, not
@@ -219,14 +228,6 @@ owner.
   not a direct file link (the assistant's recommendation, the owner agreed): it always shows the
   newest file, offers the CurseForge app as well as the zip, and a file link would change with
   every upload.
-- **Version from the tag (2026-11-25, the owner's request):** `index.html` and `i18n.js` say
-  `@version@` (`fact_version`, `in_rel_d`; the local preview shows the placeholder). The website
-  workflow replaces it while publishing with the full name of the newest tag `v*` reachable from
-  `main`, without the "v" (`0.1.0-alpha.2`; the owner wants the full name), and fails if a
-  placeholder is left. Besides a push to `main` that changes `website/`, the workflow also runs
-  after every successful release that uploaded (`workflow_run` of "Release", event `push`; dry
-  runs do not count). Not on the tag itself, because the `github-pages` environment only lets
-  `main` deploy. Simulated locally on a copy, never run on GitHub yet.
 - **Deliberately not included yet:** Guildy (only once the PR there is accepted), more screenshots from the
   game (so far only the window in the header), legal notice and privacy policy (needed before
   publishing), the domain (the owner gets it), a preview image for shared
@@ -245,7 +246,7 @@ owner.
   and closing the story (focus returns), "Set alias", "In the chronicle"; no messages in the
   console, no horizontal scrolling.
 - **Keep in step with changes to the addon:** the screenshot in the header as soon as the window
-  visibly changes; the texts around the version (`in_rel_t`, `in_rel_d` say "early alpha"), the counters
+  visibly changes; the counters
   in the rebuilt window (`renderWindow` in `main.js`: 5 alias features, 10 in total; in the HTML
   Chronicle 1/4 and Fellow travellers 0/1), new main features as tabs in the header and as their
   own section with an entry in the navigation; the bond tiers (`TIERS` in `main.js`)
