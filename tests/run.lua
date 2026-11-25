@@ -1763,6 +1763,9 @@ check(events[4].card:GetWidth() < events[2].card:GetWidth() and events[2].card:G
     and events[6].card:GetWidth() == (window.book:GetWidth() - 44) / 2
     and events[4].card.mockPoint[1] == (events[4].onLeft and "TOPRIGHT" or "TOPLEFT"),
     "the book sets a card's width by its weight, and a narrower card keeps to the line")
+check(events[1].chipDot.mockPoint[4] == events[1].picture.mockPoint[4]
+    and events[1].chipDot.mockPoint[5] > events[1].picture.mockPoint[5] + 14,
+    "a companion's name stands in a row of its own above the picture")
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
     and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"
     and events[4].detail:GetText() == "at level 13" and events[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil

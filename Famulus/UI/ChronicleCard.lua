@@ -1,6 +1,7 @@
--- What a card of the chronicle's book holds (UI/Book.lua): its picture,
--- and beside it whose event it is in the head (none for the player's own),
--- the text, and the time and place in the foot. The card is as high as
+-- What a card of the chronicle's book holds (UI/Book.lua): whose event it
+-- is in a row of its own at the top (none for the player's own), below it
+-- the picture, and beside that the text and the time and place in the
+-- foot. The card is as high as
 -- that needs; the event's weight sets the picture, the room above and
 -- below, and the headline. The picture keeps the same left edge on every
 -- card, the text the same distance from it.
@@ -17,7 +18,8 @@
 local _, ns = ...
 local UI = ns.UI
 
-local LINE, LINE_GAP = 14, 4 -- the head and the foot, and their distance from the text
+local LINE, LINE_GAP = 14, 4 -- the head and the foot; the foot's distance from the text
+local HEAD_GAP = 8 -- between the head's row and the picture
 local SIDE = 14 -- left of the picture's column and right of the text
 local TEXT_GAP = 12 -- between the picture and the text, whatever its size
 
@@ -68,7 +70,7 @@ function UI.ChronicleCard(part, story, width)
     part.chipText:SetShown(chip ~= nil)
     if chip then
         part.chipInitial:SetText(chip.initial or "")
-        part.chipText:SetWidth(textWidth - LINE - 5)
+        part.chipText:SetWidth(width - SIDE * 2 - LINE - 5)
         part.chipText:SetText(chip.text or "")
     end
 
@@ -90,17 +92,21 @@ function UI.ChronicleCard(part, story, width)
     part.footer:SetWidth(textWidth)
     part.footer:SetText(story.footer or "")
 
-    local headHeight = chip and LINE + LINE_GAP or 0
-    local blockHeight = headHeight + textHeight + LINE_GAP + LINE
-    local height = math.floor(math.max(size, blockHeight) + pad * 2 + 0.5)
+    -- The head's row above, then picture and text side by side, both
+    -- centred on the taller of the two.
+    local headHeight = chip and LINE + HEAD_GAP or 0
+    local blockHeight = textHeight + LINE_GAP + LINE
+    local bodyHeight = math.max(size, blockHeight)
+    local height = math.floor(pad * 2 + headHeight + bodyHeight + 0.5)
+    local body = pad + headHeight
     local left = SIDE + size + TEXT_GAP
-    local top = math.floor((height - blockHeight) / 2 + 0.5)
-    part.picture:ClearAllPoints()
-    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE, -math.floor((height - size) / 2 + 0.5))
+    local top = body + math.floor((bodyHeight - blockHeight) / 2 + 0.5)
     part.chipDot:ClearAllPoints()
-    part.chipDot:SetPoint("TOPLEFT", part, "TOPLEFT", left, -top)
+    part.chipDot:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE, -pad)
+    part.picture:ClearAllPoints()
+    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", SIDE, -(body + math.floor((bodyHeight - size) / 2 + 0.5)))
     part.title:ClearAllPoints()
-    part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(top + headHeight))
+    part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -top)
     part.footer:ClearAllPoints()
     part.footer:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(top + blockHeight - LINE))
     return height
