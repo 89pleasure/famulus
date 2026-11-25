@@ -27,6 +27,29 @@ Custom names for other players, modelled on the addon CustomNames
   client skips it by itself for secret names. Not `AddMessageEventFilter` (would also change the
   link target) and no hook on `AddMessage` (CustomNames replaces the method there). Lines already
   printed do not change. Option `style`: "Alias" or "Alias (name)".
+  - **Online and offline notices (the owner's report, 2026-11-25: whispers, guild chat and
+    tooltips showed the alias, "X has come online" did not; checked against the mock only, not
+    yet in game):** these are `CHAT_MSG_SYSTEM` lines without a sender, so the sender filter never
+    sees them. The same feature therefore also sets `ChatFrameUtil.AddMessageEventFilter` on
+    `CHAT_MSG_SYSTEM` (removed again when switched off). In a player link
+    (`ERR_FRIEND_ONLINE_SS`, "|Hplayer:%s|h[%s]|h has come online."; in retail also for guild members, unconfirmed in
+    Forever) it
+    changes only the text between the brackets, a class colour around it stays; the link target
+    keeps the real name. That holds for every player link in a system line, not only the online
+    notice. The offline notice (`ERR_FRIEND_OFFLINE_S`, "%s has gone offline.") has no link; the
+    filter turns the game's text into a pattern and builds the line anew with the alias. Here
+    `AddMessageEventFilter` is safe because only the text of the line changes, not `arg2`.
+    Decisions of the assistant: part of `chatAliases` (no feature and switch of its own),
+    `style` applies as in the chat. Details from the Forever source
+    (`Blizzard_ChatFrameBase/Mainline/ChatFrameOverrides.lua`): filters run per chat frame and
+    only on lines that are not secret; a whisper window of its own (`privateMessageList`) picks
+    its partner's online/offline lines by comparing them with the game's text, so the filter
+    leaves the line alone there. `/fam test` (group `names`, "online notices") checks that the
+    online text has a player link and the offline text one `%s`.
+  - **Not included:** the Battle.net notice "[Account] (Character) has come online"
+    (`CHAT_MSG_BN_INLINE_TOAST_ALERT`): the chat frame builds it itself from `arg2` and
+    `C_BattleNet`; `arg2` is also the target of the link (whispering by click), so a filter would
+    have to change the target.
 - **`tooltipAliases`:** a line of its own via `TooltipDataProcessor` (type `Unit`), only for
   players; the game's name line is not overwritten.
 - **`aliasMenu`:** `Menu.ModifyMenu` on the player menus (`aliasMenu.TAGS`), appends "Set/Change/

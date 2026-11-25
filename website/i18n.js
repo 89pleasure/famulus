@@ -194,7 +194,7 @@ window.FAMULUS_I18N = {
     on: 'AN',
     off: 'AUS',
     f_chat: 'Aliase im Chat',
-    f_chat_d: 'Zeigt vor Chatnachrichten den Alias statt des Charakternamens. Flüstern und Einladen erreichen weiterhin den Charakter.',
+    f_chat_d: 'Zeigt vor Chatnachrichten und in den Meldungen, wenn jemand online kommt oder offline geht, den Alias statt des Charakternamens. Flüstern und Einladen erreichen weiterhin den Charakter.',
     o_style: 'Anzeige',
     o_style_alias: 'Alias',
     o_style_both: 'Alias (Name)',

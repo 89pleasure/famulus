@@ -42,7 +42,7 @@ L.lang_auto = "Game client"
 
 -- Aliases
 L.f_chatAliases = "Aliases in chat"
-L.f_chatAliases_desc = "Shows the alias instead of the character name in front of chat messages. Whispers and invites still go to the character."
+L.f_chatAliases_desc = "Shows the alias instead of the character name in front of chat messages and in the notices that someone came online or went offline. Whispers and invites still go to the character."
 L.o_chatAliases_style = "Display"
 L.o_chatAliases_style_desc = "Show the alias alone, or with the character name behind it."
 L.o_chatAliases_style_alias = "Alias"

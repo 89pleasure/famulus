@@ -951,6 +951,33 @@ function mock.CountSenderFilters()
     return #senderFilters
 end
 
+-- The game's notices that someone came online or went offline, as the
+-- client's English texts have them.
+ERR_FRIEND_ONLINE_SS = "|Hplayer:%s|h[%s]|h has come online."
+ERR_FRIEND_OFFLINE_S = "%s has gone offline."
+
+-- mock.SystemMessage runs the message filters of CHAT_MSG_SYSTEM the way a
+-- chat frame does before it prints the line: the first return value drops
+-- it, a second one replaces the arguments. Returns the line as printed, or
+-- nil if a filter dropped it. chatFrame defaults to a plain frame.
+local messageFilters = {}
+function mock.SystemMessage(message, chatFrame)
+    local args = { message, "", "", "", "", "", 0, 0, "", 0, 0, "", 0, false }
+    for _, filter in ipairs(messageFilters.CHAT_MSG_SYSTEM or {}) do
+        local results = { filter(chatFrame or {}, "CHAT_MSG_SYSTEM", unpack(args, 1, 14)) }
+        if results[1] then
+            return nil
+        end
+        if results[2] then
+            args = { unpack(results, 2, 15) }
+        end
+    end
+    return args[1], #args
+end
+function mock.CountMessageFilters(event)
+    return #(messageFilters[event] or {})
+end
+
 -- Chat input. InsertLink only succeeds while a chat input is open.
 ChatFrameUtil = {
     AddSenderNameFilter = function(callback)
@@ -960,6 +987,24 @@ ChatFrameUtil = {
         for i = #senderFilters, 1, -1 do
             if senderFilters[i] == callback then
                 table.remove(senderFilters, i)
+            end
+        end
+    end,
+    AddMessageEventFilter = function(event, callback)
+        local filters = messageFilters[event] or {}
+        messageFilters[event] = filters
+        for _, known in ipairs(filters) do
+            if known == callback then
+                return
+            end
+        end
+        filters[#filters + 1] = callback
+    end,
+    RemoveMessageEventFilter = function(event, callback)
+        local filters = messageFilters[event] or {}
+        for i = #filters, 1, -1 do
+            if filters[i] == callback then
+                table.remove(filters, i)
             end
         end
     end,

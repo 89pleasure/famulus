@@ -44,6 +44,10 @@ the index there says which file it is in.
 - **Aliases (2026-11-16, checked against the mock only, not yet in game):** category `aliases` with
   three features and the alias list, see "Aliases" below.
 - **Aliases in game (2026-11-18):** The alias appears in the normal chat and in Guildy (confirmed).
+- **Aliases in online and offline notices (2026-11-25, checked against the mock only, not yet in
+  game):** see "Online and offline notices" under "Aliases". Open in game: whether the alias
+  shows in "[Name] has come online." for friends and guild members and in "Name has gone
+  offline.", and what `/fam test` reports under "online notices".
 - **New window (2026-11-18, checked against the mock only, not yet in game):** see "The
   window" below. The Inter fonts load (see "Font"). Open in game: whether rounded corners, shadows and hairlines look clean, switching
   the colour schemes, the sliding tab marker, gradients and glow effects.
