@@ -54,6 +54,11 @@ local EXPECT_PRESENT = {
     "C_GuildInfo.GuildRoster",
     "C_FriendList.ShowFriends",
     "BNConnected",
+    -- What Modules/Chronicle/Sharing.lua reads from SendAddonMessage: a
+    -- refused message waits and goes again, none to someone offline.
+    "Enum.SendAddonMessageResult.AddonMessageThrottle",
+    "Enum.SendAddonMessageResult.AddOnMessageLockdown",
+    "Enum.SendAddonMessageResult.TargetOffline",
 }
 
 local EXPECT_ABSENT = {

@@ -889,7 +889,7 @@ local function ChronicleBriefs(companions, online)
         local profile = companion.profile
         if profile and type(profile.stats) == "table" then
             card.stats = {}
-            for _, id in ipairs(ns.features.sharing.STATISTICS) do
+            for _, id in ipairs(ns.ChronicleService.STATISTICS) do
                 local value = tonumber(profile.stats[id])
                 card.stats[#card.stats + 1] = { value = value and Number(value) or "-", label = L["c_stat_" .. id] }
             end

@@ -491,6 +491,7 @@ GuildyAPI = {
 
 Enum = {
     TooltipDataType = { Unit = 2 },
+    SendAddonMessageResult = { Success = 0, AddonMessageThrottle = 3, ChannelThrottle = 8, AddOnMessageLockdown = 11, TargetOffline = 12 },
 }
 C_Item = {
     -- mock.state.owned = { [itemID] = <count> }; mock.state.itemNames = { [itemID] = "<name>" }
@@ -610,16 +611,45 @@ C_BattleNet = {
         return nil
     end,
 }
--- Addon messages: what was sent is collected in mock.sent.
+-- Addon messages: every call lands in mock.attempts, what the client accepted
+-- in mock.sent. mock.addonResult(message) may answer with a result code in
+-- place of the client. With mock.addonThrottle the client refuses like the
+-- real one (warcraft.wiki.gg): ten at once, then one more per second, but
+-- whispers only with mock.whisperThrottle (the wiki exempts them outside
+-- instances). mock.bytesSent adds up what was accepted, for the bandwidth.
 mock.sent = {}
+mock.attempts = {}
+local addonAllowance, addonRefilled = 10, nil
 C_ChatInfo = {
     RegisterAddonMessagePrefix = function(prefix)
         record("C_ChatInfo.RegisterAddonMessagePrefix", prefix)
         return true
     end,
     SendAddonMessage = function(prefix, text, chatType, target)
-        mock.sent[#mock.sent + 1] = { prefix = prefix, text = text, chatType = chatType, target = target }
-        return 0
+        local message = { prefix = prefix, text = text, chatType = chatType, target = target }
+        mock.attempts[#mock.attempts + 1] = message
+        local result = 0
+        if mock.addonResult then
+            local answer = mock.addonResult(message)
+            if answer ~= nil then
+                result = answer -- false too, like older clients
+            end
+        end
+        if result == 0 and mock.addonThrottle and (chatType ~= "WHISPER" or mock.whisperThrottle) then
+            addonAllowance = math.min(10, addonAllowance + (mock.now - (addonRefilled or mock.now)))
+            addonRefilled = mock.now
+            if addonAllowance < 1 then
+                result = Enum.SendAddonMessageResult.AddonMessageThrottle
+            else
+                addonAllowance = addonAllowance - 1
+            end
+        end
+        message.result = result
+        if result == 0 then
+            mock.bytesSent = (mock.bytesSent or 0) + #text
+            mock.sent[#mock.sent + 1] = message
+        end
+        return result
     end,
     InChatMessagingLockdown = function()
         return mock.state.lockdown == true

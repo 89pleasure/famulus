@@ -331,17 +331,23 @@ function ChronicleService.Add(kind, entry)
     return true
 end
 
--- The player's own entries newer than `since`, oldest first, at most `limit`
--- of the newest. For companions who catch up on what they missed.
+-- The player's own entries newer than `since`, oldest first: the oldest
+-- `limit`, and the rest of the last one's second. For companions who catch
+-- up on what they missed: a call with the last one's time continues where
+-- this one stopped, so nothing is skipped.
 function ChronicleService.OwnSince(since, limit)
     local entries, found = ChronicleService.Entries(), {}
-    for i = #entries, 1, -1 do
+    local first = #entries + 1
+    while first > 1 and entries[first - 1].t > since do
+        first = first - 1
+    end
+    for i = first, #entries do
         local entry = entries[i]
-        if entry.t <= since or #found == limit then
+        if #found >= limit and entry.t > found[#found].t then
             break
         end
         if entry.who == nil and entry.c == character and not entry.demo then
-            table.insert(found, 1, entry)
+            found[#found + 1] = entry
         end
     end
     return found
@@ -455,6 +461,11 @@ function ChronicleService.Companions()
     end
     return list
 end
+
+-- The character's own statistics that friends see in their stats, by the
+-- game's IDs: deaths, creatures killed, quests completed, dungeons entered.
+-- Sharing sends them, the window shows them; a label is c_stat_<id>.
+ChronicleService.STATISTICS = { 60, 107, 98, 932 }
 
 function ChronicleService.Character()
     return character
