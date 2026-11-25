@@ -3,6 +3,31 @@
 Every release has a section `## <version>` (the tag without the `v`, for example `## 0.2.0-beta.1`).
 That section becomes the changelog of the file on CurseForge.
 
+## 0.1.0-alpha.5
+
+### Chronicle
+- React to your friends' events: a click on a friend's card in the chronicle celebrates a level-up
+  or a boss with them, applauds a profession or mourns a death; a second click takes it back. Your
+  own cards show who reacted. A reaction reaches your friend at once while you are both online,
+  otherwise as soon as you are; your friends need this version to see it. It can be switched off
+  under "Share with friends" > "Reactions".
+- On a friend's profession card, the recipe book now opens from a click on the picture.
+- The live feed also shows when a friend reacts to one of your events, with its own switch.
+- The live feed plays a soft double click with each card, once when several come together, at the
+  game's sound effects volume. "Play a sound" under "Show events on screen" switches it off.
+
+### Aliases
+- Aliases now also appear in the notices that someone came online or went offline. Clicking the
+  name still whispers the character. Not in a whisper window of its own, nor in the notices for
+  Battle.net friends.
+
+### Window
+- Settings are a list of entries with icons on the left and the chosen entry in full on the right:
+  its switch, its default, its whole description and its options. The live feed's kinds of events
+  are chips you switch on and off.
+- Lines and borders are a little darker than the ground they run over and no longer look too
+  bright.
+
 ## 0.1.0-alpha.4
 
 ### Chronicle
