@@ -13,12 +13,15 @@
 --                                       -- heading, the zones in the order of time
 --       events = { {
 --           kind = "level",             -- see PICTURES
---           title = "Reached level 24", detail = "with Mira" or nil,
---           when = "21:14",
---           weight = "low" or "medium" or "high", -- a chronicle's card: head
---                                       -- (chip), two lines of text, foot
---                                       -- (when and where); see WEIGHTS
---           where = "Lakeshire",        -- with a weight: the place, in the foot
+--           title = "Reached level 24", detail = "in Lakeshire" or nil,
+--           when = "21:14",             -- optional: closes the detail line
+--           weight = "low" or "medium" or "high", -- optional: size and look of
+--                                       -- the card, see WEIGHTS
+--           -- How the text is built is up to the caller (the chronicle uses all three):
+--           head = true,                -- a line above the text, kept even when
+--                                       -- empty; it shows the chip
+--           lines = 2,                  -- the text keeps at least this many lines
+--           footer = "21:14  ·  Lakeshire", -- a line below the text
 --           count = 2,                  -- a bundle: how often, in the corner
 --           number = 24,                -- shown in the picture of a level
 --           icon = "horseshoe",         -- optional: a picture of its own (UI.media)
@@ -440,8 +443,6 @@ local function EventSet(event, story, onLeft, width)
     event.story = story
     event.onLeft = onLeft
     local look = PICTURES[story.kind] or PICTURES.zone
-    -- A chronicle's card (it has a weight): a head, two lines of text, a foot.
-    local framed = story.weight ~= nil
     local weight = WEIGHTS[story.weight] or story.big and WEIGHTS.high or WEIGHTS.medium
     local big = weight == WEIGHTS.high
     local pad = weight.pad
@@ -505,9 +506,9 @@ local function EventSet(event, story, onLeft, width)
     UI.SetFont(event.title, weight.title, weight.font)
     UI.Ink(event.title, look.title or "text")
     local textHeight = event.title:GetStringHeight()
-    -- The time closes the line below the headline, unless a foot tells it.
+    -- The time closes the line below the headline.
     local detail = story.detail
-    if story.when and not framed then
+    if story.when then
         detail = detail and (detail .. "  ·  " .. story.when) or story.when
     end
     event.detail:SetShown(detail ~= nil)
@@ -516,18 +517,16 @@ local function EventSet(event, story, onLeft, width)
         event.detail:SetText(detail)
         textHeight = textHeight + 4 + event.detail:GetStringHeight()
     end
-    if framed then
-        -- Two lines are kept for the text, whether it needs them or not.
-        textHeight = math.max(textHeight, 2 * (weight.title + 4))
+    if story.lines then
+        textHeight = math.max(textHeight, story.lines * (weight.title + 4))
     end
     local peopleTop = textHeight + 8
     local peopleHeight = LayPeople(event, story.people, textWidth)
     if peopleHeight > 0 then
         textHeight = peopleTop + peopleHeight
     end
-    -- A chronicle's card: whose event it is in the head (empty for the
-    -- player's own), when and where in the foot.
-    local chip = framed and story.chip or nil
+    -- The head (whose event it is, or empty) and the foot line.
+    local chip = story.head and story.chip or nil
     local classShown = UI.SetClass(event.chipClass, chip and chip.class)
     event.chipDot:SetShown(chip ~= nil and not classShown)
     event.chipInitial:SetShown(chip ~= nil and not classShown)
@@ -537,18 +536,15 @@ local function EventSet(event, story, onLeft, width)
         event.chipText:SetWidth(textWidth - HEAD_LINE - 5)
         event.chipText:SetText(chip.text or "")
     end
-    local footer = framed and (story.when and story.where and (story.when .. "  ·  " .. story.where)
-        or story.when or story.where) or nil
+    local footer = story.footer
     event.footer:SetShown(footer ~= nil)
     if footer then
         event.footer:SetWidth(textWidth)
         event.footer:SetText(footer)
     end
-    local textTop = framed and HEAD_LINE + LINE_GAP or 0
-    if framed then
-        textHeight = textTop + textHeight + LINE_GAP + HEAD_LINE
-    end
-    -- The fellow travellers' sunken strip below says, in the accent, what
+    local textTop = story.head and HEAD_LINE + LINE_GAP or 0
+    textHeight = textTop + textHeight + (footer and LINE_GAP + HEAD_LINE or 0)
+    -- A sunken strip below says, in the accent, what
     -- the event itself adds.
     local footText = story.foot
     event.foot:SetShown(footText ~= nil)

@@ -2580,8 +2580,8 @@ for _, event in ipairs(bookFrames("story")) do
 end
 check(spans == 2 and found["On the road in Uldaman"] and found["On the road in Badlands"],
     "a stretch together says where and when")
-check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss" and found["Archaedas defeated"].detail == nil
-    and found["Archaedas defeated"].where == "Uldaman"
+check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss" and found["Archaedas defeated"].detail == "in Uldaman"
+    and not found["Archaedas defeated"].big and found["Archaedas defeated"].weight == nil
     and found["Archaedas defeated"].chip == nil, "bosses defeated together, from the fellow travellers' own day log")
 check(raidLine and partyLine, "bosses without a name (a raid) are counted on the day's line, named ones are not")
 check(partyLine and partyLine:match("^%d%d:%d%d to %d%d:%d%d$") and raidLine:match("^%d%d:%d%d to %d%d:%d%d  ·  2 bosses$"),

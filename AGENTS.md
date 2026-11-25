@@ -559,8 +559,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   2026-11-19). Seit 2026-11-25 ist er bei leichten Ereignissen kleiner (40 px), siehe
   „Gewichtung“; mittlere und schwere behalten 54 px.
 - **Gewichtung und Aufbau der Karten (Wunsch des Auftraggebers, 2026-11-25; nur gegen den Mock
-  geprüft, im Spiel noch nicht gesehen):** Jedes Ereignis der Chronik hat ein Gewicht
-  (`story.weight`, Tabelle `WEIGHT` in `UI/Options.lua`, Maße in `WEIGHTS` in `UI/Book.lua`):
+  geprüft, im Spiel noch nicht gesehen):** Gilt nur für das Buch der Chronik. Jedes Ereignis dort
+  hat ein Gewicht (`story.weight`, Tabelle `WEIGHT` in `UI/Options.lua`, Maße in `WEIGHTS` in
+  `UI/Book.lua`):
   - **Leicht** (`low`): Tode, Ankünfte in neuen Gebieten. Weniger Rand (8 px), Bild 40 px,
     Überschrift 12 px. Karte 84 px hoch.
   - **Mittel** (`medium`): Berufs-Meilensteine und alles, was der Auftraggeber nicht eingeordnet
@@ -569,9 +570,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   - **Schwer** (`high`): Bosse und Stufenaufstiege, dazu was die Tabellen mit `big` markieren
     (Reiten). Das bisherige Meilenstein-Aussehen: Akzentrand, Akzentmarke links, Überschrift
     15 px halbfett. 104 px. Wörtlich nach Art umgesetzt: Auch Stufen und Bosse von Freunden
-    sind schwer (vorher nur der eigene Aufstieg), ebenso die Boss-Karten in „Eure Geschichte“
-    bei den Weggefährten, die `ChronicleEvent` benutzen. Die Live-Einblendung zeigt schwere
-    Ereignisse mit Akzentrand (`story.weight == "high"` in `UI/Feed.lua`).
+    sind schwer (vorher nur der eigene Aufstieg).
   - **Aufbau neben dem Bild:** Kopf, Inhalt, Fuß. Der Kopf nennt die Person (Klassensymbol, sonst
     Anfangsbuchstabe, und `ChronicleService.Label`); bei eigenen Ereignissen bleibt er leer, die
     Zeile bleibt aber frei, damit alle Karten eines Gewichts gleich gebaut sind (Entscheidung des
@@ -583,9 +582,15 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     (`Placeless` in `UI/Options.lua`): „Gefallen“ statt „Gefallen in Dunkelküste“, „Neues Gebiet
     entdeckt“ (`c_zone_nowhere`) statt „Ankunft in Feralas“, „in Uldaman“ fällt aus der Zeile
     unter einem Boss weg, „mit Mira und Tom“ bleibt. Die Live-Einblendung hat keinen Fuß und
-    nennt den Ort weiter (`story.fullTitle`, `story.fullDetail`).
-  - Bücher ohne Gewicht (die Runden und „Eure Geschichte“ der Weggefährten) bleiben, wie sie
-    waren; `story.big` gilt dort wie `high`.
+    nennt den Ort weiter.
+  - **Der Aufbau des Inhalts gehört dem Aufrufer, nicht dem Widget** (Vorgabe des Auftraggebers,
+    2026-11-25, nachdem die erste Fassung auch die Boss-Karten in „Eure Geschichte“ umgebaut
+    hatte): `UI.Book` kennt die Bausteine `head` (Zeile über dem Text mit `chip`), `lines`
+    (Mindestzahl Zeilen) und `footer` (Zeile unter dem Text), aber gebaut werden sie nur, wo die
+    Story sie mitbringt. Die Chronik setzt sie in `ChronicleRun`; `ChronicleEvent` (auch von der
+    Live-Einblendung und den Boss-Karten der Weggefährten benutzt) liefert weiter die alte Form.
+    Die Weggefährten (Runden, „Eure Geschichte“) und die Live-Einblendung sehen aus wie vorher;
+    `story.big` gilt dort wie `high`.
 - **Bilder sind Symbole des Spiels (Wunsch des Auftraggebers, 2026-11-19):** Sie sind eckig und es
   gibt sehr viele; die eigenen Zeichnungen (`skull.tga` usw.) stehen nur noch klein auf dem Punkt
   der Zeitlinie und als Rückfall. Reihenfolge (`EntryTexture` in `UI/Options.lua`):
