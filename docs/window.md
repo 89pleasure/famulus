@@ -191,7 +191,8 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
       `UI.ChronicleChapter`, which builds the cards as the chronicle does, without click, tooltip
       and route), made smaller to fit (`Fit`). `share`: the player's crest and Mira's, news
       travelling both ways between them. `feed`: the live feed's own cards (`UI.Feed.Card`,
-      `UI.Feed.Fill`; never on screen), their running-out line looping over the duration; pointed
+      `UI.Feed.Fill`; never on screen), their running-out line looping over the duration, a
+      friend's card with its button to react while reactions are on (it catches no mouse there); pointed
       at a kind, a card of that kind (reactions via `liveFeed.ReactionStory`), at "own" one of the
       player's.
     - **Fellow travellers:** `fellows`: the overview's tiles (`UI.FellowTile`,

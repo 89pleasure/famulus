@@ -3884,7 +3884,12 @@ mock.Advance(0.1)
     set("sharing", "enabled", true)
     check(share.pills[1]:IsShown() and share.pills[1].text:GetText() == "Level 40" and share.pills[2].text:GetText() == "Challenge"
         and share.caption.text:GetText() == "Only to friends and guild", "switched on, news goes both ways")
+    -- The live feed's cards with their button to react, as in the feed, while reactions are on.
+    local feed = choose("area_chronicle", "ui_tab_record", ns.L.f_liveFeed)
+    check(stage.current == "feed" and feed.cards[1].react:IsShown() and not feed.cards[1].react.mouseEnabled,
+        "with reactions on, a friend's card shows its button, which catches no mouse here")
     set("sharing", "enabled", false)
+    check(not feed.cards[1].react:IsShown(), "without them, none")
 
     -- Fellow travellers: the overview's tiles; their options as lists.
     local fellows = choose("area_fellows", "ui_tab_record", ns.L.f_rememberFellows)

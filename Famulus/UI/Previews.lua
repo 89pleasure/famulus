@@ -495,7 +495,23 @@ local function FeedStory(kind, own)
         return ns.features.liveFeed.ReactionStory(Chronicle.Sample("level", true), mira, "cheer")
     end
     local entry = Chronicle.Sample(kind, own)
-    return entry and UI.ChronicleStory(entry) or nil
+    if not entry then
+        return nil
+    end
+    local story = UI.ChronicleStory(entry)
+    -- A friend's card brings the button to react while reactions are on,
+    -- as in the feed (Modules/Chronicle/LiveFeed.lua); here it does nothing.
+    local reaction = not own and Chronicle.ReactionsOn() and Chronicle.Reaction(entry)
+    if reaction then
+        story.reaction = {
+            icon = reaction,
+            given = function()
+                return false
+            end,
+            give = function() end,
+        }
+    end
+    return story
 end
 
 local function IsKind(feature, key)
@@ -513,6 +529,8 @@ SCENES.feed = {
         scene.cards = {}
         for index = 1, 2 do
             local card = UI.Feed.Card(scene)
+            -- A picture: its button to react catches no mouse.
+            card.react:EnableMouse(false)
             -- The line along its foot that shows how long it stays runs out
             -- here again and again.
             card.barGroup:SetLooping("REPEAT")
