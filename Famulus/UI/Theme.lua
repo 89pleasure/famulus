@@ -394,19 +394,6 @@ local driver = CreateFrame("Frame")
 driver:Hide()
 local tweens = {}
 
--- The client loads a font file in the background on its first use, and that
--- first SetFont returns false. Asking for the fonts at login has them ready
--- by the time the window is built.
-ns:On("LOGIN", function()
-    if UI.FontPath() ~= UI.fonts.regular then
-        return
-    end
-    local probe = driver:CreateFontString()
-    for _, path in pairs(UI.fonts) do
-        probe:SetFont(path, 12, "")
-    end
-end)
-
 driver:SetScript("OnUpdate", function(_, elapsed)
     for i = #tweens, 1, -1 do
         local tween = tweens[i]

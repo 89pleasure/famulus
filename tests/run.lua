@@ -835,6 +835,21 @@ local looks = visibleRows()
 check(#looks == 3 and looks[1].swatches:IsShown() and looks[2].toggle:IsShown() and looks[3].dropdown:IsShown(),
     "colour scheme, sparks and window size")
 check(window.themeButton == nil and ns.UI.colors.card[1] < 0.3, "the window is dark and has no light version")
+
+-- Fonts load lazily: a string waits on the game's font, then switches and is redrawn.
+local inter = ns.UI.fonts.regular
+mock.unloadedFonts[inter] = true
+ns.UI.fontLoaded[inter] = nil -- as on a fresh login
+local timersBeforeFont = mock.ActiveTimers()
+local lazy = ns.UI.Text(window, 13)
+check(lazy.font == STANDARD_TEXT_FONT and mock.ActiveTimers() == timersBeforeFont + 1, "a font not loaded yet shows the game's font and asks again")
+check(ns.UI.fontLoaded[inter] == false, "the self-test learns that the window waits for the font")
+mock.unloadedFonts[inter] = nil
+local setsBefore = lazy.fontSets
+mock.Advance(0.6)
+check(lazy.font == inter and lazy.fontSize == 13 and lazy.fontSets == setsBefore + 3, "once loaded, the string switches and is redrawn")
+mock.Advance(1)
+check(ns.UI.fontLoaded[inter] == true and lazy.fontSets == setsBefore + 3, "and the retries stop")
 local lilac
 for _, dot in ipairs(looks[1].swatches.dots) do
     if dot.value == "lilac" then

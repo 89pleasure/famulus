@@ -81,8 +81,7 @@ nicht mehr darin („da wir uns nun ganz woanders bewegen thematisch“); die Ta
   drei Features und der Alias-Liste, siehe „Aliase“ unten.
 - **Aliase im Spiel (2026-11-18):** Der Alias erscheint im normalen Chat und in Guildy (bestätigt).
 - **Neues Fenster (2026-11-18, nur gegen den Mock geprüft, noch nicht im Spiel):** siehe „Das
-  Fenster“ unten. Offen im Spiel: ob die Inter-Schriften laden (`/fam test`, Gruppe `media`, Prüfungen
-  `font …`), ob runde Ecken, Schatten und Haarlinien sauber aussehen, das Umschalten
+  Fenster“ unten. Die Inter-Schriften laden (siehe „Schrift“). Offen im Spiel: ob runde Ecken, Schatten und Haarlinien sauber aussehen, das Umschalten
   der Farbwelten, die gleitende Reiter-Markierung, Verläufe und Glüheffekte.
 - **Name (2026-11-19):** Das Addon heißt **Famulus** (lateinisch: Gehilfe eines Gelehrten oder
   Magiers); „Schnitzel“ war der Arbeitstitel. Verworfen, weil auf CurseForge schon für WoW Forever
@@ -150,10 +149,8 @@ nicht mehr darin („da wir uns nun ganz woanders bewegen thematisch“); die Ta
     Spielschrift. Ursache (per `/run` geprüft): Der Client lädt eine Schriftdatei beim ersten
     `SetFont` im Hintergrund; dieser erste Aufruf liefert falsch, ein späterer wahr. Symlink und
     das Kürzen der Dateien sind es nicht (Polestars ungekürztes Inter verhielt sich gleich).
-    Jetzt fragt `UI/Theme.lua` die Schriften schon beim Login an; im Spiel noch nicht bestätigt
-    (der Selbsttest nach dem Login muss die Prüfungen `font …` als ok melden). Dieselben Dateien
-    in einem Probe-Ordner ohne `.toc` blieben auch beim zweiten Aufruf falsch, vermutlich wegen
-    der fehlenden `.toc`.
+    Das Anfragen beim Login half nicht (Selbsttest 2026-11-24 weiter falsch); die Erklärung
+    steht seit 2026-11-25 unter „Schrift“: Die Warnung war ein Fehlalarm, Inter wird gezeichnet.
   - Der Knopf unter Optionen › AddOns › Famulus schloss Blizzards Einstellungsfenster mit
     `SettingsPanel:Close()` aus Addon-Code. Das Spiel meldete danach „Famulus wurde blockiert …“.
     Ursache: Ohne Argument kehrt `Close` über `TransitionBackOpeningPanel` ins Spielmenü zurück und
@@ -372,16 +369,44 @@ gelassen; Aufbau, Farben und Schrift sind Entscheidungen des Assistenten und noc
   Fenster und Menüs (`UI.Shadow`, `shadow.tga`). Der frühere Verlaufsrahmen (`UI.GradientFrame`) ist
   entfallen.
 - **Schrift:** Inter (SIL Open Font License 1.1) in Regular, Medium und SemiBold, mit
-  `tools/make_fonts.py` auf Latein, Griechisch, Kyrillisch und Satzzeichen gekürzt (je ~100 KB,
-  beim Login angefragt, weil der Client sie im Hintergrund lädt und der erste `SetFont` falsch
-  liefert). Auf koKR/zhCN/zhTW-Clients bleibt die Spielschrift. Lädt eine Datei nicht, nimmt
-  `UI.SetFont` die Spielschrift.
-  **Beobachtet 2026-11-24, ungeklärt:** Der Name des Reiters „Chronik“ im Kopf blieb leer,
-  über mehrere Seitenwechsel hinweg; Breite und Zähler stimmten, der Client kannte den Text also.
-  Einmal fehlte auch der Zähler und erschien erst, als sich seine Zahl änderte. Nach `/reload`
-  war alles da. Vermutung (unbestätigt): Der Text wurde gesetzt, bevor die Schrift fertig geladen
-  war, und weil er sich nicht ändert, zeichnet der Client ihn nicht neu. Tritt es wieder auf,
-  festhalten, wie lange nach dem Login das Fenster zum ersten Mal offen war.
+  `tools/make_fonts.py` auf Latein, Griechisch, Kyrillisch und Satzzeichen gekürzt (je ~100 KB).
+  Auf koKR/zhCN/zhTW-Clients bleibt die Spielschrift.
+  **Wie der Client Schriften lädt (geklärt 2026-11-25, aus dem Quellcode von FlareUI, Kommentar
+  über `ns.FontRedraw` in `Core.lua`; dort aus Fehlerberichten von Spielern gelernt):** Eine
+  Schriftdatei lädt erst, wenn ein **sichtbarer** FontString **mit Text** sie verlangt. Bis dahin
+  liefert `SetFont` falsch und der String behält seine alte Schrift (ein neuer hat keine,
+  `SetText` wirft dann); ist die Datei da, wechselt er von selbst. Ein versteckter oder leerer
+  String lädt nichts. Text, der vor dem Laden gezeichnet wurde, kann leer bleiben; dieselbe
+  Schrift noch einmal setzen hilft nicht, Größe ändern und zurück zeichnet ihn neu. Folgen:
+  - Die Warnungen `font …` im Selbsttest (2026-11-19 und 2026-11-24) waren Fehlalarme: Er prüfte
+    an einem versteckten, leeren String. Auch das Anfragen beim Login (verstecktes Frame, ohne
+    Text) lud nichts und ist entfernt. Belegt durch den Screenshot im Kopf der Website (Windows,
+    2026-11-24): Das Fenster zeigt Inter in zwei Schnitten, nicht Friz Quadrata.
+  - Inter erschien trotz des alten Rückfalls auf die Spielschrift, weil der Client die erste
+    Anfrage behält und den String später umstellt, ohne ihn neu zu zeichnen. Das erklärt
+    vermutlich den leeren Reiter „Chronik“ und den fehlenden Zähler vom 2026-11-24 (Name des
+    Reiters blieb über Seitenwechsel leer, Breite und Zähler stimmten; nach `/reload` war alles
+    da).
+  - Seit 2026-11-25 (`ApplyFont` in `UI/Widgets.lua`, wie `SetFontRaw` bei FlareUI): Liefert
+    `SetFont` falsch, bekommt der String die Spielschrift, fragt erneut nach Inter und steht in
+    einer Liste; ein Ticker (0,5 s, nur solange jemand wartet, höchstens eine Minute, beim Öffnen
+    des Fensters neu) fragt nach, und sobald der Client ja sagt, wird der String mit Größe+1 und
+    zurück neu gezeichnet. Der Selbsttest liest `UI.fontLoaded` und warnt nur, wenn das Fenster
+    die Schrift verlangt hat und sie nicht kam; vor dem ersten Öffnen meldet er „not used yet“.
+  - Nicht übernommen von FlareUI: alle Strings 2 und 10 s nach jedem Ladebildschirm neu zeichnen
+    (dort gegen Strings, die sofort ja sagten und trotzdem leer blieben). Bleibt Text nach einem
+    Ladebildschirm leer, ist das der nächste Schritt.
+  - **Falls es wieder auftritt (Entscheidung des Auftraggebers, 2026-11-25):** Inter bleibt
+    vorerst. Bleibt Text trotz des Ladefixes leer, wechselt das Fenster auf eine Schrift des
+    Spiels, die von Anfang an geladen ist, und zwar **Arial Narrow** (`Fonts\ARIALN.TTF`),
+    nicht Friz Quadrata. Polestar zeigt in seinem Standard-Look die Spielschrift; Inter ist dort
+    nur eine Option, mit demselben schlichten Rückfall wie früher bei uns. Eine eigene
+    Schriftfamilie (`CreateFontFamily`, wie bei FlareUI) hilft gegen das Laden nicht: Sie wählt
+    je Text die Datei nach dem Alphabet (gegen Kästchen bei koreanischen oder chinesischen
+    Namen), aber Inter darin muss genauso erst laden.
+  - Im Spiel ungeprüft. Zu sehen wäre: Beim ersten Öffnen nach dem Login höchstens eine halbe
+    Sekunde Spielschrift, dann Inter, kein leerer Text; `/fam test` nach dem Öffnen meldet
+    `font …` als ok.
   **Ebenfalls 2026-11-24, ungeklärt:** Nach einem Tod (23:44) zeigte die Chronik ihn im Buch, die
   Karte „Diese Woche“ daneben zählte ihn nicht (5 statt 6); das Fenster war beim Tod zu und wurde
   danach geöffnet. Buch und Randspalte entstehen im selben `Render` aus denselben Einträgen.
