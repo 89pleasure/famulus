@@ -561,7 +561,7 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
 - **Gewichtung und Aufbau der Karten (Wunsch des Auftraggebers, 2026-11-25; nur gegen den Mock
   geprüft, im Spiel noch nicht gesehen):** Gilt nur für das Buch der Chronik. Jedes Ereignis dort
   hat ein Gewicht (`story.weight`, Tabelle `WEIGHT` in `UI/Options.lua`, Maße in `WEIGHTS` in
-  `UI/Book.lua`):
+  `UI/ChronicleCard.lua`):
   - **Leicht** (`low`): Tode, Ankünfte in neuen Gebieten. Weniger Rand (8 px), Bild 40 px,
     Überschrift 12 px. Karte 84 px hoch.
   - **Mittel** (`medium`): Berufs-Meilensteine und alles, was der Auftraggeber nicht eingeordnet
@@ -583,14 +583,22 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     entdeckt“ (`c_zone_nowhere`) statt „Ankunft in Feralas“, „in Uldaman“ fällt aus der Zeile
     unter einem Boss weg, „mit Mira und Tom“ bleibt. Die Live-Einblendung hat keinen Fuß und
     nennt den Ort weiter.
-  - **Der Aufbau des Inhalts gehört dem Aufrufer, nicht dem Widget** (Vorgabe des Auftraggebers,
-    2026-11-25, nachdem die erste Fassung auch die Boss-Karten in „Eure Geschichte“ umgebaut
-    hatte): `UI.Book` kennt die Bausteine `head` (Zeile über dem Text mit `chip`), `lines`
-    (Mindestzahl Zeilen) und `footer` (Zeile unter dem Text), aber gebaut werden sie nur, wo die
-    Story sie mitbringt. Die Chronik setzt sie in `ChronicleRun`; `ChronicleEvent` (auch von der
-    Live-Einblendung und den Boss-Karten der Weggefährten benutzt) liefert weiter die alte Form.
-    Die Weggefährten (Runden, „Eure Geschichte“) und die Live-Einblendung sehen aus wie vorher;
-    `story.big` gilt dort wie `high`.
+  - **Das Buch gibt das Design vor, jedes Feature den Inhalt seiner Karten** (Vorgabe des
+    Auftraggebers, 2026-11-25, nachdem die erste Fassung auch die Boss-Karten in „Eure
+    Geschichte“ umgebaut hatte: „so können wir in jedem Feature selbst entscheiden, wie der
+    Inhalt der Karte ist, haben aber immer das gleiche Design des Books“). `UI.Book` kennt nur
+    Kapitel, Linie, Punkte und den Stil der Karte (Grund, Haarlinie, Lichtkante, Leuchten unter
+    der Maus, Akzent über `story.big`, Klick). Den Inhalt baut `story.content(part, story,
+    width)` in einen eigenen Rahmen der Karte und gibt seine Höhe zurück; die Karte wächst mit.
+    Je Builder-Funktion hat jede Karte ihren eigenen Rahmen, der wiederverwendet wird (deshalb
+    dieselbe Funktion für alle Karten einer Art, keine neue Closure je Story). Inhalte:
+    `UI.ChronicleCard` (`UI/ChronicleCard.lua`, gesetzt in `ChronicleRun`) und `UI.FellowCard`
+    (`UI/Fellows.lua`, gesetzt in `SessionChapters`; aussehen wie vorher, im Mock Karte für Karte
+    gleich hoch wie auf `main`). Gemeinsamer Baustein: der Bildrahmen (`UI.BookPicture`,
+    `UI.SetBookPicture` in `UI/Book.lua`: Spielsymbol, eigenes Symbol, Zahl, Zähl-Plakette,
+    Tooltip). `ChronicleEvent` liefert weiter nur die Daten, auch für die Live-Einblendung, die
+    unverändert ist.
+
 - **Bilder sind Symbole des Spiels (Wunsch des Auftraggebers, 2026-11-19):** Sie sind eckig und es
   gibt sehr viele; die eigenen Zeichnungen (`skull.tga` usw.) stehen nur noch klein auf dem Punkt
   der Zeitlinie und als Rückfall. Reihenfolge (`EntryTexture` in `UI/Options.lua`):

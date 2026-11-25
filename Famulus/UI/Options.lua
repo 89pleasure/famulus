@@ -653,9 +653,7 @@ local function Placeless(entry)
 end
 
 -- A run of entries as a card of the chronicle's book: the look of the
--- newest, one sentence for all. The chronicle builds its cards in three
--- parts: whose event it is in the head (empty for the player's own), two
--- lines of text, time and place in the foot (see UI/Book.lua).
+-- newest, one sentence for all; time and place in the foot (UI/ChronicleCard.lua).
 local function ChronicleRun(run)
     local Chronicle = ns.ChronicleService
     local newest = run[1]
@@ -677,10 +675,11 @@ local function ChronicleRun(run)
     local when = #run > 1 and L.c_ch_span:format(date("%H:%M", run[#run].t), event.when) or event.when
     event.when = nil
     event.footer = zone and (when .. "  ·  " .. zone) or when
-    event.head, event.lines = true, 2
     local special = event.kind == "ability" and Chronicle.Ability(newest.ability)
         or event.kind == "item" and Chronicle.Item(newest.item) or nil
     event.weight = special and special.big and "high" or WEIGHT[event.kind] or "medium"
+    event.big = event.weight == "high"
+    event.content = UI.ChronicleCard
     return event
 end
 
@@ -1233,6 +1232,7 @@ local function SessionChapters(events, now, limit)
             chapter = { events = {}, start = event.from, finish = event.t, seconds = 0 }
             chapters[#chapters + 1] = chapter
         end
+        event.content = event.content or UI.FellowCard
         chapter.events[#chapter.events + 1] = event
         chapter.start = math.min(chapter.start, event.from)
         chapter.seconds = chapter.seconds + (event.seconds or 0)

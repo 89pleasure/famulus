@@ -1683,10 +1683,22 @@ check(window.area.name:GetText() == "Chronicle" and tabButton("Everyone").select
     "the chronicle has its own page: everyone, my journey, companions, recording")
 check(not navButton("Chronicle").pill:IsShown(), "the chronicle's entry shows no counter")
 -- The entries are told as a picture book: chapters, and events on a line.
+-- A card's content is a frame of its own (event.content); the tests read
+-- the card and its content as one.
 local function bookFrames(field)
     local list = {}
     for _, frame in ipairs(mock.frames) do
         if frame[field] and frame:IsVisible() then
+            if field == "story" then
+                local event = frame
+                frame = setmetatable({}, { __index = function(_, key)
+                    local value = event.content and rawget(event.content, key)
+                    if value ~= nil then
+                        return value
+                    end
+                    return event[key]
+                end })
+            end
             list[#list + 1] = frame
         end
     end
@@ -1721,7 +1733,7 @@ check(events[2].top > events[1].top and events[2].top < events[1].top + events[1
     and events[2].top + events[2].cardHeight / 2 >= events[1].top + events[1].cardHeight / 2 + 30,
     "each side runs on by itself: a card reaches into the height of the one across, the dots keep apart")
 check(events[1].story.chip and events[1].story.chip.text == "Jaina Proudmoore" and events[1].story.chip.initial == "J"
-    and events[1].chipText:IsShown() and not events[2].chipText:IsShown() and not events[1].foot:IsShown(),
+    and events[1].chipText:IsShown() and not events[2].chipText:IsShown() and events[1].foot == nil,
     "a companion's event names them in the head of the card, not in the headline; the player's own leaves it empty")
 check(events[1].number:IsShown() and events[1].number:GetText() == "20" and not events[1].icon:IsShown()
     and events[1].photo:IsShown() and events[1].dim:IsShown() and events[1].story.texture == ns.UI.gameIcons.level
@@ -2810,7 +2822,7 @@ do
     check(uldaman and uldaman.story.detail:find("^19:05 to 23:10  ·  4 h 5 min  ·  3 bosses$") ~= nil,
         "from when to when, how long, and the bosses as a number: " .. tostring(uldaman and uldaman.story.detail))
     check(uldaman and uldaman.footText:IsShown() and uldaman.footText:GetText() == "Again with Mira and Borin  ·  6 times in 30 days"
-        and not uldaman.chipText:IsShown(), "the strip below says when the same people came together again: "
+        and uldaman.foot:IsShown() and uldaman.chipText == nil, "the strip below says when the same people came together again: "
         .. tostring(uldaman and uldaman.footText:GetText()))
     local first = found["On the road in Westfall"]
     check(first and not first.foot:IsShown(), "the first time together has no such strip")
