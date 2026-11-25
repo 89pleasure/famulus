@@ -486,3 +486,181 @@ function UI.FellowOverview(parent, cardParent, cardWidth)
 
     return overview
 end
+
+---------------------------------------------------------------------------
+-- What a card of the fellow travellers' books holds (UI/Book.lua): a
+-- picture or a person's crest, the text, the people of a group as plates,
+-- and a sunken strip below that says, in the accent, what the event adds.
+--
+--   story = {
+--       content = UI.FellowCard,
+--       kind, texture, icon, number, ...  -- the picture (UI.SetBookPicture)
+--       noPicture = true,           -- the text takes the card's whole width
+--       crest = { name = "Mira Stormfeather", class = "MAGE", progress = 0.4 },
+--                                   -- a person's crest instead of the picture
+--       big = true,                 -- a milestone: larger text, more room
+--       title = "On the road in Uldaman", detail = "20:00 to 22:40" or nil,
+--       when = "21:14",             -- optional: closes the detail line
+--       people = { { name = "Mira", class = "MAGE", note = "until 22:40" or nil } },
+--       foot = "Again with Mira and Borin",
+--   }
+---------------------------------------------------------------------------
+
+local PICTURE = 54
+local STRIP = 30 -- the sunken strip below
+local PERSON_H, PERSON_ICON, PERSON_GAP = 22, 16, 4 -- a person's plate
+
+-- The people as plates (class icon, else the initial, the name and a
+-- note), row after row within `width`. Notes each plate's place (plate.x,
+-- plate.y) and returns the height they take.
+local function LayPeople(part, people, width)
+    local list = people or {}
+    local x, y = 0, 0
+    for index, each in ipairs(list) do
+        local plate = part.people[index]
+        if not plate then
+            plate = CreateFrame("Frame", nil, part)
+            plate:SetHeight(PERSON_H)
+            UI.Card(plate, "field", "cardBorder", PERSON_H / 2)
+            plate.disc = UI.Icon(plate, "circle", PERSON_ICON, "chip")
+            plate.disc:SetPoint("LEFT", 3, 0)
+            plate.initial = UI.Text(plate, 9, "textDim", "semibold")
+            plate.initial:SetPoint("CENTER", plate.disc, "CENTER")
+            plate.initial:SetJustifyH("CENTER")
+            plate.initial:SetJustifyV("MIDDLE")
+            plate.class = UI.ClassIcon(plate, PERSON_ICON)
+            plate.class:SetPoint("CENTER", plate.disc, "CENTER")
+            plate.name = UI.Text(plate, 11, "textDim", "medium")
+            plate.name:SetPoint("LEFT", plate.disc, "RIGHT", 5, 0)
+            plate.name:SetWordWrap(false)
+            plate.note = UI.Text(plate, 11, "textMuted")
+            plate.note:SetPoint("LEFT", plate.name, "RIGHT", 5, 0)
+            plate.note:SetWordWrap(false)
+            part.people[index] = plate
+        end
+        local classShown = UI.SetClass(plate.class, each.class)
+        plate.disc:SetShown(not classShown)
+        plate.initial:SetShown(not classShown)
+        plate.initial:SetText(UI.Initial(each.name))
+        plate.note:SetShown(each.note ~= nil)
+        plate.note:SetText(each.note or "")
+        local noteWidth = each.note and 5 + plate.note:GetStringWidth() or 0
+        local room = width - 3 - PERSON_ICON - 5 - noteWidth - 9
+        plate.name:SetText(each.name or "")
+        plate.name:SetWidth(math.max(1, math.min(plate.name:GetStringWidth() + 1, room)))
+        local plateWidth = math.floor(3 + PERSON_ICON + 5 + plate.name:GetWidth() + noteWidth + 9 + 0.5)
+        plate:SetWidth(plateWidth)
+        if x > 0 and x + plateWidth > width then
+            x, y = 0, y + PERSON_H + PERSON_GAP
+        end
+        plate.x, plate.y = x, y
+        plate:Show()
+        x = x + plateWidth + PERSON_GAP
+    end
+    for index = #list + 1, #part.people do
+        part.people[index]:Hide()
+    end
+    part.peopleCount = #list
+    return #list > 0 and y + PERSON_H or 0
+end
+
+local function BuildCard(part)
+    UI.BookPicture(part)
+    part.title = UI.Text(part, 13, "text", "medium")
+    part.title:SetSpacing(1)
+    part.detail = UI.Text(part, 12, "textMuted")
+    part.detail:SetSpacing(2)
+    part.detail:SetPoint("TOPLEFT", part.title, "BOTTOMLEFT", 0, -4)
+    part.people = {}
+    local pixel = UI.Pixel(part)
+    local foot = CreateFrame("Frame", nil, part)
+    part.foot = foot
+    foot:SetHeight(STRIP)
+    foot:SetPoint("BOTTOMLEFT")
+    foot:SetPoint("BOTTOMRIGHT")
+    UI.Round(foot, "sunken", 9, { inset = pixel, square = { TOPLEFT = true, TOPRIGHT = true } })
+    local footLine = UI.Line(foot)
+    footLine:SetPoint("TOPLEFT", pixel, 0)
+    footLine:SetPoint("TOPRIGHT", -pixel, 0)
+    part.footIcon = UI.Icon(foot, "people", 13, "accent")
+    part.footIcon:SetPoint("LEFT", foot, "LEFT", 12, 0)
+    part.footText = UI.Text(foot, 11, "accent2", "medium")
+    part.footText:SetPoint("LEFT", part.footIcon, "RIGHT", 7, 0)
+    part.footText:SetWordWrap(false)
+end
+
+function UI.FellowCard(part, story, width)
+    if not part.title then
+        BuildCard(part)
+    end
+    local look = UI.BookPictures[story.kind] or UI.BookPictures.zone
+    local big = story.big and true or false
+    local pad = big and 15 or 12
+    local size = story.noPicture and 0 or PICTURE
+    local beside = size > 0 and size + 12 or 0
+    local textWidth = width - pad * 2 - beside
+
+    -- Picture: an icon, or a number; or a person's crest.
+    local crest = story.crest
+    part.picture:SetShown(size > 0 and crest == nil)
+    if crest and not part.crest then
+        part.crest = UI.Crest(part, PICTURE)
+    end
+    if part.crest then
+        part.crest:SetShown(crest ~= nil and size > 0)
+        if crest then
+            part.crest:SetPerson(crest.name, crest.class)
+            part.crest:SetProgress(crest.progress)
+        end
+    end
+    UI.SetBookPicture(part, story, PICTURE)
+
+    -- Text: headline and detail, the time closing the detail line, below
+    -- them the people.
+    part.title:SetWidth(textWidth)
+    part.title:SetText(story.title or "")
+    UI.SetFont(part.title, big and 15 or 13, big and "semibold" or "medium")
+    UI.Ink(part.title, look.title or "text")
+    local textHeight = part.title:GetStringHeight()
+    local detail = story.detail
+    if story.when then
+        detail = detail and (detail .. "  ·  " .. story.when) or story.when
+    end
+    part.detail:SetShown(detail ~= nil)
+    if detail then
+        part.detail:SetWidth(textWidth)
+        part.detail:SetText(detail)
+        textHeight = textHeight + 4 + part.detail:GetStringHeight()
+    end
+    local peopleTop = textHeight + 8
+    local peopleHeight = LayPeople(part, story.people, textWidth)
+    if peopleHeight > 0 then
+        textHeight = peopleTop + peopleHeight
+    end
+
+    local footText = story.foot
+    part.foot:SetShown(footText ~= nil)
+    if footText then
+        part.footText:SetWidth(width - 12 - 13 - 7 - 12)
+        part.footText:SetText(footText)
+    end
+
+    local bodyHeight = math.floor(math.max(size, textHeight) + pad * 2 + 0.5)
+    local pictureTop = -math.floor((bodyHeight - size) / 2 + 0.5)
+    part.picture:ClearAllPoints()
+    part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", pad, pictureTop)
+    if part.crest then
+        part.crest:ClearAllPoints()
+        part.crest:SetPoint("TOPLEFT", part, "TOPLEFT", pad, pictureTop)
+    end
+    local left = pad + beside
+    local top = math.floor((bodyHeight - textHeight) / 2 + 0.5)
+    part.title:ClearAllPoints()
+    part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -top)
+    for index = 1, part.peopleCount do
+        local plate = part.people[index]
+        plate:ClearAllPoints()
+        plate:SetPoint("TOPLEFT", part, "TOPLEFT", left + plate.x, -(top + peopleTop + plate.y))
+    end
+    return bodyHeight + (footText and STRIP or 0)
+end

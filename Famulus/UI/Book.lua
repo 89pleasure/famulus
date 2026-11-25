@@ -12,29 +12,24 @@
 --       route = { "Redridge Mountains", "Duskwood" }, -- optional: below the
 --                                       -- heading, the zones in the order of time
 --       events = { {
---           kind = "level",             -- see PICTURES
---           title = "Reached level 24", detail = "in Lakeshire" or nil,
---           when = "21:14",
---           times = { "20:02", "21:14" }, -- instead of `when`: an event that
---           count = 2,                  -- happened several times (a bundle)
---           number = 24,                -- shown in the picture of a level
---           icon = "horseshoe",         -- optional: a picture of its own (UI.media)
+--           content = UI.ChronicleCard, -- builds what the card holds, see below
+--           kind = "level",             -- for its picture, see PICTURES
+--           weight = "low" or "medium" or "high", -- optional: how wide the card
+--                                       -- is, see WIDTHS; without, as wide as can be
+--           big = true,                 -- a milestone: accent border and mark
 --           onClick = function() end,   -- optional: what a click on the card does
---           item = 211527, spell = 33388, -- optional: the picture shows the game's
---                                       -- tooltip of this item or spell
---           texture = 134400,           -- optional: a texture of the game's instead
---                                       -- (an item's icon), shown in its own colours
---           big = true,                 -- a milestone: larger, accent border and mark
---           chip = { initial = "A", text = "Companion", class = "MAGE" or nil } or nil,
---           -- The fellow travellers' timeline adds:
---           noPicture = true,           -- the text takes the card's whole width
---           crest = { name = "Mira Stormfeather", class = "MAGE", progress = 0.4 },
---                                       -- a person's crest instead of the picture
---           people = { { name = "Mira", class = "MAGE", note = "until 22:40" or nil } },
---                                       -- below the text, a plate per person
---           foot = "Again with Mira and Borin", -- the strip below, in the accent
+--           ...                         -- whatever its content reads
 --       } },
 --   } }
+--
+-- The book sets the design: chapters, the line, the dots and the cards'
+-- look. What a card holds is up to each feature: story.content(part,
+-- story, width) builds it into `part`, a frame of the card's width that
+-- belongs to this content alone, and returns the height it needs; the card
+-- grows with it. Use the same function for every card of one kind (not a
+-- new closure per story), so that its frames are used again. Shared parts
+-- of the book's look: the room inside a card's edge (UI.BookPad), and the
+-- picture (UI.BookPicture and UI.SetBookPicture).
 --
 -- Frames are created as needed and reused; nothing runs per frame.
 
@@ -43,24 +38,31 @@ local UI = ns.UI
 
 local AXIS = 44 -- width of the column the line runs through
 local GAP = 14 -- between two events
-local PICTURE = 54 -- the same for every event, whatever the size of its card
-local DOT = 22
-local FOOT = 30 -- the sunken strip that says whose event it is
+-- The glowing dot on the line, by the card's weight (without one: medium,
+-- a milestone high); its halo is three times as large.
+local DOTS = { low = 5, medium = 7, high = 9 }
 local PHOTO_INSET = 2 -- an icon of the game fills its frame but for a fine line
-local DOT_GAP = DOT + 12 -- between the dots of two events on the line
+local DOT_GAP = 34 -- between the dots of two events on the line
+-- How wide a card is, by its weight: a share of its side of the book. A
+-- narrower card keeps to the line.
+local WIDTHS = { low = 0.8, medium = 0.9, high = 1 }
+-- The room between a card's edge and what it holds, the same on every card:
+-- UI.BookPad at the sides and below, UI.BookPadTop above. Measured from the
+-- outer edge; the frame's hairline takes a pixel of it, and at the top the
+-- line of light takes one more, so the top gets one more to look the same.
+local PAD = 14
+UI.BookPad = PAD
+UI.BookPadTop = PAD + 1
 local HEAD_TOP, HEAD_BOTTOM = 6, 16 -- room above and below a chapter's heading
 local HEAD_GAP = 16 -- between the place and the words beside it
 local CHAPTER_GAP = 16 -- below a chapter's last card
-local CHIP_H, CHIP_GAP, CHIP_PAD = 18, 4, 6 -- the times of a bundle
-local MAX_TIMES = 10 -- plates for times; more are counted on the last one
 local ROUTE_GAP, ROUTE_H, ROUTE_PAD = 8, 22, 9 -- the route below a heading
 local ROUTE_ARROW = 10 -- the arrow between two zones of the route
 local ROUTE_STEP = 6 -- between a plate and an arrow
-local PERSON_H, PERSON_ICON = 22, 16 -- a person's plate
 
--- Per kind: the picture's icon (none: the number), its colours, and the
--- icon on the line.
--- Also used by the live feed (UI/Feed.lua) as UI.BookPictures.
+-- Per kind: the picture's icon (none: the number), its colours, and a
+-- small icon of the kind (mark) for a card's content to show. Used by the
+-- cards' contents and the live feed (UI/Feed.lua) as UI.BookPictures.
 local PICTURES = {
     level = { fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "sparkle" },
     achievement = { icon = "star", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "star" },
@@ -228,71 +230,19 @@ end
 -- Event
 ---------------------------------------------------------------------------
 
-local function CreateEvent(book)
-    local event = CreateFrame("Frame", nil, book)
-    event:SetWidth(book.width)
+UI.BookPictures = PICTURES
 
-    -- The dot that sits on the line (the line itself belongs to the chapter).
-    event.ring = UI.Icon(event, "circle", DOT, "accentLine", "BORDER")
-    event.core = UI.Icon(event, "circle", DOT - 2, "window", "ARTWORK")
-    event.core:SetPoint("CENTER", event.ring, "CENTER")
-    event.mark = UI.Icon(event, "sparkle", 11, "accent", "OVERLAY")
-    -- A short line from the dot to its card, so that with cards on both
-    -- sides it is plain which dot belongs to which.
-    event.tick = event:CreateTexture(nil, "BACKGROUND")
-    event.tick:SetSize(AXIS / 2 - DOT / 2, UI.Pixel(event))
-    UI.Paint(event.tick, "accentLine")
-    event.mark:SetPoint("CENTER", event.ring, "CENTER")
-    local card = CreateFrame("Frame", nil, event)
-    event.card = card
-    -- A story with onClick can be clicked; its card lights up under the
-    -- mouse. The mouse is only caught where there is something to do.
-    card:SetScript("OnEnter", function()
-        event.hover:Fade(true)
-    end)
-    card:SetScript("OnLeave", function()
-        event.hover:Fade(false)
-    end)
-    card:SetScript("OnMouseUp", function(_, button)
-        local story = event.story
-        if button == "LeftButton" and story and story.onClick then
-            story.onClick()
-        end
-    end)
-    -- The card is built like the card of an option in the window: the same
-    -- ground and light on the top edge, the same glow under the mouse, an
-    -- accent border and a mark on the left for what stands out (there a
-    -- feature that is on, here a milestone), and a sunken strip below.
-    local pixel = UI.Pixel(card)
-    event.shape = UI.Card(card, "card", "cardBorder", 10)
-    event.hover = UI.Round(card, "hover", 8, { inset = 4, sublevel = 2 })
-    event.hover:Hide()
-    local sheen = UI.Line(card, "sheenSoft")
-    sheen:SetPoint("TOPLEFT", 10, -pixel)
-    sheen:SetPoint("TOPRIGHT", -10, -pixel)
-    event.bar = card:CreateTexture(nil, "BORDER")
-    event.bar:SetPoint("TOPLEFT", 0, -14)
-    event.bar:SetPoint("BOTTOMLEFT", 0, 14)
-    event.bar:SetWidth(2)
-    UI.Paint(event.bar, "accent")
-
-    local foot = CreateFrame("Frame", nil, card)
-    event.foot = foot
-    foot:SetHeight(FOOT)
-    foot:SetPoint("BOTTOMLEFT")
-    foot:SetPoint("BOTTOMRIGHT")
-    UI.Round(foot, "sunken", 9, { inset = pixel, square = { TOPLEFT = true, TOPRIGHT = true } })
-    local footLine = UI.Line(foot)
-    footLine:SetPoint("TOPLEFT", pixel, 0)
-    footLine:SetPoint("TOPRIGHT", -pixel, 0)
-
-    local picture = CreateFrame("Frame", nil, card)
-    event.picture = picture
+-- A picture of the book on `part`: a frame with slightly round corners
+-- for an icon of the book, an icon of the game, or a number on it; a
+-- bundle's count in the corner. Sets part.picture, part.icon, part.photo,
+-- part.dim, part.number, part.badge and part.badgeText.
+function UI.BookPicture(part)
+    local picture = CreateFrame("Frame", nil, part)
+    part.picture = picture
     -- A picture that stands for an item or a spell shows the game's tooltip
-    -- of it; the mouse is only caught where there is one (see EventSet).
+    -- of it; the mouse is only caught where there is one.
     picture:SetScript("OnEnter", function(self)
-        local story = event.story
-        local item, spell = story and story.item, story and story.spell
+        local item, spell = self.item, self.spell
         if item and GameTooltip.SetItemByID then
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetItemByID(item)
@@ -313,309 +263,176 @@ local function CreateEvent(book)
     end)
     -- The frame's corners are only slightly round, so that a square icon
     -- fills it without reaching over the line.
-    event.pictureShape = UI.Card(picture, "control", "controlBorder", 5)
-    event.icon = picture:CreateTexture(nil, "ARTWORK")
-    event.icon:SetPoint("CENTER")
+    part.pictureShape = UI.Card(picture, "control", "controlBorder", 5)
+    part.icon = picture:CreateTexture(nil, "ARTWORK")
+    part.icon:SetPoint("CENTER")
     -- An icon of the game: in its own colours, its own dark border cut off.
-    event.photo = picture:CreateTexture(nil, "ARTWORK")
-    event.photo:SetPoint("CENTER")
-    event.photo:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+    part.photo = picture:CreateTexture(nil, "ARTWORK")
+    part.photo:SetPoint("CENTER")
+    part.photo:SetTexCoord(0.1, 0.9, 0.1, 0.9)
     -- A number stands on its icon; the icon is dimmed for it.
-    event.dim = picture:CreateTexture(nil, "ARTWORK", nil, 1)
-    event.dim:SetAllPoints(event.photo)
-    UI.Paint(event.dim, "shadow")
-    event.number = picture:CreateFontString(nil, "OVERLAY")
-    event.number:SetPoint("CENTER", 0, -1)
-    event.number:SetJustifyH("CENTER")
-    event.number:SetShadowOffset(1, -1)
-    event.number:SetShadowColor(0, 0, 0, 0.9)
+    part.dim = picture:CreateTexture(nil, "ARTWORK", nil, 1)
+    part.dim:SetAllPoints(part.photo)
+    UI.Paint(part.dim, "shadow")
+    part.number = picture:CreateFontString(nil, "OVERLAY")
+    part.number:SetPoint("CENTER", 0, -1)
+    part.number:SetJustifyH("CENTER")
+    part.number:SetShadowOffset(1, -1)
+    part.number:SetShadowColor(0, 0, 0, 0.9)
     -- How often a bundled event happened, in the picture's corner.
-    event.badge = CreateFrame("Frame", nil, picture)
-    event.badge:SetHeight(16)
-    event.badge:SetPoint("BOTTOMRIGHT", -3, 3)
-    event.badgeGround = UI.Round(event.badge, "deathLine", 4)
-    event.badgeText = UI.Text(event.badge, 11, "deathInk", "semibold")
-    event.badgeText:SetPoint("CENTER")
-    event.badgeText:SetJustifyH("CENTER")
-    event.badgeText:SetJustifyV("MIDDLE")
-    event.badge:Hide()
-    event.plates = {} -- the times of a bundle
+    part.badge = CreateFrame("Frame", nil, picture)
+    part.badge:SetHeight(16)
+    part.badge:SetPoint("BOTTOMRIGHT", -3, 3)
+    part.badgeGround = UI.Round(part.badge, "deathLine", 4)
+    part.badgeText = UI.Text(part.badge, 11, "deathInk", "semibold")
+    part.badgeText:SetPoint("CENTER")
+    part.badgeText:SetJustifyH("CENTER")
+    part.badgeText:SetJustifyV("MIDDLE")
+    part.badge:Hide()
+    return picture
+end
 
-    event.title = UI.Text(card, 13, "text", "medium")
-    event.title:SetSpacing(1)
-    event.detail = UI.Text(card, 12, "textMuted")
-    event.detail:SetSpacing(2)
-    event.chipDot = UI.Icon(foot, "circle", 18, "accentSoft")
-    event.chipDot:SetPoint("LEFT", foot, "LEFT", 12, 0)
-    event.chipInitial = UI.Text(foot, 10, "accent", "semibold")
-    event.chipInitial:SetPoint("CENTER", event.chipDot, "CENTER")
-    event.chipInitial:SetJustifyH("CENTER")
-    -- Where the class is known, its icon instead of the initial.
-    event.chipClass = UI.ClassIcon(foot, 18)
-    event.chipClass:SetPoint("CENTER", event.chipDot, "CENTER")
-    event.chipText = UI.Text(foot, 11, "textMuted")
-    event.chipText:SetPoint("LEFT", event.chipDot, "RIGHT", 6, 0)
-    event.chipText:SetWordWrap(false)
-    -- Or the strip says something about the event itself, in the accent.
-    event.footIcon = UI.Icon(foot, "people", 13, "accent")
-    event.footIcon:SetPoint("LEFT", foot, "LEFT", 12, 0)
-    event.footText = UI.Text(foot, 11, "accent2", "medium")
-    event.footText:SetPoint("LEFT", event.footIcon, "RIGHT", 7, 0)
-    event.footText:SetWordWrap(false)
-    event.people = {} -- the plates of the people in it
+-- Shows a story's picture (made by UI.BookPicture) at `size`: its game
+-- icon (story.texture), else the icon of its kind or story.icon, else its
+-- number (story.number, at `numberSize`); story.count in the corner;
+-- story.item or story.spell for the tooltip.
+function UI.SetBookPicture(part, story, size, numberSize)
+    local look = PICTURES[story.kind] or PICTURES.zone
+    local picture = part.picture
+    picture.item, picture.spell = story.item, story.spell
+    picture:SetSize(size, size)
+    picture:EnableMouse(story.item ~= nil or story.spell ~= nil)
+    part.pictureShape.border:SetColor(look.border)
+    part.pictureShape.fill:SetColor(look.fill)
+    local photo = story.texture
+    local icon = not photo and look.icon and (story.icon or look.icon) or nil
+    local number = not icon and story.number
+    part.photo:SetShown(photo ~= nil)
+    part.dim:SetShown(photo ~= nil and number ~= nil and number ~= false)
+    if photo then
+        part.photo:SetTexture(photo)
+        part.photo:SetSize(size - PHOTO_INSET * 2, size - PHOTO_INSET * 2)
+    end
+    part.icon:SetShown(icon ~= nil)
+    part.number:SetShown(number and true or false)
+    if icon then
+        part.icon:SetTexture(UI.media[icon] or UI.media[look.icon])
+        part.icon:SetSize(size * 0.56, size * 0.56)
+        UI.Tint(part.icon, look.ink)
+    end
+    if number then
+        UI.SetDisplayFont(part.number, numberSize or 24)
+        UI.Ink(part.number, photo and "text" or look.ink)
+        part.number:SetText(tostring(number))
+    end
+    -- A bundle without a number counts its events in the corner.
+    local counted = story.count ~= nil and not number
+    part.badge:SetShown(counted)
+    if counted then
+        part.badgeText:SetText(tostring(story.count))
+        part.badge:SetWidth(math.max(16, math.floor(part.badgeText:GetStringWidth() + 8 + 0.5)))
+        part.badgeGround:SetColor(look.border)
+        UI.Ink(part.badgeText, look.ink)
+    end
+end
+
+local function CreateEvent(book)
+    local event = CreateFrame("Frame", nil, book)
+    event:SetWidth(book.width)
+
+    -- The dot that sits on the line (the line itself belongs to the chapter).
+    -- A glowing dot in the accent, like what is active elsewhere in the window.
+    event.dot = UI.Icon(event, "circle", DOTS.medium, "accent", "ARTWORK")
+    event.glow = UI.Halo(event, event.dot, DOTS.medium * 3, "accentGlow", "BORDER")
+    -- A short line from the dot to its card, so that with cards on both
+    -- sides it is plain which dot belongs to which.
+    event.tick = event:CreateTexture(nil, "BACKGROUND")
+    UI.Paint(event.tick, "accentLine")
+    local card = CreateFrame("Frame", nil, event)
+    event.card = card
+    -- A story with onClick can be clicked; its card lights up under the
+    -- mouse. The mouse is only caught where there is something to do.
+    card:SetScript("OnEnter", function()
+        event.hover:Fade(true)
+    end)
+    card:SetScript("OnLeave", function()
+        event.hover:Fade(false)
+    end)
+    card:SetScript("OnMouseUp", function(_, button)
+        local story = event.story
+        if button == "LeftButton" and story and story.onClick then
+            story.onClick()
+        end
+    end)
+    -- The card is built like the card of an option in the window: the same
+    -- ground and light on the top edge, the same glow under the mouse, an
+    -- accent border and a mark on the left for what stands out (there a
+    -- feature that is on, here a milestone).
+    local pixel = UI.Pixel(card)
+    event.shape = UI.Card(card, "card", "cardBorder", 10)
+    event.hover = UI.Round(card, "hover", 8, { inset = 4, sublevel = 2 })
+    event.hover:Hide()
+    local sheen = UI.Line(card, "sheenSoft")
+    sheen:SetPoint("TOPLEFT", 10, -pixel)
+    sheen:SetPoint("TOPRIGHT", -10, -pixel)
+    event.bar = card:CreateTexture(nil, "BORDER")
+    event.bar:SetPoint("TOPLEFT", 0, -14)
+    event.bar:SetPoint("BOTTOMLEFT", 0, 14)
+    event.bar:SetWidth(2)
+    UI.Paint(event.bar, "accent")
+    event.parts = {} -- per content builder, the frame it fills
     return event
-end
-
-UI.BookPictures = PICTURES
-
--- The times of a bundle as small plates, row after row within `width`.
--- Notes each plate's place below the first one (plate.x, plate.y) and
--- returns the height they take; without times, hides them.
-local function LayTimes(event, times, width)
-    local list = times or {}
-    if #list > MAX_TIMES then
-        list = {}
-        for i = 1, MAX_TIMES - 1 do
-            list[i] = times[i]
-        end
-        list[MAX_TIMES] = "+" .. (#times - MAX_TIMES + 1)
-    end
-    local x, y = 0, 0
-    for index, text in ipairs(list) do
-        local plate = event.plates[index]
-        if not plate then
-            plate = CreateFrame("Frame", nil, event.card)
-            plate:SetHeight(CHIP_H)
-            UI.Card(plate, "field", "cardBorder", 5)
-            plate.text = UI.Text(plate, 11, "textDim", "medium")
-            plate.text:SetPoint("CENTER")
-            plate.text:SetJustifyH("CENTER")
-            plate.text:SetJustifyV("MIDDLE")
-            event.plates[index] = plate
-        end
-        plate.text:SetText(text)
-        local plateWidth = math.floor(plate.text:GetStringWidth() + CHIP_PAD * 2 + 0.5)
-        plate:SetWidth(plateWidth)
-        if x > 0 and x + plateWidth > width then
-            x, y = 0, y + CHIP_H + CHIP_GAP
-        end
-        plate.x, plate.y = x, y
-        plate:Show()
-        x = x + plateWidth + CHIP_GAP
-    end
-    for index = #list + 1, #event.plates do
-        event.plates[index]:Hide()
-    end
-    event.plateCount = #list
-    return #list > 0 and y + CHIP_H or 0
-end
-
--- The people of an event as plates (class icon, else the initial, the name
--- and a note), row after row within `width`, placed like the times above.
-local function LayPeople(event, people, width)
-    local list = people or {}
-    local x, y = 0, 0
-    for index, each in ipairs(list) do
-        local plate = event.people[index]
-        if not plate then
-            plate = CreateFrame("Frame", nil, event.card)
-            plate:SetHeight(PERSON_H)
-            UI.Card(plate, "field", "cardBorder", PERSON_H / 2)
-            plate.disc = UI.Icon(plate, "circle", PERSON_ICON, "chip")
-            plate.disc:SetPoint("LEFT", 3, 0)
-            plate.initial = UI.Text(plate, 9, "textDim", "semibold")
-            plate.initial:SetPoint("CENTER", plate.disc, "CENTER")
-            plate.initial:SetJustifyH("CENTER")
-            plate.initial:SetJustifyV("MIDDLE")
-            plate.class = UI.ClassIcon(plate, PERSON_ICON)
-            plate.class:SetPoint("CENTER", plate.disc, "CENTER")
-            plate.name = UI.Text(plate, 11, "textDim", "medium")
-            plate.name:SetPoint("LEFT", plate.disc, "RIGHT", 5, 0)
-            plate.name:SetWordWrap(false)
-            plate.note = UI.Text(plate, 11, "textMuted")
-            plate.note:SetPoint("LEFT", plate.name, "RIGHT", 5, 0)
-            plate.note:SetWordWrap(false)
-            event.people[index] = plate
-        end
-        local classShown = UI.SetClass(plate.class, each.class)
-        plate.disc:SetShown(not classShown)
-        plate.initial:SetShown(not classShown)
-        plate.initial:SetText(UI.Initial(each.name))
-        plate.note:SetShown(each.note ~= nil)
-        plate.note:SetText(each.note or "")
-        local noteWidth = each.note and 5 + plate.note:GetStringWidth() or 0
-        local room = width - 3 - PERSON_ICON - 5 - noteWidth - 9
-        plate.name:SetText(each.name or "")
-        plate.name:SetWidth(math.max(1, math.min(plate.name:GetStringWidth() + 1, room)))
-        local plateWidth = math.floor(3 + PERSON_ICON + 5 + plate.name:GetWidth() + noteWidth + 9 + 0.5)
-        plate:SetWidth(plateWidth)
-        if x > 0 and x + plateWidth > width then
-            x, y = 0, y + PERSON_H + CHIP_GAP
-        end
-        plate.x, plate.y = x, y
-        plate:Show()
-        x = x + plateWidth + CHIP_GAP
-    end
-    for index = #list + 1, #event.people do
-        event.people[index]:Hide()
-    end
-    event.peopleCount = #list
-    return #list > 0 and y + PERSON_H or 0
 end
 
 -- onLeft: the card stands left of the line. Sets event.cardHeight.
 local function EventSet(event, story, onLeft, width)
     event.story = story
     event.onLeft = onLeft
-    local look = PICTURES[story.kind] or PICTURES.zone
-    local big = story.big and true or false
-    local pad = big and 15 or 12
-    local size = story.noPicture and 0 or PICTURE
-    local column = (width - AXIS) / 2
-    local beside = size > 0 and size + 12 or 0 -- the text's distance from the picture's left edge
-    local textWidth = column - pad * 2 - beside
-
-    -- Picture: an icon, or a number (a level, a skill); or a person's crest.
-    local crest = story.crest
-    event.picture:SetShown(size > 0 and crest == nil)
-    if crest and not event.crest then
-        event.crest = UI.Crest(event.card, PICTURE)
-    end
-    if event.crest then
-        event.crest:SetShown(crest ~= nil and size > 0)
-        if crest then
-            event.crest:SetPerson(crest.name, crest.class)
-            event.crest:SetProgress(crest.progress)
-        end
-    end
-    event.picture:SetSize(PICTURE, PICTURE)
-    event.picture:EnableMouse(story.item ~= nil or story.spell ~= nil)
-    event.pictureShape.border:SetColor(look.border)
-    event.pictureShape.fill:SetColor(look.fill)
-    local photo = story.texture
-    local icon = not photo and look.icon and (story.icon or look.icon) or nil
-    local number = not icon and story.number
-    event.photo:SetShown(photo ~= nil)
-    event.dim:SetShown(photo ~= nil and number ~= nil and number ~= false)
-    if photo then
-        event.photo:SetTexture(photo)
-        event.photo:SetSize(size - PHOTO_INSET * 2, size - PHOTO_INSET * 2)
-    end
-    event.icon:SetShown(icon ~= nil)
-    event.number:SetShown(number and true or false)
-    if icon then
-        event.icon:SetTexture(UI.media[icon] or UI.media[look.icon])
-        event.icon:SetSize(size * 0.56, size * 0.56)
-        UI.Tint(event.icon, look.ink)
-    end
-    if number then
-        UI.SetDisplayFont(event.number, 24)
-        UI.Ink(event.number, photo and "text" or look.ink)
-        event.number:SetText(tostring(number))
-    end
-    event.mark:SetTexture(UI.media[icon or story.icon or look.mark] or UI.media[look.mark])
-    -- A bundle without a number counts its events in the corner.
-    local counted = story.count ~= nil and not number
-    event.badge:SetShown(counted)
-    if counted then
-        event.badgeText:SetText(tostring(story.count))
-        event.badge:SetWidth(math.max(16, math.floor(event.badgeText:GetStringWidth() + 8 + 0.5)))
-        event.badgeGround:SetColor(look.border)
-        UI.Ink(event.badgeText, look.ink)
-    end
-
-    -- Text: headline, detail, and whom it is about.
-    event.title:SetWidth(textWidth)
-    event.title:SetText(story.title or "")
-    UI.SetFont(event.title, big and 15 or 13, big and "semibold" or "medium")
-    UI.Ink(event.title, look.title or "text")
-    local textHeight = event.title:GetStringHeight()
-    -- The time closes the line below the headline; a bundle lists its
-    -- times below that line instead.
-    local detail = story.detail
-    if story.when and not story.times then
-        detail = detail and (detail .. "  ·  " .. story.when) or story.when
-    end
-    event.detail:SetShown(detail ~= nil)
-    if detail then
-        event.detail:SetWidth(textWidth)
-        event.detail:SetText(detail)
-        textHeight = textHeight + 4 + event.detail:GetStringHeight()
-    end
-    local platesTop = textHeight + 6
-    local platesHeight = LayTimes(event, story.times, textWidth)
-    if platesHeight > 0 then
-        textHeight = platesTop + platesHeight
-    end
-    local peopleTop = textHeight + 8
-    local peopleHeight = LayPeople(event, story.people, textWidth)
-    if peopleHeight > 0 then
-        textHeight = peopleTop + peopleHeight
-    end
-    -- Whose event it is stands in a sunken strip below, like an option
-    -- under its feature; or, in the accent, what the event itself adds.
-    local chip = story.chip
-    local footText = not chip and story.foot or nil
-    local classShown = UI.SetClass(event.chipClass, chip and chip.class)
-    event.foot:SetShown(chip ~= nil or footText ~= nil)
-    event.chipDot:SetShown(chip ~= nil and not classShown)
-    event.chipInitial:SetShown(chip ~= nil and not classShown)
-    event.chipText:SetShown(chip ~= nil)
-    if chip then
-        event.chipInitial:SetText(chip.initial or "")
-        event.chipText:SetWidth(column - 12 - 18 - 6 - 12)
-        event.chipText:SetText(chip.text or "")
-    end
-    event.footIcon:SetShown(footText ~= nil)
-    event.footText:SetShown(footText ~= nil)
-    if footText then
-        event.footText:SetWidth(column - 12 - 13 - 7 - 12)
-        event.footText:SetText(footText)
-    end
-
-    local bodyHeight = math.floor(math.max(size, textHeight) + pad * 2 + 0.5)
-    local cardHeight = bodyHeight + ((chip or footText) and FOOT or 0)
+    local column = math.floor((width - AXIS) / 2 * (WIDTHS[story.weight] or 1) + 0.5)
+    local dot = DOTS[story.weight] or story.big and DOTS.high or DOTS.medium
+    event.dot:SetSize(dot, dot)
+    event.glow:SetSize(dot * 3, dot * 3)
+    event.tick:SetSize(AXIS / 2 - dot / 2, UI.Pixel(event))
     local card = event.card
+
+    -- What the card holds is the feature's: its builder fills a frame of
+    -- its own, and the card is as high as that needs.
+    local build = story.content
+    assert(type(build) == "function", "a story of the book needs a content builder")
+    local part = event.parts[build]
+    if not part then
+        part = CreateFrame("Frame", nil, card)
+        part:SetPoint("TOPLEFT")
+        event.parts[build] = part
+    end
+    for _, other in pairs(event.parts) do
+        other:SetShown(other == part)
+    end
+    event.content = part
+    part:SetWidth(column)
+    local cardHeight = math.floor(build(part, story, column) + 0.5)
+    part:SetHeight(cardHeight)
+
     card:SetSize(column, cardHeight)
     card:ClearAllPoints()
-    card:SetPoint(onLeft and "TOPLEFT" or "TOPRIGHT", event, onLeft and "TOPLEFT" or "TOPRIGHT", 0, 0)
+    local side = (width - AXIS) / 2
+    if onLeft then
+        card:SetPoint("TOPRIGHT", event, "TOPLEFT", side, 0)
+    else
+        card:SetPoint("TOPLEFT", event, "TOPRIGHT", -side, 0)
+    end
+    local big = story.big and true or false
     event.borderColor = big and "cardActive" or "cardBorder"
     event.shape.border:SetColor(event.borderColor)
     card:EnableMouse(story.onClick ~= nil)
     event.hover:Hide()
     event.bar:SetShown(big)
 
-    event.picture:ClearAllPoints()
-    event.picture:SetPoint("TOPLEFT", card, "TOPLEFT", pad, -math.floor((bodyHeight - size) / 2 + 0.5))
-    if event.crest then
-        event.crest:ClearAllPoints()
-        event.crest:SetPoint("TOPLEFT", card, "TOPLEFT", pad, -math.floor((bodyHeight - size) / 2 + 0.5))
-    end
-    local left = pad + beside
-    local top = math.floor((bodyHeight - textHeight) / 2 + 0.5)
-    event.title:ClearAllPoints()
-    event.title:SetPoint("TOPLEFT", card, "TOPLEFT", left, -top)
-    local last = event.title
-    if detail then
-        event.detail:ClearAllPoints()
-        event.detail:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -4)
-    end
-    for index = 1, event.plateCount do
-        local plate = event.plates[index]
-        plate:ClearAllPoints()
-        plate:SetPoint("TOPLEFT", card, "TOPLEFT", left + plate.x, -(top + platesTop + plate.y))
-    end
-    for index = 1, event.peopleCount do
-        local plate = event.people[index]
-        plate:ClearAllPoints()
-        plate:SetPoint("TOPLEFT", card, "TOPLEFT", left + plate.x, -(top + peopleTop + plate.y))
-    end
-
     -- The dot at the height of the card's middle.
-    event.ring:ClearAllPoints()
-    event.ring:SetPoint("CENTER", event, "TOP", 0, -cardHeight / 2)
+    event.dot:ClearAllPoints()
+    event.dot:SetPoint("CENTER", event, "TOP", 0, -cardHeight / 2)
     event.tick:ClearAllPoints()
-    event.tick:SetPoint(onLeft and "RIGHT" or "LEFT", event.ring, onLeft and "LEFT" or "RIGHT", 0, 0)
+    event.tick:SetPoint(onLeft and "RIGHT" or "LEFT", event.dot, onLeft and "LEFT" or "RIGHT", 0, 0)
 
     event.cardHeight = cardHeight
     event:SetHeight(cardHeight)

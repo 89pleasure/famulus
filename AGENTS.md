@@ -467,8 +467,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Stufenaufstiege desselben Gefährten, teilen sie sich eine Karte (`SameRun`, `ChronicleRun` in
     `UI/Options.lua`; Satz aus `ChronicleService.TextRun`): „3-mal gefallen in Dunkelküste“ mit
     der Zahl in der Ecke des Bildes, „Stufe 21 bis 22 erreicht“ mit der höchsten Stufe im Bild.
-    Unter der Zeile stehen alle Uhrzeiten als kleine Plaketten (höchstens zehn, die letzte zählt
-    den Rest). Eigene Stufenaufstiege bleiben einzeln, sie sind die Meilensteine. Die Zahl der
+    Bis 2026-11-25 standen unter der Zeile alle Uhrzeiten als kleine Plaketten; seitdem nennt der
+    Fuß der Karte die erste und die letzte („20:02 – 21:14 · Dunkelküste“, siehe „Gewichtung“).
+    Eigene Stufenaufstiege bleiben einzeln. Die Zahl der
     Ereignisse im Kapitelkopf zählt weiter jeden Eintrag.
   - **Kapitelkopf in einer Zeile:** links die Zeit (bis 2026-11-24 der Tag), Mitte der Titel in
     der Buchschrift (22 px; bis 2026-11-24 das Gebiet), Stufen und Zahl der Ereignisse rechts,
@@ -531,7 +532,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   Auftraggeber alle angenommen):**
   1. **Name im Streifen:** Die Überschrift eines Gefährten-Ereignisses nennt ihn im Buch nicht mehr
      („Schlafsack erhalten“ statt „Mira erhält: Schlafsack“); der Name (oder Alias) steht mit dem
-     Anfangsbuchstaben im vertieften Streifen unten. `ChronicleService.Text(entry, true)` liefert
+     Anfangsbuchstaben im vertieften Streifen unten (seit 2026-11-25 im Kopf der Karte, siehe
+     „Gewichtung“). `ChronicleService.Text(entry, true)` liefert
      die Überschrift ohne Namen; die Einblendung hat keinen Streifen und nimmt `story.fullTitle`.
      Seit 2026-11-24 mit Klassensymbol und „Alias (Charaktername)“, siehe „Klasse und Name“.
   2. **Symbole füllen den Rahmen:** Der Rahmen hat nur noch leicht runde Ecken (5 px), das Symbol
@@ -553,12 +555,96 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
   ineinandergreifenden Spalten sonst unklar ist, welcher Punkt zu welcher Seite gehört; die
   Abdunklung unter einer Zahl ist kräftiger; Beispieleinträge benennen kein Kapitel, das echte
   Einträge hat.
-- **Der Bildrahmen ist im Buch bei jedem Ereignis gleich groß** (54 px; Vorgabe des Auftraggebers,
-  2026-11-19, ihm gefällt die Größe bei Berufen und Gefährten). Auch ein Meilenstein hat keinen
-  größeren Rahmen; nur seine Karte ist etwas höher.
+- **Der Bildrahmen war im Buch bei jedem Ereignis gleich groß** (54 px; Vorgabe des Auftraggebers,
+  2026-11-19). Seit 2026-11-25 hat er im Buch der Chronik je Gewicht eine eigene Größe (40, 48,
+  56 px), siehe „Gewichtung“; die Weggefährten behalten 54 px.
+- **Gewichtung und Aufbau der Karten (Wunsch des Auftraggebers, 2026-11-25; nur gegen den Mock
+  geprüft, im Spiel noch nicht gesehen):** Gilt nur für das Buch der Chronik. Jedes Ereignis dort
+  hat ein Gewicht (`story.weight`, Tabelle `WEIGHT` in `UI/Options.lua`, Maße in `WEIGHTS` in
+  `UI/ChronicleCard.lua`):
+  - **Leicht** (`low`): Tode, Ankünfte in neuen Gebieten. Bild 40 px, Überschrift 12 px.
+  - **Mittel** (`medium`): Berufs-Meilensteine und alles, was der Auftraggeber nicht eingeordnet
+    hat (Herausforderungen, Gegenstände, Fähigkeiten, Beruf erlernt; Entscheidung des
+    Assistenten). Bild 48 px, Überschrift 13 px.
+  - **Schwer** (`high`): Bosse und Stufenaufstiege, dazu was die Tabellen mit `big` markieren
+    (Reiten). Bild 56 px. Das bisherige Meilenstein-Aussehen: Akzentrand, Akzentmarke links, Überschrift
+    15 px halbfett. Wörtlich nach Art umgesetzt: Auch Stufen und Bosse von Freunden
+    sind schwer (vorher nur der eigene Aufstieg).
+  - **Aufbau neben dem Bild:** Kopf, Inhalt, Fuß. Der Kopf nennt die Person (Klassensymbol, sonst
+    Anfangsbuchstabe, und `ChronicleService.Label`); bei eigenen Ereignissen gibt es ihn nicht.
+    Seit 2026-11-25 (Wunsch des Auftraggebers) steht er als eigene Reihe über Bild und Text,
+    bündig mit dem Bild, nicht mehr über dem Text rechts vom Bild; die Reihe ist ein vertiefter
+    Streifen über die ganze Kartenbreite wie früher der Name unten (`sunken`, oben rund, unten
+    eine feine Linie, 28 px hoch, Klassensymbol 18 px).
+  - **Streifen mit Typ-Icon, Punkte ohne Symbol (Wunsch des Auftraggebers, 2026-11-25):** Der
+    Streifen steht seitdem auf jeder Karte der Chronik, bei eigenen Ereignissen mit dem Namen
+    des eigenen Charakters (`ChronicleService.Character`, Klasse aus `ChronicleService.Class`;
+    gesetzt in `ChronicleRun`). Rechtsbündig darin das Symbol der Art (`mark` aus
+    `UI.BookPictures`, oder `story.icon` wie das Hufeisen), 13 px in Akzentfarbe; vorher stand es
+    auf dem Punkt der Linie. Der Kreis mit dem Anfangsbuchstaben links vom Namen ist entfallen:
+    links steht das Klassensymbol, wo die Klasse bekannt ist, sonst beginnt der Name am Rand
+    (Entscheidung des Assistenten: wörtlich „das Initial-Icon kann weg“, das Klassensymbol
+    bleibt). Die Punkte auf der Linie sind leuchtende Punkte in Akzentfarbe wie früher die
+    Anzeige „x von y aktiv“ (`UI.Halo` mit `accentGlow`, dreimal so groß wie der Punkt), in
+    allen Büchern, also auch bei den Weggefährten (Book-Design). Die Größe legt das Book nach
+    Gewicht fest (`DOTS`: leicht 5, mittel 7, schwer 9 px; ohne Gewicht mittel, mit `big`
+    schwer; Wunsch des Auftraggebers, die Größen hat der Assistent gewählt).
+    Der Fuß nennt immer Uhrzeit und Ort („21:14 · Dunkelküste“, ohne Ort nur die Uhrzeit).
+  - **Höhe nach Inhalt, gleiche Kanten (Wunsch des Auftraggebers nach dem ersten Screenshot,
+    2026-11-25):** Die erste Fassung hielt die Kopfzeile auch ohne Namen und immer zwei Zeilen
+    Text frei und hängte Rand und Bildgröße ans Gewicht; im Spiel sah das hohl und unruhig aus
+    (leere Flächen, Bild und Text je Gewicht an anderer Stelle). Seitdem ist die Karte so hoch
+    wie Bild oder Text plus Rand oben und unten. Seitlich haben alle Karten denselben Rand
+    (`SIDE`), das Bild steht linksbündig, und der Text hält immer denselben Abstand zum Bild
+    (`TEXT_GAP`; drei Größen 40/48/56, linksbündig und fester Abstand auf Wunsch des
+    Auftraggebers, 2026-11-25; eine Bildspalte in der Breite des größten Bildes ließ bei
+    leichten Karten zu viel Platz). Die Textkante wandert also mit der Bildgröße. Bild und Text
+    beginnen auf derselben Höhe, der Fuß endet mit dem Bild, falls das Bild höher ist (Wunsch
+    des Auftraggebers, 2026-11-25; vorher standen beide mittig zueinander und hatten
+    verschiedene Abstände zum oberen Rand).
+  - **Breite nach Gewicht, vom Book festgelegt (Wunsch des Auftraggebers, 2026-11-25):** Das
+    Feature gibt nur `story.weight` mit; `UI.Book` macht daraus die Breite der Karte (`WIDTHS`
+    in `UI/Book.lua`: leicht 80 %, mittel 90 %, schwer 100 % ihrer Buchseite; die Anteile sind
+    eine Entscheidung des Assistenten). Eine schmalere Karte hängt an der Linie, damit der
+    Strich vom Punkt sie erreicht. Ohne Gewicht (Weggefährten) ist die Karte so breit wie
+    bisher. Der Inhalt bekommt die Breite übergeben und richtet sich danach. Das Gewicht wirkt nur auf Bildgröße, Rand
+    oben und unten, Überschrift und Akzent. Seit 2026-11-25 (Wunsch des Auftraggebers nach einem
+    Screenshot: bei HIGH war der Abstand zur Namensleiste größer als bei MEDIUM und LOW) legt
+    das Book den Innenabstand fest, `UI.BookPad` (14 px), gleich an allen Seiten, für jedes
+    Gewicht und unter der Namensleiste. Gemessen vom äußeren Rand; weil Haarlinie und
+    Lichtkante oben innen je etwa einen Pixel nehmen und die Linie der Namensleiste in der
+    Leiste liegt, bekommt oben einen Pixel mehr (`UI.BookPadTop`) und unter der Namensleiste
+    einen weniger. Nachgemessen am Screenshot vom 2026-11-25 (vorher sichtbar: unter der
+    Leiste 32, seitlich 30, oben 27 Bildschirmpixel); das Gewicht wirkt nur noch auf Breite, Bildgröße,
+    Überschrift und Akzent. Eine leichte Karte mit zwei Zeilen Text kann deshalb höher sein
+    als eine mittlere mit einer. Die Weggefährten haben ihren eigenen Rand behalten (12, bei
+    Meilensteinen 15 px). Entscheidungen des Assistenten im Einzelnen; im
+    Spiel noch nicht gesehen. Der vertiefte Streifen mit dem Namen unter der Karte
+    ist entfallen; die Weggefährten behalten ihren Streifen (`story.foot`).
+  - **Der Ort steht nie im Text:** Das Buch liest die Sätze mit ausgeblendetem Gebiet
+    (`Placeless` in `UI/Options.lua`): „Gefallen“ statt „Gefallen in Dunkelküste“, „Neues Gebiet
+    entdeckt“ (`c_zone_nowhere`) statt „Ankunft in Feralas“, „in Uldaman“ fällt aus der Zeile
+    unter einem Boss weg, „mit Mira und Tom“ bleibt. Die Live-Einblendung hat keinen Fuß und
+    nennt den Ort weiter.
+  - **Das Buch gibt das Design vor, jedes Feature den Inhalt seiner Karten** (Vorgabe des
+    Auftraggebers, 2026-11-25, nachdem die erste Fassung auch die Boss-Karten in „Eure
+    Geschichte“ umgebaut hatte: „so können wir in jedem Feature selbst entscheiden, wie der
+    Inhalt der Karte ist, haben aber immer das gleiche Design des Books“). `UI.Book` kennt nur
+    Kapitel, Linie, Punkte und den Stil der Karte (Grund, Haarlinie, Lichtkante, Leuchten unter
+    der Maus, Akzent über `story.big`, Klick). Den Inhalt baut `story.content(part, story,
+    width)` in einen eigenen Rahmen der Karte und gibt seine Höhe zurück; die Karte wächst mit.
+    Je Builder-Funktion hat jede Karte ihren eigenen Rahmen, der wiederverwendet wird (deshalb
+    dieselbe Funktion für alle Karten einer Art, keine neue Closure je Story). Inhalte:
+    `UI.ChronicleCard` (`UI/ChronicleCard.lua`, gesetzt in `ChronicleRun`) und `UI.FellowCard`
+    (`UI/Fellows.lua`, gesetzt in `SessionChapters`; aussehen wie vorher, im Mock Karte für Karte
+    gleich hoch wie auf `main`). Gemeinsamer Baustein: der Bildrahmen (`UI.BookPicture`,
+    `UI.SetBookPicture` in `UI/Book.lua`: Spielsymbol, eigenes Symbol, Zahl, Zähl-Plakette,
+    Tooltip). `ChronicleEvent` liefert weiter nur die Daten, auch für die Live-Einblendung, die
+    unverändert ist.
+
 - **Bilder sind Symbole des Spiels (Wunsch des Auftraggebers, 2026-11-19):** Sie sind eckig und es
-  gibt sehr viele; die eigenen Zeichnungen (`skull.tga` usw.) stehen nur noch klein auf dem Punkt
-  der Zeitlinie und als Rückfall. Reihenfolge (`EntryTexture` in `UI/Options.lua`):
+  gibt sehr viele; die eigenen Zeichnungen (`skull.tga` usw.) stehen nur noch klein im Streifen
+  der Karte (bis 2026-11-25 auf dem Punkt der Zeitlinie) und als Rückfall. Reihenfolge (`EntryTexture` in `UI/Options.lua`):
   1. das Symbol, das mit dem Eintrag gespeichert ist (`entry.icon`, eine Datei-ID): bei Berufen
      aus `GetProfessionInfo`, bei Herausforderungen aus `GetAchievementInfo`; es wird mitgeteilt;
   2. das Symbol des Gegenstands (`C_Item.GetItemIconByID`) oder des Zaubers einer Fähigkeit
@@ -632,8 +718,8 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
     Tabelle.** Was beim Einschalten schon in den Taschen liegt, wird nur gemerkt. Bisher: 211527
     (Schlafsack, ID vom Auftraggeber). Im Buch zeigt ein Gegenstand das Symbol, das das Spiel ihm
     gibt (Wunsch des Auftraggebers; `C_Item.GetItemIconByID`, `story.texture` in `UI/Book.lua`):
-    in eigenen Farben, also ohne `UI.Tint`, mit beschnittenem Rand im runden Rahmen. Der Punkt auf
-    der Zeitlinie bleibt die Truhe; kennt der Client kein Symbol, steht sie auch im Bild. Das ist
+    in eigenen Farben, also ohne `UI.Tint`, mit beschnittenem Rand im runden Rahmen. Das kleine
+    Symbol (im Streifen, früher auf dem Punkt der Zeitlinie) bleibt die Truhe; kennt der Client kein Symbol, steht sie auch im Bild. Das ist
     die einzige Stelle, an der das Buch eine Textur des Spiels statt eines eigenen Symbols zeigt.
     Die Maus über dem Bild zeigt den Tooltip des Spiels (Wunsch des Auftraggebers): bei
     Gegenständen `GameTooltip:SetItemByID`, bei Fähigkeiten aus der Tabelle `SetSpellByID`
@@ -890,9 +976,9 @@ und die Bilderbuch-Optik sind gebaut und nur gegen den Mock geprüft.
 - **Klasse und Name (Wunsch des Auftraggebers, 2026-11-24; nur gegen den Mock geprüft):** Neben
   dem Namen eines Freundes stand ein Kreis mit dem Anfangsbuchstaben; jetzt steht dort das
   Klassensymbol des Spiels (`UI-Classes-Circles`, `UI.ClassIcon`/`UI.SetClass` in
-  `UI/Widgets.lua`, die auch das Wappen der Weggefährten nutzt): im Streifen unter einer Karte des
+  `UI/Widgets.lua`, die auch das Wappen der Weggefährten nutzt): im Kopf einer Karte des
   Buchs und in der Randspalte (Liste „Freunde“, Bilanz-Karten). Ist die Klasse unbekannt, bleibt
-  der Buchstabe. Hinter einem Alias steht der Charaktername in Klammern, „Papa (Borin Eisenbart)“
+  in der Randspalte der Buchstabe; im Buch steht seit 2026-11-25 dann nur der Name. Hinter einem Alias steht der Charaktername in Klammern, „Papa (Borin Eisenbart)“
   (`ChronicleService.Label`), überall, wo die Chronik die Person nennt: Streifen, Randspalte,
   Filterzeile „Nur Ereignisse von …“ und die Sätze der Live-Einblendung. Ohne Alias steht nur der
   Name.

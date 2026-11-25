@@ -45,6 +45,7 @@ Modules\Fellows\RememberFellows.lua
 UI\Theme.lua
 UI\Widgets.lua
 UI\Book.lua
+UI\ChronicleCard.lua
 UI\Rail.lua
 UI\Fellows.lua
 UI\Feed.lua

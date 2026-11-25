@@ -59,6 +59,12 @@ end
 
 local Widget = {}
 
+-- Keeps the last anchor, so that tests can compare where things stand
+-- (mockPoint = { point, relativeTo, relativePoint, x, y }).
+function Widget:SetPoint(...)
+    self.mockPoint = { ... }
+end
+
 function Widget:SetScript(script, fn)
     self.scripts[script] = fn
 end

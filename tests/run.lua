@@ -1683,10 +1683,22 @@ check(window.area.name:GetText() == "Chronicle" and tabButton("Everyone").select
     "the chronicle has its own page: everyone, my journey, companions, recording")
 check(not navButton("Chronicle").pill:IsShown(), "the chronicle's entry shows no counter")
 -- The entries are told as a picture book: chapters, and events on a line.
+-- A card's content is a frame of its own (event.content); the tests read
+-- the card and its content as one.
 local function bookFrames(field)
     local list = {}
     for _, frame in ipairs(mock.frames) do
         if frame[field] and frame:IsVisible() then
+            if field == "story" then
+                local event = frame
+                frame = setmetatable({}, { __index = function(_, key)
+                    local value = event.content and rawget(event.content, key)
+                    if value ~= nil then
+                        return value
+                    end
+                    return event[key]
+                end })
+            end
             list[#list + 1] = frame
         end
     end
@@ -1721,17 +1733,57 @@ check(events[2].top > events[1].top and events[2].top < events[1].top + events[1
     and events[2].top + events[2].cardHeight / 2 >= events[1].top + events[1].cardHeight / 2 + 30,
     "each side runs on by itself: a card reaches into the height of the one across, the dots keep apart")
 check(events[1].story.chip and events[1].story.chip.text == "Jaina Proudmoore" and events[1].story.chip.initial == "J"
-    and events[1].chipText:IsShown() and not events[2].chipText:IsShown(), "a companion's event names them in the strip below, not in the headline")
+    and events[1].chipText:GetText() == "Jaina Proudmoore" and events[1].foot == nil
+    and events[2].strip:IsShown() and events[2].chipText:GetText() == (Chronicle.Character() or ""),
+    "every card names whose event it is in its strip, not in the headline; the player's own name their character")
 check(events[1].number:IsShown() and events[1].number:GetText() == "20" and not events[1].icon:IsShown()
     and events[1].photo:IsShown() and events[1].dim:IsShown() and events[1].story.texture == ns.UI.gameIcons.level
-    and not events[1].story.big and not events[1].bar:IsShown() and events[1].foot:IsShown() and not events[2].foot:IsShown(),
-    "a level shows its number on an icon of the game; a companion's is no milestone")
-check(events[6].story.big and events[6].bar:IsShown() and events[6].number:GetText() == "13"
-    and events[6].card:GetHeight() > events[5].card:GetHeight() and events[6].picture:GetWidth() == events[5].picture:GetWidth(),
-    "the player's own level-up is a milestone: a larger card with the mark of an active card, its picture as large as any")
-check(events[4].story.kind == "death" and events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
-    and events[4].story.texture == ns.UI.gameIcons.death and events[4].detail:GetText():match("%d%d:%d%d$") ~= nil,
-    "other events show an icon of the game and their time")
+    and events[1].story.weight == "high" and events[1].bar:IsShown(),
+    "a level shows its number on an icon of the game; a companion's weighs high too")
+check(events[6].story.weight == "high" and events[6].bar:IsShown() and events[6].number:GetText() == "13"
+    and events[3].story.kind == "boss" and events[3].story.weight == "high" and events[3].bar:IsShown()
+    and events[2].story.weight == "medium" and not events[2].bar:IsShown()
+    and events[6].card:GetHeight() > events[2].card:GetHeight() and events[6].picture:GetWidth() > events[2].picture:GetWidth(),
+    "level-ups and bosses weigh high: a larger card with the mark of an active card")
+check(events[4].story.kind == "death" and events[4].story.weight == "low" and events[5].story.weight == "low"
+    and events[4].picture:GetWidth() < events[2].picture:GetWidth() and events[2].picture:GetWidth() < events[6].picture:GetWidth()
+    and events[4].picture.mockPoint[4] == events[6].picture.mockPoint[4],
+    "deaths and new zones weigh low; the picture grows with the weight and stands at the left")
+do
+    local same = true
+    for index = 1, 6 do
+        local picture, title = events[index].picture, events[index].title
+        same = same and title.mockPoint[4] - picture.mockPoint[4] - picture:GetWidth()
+            == events[1].title.mockPoint[4] - events[1].picture.mockPoint[4] - events[1].picture:GetWidth()
+    end
+    check(same and events[2].title.mockPoint[5] == events[1].title.mockPoint[5],
+        "the text keeps the same distance from the picture on every card, and begins below the strip on each")
+end
+check(events[4].card:GetWidth() < events[2].card:GetWidth() and events[2].card:GetWidth() < events[6].card:GetWidth()
+    and events[6].card:GetWidth() == (window.book:GetWidth() - 44) / 2
+    and events[4].card.mockPoint[1] == (events[4].onLeft and "TOPRIGHT" or "TOPLEFT"),
+    "the book sets a card's width by its weight, and a narrower card keeps to the line")
+check(events[1].strip:IsShown() and events[2].strip:IsShown() and events[1].picture.mockPoint[5] <= -28
+    and events[1].kindIcon:IsShown() and events[1].kindIcon.mockPoint[1] == "RIGHT" and events[1].mark == nil
+    and events[1].dot:IsShown() and events[1].glow:IsShown()
+    and events[4].dot:GetWidth() < events[2].dot:GetWidth() and events[2].dot:GetWidth() < events[1].dot:GetWidth()
+    and events[1].glow:GetWidth() == events[1].dot:GetWidth() * 3,
+    "the name stands in a sunken strip above the picture, the icon of the kind at its right; on the line a glowing dot, larger with the weight")
+do
+    local level = true
+    for index = 1, 6 do
+        level = level and events[index].picture.mockPoint[5] == events[index].title.mockPoint[5]
+    end
+    check(level and events[2].picture.mockPoint[4] == ns.UI.BookPad and events[2].picture.mockPoint[5] == -(28 + ns.UI.BookPad - 1)
+    and events[6].picture.mockPoint[5] == events[2].picture.mockPoint[5] and events[1].picture.mockPoint[5] == events[2].picture.mockPoint[5],
+    "picture and text begin at the same height; the room inside the edge and below the strip is the book's, the same for every weight")
+end
+check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
+    and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"
+    and events[4].detail:GetText() == "at level 13" and events[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil
+    and events[5].story.title == "Discovered a new zone" and events[1].footer:GetText():match("^%d%d:%d%d  ·  Duskwood$") ~= nil
+    and not events[1].detail:IsShown() and events[2].footer:GetText():match("^%d%d:%d%d$") ~= nil,
+    "other events show an icon of the game; the foot always tells the time and the place, the text never the place")
 check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 40,
     "the page is as long as its book")
 check(heads[1].small:IsShown() and heads[1].sub:IsShown() and heads[1].left:IsShown() and heads[1].right:IsShown()
@@ -1768,16 +1820,16 @@ do -- a click on a companion narrows the book to them, a second one widens it ag
 end
 do -- the class beside a companion's name, and the character name behind an alias
     local first = bookFrames("story")[1]
-    check(first.chipInitial:IsShown() and first.chipDot:IsShown() and not first.chipClass:IsShown()
+    check(not first.chipClass:IsShown() and first.chipText.mockPoint[4] == ns.UI.BookPad
         and people.rows[1].initial:IsShown() and not people.rows[1].class:IsShown(),
-        "while the class is not known, the initial stands beside the name")
+        "while the class is not known, the name stands alone in the book's strip; the rail shows the initial")
     Chronicle.Class("Jaina Proudmoore", "MAGE")
     ns.AliasService.Set("Jaina Proudmoore", "Anna")
     mock.Advance(0.1)
     first = bookFrames("story")[1]
     local row = railCard("people").rows[1]
-    check(first.story.chip.class == "MAGE" and first.chipClass:IsShown() and not first.chipInitial:IsShown()
-        and not first.chipDot:IsShown() and row.class:IsShown() and not row.initial:IsShown() and not row.avatar:IsShown(),
+    check(first.story.chip.class == "MAGE" and first.chipClass:IsShown() and first.chipText.mockPoint[4] > ns.UI.BookPad
+        and row.class:IsShown() and not row.initial:IsShown() and not row.avatar:IsShown(),
         "a known class shows its icon instead, in the book and in the rail")
     check(first.chipText:GetText() == "Anna (Jaina Proudmoore)" and row.name:GetText() == "Anna (Jaina Proudmoore)"
         and (first.story.detail == nil or not first.story.detail:find("Proudmoore", 1, true)),
@@ -1838,12 +1890,13 @@ do -- what repeats right away shares a card
     end
     check(#bookFrames("story") == 8 and bookFrames("chapter")[1].chapter.sub:find("11 events", 1, true) ~= nil,
         "five entries, two cards; the chapter still counts every event")
-    check(deaths and deaths.story.title == "Fallen 3 times in Duskwood" and deaths.story.detail == "at levels 12 to 13"
-        and deaths.badge:IsShown() and deaths.badgeText:GetText() == "3" and deaths.plateCount == 3
-        and deaths.plates[1].text:GetText() == date("%H:%M", now - 52) and not deaths.detail:GetText():find(":", 1, true),
-        "deaths in one place: one card, how often in the corner, every time below")
+    check(deaths and deaths.story.title == "Fallen 3 times" and deaths.story.detail == "at levels 12 to 13"
+        and deaths.story.fullTitle == "Fallen 3 times in Duskwood"
+        and deaths.badge:IsShown() and deaths.badgeText:GetText() == "3"
+        and deaths.footer:GetText() == date("%H:%M", now - 52) .. " – " .. date("%H:%M", now - 50) .. "  ·  Duskwood",
+        "deaths in one place: one card, how often in the corner, from the first time to the last in the foot")
     check(levels and levels.story.title == "Reached levels 21 to 22" and levels.number:GetText() == "22"
-        and not levels.badge:IsShown() and levels.plateCount == 2 and levels.story.fullTitle == "Jaina Proudmoore reaches levels 21 to 22",
+        and not levels.badge:IsShown() and levels.story.fullTitle == "Jaina Proudmoore reaches levels 21 to 22",
         "a companion's levels in a row: one card from the first to the last")
     local entries = Chronicle.Entries()
     for index = #entries, 1, -1 do
@@ -1932,7 +1985,8 @@ end
 mock.Click(tabButton("My journey"))
 mock.Advance(0.1)
 events = bookFrames("story")
-check(#events == 5 and events[1].story.title == "Challenge completed: Challenge 501" and events[1].story.chip == nil,
+check(#events == 5 and events[1].story.title == "Challenge completed: Challenge 501"
+    and events[1].story.chip.text == Chronicle.Character() and events[1].strip:IsShown(),
     "my journey: only my own")
 mock.Click(tabButton("Friends"))
 mock.Advance(0.1)
@@ -1998,7 +2052,7 @@ do -- an item is shown with the game's icon of it, in its own colours
     local mine, theirs
     for _, each in ipairs(bookFrames("story")) do
         if each.story.kind == "skill" then
-            if each.story.chip then
+            if each.story.chip.text == "Jaina Proudmoore" then
                 theirs = each
             else
                 mine = each
@@ -2571,6 +2625,7 @@ end
 check(spans == 2 and found["On the road in Uldaman"] and found["On the road in Badlands"],
     "a stretch together says where and when")
 check(found["Archaedas defeated"] and found["Archaedas defeated"].kind == "boss" and found["Archaedas defeated"].detail == "in Uldaman"
+    and not found["Archaedas defeated"].big and found["Archaedas defeated"].weight == nil
     and found["Archaedas defeated"].chip == nil, "bosses defeated together, from the fellow travellers' own day log")
 check(raidLine and partyLine, "bosses without a name (a raid) are counted on the day's line, named ones are not")
 check(partyLine and partyLine:match("^%d%d:%d%d to %d%d:%d%d$") and raidLine:match("^%d%d:%d%d to %d%d:%d%d  ·  2 bosses$"),
@@ -2799,7 +2854,7 @@ do
     check(uldaman and uldaman.story.detail:find("^19:05 to 23:10  ·  4 h 5 min  ·  3 bosses$") ~= nil,
         "from when to when, how long, and the bosses as a number: " .. tostring(uldaman and uldaman.story.detail))
     check(uldaman and uldaman.footText:IsShown() and uldaman.footText:GetText() == "Again with Mira and Borin  ·  6 times in 30 days"
-        and not uldaman.chipText:IsShown(), "the strip below says when the same people came together again: "
+        and uldaman.foot:IsShown() and uldaman.chipText == nil, "the strip below says when the same people came together again: "
         .. tostring(uldaman and uldaman.footText:GetText()))
     local first = found["On the road in Westfall"]
     check(first and not first.foot:IsShown(), "the first time together has no such strip")

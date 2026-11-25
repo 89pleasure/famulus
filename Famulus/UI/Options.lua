@@ -584,7 +584,7 @@ local function EntryTexture(entry, kind, special)
     return UI.gameIcons[kind == "skill" and "profession" or kind]
 end
 
--- An entry as the book shows it (see UI/Book.lua).
+-- An entry as a book shows it (see UI/Book.lua).
 local function ChronicleEvent(entry)
     local Chronicle = ns.ChronicleService
     -- The book says whose event it is in the strip below the card, so its
@@ -642,21 +642,47 @@ local function SameRun(a, b)
     return kindA == "level" and a.who ~= nil
 end
 
--- A run of entries as one event of the book: the look of the newest, one
--- sentence for all, and each one's time, the earliest first.
+-- How much an event weighs in the chronicle's book: the size and look of
+-- its card. Other kinds are "medium"; what the tables mark as great is "high".
+local WEIGHT = { death = "low", zone = "low", skill = "medium", boss = "high", level = "high" }
+
+-- An entry as the chronicle's book tells it: the place is not in the text,
+-- the foot of the card names it.
+local function Placeless(entry)
+    return setmetatable({ zone = false }, { __index = entry })
+end
+
+-- A run of entries as a card of the chronicle's book: the look of the
+-- newest, one sentence for all; time and place in the foot (UI/ChronicleCard.lua).
 local function ChronicleRun(run)
-    local event = ChronicleEvent(run[1])
-    if #run == 1 then
-        return event
-    end
     local Chronicle = ns.ChronicleService
-    event.title, event.detail = Chronicle.TextRun(run, true)
-    event.fullTitle = (Chronicle.TextRun(run))
-    event.count = #run
-    event.times = {}
-    for index = #run, 1, -1 do
-        event.times[#event.times + 1] = date("%H:%M", run[index].t)
+    local newest = run[1]
+    local event = ChronicleEvent(newest)
+    local told, zone = {}, type(newest.zone) == "string" and newest.zone or nil
+    for index, entry in ipairs(run) do
+        told[index] = Placeless(entry)
+        if entry.zone ~= zone then
+            zone = nil
+        end
     end
+    if #run == 1 then
+        event.title, event.detail = Chronicle.Text(told[1], true)
+    else
+        event.title, event.detail = Chronicle.TextRun(told, true)
+        event.fullTitle = (Chronicle.TextRun(run))
+        event.count = #run
+    end
+    local when = #run > 1 and L.c_ch_span:format(date("%H:%M", run[#run].t), event.when) or event.when
+    event.when = nil
+    event.footer = zone and (when .. "  ·  " .. zone) or when
+    local special = event.kind == "ability" and Chronicle.Ability(newest.ability)
+        or event.kind == "item" and Chronicle.Item(newest.item) or nil
+    event.weight = special and special.big and "high" or WEIGHT[event.kind] or "medium"
+    event.big = event.weight == "high"
+    -- The strip names everyone, the player's own character too.
+    local me = Chronicle.Character()
+    event.chip = event.chip or { text = me, class = me and Chronicle.Class(me) }
+    event.content = UI.ChronicleCard
     return event
 end
 
@@ -1209,6 +1235,7 @@ local function SessionChapters(events, now, limit)
             chapter = { events = {}, start = event.from, finish = event.t, seconds = 0 }
             chapters[#chapters + 1] = chapter
         end
+        event.content = event.content or UI.FellowCard
         chapter.events[#chapter.events + 1] = event
         chapter.start = math.min(chapter.start, event.from)
         chapter.seconds = chapter.seconds + (event.seconds or 0)
