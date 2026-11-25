@@ -33,16 +33,17 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# Two jobs as in GitHub's own Pages workflow: in a single job, deploy-pages sometimes looked for the
+# artifact before GitHub listed it ("Found 0 artifact(s)", 2026-11-25, twice), and a re-run then
+# uploaded a second one ("Multiple artifacts"). Re-run the whole workflow, not only the failed job.
 jobs:
-  deploy:
+  build:
     # After a release only if it succeeded and uploaded (a tag push, not a dry run by hand).
+    # deploy needs build, so it is skipped along with it.
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       # The full history, so that the tags are there.
       - name: Check out the repository
@@ -74,6 +75,13 @@ jobs:
         with:
           path: website
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Publish on GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
