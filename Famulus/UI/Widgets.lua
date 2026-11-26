@@ -619,6 +619,58 @@ function UI.IconButton(parent, media, onClick, size)
     return button
 end
 
+-- The button of a reaction, as the live feed's cards and the chronicle's book
+-- show it: a small rounded square with the reaction's icon, muted until it is
+-- given (or, on the player's own event, received), then in the accent on an
+-- accent ground, like a lit chip. With a count it widens and says how many.
+-- What it does is its owner's: the scripts, `button.over` while the mouse is
+-- on it, and button:Paint() after that changes.
+--   button:Set(icon, lit, count) -- "cheer", true or false, a number or nil
+local REACTION_PAD, REACTION_COUNT_GAP = 7, 4
+
+function UI.ReactionButton(parent, size, iconSize)
+    local button = CreateFrame("Button", nil, parent)
+    button:SetSize(size, size)
+    button.size = size
+    button.ground = UI.Card(button, "control", "controlBorder", 8)
+    button.hover = UI.Round(button, "hover", 8, { layer = "ARTWORK" })
+    button.hover:Hide()
+    button.icon = UI.Icon(button, "cheer", iconSize, "textMuted", "OVERLAY")
+    button.iconSize = iconSize
+    button.count = UI.Text(button, 11, "textMuted", "semibold")
+    button.count:SetWordWrap(false)
+    button.count:Hide()
+
+    function button:Set(icon, lit, count)
+        self.reactionIcon, self.lit = icon, lit and true or false
+        local counted = (tonumber(count) or 0) > 0
+        self.count:SetShown(counted)
+        self.count:SetText(counted and tostring(count) or "")
+        self.icon:ClearAllPoints()
+        if counted then
+            self.icon:SetPoint("LEFT", self, "LEFT", REACTION_PAD, 0)
+            self.count:ClearAllPoints()
+            self.count:SetPoint("LEFT", self.icon, "RIGHT", REACTION_COUNT_GAP, 0)
+            local width = REACTION_PAD + self.iconSize + REACTION_COUNT_GAP + self.count:GetStringWidth() + REACTION_PAD + 1
+            self:SetWidth(math.max(self.size, math.ceil(width)))
+        else
+            self.icon:SetPoint("CENTER")
+            self:SetWidth(self.size)
+        end
+        self:Paint()
+    end
+
+    function button:Paint()
+        self.ground.fill:SetColor(self.lit and "accentDeep" or "control")
+        self.ground.border:SetColor(self.lit and "accentLine" or "controlBorder")
+        self.icon:SetTexture(UI.media[self.reactionIcon] or UI.media.cheer)
+        local ink = self.lit and "accent" or self.over and "text" or "textMuted"
+        UI.Tint(self.icon, ink)
+        UI.Ink(self.count, ink)
+    end
+    return button
+end
+
 ---------------------------------------------------------------------------
 -- Toggle: a 34x20 pill with a sliding knob. Purely visual; the row that
 -- owns it handles the click, so the whole row is the hit target.

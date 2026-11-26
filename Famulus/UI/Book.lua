@@ -20,8 +20,6 @@
 --           onClick = function() end,   -- optional: what a click on the card does
 --           tooltip = function(tip) end, -- optional: fills the game's tooltip
 --                                       -- while the mouse is over the card
---           onPicture = function() end, -- optional: what a click on the picture
---           pictureHint = "...",        -- does, and what its tooltip says
 --           ...                         -- whatever its content reads
 --       } },
 --   } }
@@ -246,8 +244,7 @@ function UI.BookPicture(part)
     local picture = CreateFrame("Frame", nil, part)
     part.picture = picture
     -- A picture that stands for an item or a spell shows the game's tooltip
-    -- of it, one that can be clicked says what the click does; the mouse is
-    -- only caught where there is one of these.
+    -- of it; the mouse is only caught where there is one.
     picture:SetScript("OnEnter", function(self)
         local item, spell = self.item, self.spell
         if item and GameTooltip.SetItemByID then
@@ -258,19 +255,10 @@ function UI.BookPicture(part)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetSpellByID(spell)
             GameTooltip:Show()
-        elseif self.hint then
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText(self.hint)
-            GameTooltip:Show()
         end
     end)
     picture:SetScript("OnLeave", function()
         GameTooltip:Hide()
-    end)
-    picture:SetScript("OnMouseUp", function(self, button)
-        if button == "LeftButton" and self.onClick then
-            self.onClick()
-        end
     end)
     picture:SetScript("OnHide", function(self)
         if GameTooltip.IsOwned and GameTooltip:IsOwned(self) then
@@ -311,15 +299,13 @@ end
 -- Shows a story's picture (made by UI.BookPicture) at `size`: its game
 -- icon (story.texture), else the icon of its kind or story.icon, else its
 -- number (story.number, at `numberSize`); story.count in the corner;
--- story.item or story.spell for the tooltip; story.onPicture for a click on
--- it, with story.pictureHint as its tooltip.
+-- story.item or story.spell for the tooltip.
 function UI.SetBookPicture(part, story, size, numberSize)
     local look = PICTURES[story.kind] or PICTURES.zone
     local picture = part.picture
     picture.item, picture.spell = story.item, story.spell
-    picture.onClick, picture.hint = story.onPicture, story.onPicture and story.pictureHint or nil
     picture:SetSize(size, size)
-    picture:EnableMouse(story.item ~= nil or story.spell ~= nil or story.onPicture ~= nil)
+    picture:EnableMouse(story.item ~= nil or story.spell ~= nil)
     part.pictureShape.border:SetColor(look.border)
     part.pictureShape.fill:SetColor(look.fill)
     local photo = story.texture

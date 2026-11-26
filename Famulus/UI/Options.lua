@@ -755,11 +755,12 @@ function UI.FeedStory(entry)
     return story
 end
 
--- The reaction on a card of the chronicle's book. A companion's event gets
--- the player's with a click on the card, and loses it with another; what
--- else a click did (a recipe book) moves to the picture. The player's own
--- event shows how many reacted, and who on the mouse. For a run: the
--- reaction goes to its newest entry, and those received to any count.
+-- The reaction on a card of the chronicle's book: its button at the foot's
+-- right (UI/ChronicleCard.lua), as on the live feed's cards. A companion's
+-- event gets the player's with a click on the button, and loses it with
+-- another; a click on the card does what it did before (a recipe book). The
+-- player's own event shows how many reacted, and who on the mouse. For a
+-- run: the reaction goes to its newest entry, and those received to any count.
 local function CardReaction(event, run)
     local Chronicle = ns.ChronicleService
     if not Chronicle.ReactionsOn() then
@@ -773,22 +774,22 @@ local function CardReaction(event, run)
             given = given or entry.mine ~= nil
             untold = untold or Chronicle.ReactionUntold(entry)
         end
-        event.reaction = { icon = reaction, lit = given }
-        if event.onClick then
-            event.onPicture, event.pictureHint = event.onClick, L.c_open_book
-        end
-        event.onClick = function()
-            for _, entry in ipairs(run) do
-                Chronicle.React(entry, not given and entry == newest)
-            end
-        end
         local name = (Chronicle.Companion(newest))
-        event.tooltip = function(tip)
-            tip:SetText(given and L.c_react_given or L.c_react)
-            if given and untold then
-                tip:AddLine(L.c_react_waiting:format(name), 1, 1, 1, true)
-            end
-        end
+        event.reaction = {
+            icon = reaction,
+            lit = given,
+            onClick = function()
+                for _, entry in ipairs(run) do
+                    Chronicle.React(entry, not given and entry == newest)
+                end
+            end,
+            tooltip = function(tip)
+                tip:SetText(given and L.c_react_given or L.c_react)
+                if given and untold then
+                    tip:AddLine(L.c_react_waiting:format(name), 1, 1, 1, true)
+                end
+            end,
+        }
         return
     end
     if not Chronicle.IsOwn(newest) then
@@ -806,13 +807,17 @@ local function CardReaction(event, run)
     if #names == 0 then
         return
     end
-    event.reaction = { icon = Chronicle.REACTIONS[newest.k] or "cheer", lit = true, count = #names }
-    event.tooltip = function(tip)
-        tip:SetText(L.c_reactions_from)
-        for _, who in ipairs(names) do
-            tip:AddLine(Chronicle.Label({ who = who }), 1, 1, 1)
-        end
-    end
+    event.reaction = {
+        icon = Chronicle.REACTIONS[newest.k] or "cheer",
+        lit = true,
+        count = #names,
+        tooltip = function(tip)
+            tip:SetText(L.c_reactions_from)
+            for _, who in ipairs(names) do
+                tip:AddLine(Chronicle.Label({ who = who }), 1, 1, 1)
+            end
+        end,
+    }
 end
 
 -- A run of entries as a card of the chronicle's book: the look of the
@@ -926,7 +931,10 @@ function UI.ChronicleChapter(entries)
     local chapter = { entries = entries, events = {} }
     for index, entry in ipairs(entries) do
         local story = ChronicleRun({ entry })
-        story.onClick, story.tooltip, story.onPicture, story.item, story.spell = nil, nil, nil, nil, nil
+        story.onClick, story.tooltip, story.item, story.spell = nil, nil, nil, nil
+        if story.reaction then
+            story.reaction.onClick, story.reaction.tooltip = nil, nil
+        end
         if story.chip and not story.chip.class and entry.who then
             story.chip.class = ns.ChronicleService.SampleClass(entry.who)
         end
