@@ -78,7 +78,10 @@ local resetArmed, resetToken = false, 0
 local tidyArmed, tidyToken = false, 0 -- the fellow travellers' tidying up asks first, too
 local aliasEditor -- input row of the aliases page, once it has been shown
 local embers = {} -- the sparks in the background, one set per ground
-local Render, PlayEmbers, SelectPage, RefreshState -- forward declarations
+-- The welcome page (UI/Welcome.lua): whether it is shown, and the page once built.
+-- holdWelcome: the window opens for something asked for (an alias), not for it.
+local welcoming, holdWelcome, welcomePage = false, false, nil
+local Render, PlayEmbers, SelectPage, RefreshState, OpenWelcome -- forward declarations
 local RenderSplit, RefreshSplit -- the settings tabs, see there
 
 -- Grain lies in a band across the top of the window, sidebar and content
@@ -580,13 +583,20 @@ end
 
 local CHRONICLE_ROWS = 50 -- events in the book; older ones stay in the saved data
 
+-- Whether anything writes into the chronicle right now.
+local function ChronicleRecording()
+    local features = ns.features
+    return features.ownJourney.enabled or features.companions.enabled or features.sharing.enabled
+end
+
+-- An empty book says whether it waits for the first event or for a switch.
 local CHRONICLE_EMPTY_ITEM = {
     kind = "info",
     label = function()
-        return L.c_empty
+        return ChronicleRecording() and L.c_empty_on or L.c_empty
     end,
     desc = function()
-        return L.c_empty_desc
+        return ChronicleRecording() and L.c_empty_on_desc or L.c_empty_desc
     end,
 }
 -- The book narrowed to a companion who has nothing in it yet.
@@ -2536,6 +2546,32 @@ local function BuildPages()
         InfoItem("idea", function()
             return L.about_idea_value
         end),
+        -- The welcome page once more, to switch the main features on later.
+        {
+            kind = "action",
+            id = "welcome",
+            label = function()
+                return L.about_welcome
+            end,
+            desc = function()
+                return L.about_welcome_value
+            end,
+            button = function()
+                return L.about_welcome_button
+            end,
+            confirm = function()
+                return L.about_welcome_button
+            end,
+            armed = function()
+                return false
+            end,
+            usable = function()
+                return true
+            end,
+            click = function()
+                OpenWelcome()
+            end,
+        },
     }
     AddPage({
         id = "about",
@@ -3576,8 +3612,65 @@ function RefreshState(animate)
     RefreshTabs()
 end
 
+-- The welcome page lies over sidebar and content; the head keeps only logo,
+-- name and close. What lies below is left as it was and laid out again once
+-- the page is gone.
+local function EndWelcome(page, tab)
+    welcoming = false
+    PlayEmbers()
+    selectedTabs[page] = tab
+    SelectPage(page)
+end
+
+local function ShowWelcome()
+    if not welcomePage then
+        welcomePage = UI.Welcome.Build(window, {
+            width = WIDTH,
+            height = HEIGHT,
+            head = HEAD,
+            radius = RADIUS,
+            grain = GRAIN_BAND,
+        }, {
+            -- One click: the main features on, then the chronicle.
+            all = function()
+                UI.Welcome.SwitchOn()
+                EndWelcome("chronicle")
+            end,
+            -- The chronicle's switches, to pick from there.
+            choose = function()
+                UI.Welcome.Decide()
+                EndWelcome("chronicle", "record")
+            end,
+            later = function()
+                UI.Welcome.Decide()
+                EndWelcome("chronicle")
+            end,
+        })
+        PlayEmbers()
+    end
+    window.area:Hide()
+    welcomePage:Refresh()
+    welcomePage:Show()
+end
+
+function OpenWelcome()
+    welcoming = true
+    DisarmReset()
+    tidyArmed = false
+    PlayEmbers()
+    Render()
+end
+
 function Render()
     UI.CloseMenu()
+    if welcoming then
+        ShowWelcome()
+        return
+    end
+    if welcomePage then
+        welcomePage:Hide()
+    end
+    window.area:Show()
     local searching = searchText ~= ""
     local page = pages[currentPage]
     local tab = CurrentTab(page)
@@ -3989,10 +4082,14 @@ end
 
 -- The sparks move only while the window is open and the player wants them.
 -- wanted: false to stop them regardless of the option.
+-- While the welcome page lies over the window, only its own sparks move.
 function PlayEmbers(wanted)
     local playing = wanted ~= false and window ~= nil and window:IsShown() and ns:GetOption("general", "embers") == true
     for _, set in ipairs(embers) do
-        set:SetPlaying(playing)
+        set:SetPlaying(playing and not welcoming)
+    end
+    if welcomePage then
+        welcomePage.embers:SetPlaying(playing and welcoming)
     end
 end
 
@@ -4238,6 +4335,9 @@ local function Build()
     window.scroll = UI.Scroll(window)
 
     window:SetScript("OnShow", function(self)
+        -- Until the player has chosen, the window opens on the welcome page;
+        -- closing it is no choice.
+        welcoming = not holdWelcome and UI.Welcome.Wanted()
         PlayEmbers()
         Render()
         UI.RetryFonts()
@@ -4274,10 +4374,19 @@ function ns:EditAlias(name)
     if not window then
         Build()
     end
+    -- The alias asked for wins over the welcome page; it comes again at the
+    -- next opening.
+    holdWelcome = true
     if not window:IsShown() then
         window:Show()
     end
-    if currentPage ~= "aliases" or searchText ~= "" or CurrentTab().id ~= "names" then
+    holdWelcome = false
+    local wasWelcoming = welcoming
+    welcoming = false
+    if wasWelcoming then
+        PlayEmbers()
+    end
+    if wasWelcoming or currentPage ~= "aliases" or searchText ~= "" or CurrentTab().id ~= "names" then
         selectedTabs.aliases = "names"
         SelectPage("aliases")
     end

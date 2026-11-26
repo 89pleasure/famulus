@@ -643,6 +643,55 @@ local function pageTab(text)
     end
 end
 
+-- The welcome page (UI/Welcome.lua), once it has been built.
+local function welcomePage()
+    for _, frame in ipairs(mock.frames) do
+        if frame.all and frame.later and frame.list then
+            return frame
+        end
+    end
+end
+local function shownCells(page)
+    local list = {}
+    for _, cell in ipairs(page.cells) do
+        if cell:IsShown() then
+            list[#list + 1] = cell
+        end
+    end
+    return list
+end
+
+-- With the defaults the window opens on the welcome page, over sidebar and
+-- content, until the player chooses.
+do
+    local page = welcomePage()
+    check(page ~= nil and page:IsShown() and not window.area:IsShown() and page.title:GetText() == "Welcome to Famulus",
+        "with the defaults the window opens on the welcome page; the head keeps only logo, name and close")
+    check(page.all.label:GetText() == "Record the journey and share it with friends"
+        and page.note:GetText():find("Switches on 5 features.", 1, true) == 1
+        and page.note:GetText():find("only to friends and guild", 1, true) ~= nil and not page.list:IsShown(),
+        "one button switches the main features on; below it how many, and that sharing reaches only friends and guild")
+    check(page.embers.playing, "the page's own sparks rise")
+    mock.Click(page.more)
+    local cells = shownCells(page)
+    check(page.list:IsShown() and page.more.label:GetText() == "Less" and #cells == 6
+        and cells[1].name:GetText() == ns.L.f_ownJourney and cells[1].tag:GetText() == "Only for you"
+        and cells[3].name:GetText() == ns.L.f_sharing and cells[3].tag:GetText() == "Goes to friends and guild"
+        and cells[6].name:GetText() == "Already on: Aliases, " .. ns.L.f_liveFeed,
+        "\"What exactly?\" lists the five, which of them sends something, and what runs already")
+    SlashCmdList.FAMULUS("")
+    check(not window:IsShown() and FamulusDB.welcome == nil and not page.embers.playing, "closing the window is no choice")
+    SlashCmdList.FAMULUS("")
+    check(page:IsShown() and not page.list:IsShown(), "so the next opening shows the page again, its list shut")
+    mock.Click(page.later)
+    local off = true
+    for _, id in ipairs(ns.UI.Welcome.FEATURES) do
+        off = off and not ns:GetOption(id, "enabled")
+    end
+    check(FamulusDB.welcome == true and not page:IsShown() and window.area:IsShown() and off and not page.embers.playing,
+        "\"Later\" is a choice: the page goes and nothing is switched on")
+end
+
 check(ns.areas[1].id == "chronicle" and ns.areas[2].id == "fellows" and ns.areas[3].id == "aliases"
     and ns.categories[1] == "chronicle" and ns.categories[3] == "aliases",
     "the main features in order: chronicle, fellow travellers, aliases last")
@@ -1277,6 +1326,100 @@ check(ns:GetOption("general", "embers") == false and sparkGroups() == 0, "switch
 mock.Click(looks[2].switch)
 mock.Advance(0.1)
 check(sparkGroups() == sparksTotal, "switching them on starts them again")
+
+-- The welcome page again: one click switches the five main features on
+-- (UI/Welcome.lua). The opening above chose "Later"; here nothing is chosen yet.
+do
+    local Welcome = ns.UI.Welcome
+    local page = welcomePage()
+    for _, id in ipairs(Welcome.FEATURES) do
+        enable(id, false)
+    end
+    FamulusDB.welcome = nil
+    SlashCmdList.FAMULUS("")
+    SlashCmdList.FAMULUS("")
+    check(window:IsShown() and page:IsShown() and sparkGroups() == 0 and page.embers.playing,
+        "without a choice the window opens on the welcome page; only its own sparks move")
+    enable("rememberFellows")
+    check(not Welcome.Wanted(), "whoever has one of the five on does not get it")
+    enable("rememberFellows", false)
+
+    -- An alias asked for from a player's menu wins; the page comes again later.
+    SlashCmdList.FAMULUS("")
+    ns:EditAlias("Thrall")
+    check(window:IsShown() and not page:IsShown() and window.area.name:GetText() == "Aliases" and FamulusDB.welcome == nil,
+        "an alias asked for opens the aliases page instead, without choosing")
+    SlashCmdList.FAMULUS("")
+    SlashCmdList.FAMULUS("")
+    check(page:IsShown(), "the next opening shows the welcome page again")
+
+    -- The one click.
+    mock.reset()
+    mock.Click(page.all)
+    local running = true
+    for _, id in ipairs(Welcome.FEATURES) do
+        running = running and ns:GetOption(id, "enabled") == true and ns.features[id].enabled
+    end
+    check(running and FamulusDB.welcome == true, "one click switches the five on, and they run")
+    local lines = 0
+    for _, line in ipairs(mock.chat) do
+        lines = lines + (line:find("5 features switched on. You can change them under Settings.", 1, true) and 1 or 0)
+    end
+    check(lines == 1, "one line in the chat says so")
+    local rows = visibleRows()
+    check(not page:IsShown() and window.area:IsShown() and window.area.name:GetText() == "Chronicle"
+        and tabButton("Everyone") and tabButton("Everyone").selected
+        and #rows == 1 and rows[1].label:GetText() == "Your chronicle is running",
+        "then the chronicle opens; empty, it says that it is recording")
+    SlashCmdList.FAMULUS("")
+    SlashCmdList.FAMULUS("")
+    check(not page:IsShown() and window.area:IsShown(), "after the choice the window opens as usual")
+
+    -- "About" offers it again; it starts from what is on.
+    mock.Click(navButton("About"))
+    local again
+    for _, row in ipairs(visibleRows()) do
+        if row.item.id == "welcome" then
+            again = row
+        end
+    end
+    check(again ~= nil and again.label:GetText() == "Welcome" and again.action.label:GetText() == "Show welcome page",
+        "\"About\" offers the welcome page again")
+    mock.Click(again.action)
+    check(page:IsShown() and page.note:GetText() == ns.L.ui_welcome_note_done, "it opens again, saying that everything is on")
+    mock.Click(page.choose)
+    check(not page:IsShown() and window.area.name:GetText() == "Chronicle" and tabButton("Settings") and tabButton("Settings").selected,
+        "\"Choose myself\" opens the chronicle's switches")
+
+    -- In every language the page has its words, and the one button fits.
+    for _, language in ipairs(ns:GetLocaleCodes()) do
+        ns:SetOption("general", "language", language)
+        mock.Advance(0.1)
+        mock.Click(navButton(ns.L.cat_about))
+        for _, row in ipairs(visibleRows()) do
+            if row.item.id == "welcome" then
+                mock.Click(row.action)
+            end
+        end
+        mock.Click(page.more)
+        local cells = shownCells(page)
+        -- The links are the last row; with the list open they still lie inside the page.
+        local linksBottom = -page.more.mockPoint[5] + page.more:GetHeight()
+        check(page:IsShown() and page.title:GetText() == ns.L.ui_welcome_title and page.all.label:GetText() == ns.L.ui_welcome_all
+            and page.all:GetWidth() <= 680 and page.later.label:GetText() == ns.L.ui_welcome_later and #cells == 6
+            and cells[3].tag:GetText() == ns.L.ui_welcome_shares and linksBottom <= page:GetHeight(),
+            "the welcome page in " .. language .. " (links end at " .. linksBottom .. " of " .. page:GetHeight() .. ")")
+        mock.Click(page.later)
+    end
+    ns:SetOption("general", "language", "auto")
+    mock.Advance(0.1)
+
+    for _, id in ipairs(Welcome.FEATURES) do
+        enable(id, false)
+    end
+    mock.Advance(0.1)
+    check(ns:CountRegisteredEvents() == 0, "switched off again, the five listen to nothing")
+end
 
 -- Minimap button.
 check(FamulusMinimapButton ~= nil and FamulusMinimapButton:IsShown(), "minimap button exists")

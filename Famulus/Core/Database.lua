@@ -1,5 +1,6 @@
 -- Settings storage.
---   FamulusDB      account-wide: { profile = {...}, window = {...}, seen = bool }
+--   FamulusDB      account-wide: { profile = {...}, window = {...}, seen = bool,
+--                  welcome = bool (the welcome page was answered, UI/Welcome.lua) }
 --   FamulusCharDB  per character: { useCharacter = bool, profile = {...} }
 -- A profile is { [section] = { [key] = value } }. Only values that differ
 -- from the default are stored, so the saved file stays tiny and a changed

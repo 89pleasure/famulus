@@ -73,6 +73,9 @@ the index there says which file it is in.
   "Time and date format" in `docs/window.md`. Open in game: the 12-hour clock in the chronicle's
   card feet and chapter headings, the two new icons (`/fam test`, group `media`: `clock`,
   `calendar`).
+- **Welcome page (2026-11-26, checked against the mock only, not yet in game):** see "Welcome
+  page" in `docs/window.md`. To see it again in game: "About" › "Show welcome page"; as a new
+  player would, with `/run FamulusDB.welcome = nil` and the five main features off.
 - **New window (2026-11-18, checked against the mock only, not yet in game):** see "The
   window" below. The Inter fonts load (see "Font"). Open in game: whether rounded corners, shadows and hairlines look clean, switching
   the colour schemes, the sliding tab marker, gradients and glow effects.
