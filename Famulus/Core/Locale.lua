@@ -5,6 +5,7 @@
 --   ns.L.key              the text in the addon's language
 --   ns.Plural(key, n)     the text for the number n: <key>_one, <key>_few or
 --                         <key>, as the language's grammar wants
+--   ns.PluralForm(n, code) which form that is: "one", "few" or nil
 --   ns.Upper, ns.Lower    upper and lower case beyond A-Z (é, ł, і, ж ...)
 --   ns.Capital(text)      the first letter in upper case
 
@@ -45,11 +46,17 @@ ns.L = setmetatable({}, {
 -- Clients whose language another translation covers.
 local SAME_AS = { enGB = "enUS", esMX = "esES" }
 
+-- Languages that ship but are not offered yet. In game (2026-11-26) Polish
+-- letters showed only in part and Ukrainian ones not at all. Their files stay
+-- and are tested; the language option does not list them, and a saved
+-- choice of one follows the client. See docs/languages.md.
+local NOT_OFFERED = { plPL = true, ukUA = true }
+
 -- code: a locale code such as "deDE", or "auto" to follow the game client.
 -- Polish (plPL) and Ukrainian (ukUA) have no game client: only the language
--- option chooses them.
+-- option chooses them, once it offers them.
 function ns:SetLocale(code)
-    if code == nil or code == "auto" then
+    if code == nil or code == "auto" or NOT_OFFERED[code] then
         code = GetLocale()
     end
     code = SAME_AS[code] or code
@@ -70,17 +77,23 @@ function ns:GetLocaleCode()
     return activeCode or BASE
 end
 
--- Locale codes that ship with the addon, reference locale first.
-function ns:GetLocaleCodes()
+-- Locale codes the language option offers, reference locale first; with
+-- `all`, also those that ship but are not offered yet.
+function ns:GetLocaleCodes(all)
     local codes = {}
     for code in pairs(locales) do
-        if code ~= BASE then
+        if code ~= BASE and (all or not NOT_OFFERED[code]) then
             codes[#codes + 1] = code
         end
     end
     table.sort(codes)
     table.insert(codes, 1, BASE)
     return codes
+end
+
+-- Whether the language option offers this locale code.
+function ns:IsLocaleOffered(code)
+    return locales[code] ~= nil and not NOT_OFFERED[code]
 end
 
 -- Times and dates, as the player chose under Settings › General: the clock
@@ -150,16 +163,22 @@ local PLURAL_RULES = {
     end,
 }
 
+-- The form the number n takes in a language (code: a locale code, else the
+-- one spoken now): "one", "few" or nil for the key itself.
+function ns.PluralForm(n, code)
+    n = math.abs(math.floor(tonumber(n) or 0))
+    return (PLURAL_RULES[string.sub(code or activeCode or BASE, 1, 2)] or OneIsOne)(n)
+end
+
 -- The text of a key for the number n, still to be formatted:
 -- ns.Plural("c_ch_events", count):format(count). An untranslated key
 -- follows English and its rule.
 function ns.Plural(key, n)
-    n = math.abs(math.floor(tonumber(n) or 0))
     local strings, code = active, activeCode
     if not strings or strings[key] == nil then
         strings, code = locales[BASE], BASE
     end
-    local form = (PLURAL_RULES[string.sub(code, 1, 2)] or OneIsOne)(n)
+    local form = ns.PluralForm(n, code)
     local text = form and strings[key .. "_" .. form]
     if text == nil then
         text = strings[key]

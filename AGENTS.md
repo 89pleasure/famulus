@@ -29,8 +29,9 @@ itself to, the following:
      Do not build them back in without asking.
 3. **Analyse the weaknesses of the three role models and learn from them.**
 4. **Optimised for performance.**
-5. **Multilingual.** English, German, French, Spanish, Italian, Polish and Ukrainian (since
-   2026-11-26; before, English and German).
+5. **Multilingual.** English, German, French, Spanish and Italian (since 2026-11-26; before,
+   English and German). Polish and Ukrainian are translated but not offered until the game's
+   fonts show their letters (see docs/languages.md).
 
 **Publishing:** Since 2026-11-24 a first alpha is to appear on CurseForge, with automatic upload
 (the owner's decision, see "Publishing on CurseForge"; before that, as of 2026-11-16: later, time
@@ -132,7 +133,7 @@ Researched facts (as of 2026-11-16, the game is patched often):
 | Megabytes of code and data at every login (Polestar: 70–250 MB according to issues) | The window is built on first opening; no libraries |
 | Replaced Blizzard functions, overwritten methods of other addons | Only `hooksecurefunc`; replace nothing, write nothing into other tables |
 | ~90 options, inconsistent defaults, a chat message per action | Few features, one rule for defaults, one summary line per action |
-| FlareUI without German; Polestar languages as extra addons | Seven languages built in and checked for parity by the test |
+| FlareUI without German; Polestar languages as extra addons | All languages built in and checked for parity by the test |
 
 ## Chronicle and fellow travellers
 

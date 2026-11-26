@@ -517,14 +517,21 @@ local function SettingsTabs()
     })
 
     -- How Famulus writes: its language, the clock and the order of a date.
+    local languageItem = GeneralItem("language", "select", function()
+        local list = { { value = "auto", text = L.lang_auto } }
+        for _, code in ipairs(ns:GetLocaleCodes()) do
+            list[#list + 1] = { value = code, text = ns.locales[code].lang_name or code }
+        end
+        return list
+    end)
+    -- A saved language that is not offered (yet) speaks the client's, so it reads so.
+    local savedLanguage = languageItem.get
+    languageItem.get = function()
+        local code = savedLanguage()
+        return ns:IsLocaleOffered(code) and code or "auto"
+    end
     local language = SimpleTab("language", {
-        GeneralItem("language", "select", function()
-            local list = { { value = "auto", text = L.lang_auto } }
-            for _, code in ipairs(ns:GetLocaleCodes()) do
-                list[#list + 1] = { value = code, text = ns.locales[code].lang_name or code }
-            end
-            return list
-        end),
+        languageItem,
         -- Each clock and order by an example: today at 21:40, today's date.
         GeneralItem("timeFormat", "select", function()
             local today = date("*t")

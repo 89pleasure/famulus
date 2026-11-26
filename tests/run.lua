@@ -109,8 +109,10 @@ local function pluralBase(key)
     local base = key:match("^(.+)_one$") or key:match("^(.+)_few$")
     return base and pluralKeys[base] and base or nil
 end
-local codes = ns:GetLocaleCodes()
+local codes = ns:GetLocaleCodes(true)
 check(#codes == 7 and codes[1] == "enUS", "seven languages ship, English first: " .. table.concat(codes, " "))
+check(table.concat(ns:GetLocaleCodes(), " ") == "enUS deDE esES frFR itIT" and not ns:IsLocaleOffered("plPL")
+    and not ns:IsLocaleOffered("ukUA") and ns:IsLocaleOffered("deDE"), "Polish and Ukrainian ship but are not offered yet")
 for _, code in ipairs(codes) do
     local strings = ns.locales[code]
     check(type(strings.lang_name) == "string" and strings.lang_name ~= "" and (code == "enUS" or strings.lang_name ~= en.lang_name),
@@ -226,20 +228,22 @@ do
         ukUA = { [0] = "", [1] = "one", [2] = "few", [5] = "", [11] = "", [12] = "", [21] = "one", [22] = "few", [101] = "one", [111] = "" },
     }
     for code, numbers in pairs(cases) do
-        local strings = ns.locales[code]
-        strings.test_count, strings.test_count_one, strings.test_count_few = "", "one", "few"
-        ns:SetLocale(code)
         for n, form in pairs(numbers) do
-            check(ns.Plural("test_count", n) == form, code .. ": " .. n .. " takes the form \"" .. form .. "\"")
+            check((ns.PluralForm(n, code) or "") == form, code .. ": " .. n .. " takes the form \"" .. form .. "\"")
         end
-        strings.test_count, strings.test_count_one, strings.test_count_few = nil, nil, nil
     end
-    ns:SetLocale("plPL")
-    check(ns.Plural("ui_fellow_bosses", 3) == (ns.locales.plPL.ui_fellow_bosses_few or ns.locales.plPL.ui_fellow_bosses),
-        "a language without a form of its own for a number uses the key")
+    -- ns.Plural picks the key of that form in the language spoken.
+    local french = ns.locales.frFR
+    french.test_count, french.test_count_one = "other", "one"
+    ns:SetLocale("frFR")
+    check(ns.Plural("test_count", 0) == "one" and ns.Plural("test_count", 2) == "other", "French: 0 is one, 2 is other")
+    french.test_count, french.test_count_one = nil, nil
+    check(ns.Plural("ui_fellow_bosses", 3) == french.ui_fellow_bosses, "a language without a form of its own for a number uses the key")
     check(ns.Plural("no_such_key", 3) == "no_such_key", "an unknown key comes back as it is")
     ns:SetLocale("esMX")
     check(ns:GetLocaleCode() == "esES", "a Mexican Spanish client speaks Spanish")
+    ns:SetLocale("ukUA")
+    check(ns:GetLocaleCode() == "enUS", "a language not offered yet speaks the client's")
     ns:SetLocale("auto")
 end
 
@@ -826,7 +830,7 @@ check(entries[2].chosen and detail.title:GetText() == ns.L.f_tooltipAliases, "an
 mock.Click(entries[1])
 
 -- Every page and tab renders, in every language; German last, for what follows.
-for _, language in ipairs({ "enUS", "esES", "frFR", "itIT", "plPL", "ukUA", "deDE" }) do
+for _, language in ipairs({ "enUS", "esES", "frFR", "itIT", "deDE" }) do
     ns:SetOption("general", "language", language)
     mock.Advance(0.1)
     for _, page in ipairs({ "area_aliases", "area_chronicle", "cat_general", "cat_about" }) do
@@ -4233,13 +4237,24 @@ mock.Advance(0.1)
     end
     local chosen, names = chosenPills()
     check(stage.current == "lang" and #lang.pills == #ns:GetLocaleCodes() and chosen == "enUS"
-        and names == "English Deutsch Español Français Italiano Polski Українська"
+        and names == "English Deutsch Español Français Italiano"
         and lang.card.tagline:GetText() == "Together through Azeroth",
-        "every language by its own name, the one shown chosen, the tagline in it: " .. names)
-    set("general", "language", "ukUA")
+        "every language offered by its own name, the one shown chosen, the tagline in it: " .. names)
+    set("general", "language", "frFR")
     chosen = chosenPills()
-    check(chosen == "ukUA" and lang.card.tagline:GetText() == ns.locales.ukUA.ui_tagline
-        and lang.card.small:GetText() == "Українська", "chosen by hand, Ukrainian: " .. lang.card.tagline:GetText())
+    check(chosen == "frFR" and lang.card.tagline:GetText() == ns.locales.frFR.ui_tagline
+        and lang.card.small:GetText() == "Français", "chosen by hand, French: " .. lang.card.tagline:GetText())
+    -- A language chosen before it was taken out of the list speaks the
+    -- client's, and the dropdown says so.
+    set("general", "language", "ukUA")
+    local languageEntry
+    for _, entry in ipairs(visibleEntries()) do
+        if entry.label:GetText() == ns.L.g_language then
+            languageEntry = entry
+        end
+    end
+    check(ns:GetLocaleCode() == "enUS" and languageEntry and languageEntry.entry.item.get() == "auto",
+        "a saved language that is not offered reads and speaks as the game client")
     set("general", "language", "auto")
     local chatfam = choose("cat_general", "ui_tab_general", ns.L.g_chatOutput)
     local function line(index)

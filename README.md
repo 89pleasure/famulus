@@ -2,8 +2,7 @@
 
 An addon for **World of Warcraft: Forever** (interface 16001) about playing together: a chronicle of
 the journey you share with your friends, the fellow travellers you grouped with, and aliases for
-other players. English, German, French, Spanish, Italian, Polish and Ukrainian; no libraries, no
-dependencies.
+other players. English, German, French, Spanish and Italian; no libraries, no dependencies.
 
 > **Alpha.** Much of Famulus has only been tested against a mock of the game client so far.
 

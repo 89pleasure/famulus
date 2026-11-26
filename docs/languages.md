@@ -8,7 +8,18 @@ the index there says which file it is in.
   fallback for a missing key), German (`deDE`), Spanish (`esES`), French (`frFR`), Italian
   (`itIT`), Polish (`plPL`) and Ukrainian (`ukUA`). Ukrainian was asked for as the hard test:
   Cyrillic, three plural forms, cases. The five new translations were written by the assistant
-  and have not been read by a native speaker. Checked against the mock only, not seen in game.
+  and have not been read by a native speaker.
+- **Polish and Ukrainian are not offered yet (the owner's decision, 2026-11-26):** in game the
+  game's font showed Polish letters only in part and Ukrainian ones not at all. Their files stay,
+  are loaded and tested; `NOT_OFFERED` in `Core/Locale.lua` keeps them out of the language
+  option (`ns:GetLocaleCodes()`; `GetLocaleCodes(true)` lists every file), and a saved choice of
+  one speaks and reads as the game client. To offer them, take them out of `NOT_OFFERED` and the
+  test's list of offered languages. Likely cause, not checked: the window's own texts are in
+  Inter, which has these letters, but `UI.SetDisplayFont` (the chronicle's headings, from
+  `QuestTitleFont`) and `UI.SetGameFont` (the game's places in the pictures) take only the file
+  of the client's font object, and on an English or German client that file has Latin-1 only
+  (no ł, ę, ż, no Cyrillic); the font object's family with its other alphabets is lost. The
+  stand-in while Inter loads (`STANDARD_TEXT_FONT`) is such a file too.
 - **Which language speaks:** the option "Language" (`general.language`, default "auto" = the
   client's `GetLocale()`). `enGB` speaks English, `esMX` Spanish (`SAME_AS` in
   `Core/Locale.lua`). WoW has no Polish or Ukrainian client: those players use another one
@@ -67,8 +78,9 @@ the index there says which file it is in.
   placeholders; plural forms only for keys passed to `ns.Plural`; the rules of English, German,
   French, Polish and Ukrainian with a test key; `esMX` speaks Spanish; every letter in all three
   fonts; upper and lower case; every page and the picture of every settings entry drawn in every
-  language; samples in every language; the picture `lang` with all seven names and Ukrainian
-  chosen by hand. The mock measures text by letters, not bytes (a Cyrillic letter is two bytes).
+  offered language; samples in every offered language; the picture `lang` with the five names
+  and French chosen by hand; Polish and Ukrainian not offered, a saved choice of one follows the
+  client. The mock measures text by letters, not bytes (a Cyrillic letter is two bytes).
 - **Open:** a native speaker's reading of the five new languages. In game: whether the longer
-  texts fit (labels, tabs, column heads, pills), whether Cyrillic shows in Inter and in the
-  game's fonts on an English client.
+  texts fit (labels, tabs, column heads, pills); a way for the game's fonts to show Polish and
+  Ukrainian letters, then offer both.
