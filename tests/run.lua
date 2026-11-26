@@ -1564,7 +1564,7 @@ do -- professions
     mock.Fire("SKILL_LINES_CHANGED")
     mock.Fire("SKILL_LINES_CHANGED")
     local learned = Chronicle.Entries()[count + 1]
-    check(learned and learned.icon == 136197 and ns.UI.ChronicleStory(learned).texture == 136197,
+    check(learned and learned.icon == 136197 and ns.UI.FeedStory(learned).texture == 136197,
         "a profession brings its own icon into the entry and the picture")
     check(#Chronicle.Entries() == count + 1 and learned.k == "profession" and Chronicle.Text(learned) == "Learned Tailoring",
         "a profession learned is written down, once")
@@ -1707,8 +1707,13 @@ do -- the live feed: what was just written down appears on screen for a while
     check(#Feed.Shown() == 1, "switched off again, the player's own events stay off screen")
     ns:SetOption("liveFeed", "own", true)
     Chronicle.Add("item", { item = 211527, name = "Cozy Sleeping Bag", who = "Jaina Proudmoore", probe = true })
-    check(#Feed.Shown() == 2 and Feed.Shown()[1].title:GetText() == "Jaina Proudmoore receives: Cozy Sleeping Bag"
-        and Feed.Shown()[1].photo:IsShown(), "a companion's event appears above the older card")
+    check(#Feed.Shown() == 2 and Feed.Shown()[1].head:GetText() == "Jaina Proudmoore" and Feed.Shown()[1].head:IsShown()
+        and Feed.Shown()[1].title:GetText() == "Received: Cozy Sleeping Bag" and Feed.Shown()[1].photo:IsShown(),
+        "a companion's event appears above the older card, whose it is in its head: "
+        .. Feed.Shown()[1].head:GetText() .. " / " .. Feed.Shown()[1].title:GetText())
+    check(not Feed.Shown()[2].head:IsShown() and not Feed.Shown()[2].headDot:IsShown() and not Feed.Shown()[2].headDot.glow:IsShown()
+        and Feed.Shown()[1].headDot:IsShown(),
+        "the player's own event has no head: the card is theirs")
     check(not Feed.Shown()[1].react:IsShown() and not Feed.Shown()[2].react:IsShown() and not Feed.Shown()[1].mouseEnabled,
         "without sharing there is no button to react, and the cards let the mouse through")
     check(Feed.Shown()[1]:GetWidth() > Feed.Shown()[2]:GetWidth() and Feed.Shown()[1].shape.border.token == "cardBorder",
@@ -1759,9 +1764,24 @@ do -- the live feed: what was just written down appears on screen for a while
     Feed.Clear()
     mock.Advance(3)
     heard = sounds()
+    local unitsBefore = mock.state.units
+    mock.state.units = { player = { name = "Ilsa" } }
     SlashCmdList.FAMULUS("feed test")
+    mock.state.units = unitsBefore
     check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13" and sounds() == heard + 1,
         "/fam feed test shows a sample card, with its sound")
+    local sample = Feed.Shown()[1]
+    check(sample.head:IsShown() and sample.head:GetText() == (ns.ChronicleService.Character() or "Ilsa")
+        and sample.detail:GetText() == GetRealZoneText() and sample:GetHeight() == 76,
+        "the sample card has all three rows: the player's own name, the level, the zone: "
+        .. tostring(sample.head:GetText()) .. " / " .. tostring(sample.detail:GetText()))
+    -- A long text is cut at the widest band instead of stretching it.
+    Feed.Fill(sample, { kind = "boss", chip = { text = "Papa (Borin Ironbeard)" }, title = string.rep("Edwin VanCleef ", 6),
+        detail = "The Deadmines" })
+    check(sample:GetWidth() == 340 and sample.title:GetWidth() < 340, "the band is at most 340 wide: " .. sample:GetWidth())
+    Feed.Fill(sample, { kind = "zone", title = "Arrived" })
+    check(sample:GetHeight() == 64 and sample:GetWidth() == 230 and not sample.head:IsShown() and not sample.detail:IsShown(),
+        "one row stays in the band of 64, at least 230 wide")
     Feed.Clear()
     forget()
 end
@@ -1873,8 +1893,10 @@ check(theirs and theirs.who == "Jaina Proudmoore" and theirs.k == "death" and th
 check(Chronicle.Text(theirs):find("Jaina Proudmoore has fallen in", 1, true) ~= nil, "and names the companion")
 do
     local card = ns.UI.Feed.Shown()[1]
-    check(card and card:IsShown() and card.title:GetText():find("Jaina Proudmoore has fallen in", 1, true) ~= nil,
-        "fresh news of a companion appears as a card on screen")
+    check(card and card:IsShown() and card.head:GetText() == "Jaina Proudmoore" and card.title:GetText() == "Fallen"
+        and card.detail:GetText() == theirs.zone .. "  ·  at level 20" and card:GetHeight() == 76,
+        "fresh news of a companion appears as a card on screen: who above, what, and where below, in a band of three rows: "
+        .. tostring(card and card.title:GetText()) .. " / " .. tostring(card and card.detail:GetText()))
 end
 mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. sharedNow .. "~death~level=20;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
 check(#Chronicle.Entries() == 1, "the same news twice is written once")
@@ -1992,7 +2014,8 @@ do
     check(ownLevel and ownLevel.r and ownLevel.r["Jaina Proudmoore"] == "cheer" and Chronicle.Reactions(ownLevel)[1] == "Jaina Proudmoore",
         "a friend's reaction to an own entry is kept with it, by name")
     local card = ns.UI.Feed.Shown()[1]
-    check(card and card.title:GetText() == "Jaina Proudmoore celebrates with you" and card.detail:GetText():find("Reached level 14", 1, true) == 1
+    check(card and card.head:GetText() == "Jaina Proudmoore" and card.title:GetText() == "Celebrates with you"
+        and card.detail:GetText():find("Reached level 14", 1, true) == 1
         and card.icon:IsShown() and not card.react:IsShown(), "and appears on screen: who, and to what; a reaction cannot be reacted to")
     react("1~X~" .. at .. "~level~cheer~", "Some Stranger")
     react("1~X~" .. (at + 1) .. "~level~cheer~")
@@ -2613,7 +2636,7 @@ local function bookFrames(field)
 end
 local events, heads = bookFrames("story"), bookFrames("chapter")
 check(#visibleRows() == 0 and #events == 6 and events[1].story.title == "Reached level 20"
-    and events[1].story.fullTitle == "Jaina Proudmoore reaches level 20",
+    and events[1].story.chip.text == "Jaina Proudmoore",
     "everyone: all entries as events of a book, newest first (got " .. #events .. ")")
 -- The part of the day a session that began at `timestamp` is named after.
 local function partOfDay(timestamp)
@@ -2672,9 +2695,9 @@ check(events[4].card:GetWidth() < events[2].card:GetWidth() and events[2].card:G
     "the book sets a card's width by its weight, and a narrower card keeps to the line")
 check(events[1].strip:IsShown() and events[2].strip:IsShown() and events[1].picture.mockPoint[5] <= -28
     and events[1].kindIcon:IsShown() and events[1].kindIcon.mockPoint[1] == "RIGHT" and events[1].mark == nil
-    and events[1].dot:IsShown() and events[1].glow:IsShown()
+    and events[1].dot:IsShown() and events[1].dot.glow:IsShown()
     and events[4].dot:GetWidth() < events[2].dot:GetWidth() and events[2].dot:GetWidth() < events[1].dot:GetWidth()
-    and events[1].glow:GetWidth() == events[1].dot:GetWidth() * 3,
+    and events[1].dot.glow:GetWidth() == events[1].dot:GetWidth() * 3,
     "the name stands in a sunken strip above the picture, the icon of the kind at its right; on the line a glowing dot, larger with the weight")
 do
     local level = true
@@ -2808,12 +2831,11 @@ do -- what repeats right away shares a card
     check(#bookFrames("story") == 8 and bookFrames("chapter")[1].chapter.sub:find("11 events", 1, true) ~= nil,
         "five entries, two cards; the chapter still counts every event")
     check(deaths and deaths.story.title == "Fallen 3 times" and deaths.story.detail == "at levels 12 to 13"
-        and deaths.story.fullTitle == "Fallen 3 times in Duskwood"
         and deaths.badge:IsShown() and deaths.badgeText:GetText() == "3"
         and deaths.footer:GetText() == date("%H:%M", now - 52) .. " – " .. date("%H:%M", now - 50) .. "  ·  Duskwood",
         "deaths in one place: one card, how often in the corner, from the first time to the last in the foot")
     check(levels and levels.story.title == "Reached levels 21 to 22" and levels.number:GetText() == "22"
-        and not levels.badge:IsShown() and levels.story.fullTitle == "Jaina Proudmoore reaches levels 21 to 22",
+        and not levels.badge:IsShown() and levels.story.chip.text == "Jaina Proudmoore",
         "a companion's levels in a row: one card from the first to the last")
     local entries = Chronicle.Entries()
     for index = #entries, 1, -1 do
@@ -3143,9 +3165,10 @@ do
     local cards = feed.cards
     check(detail.stage.current == "feed" and feed:IsVisible() and detail.title.mockPoint[5] < -200
         and cards[1]:IsShown() and cards[2]:IsShown() and cards[1]:GetParent() == feed
-        and cards[1].title:GetText() == (Chronicle.Text(Sample("level"))) and cards[1].title:GetText():find("Mira Stormfeather", 1, true)
-        and cards[2].title:GetText() == (Chronicle.Text(Sample("boss"))) and cards[1].number:GetText() == "40",
-        "above the live feed its cards, as the feed draws them: Mira's level, Borin's boss: " .. cards[1].title:GetText())
+        and cards[1].title:GetText() == ns.UI.FeedStory(Sample("level")).title and cards[1].head:GetText():find("Mira Stormfeather", 1, true)
+        and cards[2].title:GetText() == ns.UI.FeedStory(Sample("boss")).title and cards[1].number:GetText() == "40",
+        "above the live feed its cards, as the feed draws them: Mira's level, Borin's boss: "
+        .. cards[1].head:GetText() .. " / " .. cards[1].title:GetText())
     check(feed.caption.text:GetText() == "Visible for 7 seconds" and cards[1].bar:IsShown() and feed.animations[1]:IsPlaying()
         and cards[1]:GetAlpha() == 1, "how long a card stays, with a line that runs out")
     check(#ns.UI.Feed.Shown() == 0, "the picture puts no card on the screen")
@@ -3156,7 +3179,7 @@ do
     mock.Advance(0.1)
     -- Pointed at a kind: a card of that kind, faint while it is off.
     kinds[2].scripts.OnEnter(kinds[2])
-    check(cards[1].title:GetText() == (Chronicle.Text(Sample("death"))) and not cards[2]:IsShown()
+    check(cards[1].title:GetText() == ns.UI.FeedStory(Sample("death")).title and not cards[2]:IsShown()
         and feed.caption.text:GetText() == "Shown" and cards[1]:GetAlpha() == 1, "pointing at a chip shows its kind's card")
     mock.Click(kinds[2])
     mock.Advance(0.1)
@@ -3198,6 +3221,16 @@ SlashCmdList.FAMULUS("")
 ---------------------------------------------------------------------------
 section("Widgets: crest")
 ---------------------------------------------------------------------------
+
+do -- the glowing dot: the book's line, the head of a live feed card
+    local dot = ns.UI.GlowDot(UIParent, 8, "OVERLAY")
+    check(dot:GetWidth() == 8 and dot.glow:GetWidth() == 24 and dot.layer == "OVERLAY" and dot.glow.layer == "ARTWORK"
+        and dot.glow.mockPoint[2] == dot, "a glowing dot: the dot, and its glow three times as large a layer below, on it")
+    ns.UI.SetDot(dot, 5)
+    check(dot:GetWidth() == 5 and dot.glow:GetWidth() == 15 and dot:IsShown(), "a new size changes both")
+    ns.UI.SetDot(dot, nil, false)
+    check(not dot:IsShown() and not dot.glow:IsShown() and dot:GetWidth() == 5, "hidden with its glow, the size kept")
+end
 
 do
     local crest = ns.UI.Crest(UIParent, 40)
@@ -4129,7 +4162,8 @@ do
     check(#Feed.Shown() == 0, "the card waits a moment for the lists")
     mock.Advance(3.5)
     local card = Feed.Shown()[1]
-    check(#Feed.Shown() == 1 and card.title:GetText() == "Also in Tanaris: Kael and Mira" and card.detail:GetText() == "Level 42 and 41",
+    check(#Feed.Shown() == 1 and card.head:GetText() == "Kael and Mira" and card.title:GetText() == "Also in Tanaris"
+        and card.detail:GetText() == "Level 42 and 41" and card.headDot:IsShown() and card.headDot.glow:IsShown(),
         "whoever is here already comes on one card: " .. tostring(card and card.title:GetText()))
     check(card.pair and card.pair[1]:IsShown() and card.pair[2]:IsShown() and not card.crest:IsShown() and not (card.solo and card.solo:IsShown()),
         "two people, two crests instead of a picture")
@@ -4144,7 +4178,8 @@ do
     check(#Feed.Shown() == 0, "someone who arrives comes after a moment, with whoever arrives with them")
     mock.Advance(2)
     card = Feed.Shown()[1]
-    check(card and card.title:GetText() == "Lysa is in Tanaris now too" and card.detail:GetText() == "Level 38  ·  Priest  ·  Friends list"
+    check(card and card.head:GetText() == "Lysa" and card.title:GetText() == "Now in Tanaris too"
+        and card.detail:GetText() == "Level 38  ·  Priest  ·  Friends list"
         and card.solo:IsShown() and not card.pair[1]:IsShown() and not card.crest:IsShown(),
         "someone arrives: a card of their own with one crest: " .. tostring(card and card.title:GetText()))
     Feed.Clear()
@@ -4167,7 +4202,8 @@ do
     mock.Fire("GUILD_ROSTER_UPDATE")
     mock.Advance(3.5)
     card = Feed.Shown()[1]
-    check(card and card.title:GetText() == "Hagen is in Tanaris now too" and card.detail:GetText() == "Level 60  ·  Warrior  ·  Guild",
+    check(card and card.head:GetText() == "Hagen" and card.title:GetText() == "Now in Tanaris too"
+        and card.detail:GetText() == "Level 60  ·  Warrior  ·  Guild",
         "asked for, cards come there too: " .. tostring(card and card.detail:GetText()))
     ns:SetOption("nearbyFriends", "cities", false)
     mock.state.resting = nil
@@ -4187,7 +4223,8 @@ do
     mock.Fire("ZONE_CHANGED_NEW_AREA")
     mock.Advance(3.5)
     card = Feed.Shown()[1]
-    check(card and card.title:GetText() == "Also in Desolace: Ena" and card.detail:GetText() == "Level 36  ·  Mage  ·  Guild" and card.solo:IsShown(),
+    check(card and card.head:GetText() == "Ena" and card.title:GetText() == "Also in Desolace"
+        and card.detail:GetText() == "Level 36  ·  Mage  ·  Guild" and card.solo:IsShown(),
         "the player arrives: whoever is there already: " .. tostring(card and card.title:GetText()))
     Feed.Clear()
     mock.state.friends[5] = { name = "Selina Abendrot", guid = "Player-1-SELINA", connected = true, level = 23, area = "Feralas", className = "Rogue" }
@@ -4199,7 +4236,8 @@ do
     mock.Fire("PLAYER_CONTROL_GAINED")
     mock.Advance(4.5)
     card = Feed.Shown()[1]
-    check(card and card.title:GetText() == "Also in Feralas: Selina", "landing is arriving: " .. tostring(card and card.title:GetText()))
+    check(card and card.head:GetText() == "Selina" and card.title:GetText() == "Also in Feralas",
+        "landing is arriving: " .. tostring(card and card.title:GetText()))
     Feed.Clear()
     mock.Fire("PLAYER_CONTROL_GAINED")
     mock.Advance(4.5)
@@ -4408,16 +4446,18 @@ mock.Advance(0.1)
         and tidy.list.rows[3].strike:IsShown(), "tidying up: who goes is struck out")
     -- Who is nearby: the feature's own cards on the feed's place.
     local near = choose("area_fellows", "ui_tab_record", ns.L.f_nearbyFriends)
-    check(stage.current == "nearby" and near.cards[1].title:GetText() == "Also in Tanaris: Kael and Mira"
-        and near.cards[2].title:GetText() == ns.L.ui_near_came:format("Borin", "Tanaris") and near.cards[1]:GetAlpha() < 1,
+    check(stage.current == "nearby" and near.cards[1].head:GetText() == "Kael and Mira" and near.cards[1].title:GetText() == "Also in Tanaris"
+        and near.cards[2].head:GetText() == "Borin" and near.cards[2].title:GetText() == ns.L.ui_near_came:format("Tanaris")
+        and near.cards[1]:GetAlpha() < 1,
         "who is nearby, while it is off: its cards, faint: " .. near.cards[1].title:GetText())
     set("nearbyFriends", "enabled", true)
     set("nearbyFriends", "guild", false)
-    check(near.cards[1]:GetAlpha() == 1 and near.cards[1].title:GetText() == "Also in Tanaris: Mira",
+    check(near.cards[1]:GetAlpha() == 1 and near.cards[1].head:GetText() == "Mira" and near.cards[1].title:GetText() == "Also in Tanaris",
         "switched on, without the guild: only friends")
     local cities = optionRow("cities")
     cities.scripts.OnEnter(cities)
-    check(near.cards[1].title:GetText() == ns.L.ui_near_came:format("Mira", "Stormwind") and near.cards[1]:GetAlpha() < 1
+    check(near.cards[1].head:GetText() == "Mira" and near.cards[1].title:GetText() == ns.L.ui_near_came:format("Stormwind")
+        and near.cards[1]:GetAlpha() < 1
         and near.caption.text:GetText() == "Not in cities and inns", "pointed at \"cities\": a card in a city, faint while it would not come")
     cities.scripts.OnLeave(cities)
     set("nearbyFriends", "guild", true)

@@ -3,7 +3,10 @@
 -- the first card is shown, and nothing runs while none is on screen. The
 -- fellow travellers show theirs here too (who is nearby).
 --
---   UI.Feed.Show(story, seconds)   -- story: as for the book (UI/Book.lua)
+--   UI.Feed.Show(story, seconds)   -- story: as for the book (UI/Book.lua); the card
+--                                     reads chip (whose it is: { text, class }),
+--                                     title (what happened, without name and place)
+--                                     and detail (where, and what else to say)
 --   UI.Feed.Chime()                -- the cards' sound, once for cards that come together
 --   UI.Feed.SetMoving(true)        -- shows where the cards appear; drag to move
 --
@@ -51,14 +54,19 @@ function Feed.Chime()
 end
 
 -- A card is a crest on a band: the picture stands inside the band, a little
--- in from its left end. The band is as wide as its text needs.
+-- in from its left end. Beside it up to three rows, as a card of the book
+-- orders them: whose it is, what happened, where. The band is as wide as its
+-- text needs, and a little taller when it holds all three rows.
 local WIDTH, HEIGHT = 320, 64 -- the band; WIDTH is that of the mark for moving
+local TALL = 76 -- the band with three rows
 local CREST = 48
 local CREST_LEFT = 14 -- band visible left of the crest
 local TEXT_LEFT = CREST_LEFT + CREST + 14
 local PAIR, PAIR_GAP = 40, 4 -- two people's crests side by side
 local TEXT_RIGHT = 22
-local MIN_WIDTH, MAX_WIDTH = 230, 460
+local MIN_WIDTH, MAX_WIDTH = 230, 340
+local HEAD_ROW, TITLE_ROW, DETAIL_ROW, ROW_GAP = 14, 17, 15, 3 -- the rows' heights
+local HEAD_DOT, HEAD_DOT_GAP = 6, 7 -- the glowing dot before the name
 local GROUND_INSET = 3 -- keeps grain and dusk inside the rounded corners
 local GRAIN_TEXELS = 128 -- size of grain.tga, as in UI.Grain
 local GAP = 10 -- between two bands
@@ -108,7 +116,7 @@ local function Layout()
         card:ClearAllPoints()
         -- Left edges in line, so the crests stand above each other.
         card:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, y)
-        y = y - HEIGHT - GAP
+        y = y - card:GetHeight() - GAP
     end
 end
 
@@ -240,11 +248,21 @@ local function NewCard(parent)
     card.number:SetShadowOffset(1, -1)
     card.number:SetShadowColor(0, 0, 0, 0.9)
 
+    -- The rows, placed by Fill: whose it is (small, after a glowing dot in
+    -- the accent, like the dots on the line of the book), what happened, where.
+    card.headDot = UI.GlowDot(card, HEAD_DOT, "OVERLAY")
+    card.head = UI.Text(card, 11, "textDim", "semibold")
+    card.head:SetWordWrap(false)
+    card.head:SetHeight(HEAD_ROW)
+    card.head:SetJustifyV("MIDDLE")
     card.title = UI.Text(card, 14, "text", "medium")
     card.title:SetWordWrap(false)
+    card.title:SetHeight(TITLE_ROW)
+    card.title:SetJustifyV("MIDDLE")
     card.detail = UI.Text(card, 12, "textMuted")
     card.detail:SetWordWrap(false)
-    card.detail:SetPoint("TOPLEFT", card.title, "BOTTOMLEFT", 0, -4)
+    card.detail:SetHeight(DETAIL_ROW)
+    card.detail:SetJustifyV("MIDDLE")
     card.react = NewReactButton(card)
 
     -- How long it stays: a line along its foot that runs out by the time the
@@ -345,20 +363,39 @@ local function Fill(card, story)
         card.number:SetText(tostring(number))
     end
 
-    -- Text: two lines centred on the band, or one.
+    -- Text: up to three rows, centred on the band. Whose it is stands small
+    -- above, after a glowing dot (as the head of a card in the book names
+    -- them); none for the player's own events.
+    local chip = story.chip
+    local head = chip and chip.text or nil
     local detail = story.detail
+    card.head:SetWidth(0)
     card.title:SetWidth(0)
     card.detail:SetWidth(0)
-    card.title:SetText(story.fullTitle or story.title or "")
+    card.head:SetShown(head ~= nil)
+    card.head:SetText(head or "")
+    UI.SetDot(card.headDot, nil, head ~= nil)
+    card.title:SetText(story.title or "")
     UI.Ink(card.title, look.title or "text")
     card.detail:SetShown(detail ~= nil)
     card.detail:SetText(detail or "")
-    card.title:ClearAllPoints()
-    if detail then
-        card.title:SetPoint("BOTTOMLEFT", card, "LEFT", textLeft, 1)
-    else
-        card.title:SetPoint("LEFT", card, "LEFT", textLeft, 0)
+
+    local height = head and detail and TALL or HEIGHT
+    local block = (head and HEAD_ROW + ROW_GAP or 0) + TITLE_ROW + (detail and ROW_GAP + DETAIL_ROW or 0)
+    local y = -math.floor((height - block) / 2)
+    local headLeft = textLeft + HEAD_DOT + HEAD_DOT_GAP
+    if head then
+        card.headDot:ClearAllPoints()
+        card.headDot:SetPoint("CENTER", card, "TOPLEFT", textLeft + HEAD_DOT / 2, y - HEAD_ROW / 2)
+        card.head:ClearAllPoints()
+        card.head:SetPoint("TOPLEFT", card, "TOPLEFT", headLeft, y)
+        y = y - HEAD_ROW - ROW_GAP
     end
+    card.title:ClearAllPoints()
+    card.title:SetPoint("TOPLEFT", card, "TOPLEFT", textLeft, y)
+    y = y - TITLE_ROW - ROW_GAP
+    card.detail:ClearAllPoints()
+    card.detail:SetPoint("TOPLEFT", card, "TOPLEFT", textLeft, y)
 
     -- A friend's event may bring the button to react, at the right end.
     local reaction = story.reaction
@@ -369,13 +406,15 @@ local function Fill(card, story)
 
     -- The band is as wide as its text needs; text beyond the widest band is
     -- cut off.
-    local wanted = math.max(TextWidth(card.title), detail and TextWidth(card.detail) or 0)
+    local wanted = math.max(head and headLeft - textLeft + TextWidth(card.head) or 0, TextWidth(card.title),
+        detail and TextWidth(card.detail) or 0)
     local width = math.min(MAX_WIDTH, math.max(MIN_WIDTH, math.ceil(textLeft + wanted + right)))
-    card:SetWidth(width)
-    -- The grain keeps one texel per pixel whatever the width.
+    card:SetSize(width, height)
+    -- The grain keeps one texel per pixel whatever the size.
     local tile = GRAIN_TEXELS * UI.Pixel(card)
-    card.grain:SetTexCoord(0, (width - GROUND_INSET * 2) / tile, 0, (HEIGHT - GROUND_INSET * 2) / tile)
+    card.grain:SetTexCoord(0, (width - GROUND_INSET * 2) / tile, 0, (height - GROUND_INSET * 2) / tile)
     local room = width - textLeft - right
+    card.head:SetWidth(room - (headLeft - textLeft))
     card.title:SetWidth(room)
     card.detail:SetWidth(room)
 end
@@ -458,7 +497,6 @@ function Feed.Card(parent)
     return NewCard(parent)
 end
 Feed.Fill = Fill
-Feed.HEIGHT = HEIGHT
 
 -- The cards on screen, the newest first.
 function Feed.Shown()

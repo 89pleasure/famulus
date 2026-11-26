@@ -111,7 +111,8 @@ local function Levels(list)
     return L.ui_near_levels:format(low, high)
 end
 
--- The card: who, and the crests of the first two. The closest bond first.
+-- The card: who in its head (the crests of the first two show them), where in
+-- its title, and below their levels. The closest bond first.
 function nearby.Story(list, zone, came)
     local L = ns.L
     local now = time()
@@ -129,11 +130,11 @@ function nearby.Story(list, zone, came)
         local person = list[index]
         crests[index] = { name = person.name, class = person.class, progress = person.progress or 0 }
     end
-    local story = { kind = "nearby", people = crests }
+    local story = { kind = "nearby", people = crests, chip = { text = Names(list) } }
     if #list == 1 and came then
-        story.fullTitle = L.ui_near_came:format(Short(list[1]), zone)
+        story.title = L.ui_near_came:format(zone)
     else
-        story.fullTitle = L.ui_near_here:format(zone, Names(list))
+        story.title = L.ui_near_here:format(zone)
     end
     if #list == 1 then
         story.detail = Detail(list[1])

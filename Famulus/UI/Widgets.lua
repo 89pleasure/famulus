@@ -225,6 +225,33 @@ function UI.Halo(parent, anchor, size, token, layer)
     return halo
 end
 
+-- A glowing dot in the accent, as the window marks what is alive or worth a
+-- look: the dots on the book's line, the head of a card of the live feed. The
+-- dot (`size` across) with its glow, three times as large; both are textures
+-- of `parent`, the glow a layer below the dot. Place the dot, and the glow
+-- follows. UI.SetDot changes the size or shows and hides both.
+local DOT_GLOW = 3
+local DOT_LAYERS = { BACKGROUND = "BACKGROUND", BORDER = "BACKGROUND", ARTWORK = "BORDER", OVERLAY = "ARTWORK" }
+
+function UI.GlowDot(parent, size, layer)
+    layer = layer or "ARTWORK"
+    local dot = UI.Icon(parent, "circle", size, "accent", layer)
+    dot.glow = UI.Halo(parent, dot, size * DOT_GLOW, "accentGlow", DOT_LAYERS[layer] or "BORDER")
+    return dot
+end
+
+-- size: a new size, or nil to keep it; shown: true or false, or nil to leave it.
+function UI.SetDot(dot, size, shown)
+    if size then
+        dot:SetSize(size, size)
+        dot.glow:SetSize(size * DOT_GLOW, size * DOT_GLOW)
+    end
+    if shown ~= nil then
+        dot:SetShown(shown)
+        dot.glow:SetShown(shown)
+    end
+end
+
 -- Fine noise over a ground, so that large plain areas do not look flat.
 -- The texture repeats, one of its texels per screen pixel, so the grain is
 -- crisp at every UI scale. left, top, right, bottom: distances from the

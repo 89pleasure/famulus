@@ -682,8 +682,8 @@ end
 -- An entry as a book shows it (see UI/Book.lua).
 local function ChronicleEvent(entry)
     local Chronicle = ns.ChronicleService
-    -- The book says whose event it is in the strip below the card, so its
-    -- headline does not; the live feed has no strip and names them.
+    -- The card says whose event it is in its head (the chip), so its
+    -- headline does not; in the book as on the live feed.
     local title, detail = Chronicle.Text(entry, true)
     local kind = entry.k == "friendLevel" and "level" or entry.k
     local own, other = Chronicle.IsOwn(entry), Chronicle.OtherCharacter(entry)
@@ -699,7 +699,6 @@ local function ChronicleEvent(entry)
     return {
         kind = kind,
         title = title,
-        fullTitle = (Chronicle.Text(entry)),
         detail = detail,
         when = ns.FormatTime(entry.t),
         number = kind == "level" and tonumber(entry.level) or kind == "skill" and tonumber(entry.rank) or nil,
@@ -718,9 +717,6 @@ local function ChronicleEvent(entry)
         chip = chip,
     }
 end
-
--- The live feed shows an entry the same way (Modules/Chronicle/LiveFeed.lua).
-UI.ChronicleStory = ChronicleEvent
 
 -- Whether two entries next to each other in the book tell the same thing
 -- again: deaths in one place, or levels of one companion. They then share a
@@ -745,6 +741,18 @@ local WEIGHT = { death = "low", zone = "low", skill = "medium", boss = "high", l
 -- the foot of the card names it.
 local function Placeless(entry)
     return setmetatable({ zone = false }, { __index = entry })
+end
+
+-- An entry as the live feed tells it (UI/Feed.lua), ordered like a card of
+-- the book: whose it is in the head (the chip), what happened without name
+-- and place, and below it the place first, then what else the line says.
+function UI.FeedStory(entry)
+    local story = ChronicleEvent(entry)
+    local title, detail = ns.ChronicleService.Text(Placeless(entry), true)
+    local zone = type(entry.zone) == "string" and entry.zone ~= "" and entry.zone or nil
+    story.title = title
+    story.detail = zone and detail and (zone .. "  ·  " .. detail) or zone or detail
+    return story
 end
 
 -- The reaction on a card of the chronicle's book. A companion's event gets
@@ -824,7 +832,6 @@ local function ChronicleRun(run)
         event.title, event.detail = Chronicle.Text(told[1], true)
     else
         event.title, event.detail = Chronicle.TextRun(told, true)
-        event.fullTitle = (Chronicle.TextRun(run))
         event.count = #run
     end
     local when = #run > 1 and L.c_ch_span:format(ns.FormatTime(run[#run].t), event.when) or event.when
