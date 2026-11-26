@@ -73,3 +73,39 @@ function ns:GetLocaleCodes()
     table.insert(codes, 1, BASE)
     return codes
 end
+
+-- Times and dates, as the player chose under Settings › General: the clock
+-- (general.timeFormat) and the order of a date (general.dateFormat, "auto"
+-- for the language's own, c_date). Read at the moment they are written, so a
+-- change shows the next time the window draws.
+ns.TIME_FORMATS = { "24h", "12h" }
+ns.DATE_FORMATS = { "{y}-{m}-{d}", "{d}.{m}.{y}", "{m}/{d}/{y}", "{d}/{m}/{y}" }
+
+local knownDates = {}
+for _, pattern in ipairs(ns.DATE_FORMATS) do
+    knownDates[pattern] = true
+end
+
+-- "21:40", or on the 12-hour clock "9:40 PM" (midnight is 12 AM, noon 12 PM);
+-- `format` ("24h", "12h") instead of the chosen one if given.
+function ns.FormatTime(timestamp, format)
+    if (format or ns:GetOption("general", "timeFormat")) ~= "12h" then
+        return date("%H:%M", timestamp)
+    end
+    local hour = tonumber(date("%H", timestamp)) or 0
+    local text = hour < 12 and ns.L.g_timeFormat_am or ns.L.g_timeFormat_pm
+    return text:format((hour + 11) % 12 + 1, date("%M", timestamp))
+end
+
+-- The order of a date in effect: the chosen one, else the language's.
+function ns.DatePattern()
+    local pattern = ns:GetOption("general", "dateFormat")
+    return knownDates[pattern] and pattern or ns.L.c_date
+end
+
+-- A day in the order in effect ("2026-11-19", "19.11.2026", "11/19/2026" ...),
+-- or in `pattern` (one of ns.DATE_FORMATS) if given. Year, month and day as
+-- written, with their leading zeros.
+function ns.FormatDate(year, month, day, pattern)
+    return (string.gsub(pattern or ns.DatePattern(), "{(%a)}", { d = day, m = month, y = year }))
+end

@@ -36,6 +36,8 @@ local AREA_ICONS = { aliases = "tag", chronicle = "flag", fellows = "people" }
 -- Icons of the addon's own settings in their entries (features: feature.icon).
 local GENERAL_ICONS = {
     language = "globe",
+    timeFormat = "clock",
+    dateFormat = "calendar",
     chatOutput = "chat",
     minimapButton = "compass",
     charProfile = "person",
@@ -47,6 +49,8 @@ local GENERAL_ICONS = {
 -- Their pictures (UI/Previews.lua; features: feature.preview).
 local GENERAL_PREVIEWS = {
     language = "lang",
+    timeFormat = "time",
+    dateFormat = "date",
     chatOutput = "chatfam",
     minimapButton = "minimap",
     charProfile = "profile",
@@ -482,13 +486,6 @@ local function SettingsTabs()
         switches[#switches + 1] = CategoryItem(category)
     end
     local general = SimpleTab("general", {
-        GeneralItem("language", "select", function()
-            local list = { { value = "auto", text = L.lang_auto } }
-            for _, code in ipairs(ns:GetLocaleCodes()) do
-                list[#list + 1] = { value = code, text = LANGUAGE_NAMES[code] or code }
-            end
-            return list
-        end),
         GeneralItem("chatOutput", "toggle"),
         GeneralItem("minimapButton", "toggle"),
         profileItem,
@@ -519,7 +516,36 @@ local function SettingsTabs()
             return list
         end),
     })
-    return { general, appearance }
+
+    -- How Famulus writes: its language, the clock and the order of a date.
+    local language = SimpleTab("language", {
+        GeneralItem("language", "select", function()
+            local list = { { value = "auto", text = L.lang_auto } }
+            for _, code in ipairs(ns:GetLocaleCodes()) do
+                list[#list + 1] = { value = code, text = LANGUAGE_NAMES[code] or code }
+            end
+            return list
+        end),
+        -- Each clock and order by an example: today at 21:40, today's date.
+        GeneralItem("timeFormat", "select", function()
+            local today = date("*t")
+            local evening = time({ year = today.year, month = today.month, day = today.day, hour = 21, min = 40 })
+            local list = {}
+            for index, format in ipairs(ns.TIME_FORMATS) do
+                list[index] = { value = format, text = ns.FormatTime(evening, format) }
+            end
+            return list
+        end),
+        GeneralItem("dateFormat", "select", function()
+            local year, month, day = string.match(date("%Y-%m-%d"), "^(%d+)-(%d+)-(%d+)$")
+            local list = { { value = "auto", text = L.g_dateFormat_auto } }
+            for _, pattern in ipairs(ns.DATE_FORMATS) do
+                list[#list + 1] = { value = pattern, text = ns.FormatDate(year, month, day, pattern) }
+            end
+            return list
+        end),
+    })
+    return { general, appearance, language }
 end
 
 ---------------------------------------------------------------------------
@@ -531,7 +557,8 @@ local function DayKey(timestamp)
     return date("%Y-%m-%d", timestamp)
 end
 
--- "Today", "Yesterday" or the date of a day key ("2026-11-19").
+-- "Today", "Yesterday" or the date of a day key ("2026-11-19") in the
+-- chosen format.
 local function DayTitle(key, today, yesterday)
     if key == today then
         return L.c_today
@@ -542,7 +569,7 @@ local function DayTitle(key, today, yesterday)
     if not year then
         return key
     end
-    return (string.gsub(L.c_date, "{(%a)}", { d = day, m = month, y = year }))
+    return ns.FormatDate(year, month, day)
 end
 
 local CHRONICLE_ROWS = 50 -- events in the book; older ones stay in the saved data
@@ -658,7 +685,7 @@ local function ChronicleEvent(entry)
         title = title,
         fullTitle = (Chronicle.Text(entry)),
         detail = detail,
-        when = date("%H:%M", entry.t),
+        when = ns.FormatTime(entry.t),
         number = kind == "level" and tonumber(entry.level) or kind == "skill" and tonumber(entry.rank) or nil,
         -- The player's own level-ups and what the tables mark as great are the milestones of the book.
         icon = special and special.picture or nil,
@@ -784,7 +811,7 @@ local function ChronicleRun(run)
         event.fullTitle = (Chronicle.TextRun(run))
         event.count = #run
     end
-    local when = #run > 1 and L.c_ch_span:format(date("%H:%M", run[#run].t), event.when) or event.when
+    local when = #run > 1 and L.c_ch_span:format(ns.FormatTime(run[#run].t), event.when) or event.when
     event.when = nil
     event.footer = zone and (when .. "  ·  " .. zone) or when
     local special = event.kind == "ability" and Chronicle.Ability(newest.ability)
@@ -824,7 +851,7 @@ end
 -- left of it the date of an older one, else the times.
 local function SessionHead(chapter, from, to, now)
     local title, day = SessionTitle(from, now)
-    local first, last = date("%H:%M", from), date("%H:%M", to)
+    local first, last = ns.FormatTime(from), ns.FormatTime(to)
     chapter.title = title
     chapter.small = day or (first == last and first or L.c_ch_span:format(first, last))
 end
@@ -946,7 +973,7 @@ local function TimeOrDay(timestamp)
     local now = time()
     local key, today = DayKey(timestamp), DayKey(now)
     if key == today then
-        return date("%H:%M", timestamp)
+        return ns.FormatTime(timestamp)
     end
     return DayTitle(key, today, DayKey(now - 86400))
 end
@@ -1355,7 +1382,7 @@ end
 
 -- "10:40 to 12:50"
 local function Span(from, to)
-    return L.ui_fellow_span:format(date("%H:%M", from), date("%H:%M", to))
+    return L.ui_fellow_span:format(ns.FormatTime(from), ns.FormatTime(to))
 end
 
 -- The fellow travellers' books, one chapter per session of play as in the
@@ -1411,7 +1438,7 @@ local function FellowStory(guid)
             big = true,
             title = L.ui_fellow_met,
             detail = person.firstLevel and L.ui_fellow_met_detail:format(person.firstLevel) or nil,
-            when = date("%H:%M", first),
+            when = ns.FormatTime(first),
             t = first,
             from = first,
         }
@@ -1738,7 +1765,7 @@ local function RunEvent(each, data)
         title = where and L.ui_run_title:format(where) or L.ui_fellow_together
     end
     local parts = {
-        run == data.open and L.ui_run_since:format(date("%H:%M", run.f)) or Span(run.f, finish),
+        run == data.open and L.ui_run_since:format(ns.FormatTime(run.f)) or Span(run.f, finish),
         Duration(finish - run.f) or L.ui_fellow_minutes:format(0),
     }
     if run.raid and run.n then
@@ -1759,9 +1786,9 @@ local function RunEvent(each, data)
             local from, to = Presence(run, member.guid, member.seen, data.open, data.now)
             local note
             if to < finish - RUN_NOTE then
-                note = L.ui_run_until:format(date("%H:%M", to))
+                note = L.ui_run_until:format(ns.FormatTime(to))
             elseif from > run.f + RUN_NOTE then
-                note = L.ui_run_from:format(date("%H:%M", from))
+                note = L.ui_run_from:format(ns.FormatTime(from))
             end
             plates[#plates + 1] = { name = ShortName(member.person), class = member.person.class, note = note }
         end
@@ -1798,7 +1825,7 @@ local function MeetEvent(guid, person, data)
         kind = "bond",
         title = L.ui_run_met:format(ShortName(person)),
         detail = detail,
-        when = date("%H:%M", first),
+        when = ns.FormatTime(first),
         crest = CrestOf(guid, person, data.now),
         onClick = function()
             ShowStoryOf(guid)
@@ -1816,7 +1843,7 @@ local function TierEvent(moment, data)
         big = moment.tier >= 3, -- like the badge: from Trusted on in the accent
         title = L.ui_run_tier:format(ShortName(person), string.lower(L["ui_bond_" .. moment.tier])),
         detail = L.ui_run_tier_detail:format(math.floor(ns.FellowService.TIERS[moment.tier] / 3600)),
-        when = date("%H:%M", moment.t),
+        when = ns.FormatTime(moment.t),
         crest = CrestOf(moment.guid, person, data.now),
         onClick = function()
             ShowStoryOf(moment.guid)
@@ -4306,10 +4333,12 @@ ns:On("OPTION_CHANGED", function(section, key)
     end
     -- Switching a feature greys its options and says why, which moves what
     -- follows; a main feature's switch swaps its page for a notice; the
-    -- chronicle names people anew, or shows reactions or not.
+    -- chronicle names people anew, or shows reactions or not; times and dates
+    -- are written anew.
     local feature = ns.features[section]
     if (key == "enabled" and feature and #feature.options > 0) or section == "categories"
-        or (section == "general" and key == "chronicleNames") or (section == "sharing" and key == "reactions") then
+        or (section == "general" and (key == "chronicleNames" or key == "timeFormat" or key == "dateFormat"))
+        or (section == "sharing" and key == "reactions") then
         RequestRefresh("layout")
     else
         RequestRefresh("state")
