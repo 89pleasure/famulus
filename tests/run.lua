@@ -2440,6 +2440,9 @@ check(sentTo("Garrosh Hellscream") and sentTo("Garrosh Hellscream").text:find("^
 enable("sharing", false)
 check(FamulusDB.devTrace == nil, "without developer mode nothing is traced")
 ns:SetDevMode(true)
+-- A new session: out of a guild for a moment, so no roster from the tests before is kept.
+setState({})
+ns.SocialService.EachGuildMember(function() end)
 setState({ friends = {}, zone = "Westfall", level = 13, units = { player = { name = "Boris", surname = "Bloom" } },
     guild = {}, statistics = { [60] = "13" } })
 enable("sharing")
@@ -2488,6 +2491,51 @@ do
     check(traced("sent E to " .. arisa, 2) and traced("catching up " .. arisa .. " after the start: 20 own entries, more follow"),
         "the same line in a row counts up instead of repeating, and catching up says how far")
     check(not named, "no name of a player is stored in the trace")
+end
+-- The client may hand over an empty guild roster for a moment (issue #51). The last one stands
+-- in for it, so a guild member who greets the guild then is still taken and answered.
+do
+    mock.state.guild = { { name = "Boris Bloom-Forever", online = true }, { name = "Arisa Werkatz-Forever", online = true },
+        { name = "Mel Sternlicht-Forever", online = true, guid = "Player-1-MEL" } }
+    mock.Fire("GUILD_ROSTER_UPDATE")
+    mock.state.guild = {}
+    mock.Fire("GUILD_ROSTER_UPDATE")
+    local mel = sharing.Tag(sharing.Key("Mel Sternlicht"))
+    mock.sent = {}
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~P", "GUILD", "Mel Sternlicht-Forever")
+    mock.Advance(2)
+    local function traced(text)
+        for _, line in ipairs(FamulusDB.devTrace or {}) do
+            if line.text == text then
+                return true
+            end
+        end
+        return false
+    end
+    check(traced("guild roster came empty, keeping the last one: 3 members, 3 online"),
+        "an empty guild roster keeps the last one, and the trace says so")
+    check(traced("hello to " .. mel .. " queued: their guild greeting") and sentTo("Mel Sternlicht") ~= nil
+        and not traced("ignored P from " .. mel .. ": neither a friend online nor in the guild"),
+        "a guild member who greets the guild while the roster is empty is answered, not taken for a stranger")
+    check(ns.SocialService.Online()("Arisa Werkatz") ~= nil, "who was online stays online while the roster is kept")
+    -- A roster whose names cannot be read keeps the last one as well.
+    mock.state.guild = { { name = mock.SECRET, online = true } }
+    local names = {}
+    check(ns.SocialService.EachGuildMember(function(name) names[#names + 1] = name end) == true and #names == 3,
+        "a roster that names nobody keeps the last one too")
+    -- A roster that names somebody again takes over; out of the guild, nothing is kept.
+    mock.state.guild = { { name = "Boris Bloom-Forever", online = true } }
+    mock.Fire("GUILD_ROSTER_UPDATE")
+    check(traced("guild roster: 1 members, 1 online") and ns.SocialService.Online()("Arisa Werkatz") == nil,
+        "a roster that names somebody replaces the kept one")
+    mock.state.guild = nil
+    ns.SocialService.EachGuildMember(function() end)
+    mock.state.guild = {}
+    local seen = 0
+    check(ns.SocialService.EachGuildMember(function() seen = seen + 1 end) == false and seen == 0,
+        "after leaving the guild nothing is kept for the next one")
+    mock.state.guild = { { name = "Boris Bloom-Forever", online = true }, { name = "Arisa Werkatz-Forever", online = true } }
+    mock.Fire("GUILD_ROSTER_UPDATE")
 end
 ns:SetDevMode(false)
 check(FamulusDB.devTrace == nil, "switching developer mode off clears the trace")
@@ -3475,8 +3523,11 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
         "with everyone a friend, there is nothing to tidy up")
     mock.state.friends = nil
     -- In a guild whose roster has not come yet, it waits rather than take members for strangers.
+    -- A new session: out of a guild for a moment, so no roster from the tests before is kept.
     local eventsBefore = ns:CountRegisteredEvents()
     mock.reset()
+    mock.state.guild = nil
+    ns.SocialService.EachGuildMember(function() end)
     mock.state.guild = {}
     ns:Fire("FELLOWS_CHANGED")
     row = tidy()
@@ -3488,6 +3539,13 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
     row = tidy()
     check(row.desc:GetText():find("^1 person") ~= nil and not row.action.disabled and ns:CountRegisteredEvents() == eventsBefore,
         "once the roster is there it counts again, and stops listening")
+    -- Later in the session the client hands over an empty roster for a moment: the last one counts.
+    mock.state.guild = {}
+    ns:Fire("FELLOWS_CHANGED")
+    row = tidy()
+    check(row.desc:GetText():find("^1 person") ~= nil and not row.action.disabled and ns:CountRegisteredEvents() == eventsBefore,
+        "an empty roster later in the session keeps the last one; it neither waits nor takes members for strangers")
+    mock.state.guild = { { name = "Someone Else", guid = "Player-1-ELSE" } }
     mock.Click(row.action)
     row = tidy()
     check(row.action.label:GetText() == "Really remove?" and FamulusDB.fellows["Player-1-MIRA"] ~= nil, "the first click asks")

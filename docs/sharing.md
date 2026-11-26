@@ -185,7 +185,8 @@ guild channel), only known fields; `|` and control characters are removed.
   `Core/SelfTest.lua`, `FamulusDB.devTrace`, at most 500 lines, cleared when developer mode is
   switched off; each session begins with a line `SESSION`):
   - switched on and off; the guild roster and the friends list whenever their counts change
-    (`guild roster: 42 members, 7 online`, an empty roster while in a guild is marked);
+    (`guild roster: 42 members, 7 online`, an empty roster while in a guild is marked, a kept
+    one says `guild roster came empty, keeping the last one: …`);
   - the guild greeting from the queue to its echo (`guild greeting queued`, `sent P to guild`,
     `own guild greeting came back from the guild channel`);
   - every message sent (`sent H to AW-799`), refused, dropped (not online, the client said
@@ -215,10 +216,22 @@ guild channel), only known fields; `|` and control characters are removed.
   Famulus then empties its guild list, sends no `P` on switching on and takes a `P` it receives
   as from a stranger), a loading screen or chat lockdown on the receiving side, names that are
   secret in instances. `P` goes only once per session, nothing repeats it. Next time: `/fam dev`
-  before, `/reload` afterwards, then read the trace (if possible on both sides). Proposed, not
-  commissioned: keep the last guild roster when an empty one comes, and count Battle.net friends
-  who play Forever as friends (then a hello goes by whisper and the guild greeting is no longer
-  the only way).
+  before, `/reload` afterwards, then read the trace (if possible on both sides). The empty roster
+  is handled since 2026-11-26 (see "Empty guild roster" below). Proposed, not commissioned:
+  count Battle.net friends who play Forever as friends (issue #52; then a hello goes by whisper
+  and the guild greeting is no longer the only way).
+- **Empty guild roster (since 2026-11-26, issue #51; checked against the mock only, not yet
+  in game):** If the client hands over a guild roster that is empty or names
+  nobody (every name secret) while the player is in a guild, `SocialService.EachGuildMember`
+  visits the last roster of this session that named anyone instead, as Guildy does, and returns
+  `true` (`keeping`). A guild always has at least the player, so such a roster is never true. The
+  next roster that names anyone takes over; out of a guild nothing is kept. Kept in memory only,
+  not saved; two tables of columns filled in place, so reading the roster leaves no garbage.
+  Everyone who reads the roster benefits: sharing (a `P` received then is answered, not taken
+  as from a stranger; the trace says `guild roster came empty, keeping the last one: …`),
+  `SocialService.Circle` (no waiting, so the fellow travellers' cleanup does not stop at "still
+  loading"), `Online`, `Classes` and "Who is nearby". The kept roster's online states and zones
+  are those of when it came. Whether this was the cause of "Mel not linked" is not proven.
 - **Not checked in game:** whether whispered addon messages arrive the way name and sender
   are written (`Firstname Lastname` versus `Firstname-Lastname`), whether a whisper to someone
   who just went offline leaves an error message in the chat, and whether the statistic IDs
