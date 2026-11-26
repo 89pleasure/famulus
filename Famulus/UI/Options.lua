@@ -692,9 +692,9 @@ local function ChronicleEvent(entry)
         or kind == "item" and Chronicle.Item(entry.item) or nil
     local chip
     if not own then
-        chip = { initial = Initial((Chronicle.Companion(entry))), text = Chronicle.Label(entry), class = Chronicle.Class(entry.who) }
+        chip = { text = Chronicle.Label(entry) }
     elseif other then
-        chip = { initial = Initial(other), text = other, class = Chronicle.Class(other) }
+        chip = { text = other }
     end
     return {
         kind = kind,
@@ -850,7 +850,7 @@ local function ChronicleRun(run)
     event.big = event.weight == "high"
     -- The strip names everyone, the player's own character too.
     local me = Chronicle.Character()
-    event.chip = event.chip or { text = me, class = me and Chronicle.Class(me) }
+    event.chip = event.chip or { text = me }
     CardReaction(event, run)
     event.content = UI.ChronicleCard
     return event
@@ -928,7 +928,7 @@ end
 -- One chapter as the chronicle's book tells it, from entries (the newest
 -- first), each on a card of its own: the picture of the chronicle's
 -- settings (UI/Previews.lua). Its cards cannot be clicked and show no
--- tooltip; the samples' people have their classes.
+-- tooltip.
 function UI.ChronicleChapter(entries)
     local chapter = { entries = entries, events = {} }
     for index, entry in ipairs(entries) do
@@ -936,9 +936,6 @@ function UI.ChronicleChapter(entries)
         story.onClick, story.tooltip, story.item, story.spell = nil, nil, nil, nil
         if story.reaction then
             story.reaction.onClick, story.reaction.tooltip = nil, nil
-        end
-        if story.chip and not story.chip.class and entry.who then
-            story.chip.class = ns.ChronicleService.SampleClass(entry.who)
         end
         chapter.events[index] = story
     end

@@ -141,7 +141,7 @@ function feed.ReactionStory(entry, who, reaction)
     return {
         kind = "reaction",
         icon = reaction,
-        chip = { text = Chronicle.Label({ who = who }), class = Chronicle.Class(who) },
+        chip = { text = Chronicle.Label({ who = who }) },
         title = L["c_reacted_" .. reaction],
         detail = (Chronicle.Text(entry)),
     }

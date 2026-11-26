@@ -2719,7 +2719,7 @@ check(events[2].top > events[1].top and events[2].top < events[1].top + events[1
     and events[3].top >= events[1].top + events[1].cardHeight
     and events[2].top + events[2].cardHeight / 2 >= events[1].top + events[1].cardHeight / 2 + 30,
     "each side runs on by itself: a card reaches into the height of the one across, the dots keep apart")
-check(events[1].story.chip and events[1].story.chip.text == "Jaina Proudmoore" and events[1].story.chip.initial == "J"
+check(events[1].story.chip and events[1].story.chip.text == "Jaina Proudmoore" and events[1].story.chip.class == nil
     and events[1].chipText:GetText() == "Jaina Proudmoore" and events[1].foot == nil
     and events[2].strip:IsShown() and events[2].chipText:GetText() == (Chronicle.Character() or ""),
     "every card names whose event it is in its strip, not in the headline; the player's own name their character")
@@ -2828,19 +2828,19 @@ do -- a click on a companion narrows the book to them, a second one widens it ag
     mock.Click(tabButton("Everyone"))
     check(#bookFrames("story") == 6, "another tab forgets the choice")
 end
-do -- the class beside a companion's name, and the character name behind an alias
+do -- the class beside a companion's name in the rail, and the character name behind an alias
     local first = bookFrames("story")[1]
-    check(not first.chipClass:IsShown() and first.chipText.mockPoint[4] == ns.UI.BookPad
+    check(first.chipClass == nil and first.chipText.mockPoint[4] == ns.UI.BookPad
         and people.rows[1].initial:IsShown() and not people.rows[1].class:IsShown(),
-        "while the class is not known, the name stands alone in the book's strip; the rail shows the initial")
+        "the book's strip names the person alone, without a class icon; while the class is not known the rail shows the initial")
     Chronicle.Class("Jaina Proudmoore", "MAGE")
     ns.AliasService.Set("Jaina Proudmoore", "Anna")
     mock.Advance(0.1)
     first = bookFrames("story")[1]
     local row = railCard("people").rows[1]
-    check(first.story.chip.class == "MAGE" and first.chipClass:IsShown() and first.chipText.mockPoint[4] > ns.UI.BookPad
+    check(first.chipText.mockPoint[4] == ns.UI.BookPad
         and row.class:IsShown() and not row.initial:IsShown() and not row.avatar:IsShown(),
-        "a known class shows its icon instead, in the book and in the rail")
+        "a known class shows its icon in the rail; in the book's strip the name stays at the edge")
     check(first.chipText:GetText() == "Anna (Jaina Proudmoore)" and row.name:GetText() == "Anna (Jaina Proudmoore)"
         and (first.story.detail == nil or not first.story.detail:find("Proudmoore", 1, true)),
         "under an alias, the character name stands in brackets behind it")
@@ -2863,10 +2863,9 @@ do -- the guild roster and the friends list tell classes; shown, the chronicle r
     mock.Click(tabButton("My journey"))
     check(Chronicle.Class("Jaina Proudmoore") == nil, "a tab without friends does not look at the lists")
     mock.Click(tabButton("Everyone"))
-    local first = bookFrames("story")[1]
-    check(Chronicle.Class("Jaina Proudmoore") == "PRIEST" and first.story.chip.class == "PRIEST" and first.chipClass:IsShown()
+    check(Chronicle.Class("Jaina Proudmoore") == "PRIEST"
         and railCard("people").rows[1].class:IsShown() and not railCard("people").spec.people[1].online,
-        "the guild roster tells the class of a member who is offline, shown at once in book and rail")
+        "the guild roster tells the class of a member who is offline, shown at once in the rail")
     check(Chronicle.Class("Thrall Hellscream") == nil, "only of people the chronicle tells of")
     mock.state.guild = nil
     mock.state.friends = { { name = "Jaina Proudmoore", guid = "Player-1-JAINA", connected = true, level = 20, className = "Mage" } }
@@ -2875,7 +2874,7 @@ do -- the guild roster and the friends list tell classes; shown, the chronicle r
         "the friends list tells it of a friend who is online")
     mock.state.friends = {}
     mock.Click(tabButton("Everyone"))
-    check(Chronicle.Class("Jaina Proudmoore") == "MAGE" and bookFrames("story")[1].chipClass:IsShown(),
+    check(Chronicle.Class("Jaina Proudmoore") == "MAGE" and railCard("people").rows[1].class:IsShown(),
         "gone from the lists, the class stays")
     mock.state.guild, mock.state.friends = guildBefore, friendsBefore
     FamulusDB.chronicle.classes = nil
@@ -4536,8 +4535,8 @@ mock.Advance(0.1)
         "record my journey: the chronicle's own book, the player's level-up as its milestone, nothing to click")
     choose("area_chronicle", "ui_tab_record", ns.L.f_companions)
     stories = pictureStories()
-    check(stage.current == "friends" and #stories == 2 and stories[1].chip.text == "Mira Stormfeather" and stories[1].chip.class == "MAGE"
-        and stories[2].chip.class == "WARRIOR", "follow my friends: their level-ups, with their classes")
+    check(stage.current == "friends" and #stories == 2 and stories[1].chip.text == "Mira Stormfeather"
+        and stories[2].chip.text ~= nil, "follow my friends: their level-ups, each with the friend's name")
     choose("area_chronicle", "ui_tab_record", ns.L.g_chronicleNames)
     check(stage.current == "names" and pictureStories()[1].chip.text == "Dad (Borin Ironbeard)",
         "a friend under an alias, the name behind it: " .. tostring(pictureStories()[1].chip.text))
