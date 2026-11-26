@@ -33,10 +33,11 @@ function Shape:SetGradient(orientation, fromToken, toToken, width, height, alpha
     local vertical = orientation == "VERTICAL"
     local inset = self.inset or 0
     local length = math.max(1, (vertical and height or width) - inset * 2)
-    for _, part in ipairs(self.parts) do
+    for index, part in ipairs(self.parts) do
         -- Each end of a part is { 0 or 1 (near or far edge), offset from it }.
-        local near = part.span[vertical and 3 or 1]
-        local far = part.span[vertical and 4 or 2]
+        local span = self.spans[index]
+        local near = span[vertical and 3 or 1]
+        local far = span[vertical and 4 or 2]
         local size = vertical and height or width
         UI.Shade(part, orientation, fromToken, toToken, {
             start = (near[1] * size + near[2] - inset) / length,
@@ -94,6 +95,41 @@ local CORNERS = {
     { "BOTTOMRIGHT", -1, 1, 0.5, 1, 0.5, 1 },
 }
 
+-- Where each of the seven parts of a rounded shape lies inside its frame, for
+-- gradients: the four corners (in the order of CORNERS), the middle, the left
+-- and the right side. Each is { left, right, top, bottom }, and each of those
+-- { 0 or 1 (near or far edge), offset }. They depend only on inset and radius,
+-- so all shapes of the same size share them instead of a table per texture.
+local spansBySize = {} -- inset -> radius -> spans
+
+local function Spans(inset, r)
+    local byRadius = spansBySize[inset]
+    if not byRadius then
+        byRadius = {}
+        spansBySize[inset] = byRadius
+    end
+    local spans = byRadius[r]
+    if not spans then
+        local nearA, nearB = { 0, inset }, { 0, inset + r }
+        local farA, farB = { 1, -inset - r }, { 1, -inset }
+        spans = {}
+        for index, c in ipairs(CORNERS) do
+            local onLeft, onTop = c[2] > 0, c[3] < 0
+            spans[index] = {
+                onLeft and nearA or farA,
+                onLeft and nearB or farB,
+                onTop and nearA or farA,
+                onTop and nearB or farB,
+            }
+        end
+        spans[5] = { nearB, farA, nearA, farB } -- middle
+        spans[6] = { nearA, nearB, nearB, farA } -- left
+        spans[7] = { farA, farB, nearB, farA } -- right
+        byRadius[r] = spans
+    end
+    return spans
+end
+
 -- A filled rectangle with rounded corners covering `frame`.
 -- opts: layer, sublevel, inset (distance from the frame's edges), square
 -- (set of corner names that stay square, e.g. { TOPRIGHT = true }).
@@ -101,28 +137,17 @@ function UI.Round(frame, token, radius, opts)
     opts = opts or {}
     local layer, sublevel = opts.layer or "BACKGROUND", opts.sublevel or 0
     local inset, r = opts.inset or 0, radius
-    local shape = setmetatable({ parts = {}, inset = inset }, Shape)
+    -- The parts are created in the order of Spans.
+    local shape = setmetatable({ parts = {}, inset = inset, spans = Spans(inset, r) }, Shape)
 
-    -- span: where the part lies inside the frame, for gradients. Each of
-    -- left, right, top, bottom is { 0 or 1 (near or far edge), offset }.
-    local function Part(left, right, top, bottom)
+    local function Part()
         local texture = frame:CreateTexture(nil, layer, nil, sublevel)
-        texture.span = { left, right, top, bottom }
         shape.parts[#shape.parts + 1] = texture
         return texture
     end
 
-    local nearA, nearB = { 0, inset }, { 0, inset + r }
-    local farA, farB = { 1, -inset - r }, { 1, -inset }
-
     for _, c in ipairs(CORNERS) do
-        local onLeft, onTop = c[2] > 0, c[3] < 0
-        local corner = Part(
-            onLeft and nearA or farA,
-            onLeft and nearB or farB,
-            onTop and nearA or farA,
-            onTop and nearB or farB
-        )
+        local corner = Part()
         corner:SetSize(r, r)
         corner:SetPoint(c[1], frame, c[1], c[2] * inset, c[3] * inset)
         if not (opts.square and opts.square[c[1]]) then
@@ -132,16 +157,16 @@ function UI.Round(frame, token, radius, opts)
         end
     end
 
-    local middle = Part(nearB, farA, nearA, farB)
+    local middle = Part()
     middle:SetPoint("TOPLEFT", frame, "TOPLEFT", inset + r, -inset)
     middle:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset - r, inset)
 
-    local left = Part(nearA, nearB, nearB, farA)
+    local left = Part()
     left:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset - r)
     left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", inset, inset + r)
     left:SetWidth(r)
 
-    local right = Part(farA, farB, nearB, farA)
+    local right = Part()
     right:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -inset, -inset - r)
     right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset, inset + r)
     right:SetWidth(r)

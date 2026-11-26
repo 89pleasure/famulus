@@ -307,6 +307,25 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   `UI.Card` with a hairline border); window 12, cards 10, controls 6–8. Soft shadow around
   window and menus (`UI.Shadow`, `shadow.tga`). The former gradient frame (`UI.GradientFrame`) is
   gone.
+- **Memory (measured 2026-11-27 against the mock, with the owner's saved data; the client figures
+  are estimates for Lua 5.1, about ±30 %):** Before the window opens Famulus holds about 1.8 MB
+  (code ~0.9, the seven languages ~0.5, features and data). The window is the rest, and it only
+  grows: frames and textures cannot be freed in WoW, so every pool stays at the largest content it
+  ever showed until `/reload` (no leak: showing the same pages again costs nothing). Most of it
+  is textures: a rounded shape (`UI.Round`) is 7, a card (`UI.Card`) 14, a card of the chronicle's
+  book about 57; with 80 entries the first page of the chronicle draws 50 such cards. Each texture
+  costs its own Lua table, and whatever the addon keeps per texture multiplies by thousands.
+  Hence, since 2026-11-27: `UI.Paint`/`Tint`/`Ink`/`Swipe` keep one shared record per mode, token
+  and alpha (a region points to it; a fading level is kept apart, only while it is not 1) instead
+  of a table per region, and the spans `Shape:SetGradient` needs are shared by every `UI.Round` of
+  the same inset and radius instead of a table per texture. With the owner's data that took the
+  window with every page and picture from about 9.2 to 5.3 MB (first page alone 4.4 to 3.1). Keep
+  it that way: nothing per texture that can be shared. Building every page makes about 3 MB of
+  garbage, every picture of the settings another 4.7; the game's memory figure counts it until
+  the collector runs. The tab "Groups" makes most per click (about 3.5 MB at 100 groups, 10 MB at
+  400), because `TimelineData` runs twice per drawing and builds every subset of a group's people as
+  a table. Further levers, not done: one texture per rounded shape (`SetTextureSliceMargins`;
+  unchecked in Forever), building the rarely seen parts of a book card only when needed.
 - **Font:** Inter (SIL Open Font License 1.1) in Regular, Medium and SemiBold, cut down with
   `tools/make_fonts.py` to Latin, Greek, Cyrillic and punctuation (~100 KB each).
   On koKR/zhCN/zhTW clients the game font stays.
