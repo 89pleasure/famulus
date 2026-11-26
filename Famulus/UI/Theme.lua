@@ -186,6 +186,7 @@ local washes = {
     bossInk = hex("f2c36a"),
     warning = hex("f5b14c"),
     danger = hex("f06a6a"),
+    shareInk = hex("7cc4ff"), -- what goes to other players (the welcome page)
     -- The pictures of the settings (UI/Previews.lua) show the game, not the
     -- window, in the game's own colours: chat, tooltip, menu, Battle.net,
     -- the minimap, the classes. Their night sky follows the scheme (see

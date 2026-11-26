@@ -61,6 +61,33 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   "OFF", its tabs are greyed out, and instead of the content its page shows
   a notice with the button "Switch on in settings" (`window.offNotice`), which
   opens Settings › General.
+- **Welcome page (`UI/Welcome.lua`, since 2026-11-26, issue #46):** With the defaults a new
+  player sees almost nothing, so the window opens on a page that says what Famulus does and
+  switches the main features on with one click. The rule for defaults stays as it is.
+  - **When:** until the player chooses (`FamulusDB.welcome`, account-wide) and only while none of
+    the five in `Welcome.FEATURES` (ownJourney, companions, sharing, rememberFellows,
+    nearbyFriends) is on; whoever switched one on never gets it, whether `seen` is set or not.
+    Closing (X, Escape) is no choice, "Later" and "Choose myself" are. An alias asked for from a
+    player's menu (`ns:EditAlias`) opens the aliases page instead, without choosing. Again from
+    "About" (row "Welcome", button "Show welcome page").
+  - **Look:** an opaque page of its own below the head (frame level +100) that covers sidebar and
+    content; the head keeps logo, name, tagline and close, the page's name is hidden
+    (`window.area`). It draws the window's ground itself (grain, dusk, a glow behind the 96 px
+    logo, sparks of its own; while it is shown only they move). Below the title the three areas
+    as tiles (the aliases lit, they already run), the big button "Record the journey and share it
+    with friends" (`button.padding`), how many it switches on and that sharing reaches only
+    friends and guild with Famulus. "What exactly?" opens the five, two to a line, each with "Only
+    for you" or, for sharing, "Goes to friends and guild" (`shareInk`), and what already runs
+    (aliases, live feed). Links "Choose myself" (Chronicle › Settings) and "Later" (Chronicle).
+  - **The click** switches on the five the client can run and the master switches of their areas,
+    writes one chat line (`msg_welcome_on`) and opens Chronicle › Everyone. An empty book says
+    "Your chronicle is running" (`c_empty_on`) while anything records into it.
+  - Rejected on the mockup ("Famulus-Willkommensseite", claude.ai artifact
+    `4QWBiRsCVYusMxfEbDAmn8`): the three areas as cards with every switch, and one question "with
+    friends / only for me / decide myself".
+  - Checked against the mock only, not yet seen in game. Open in game: whether the page fits with
+    the list open in French (the column is 760 wide so that a tile's line takes at most three
+    lines), how logo, glow and the big button look, whether dragging the page moves the window.
 - **Reset** acts on the tab (features of the whole section, addon options only their
   key; on Settings › General also the three master switches). The first click asks
   ("Really reset?", red), a second within four seconds carries it out; greyed out on

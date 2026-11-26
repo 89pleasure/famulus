@@ -61,5 +61,6 @@ UI\Rail.lua
 UI\Fellows.lua
 UI\Feed.lua
 UI\Previews.lua
+UI\Welcome.lua
 UI\Options.lua
 UI\MinimapButton.lua

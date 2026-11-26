@@ -502,9 +502,11 @@ function UI.Button(parent, onClick, variant, icon)
         end
     end
 
+    -- button.padding: room left and right of the label together, for a
+    -- larger button than the usual.
     function button:SetLabel(text)
         label:SetText(text)
-        local padding = variant == "ghost" and 20 or 28
+        local padding = self.padding or (variant == "ghost" and 20 or 28)
         local minimum = variant == "ghost" and 0 or 84
         local width = math.max(minimum, label:GetStringWidth() + (self.icon and 20 or 0) + padding)
         self:SetWidth(width)
