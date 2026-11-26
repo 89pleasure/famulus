@@ -58,7 +58,8 @@ picture-book look are built and checked against the mock only.
     `UI/Options.lua`; sentence from `ChronicleService.TextRun`): "Fallen 3 times in Darkshore" with
     the number in the corner of the picture, "Reached levels 21 to 22" with the highest level in
     the picture. Until 2026-11-25 all times stood below the line as small badges; since then the
-    card's foot names the first and the last ("20:02 – 21:14 · Darkshore", see "Weighting").
+    card names the first and the last ("20:02 – 21:14", in its strip since 2026-11-27, see
+    "Weighting").
     The player's own level-ups stay single. The number of
     events in the chapter head still counts every entry.
   - **Chapter head on one line:** the time on the left (until 2026-11-24 the day), in the middle
@@ -170,12 +171,19 @@ picture-book look are built and checked against the mock only.
     flush with the picture, no longer above the text to the right of the picture; the row is a
     sunken strip across the full card width like the name at the bottom used to be (`sunken`,
     rounded at the top, a fine line at the bottom, 28 px tall, class icon 18 px).
-  - **Strip with type icon, dots without icon (the owner's request, 2026-11-25):** Since then
-    the strip stands on every card of the chronicle, for the player's own events with the name
-    of their own character (`ChronicleService.Character`, class from `ChronicleService.Class`;
-    set in `ChronicleRun`). Right-aligned in it the icon of the kind (`mark` from
-    `UI.BookPictures`, or `story.icon` such as the horseshoe), 13 px in accent colour; before, it
-    stood on the dot on the line. The circle with the initial to the left of the name is gone:
+  - **Strip with name and time, dots without icon:** The strip stands on every card of the
+    chronicle, for the player's own events with the name of their own character
+    (`ChronicleService.Character`, class from `ChronicleService.Class`; set in `ChronicleRun`).
+    Right-aligned in it the time (`story.when`), for a bundle the first and the last
+    ("20:02 – 21:14"). The name runs up to the time and is cut off there; it is anchored to the
+    time instead of given a measured width, so it follows when the font loads late (see "Font"
+    in docs/window.md). **No icon of the kind (since 2026-11-27):** until then a 13 px icon of
+    the kind stood there in the accent (before 2026-11-25 on the dot on the line). It told
+    nothing that picture, heading and weight do not already say, and the time took the foot's
+    room from the place: a light card is 222 px wide, which left about 106 px beside the
+    reaction button for "21:18 · Rotkammgebirge" (seen cut off in game). With a bundle's span
+    the name gets less room; the alias stays readable, the brackets go first.
+    The circle with the initial to the left of the name is gone:
     on the left stands the class icon where the class is known, otherwise the name starts at the
     edge (the assistant's decision: literally "the initial icon can go", the class icon
     stays). The dots on the line are glowing dots in accent colour like the former
@@ -183,7 +191,8 @@ picture-book look are built and checked against the mock only.
     all books, so also with the fellow travellers (book design). The book sets the size by
     weight (`DOTS`: light 5, medium 7, heavy 9 px; without weight medium, with `big`
     heavy; the owner's request, the assistant chose the sizes).
-    The foot always names time and place ("21:14 · Darkshore", without a place only the time).
+    The foot names only the place (`story.place`, "Darkshore"); a card without a place and
+    without a reaction button has no foot.
   - **Height by content, equal edges (the owner's request after the first screenshot,
     2026-11-25):** The first version kept the head row free even without a name and always kept
     two lines of text free, and tied padding and picture size to the weight; in game that looked
@@ -237,8 +246,9 @@ picture-book look are built and checked against the mock only.
     unchanged.
 
 - **Pictures are game icons (the owner's request, 2026-11-19):** They are square and there are
-  very many; the own drawings (`skull.tga` etc.) now only appear small in the card's strip
-  (until 2026-11-25 on the dot of the timeline) and as a fallback. Order (`EntryTexture` in `UI/Options.lua`):
+  very many; the own drawings (`skull.tga` etc.) now only appear as a fallback and on the chips
+  of the live feed's kinds in its settings (until 2026-11-27 also small in the card's strip).
+  Order (`EntryTexture` in `UI/Options.lua`):
   1. the icon stored with the entry (`entry.icon`, a file ID): for professions
      from `GetProfessionInfo`, for challenges from `GetAchievementInfo`; it is shared;
   2. the icon of the item (`C_Item.GetItemIconByID`) or of the spell of an ability
@@ -298,7 +308,7 @@ picture-book look are built and checked against the mock only.
       `c_profession`/`c_their_profession`), otherwise with the name sent along. Only a row with
       `sentences` (riding) has its own `c_ability_<id>` and `c_their_ability_<id>` in every
       language; the test checks that the others have none. The book shows the spell's icon and
-      tooltip; without `picture` the strip shows the sparkle.
+      tooltip; if the client has no icon, the picture is `picture`, without one the sparkle.
     - `riding` (spell 33388) and `ridingFast` (33391), both with horseshoe (`horseshoe.tga`) and
       as a milestone, fallback via skill 762 from 75 or 150 points.
     - **Class abilities (since 2026-11-27):** what a class quest teaches, for every class; the
@@ -338,8 +348,7 @@ picture-book look are built and checked against the mock only.
     from their class quests (5175 to 5178, `class = "SHAMAN"`). In the book an item shows the
     icon the game gives it (the owner's request; `C_Item.GetItemIconByID`, `story.texture` in
     `UI/Book.lua`): in its own colours, so without `UI.Tint`, with a cropped edge in the round
-    frame. The small icon (in the strip, formerly on the dot of the timeline) stays the chest; if
-    the client knows no icon, the chest also stands in the picture. This is
+    frame. If the client knows no icon, the chest stands in the picture. This is
     the only place where the book shows a game texture instead of an own icon.
     The mouse over the picture shows the game's tooltip (the owner's request): for
     items `GameTooltip:SetItemByID`, for abilities from the table `SetSpellByID`
@@ -403,7 +412,7 @@ picture-book look are built and checked against the mock only.
     as two plain palms without thumbs leaning together, and shown at 18 px (since 2026-11-27 in
     the book's reaction button at 16 px).
   - **On the card (`CardReaction` in `UI/Options.lua`, `UI/ChronicleCard.lua`):** a button at
-    the right of the foot, on the line of time and place: the same button as on the live feed's
+    the right of the foot, on the line of the place: the same button as on the live feed's
     cards (`UI.ReactionButton` in `UI/Widgets.lua`; here 26 px with a 16 px icon, as the foot is
     only 14 px tall; on the feed 32 and 18), a rounded square with the reaction's icon. Since
     2026-11-27 (the owner's request, "the same as on the feed cards") only the

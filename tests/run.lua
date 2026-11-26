@@ -2751,11 +2751,12 @@ check(events[4].card:GetWidth() < events[2].card:GetWidth() and events[2].card:G
     and events[4].card.mockPoint[1] == (events[4].onLeft and "TOPRIGHT" or "TOPLEFT"),
     "the book sets a card's width by its weight, and a narrower card keeps to the line")
 check(events[1].strip:IsShown() and events[2].strip:IsShown() and events[1].picture.mockPoint[5] <= -28
-    and events[1].kindIcon:IsShown() and events[1].kindIcon.mockPoint[1] == "RIGHT" and events[1].mark == nil
+    and events[1].time:IsShown() and events[1].time.mockPoint[1] == "RIGHT" and events[1].mark == nil
+    and events[1].kindIcon == nil and events[1].chipText.mockPoint[1] == "LEFT"
     and events[1].dot:IsShown() and events[1].dot.glow:IsShown()
     and events[4].dot:GetWidth() < events[2].dot:GetWidth() and events[2].dot:GetWidth() < events[1].dot:GetWidth()
     and events[1].dot.glow:GetWidth() == events[1].dot:GetWidth() * 3,
-    "the name stands in a sunken strip above the picture, the icon of the kind at its right; on the line a glowing dot, larger with the weight")
+    "the name stands in a sunken strip above the picture, the time at its right; on the line a glowing dot, larger with the weight")
 do
     local level = true
     for index = 1, 6 do
@@ -2767,19 +2768,31 @@ do
 end
 check(events[4].photo:IsShown() and not events[4].icon:IsShown() and not events[4].number:IsShown()
     and events[4].story.texture == ns.UI.gameIcons.death and events[4].story.title == "Fallen"
-    and events[4].detail:GetText() == "at level 13" and events[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil
-    and events[5].story.title == "Discovered a new zone" and events[1].footer:GetText():match("^%d%d:%d%d  ·  Duskwood$") ~= nil
-    and not events[1].detail:IsShown() and events[2].footer:GetText():match("^%d%d:%d%d$") ~= nil,
-    "other events show an icon of the game; the foot always tells the time and the place, the text never the place")
+    and events[4].detail:GetText() == "at level 13" and events[4].time:GetText():match("^%d%d:%d%d$") ~= nil
+    and events[4].place:GetText() == "Westfall" and events[4].place:IsShown()
+    and events[5].story.title == "Discovered a new zone" and events[1].place:GetText() == "Duskwood"
+    and not events[1].detail:IsShown() and events[2].time:GetText():match("^%d%d:%d%d$") ~= nil
+    and not events[2].place:IsShown() and not events[2].react:IsShown(),
+    "other events show an icon of the game; the strip tells the time, the foot the place alone, the text never the place")
+do -- a text taller than the picture: the foot adds its line, without a place there is none
+    local part = CreateFrame("Frame")
+    local story = { kind = "death", weight = "low", title = string.rep("Fallen ", 8), when = "21:14" }
+    local without = ns.UI.ChronicleCard(part, story, 222)
+    story.place = "Duskwood"
+    local with = ns.UI.ChronicleCard(part, story, 222)
+    check(with - without == 18 and part.place:IsShown() and part.time:GetText() == "21:14",
+        "without a place and a reaction, a card has no foot (" .. without .. " / " .. with .. ")")
+end
 do
     ns:SetOption("general", "timeFormat", "12h")
     mock.Advance(0.1)
     local twelve, head = bookFrames("story"), bookFrames("chapter")[1]
-    check(twelve[4].footer:GetText():match("^%d%d?:%d%d [AP]M  ·  Westfall$") ~= nil and head.chapter.small:find("^%d%d?:%d%d [AP]M") ~= nil,
-        "on the 12-hour clock the book writes its times with AM and PM: " .. twelve[4].footer:GetText() .. " / " .. head.chapter.small)
+    check(twelve[4].time:GetText():match("^%d%d?:%d%d [AP]M$") ~= nil and twelve[4].place:GetText() == "Westfall"
+        and head.chapter.small:find("^%d%d?:%d%d [AP]M") ~= nil,
+        "on the 12-hour clock the book writes its times with AM and PM: " .. twelve[4].time:GetText() .. " / " .. head.chapter.small)
     ns:SetOption("general", "timeFormat", "24h")
     mock.Advance(0.1)
-    check(bookFrames("story")[4].footer:GetText():match("^%d%d:%d%d  ·  Westfall$") ~= nil, "and back on 24 hours")
+    check(bookFrames("story")[4].time:GetText():match("^%d%d:%d%d$") ~= nil, "and back on 24 hours")
 end
 check(window.scroll.content:GetHeight() >= window.book:GetHeight() and window.book:GetHeight() > 6 * 40,
     "the page is as long as its book")
@@ -2889,8 +2902,9 @@ do -- what repeats right away shares a card
         "five entries, two cards; the chapter still counts every event")
     check(deaths and deaths.story.title == "Fallen 3 times" and deaths.story.detail == "at levels 12 to 13"
         and deaths.badge:IsShown() and deaths.badgeText:GetText() == "3"
-        and deaths.footer:GetText() == date("%H:%M", now - 52) .. " – " .. date("%H:%M", now - 50) .. "  ·  Duskwood",
-        "deaths in one place: one card, how often in the corner, from the first time to the last in the foot")
+        and deaths.time:GetText() == date("%H:%M", now - 52) .. " – " .. date("%H:%M", now - 50)
+        and deaths.place:GetText() == "Duskwood",
+        "deaths in one place: one card, how often in the corner, from the first time to the last in the strip")
     check(levels and levels.story.title == "Reached levels 21 to 22" and levels.number:GetText() == "22"
         and not levels.badge:IsShown() and levels.story.chip.text == "Jaina Proudmoore",
         "a companion's levels in a row: one card from the first to the last")

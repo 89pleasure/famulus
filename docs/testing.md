@@ -79,8 +79,8 @@ the index there says which file it is in.
   wheel, whether the switch in an entry and the one beside the name react (each has a hit area of
   its own), how pills and chips look, whether long names are cut off cleanly.
 - **Time and date format (2026-11-26, checked against the mock only, not yet in game):** see
-  "Time and date format" in `docs/window.md`. Open in game: the 12-hour clock in the chronicle's
-  card feet and chapter headings, the two new icons (`/fam test`, group `media`: `clock`,
+  "Time and date format" in `docs/window.md`. Open in game: the 12-hour clock in the strips of the
+  chronicle's cards and its chapter headings, the two new icons (`/fam test`, group `media`: `clock`,
   `calendar`).
 - **Data version (2026-11-26, checked against the mock only, not yet in game):** `FamulusDB` and
   every `FamulusCharDB` carry `dataVersion` (see "Saved data" in AGENTS.md). In game: after the
