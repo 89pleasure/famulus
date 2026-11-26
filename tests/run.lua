@@ -88,14 +88,167 @@ local function placeholders(text)
     end
     return table.concat(found, ",")
 end
-for key, text in pairs(en) do
-    check(de[key] ~= nil, "deDE has key " .. key)
-    if de[key] then
-        check(placeholders(text) == placeholders(de[key]), "same placeholders in " .. key)
+do
+-- The keys ns.Plural picks by a number, from the source: only they may have
+-- forms of their own (<key>_one, <key>_few), in any language.
+local pluralKeys = {}
+for _, file in ipairs(files) do
+    local handle = io.open("Famulus/" .. file:gsub("\\", "/"), "r")
+    if handle then
+        for key in handle:read("*a"):gmatch('Plural%("([%w_]+)"') do
+            pluralKeys[key] = true
+        end
+        handle:close()
     end
 end
-for key in pairs(de) do
-    check(en[key] ~= nil, "deDE key also exists in enUS: " .. key)
+check(pluralKeys.c_ch_events and pluralKeys.ui_fellow_bosses, "the keys ns.Plural picks are found in the source")
+for key in pairs(pluralKeys) do
+    check(en[key] ~= nil, "a key ns.Plural picks exists in enUS: " .. key)
+end
+local function pluralBase(key)
+    local base = key:match("^(.+)_one$") or key:match("^(.+)_few$")
+    return base and pluralKeys[base] and base or nil
+end
+local codes = ns:GetLocaleCodes()
+check(#codes == 7 and codes[1] == "enUS", "seven languages ship, English first: " .. table.concat(codes, " "))
+for _, code in ipairs(codes) do
+    local strings = ns.locales[code]
+    check(type(strings.lang_name) == "string" and strings.lang_name ~= "" and (code == "enUS" or strings.lang_name ~= en.lang_name),
+        code .. " names itself")
+    for key, text in pairs(en) do
+        if not pluralBase(key) then
+            check(strings[key] ~= nil, code .. " has key " .. key)
+        end
+    end
+    for key, text in pairs(strings) do
+        local base = pluralBase(key)
+        local reference = en[base or key]
+        check(reference ~= nil, code .. " key also exists in enUS (or is a form of a key ns.Plural picks): " .. key)
+        if reference then
+            check(placeholders(text) == placeholders(reference), "same placeholders in " .. code .. " " .. key)
+        end
+    end
+end
+
+-- Every letter of every language is in the fonts the addon ships: a font
+-- without it would show an empty box. Reads the fonts' character maps.
+local function fontLetters(path)
+    local handle = io.open(path, "rb")
+    if not handle then
+        return nil
+    end
+    local data = handle:read("*a")
+    handle:close()
+    local function u16(at)
+        local a, b = data:byte(at + 1, at + 2)
+        return a * 256 + b
+    end
+    local function u32(at)
+        return u16(at) * 65536 + u16(at + 2)
+    end
+    local cmap
+    for index = 0, u16(4) - 1 do
+        local record = 12 + index * 16
+        if data:sub(record + 1, record + 4) == "cmap" then
+            cmap = u32(record + 8)
+        end
+    end
+    if not cmap then
+        return nil
+    end
+    for index = 0, u16(cmap + 2) - 1 do
+        local record = cmap + 4 + index * 8
+        local platform, encoding = u16(record), u16(record + 2)
+        local sub = cmap + u32(record + 4)
+        if (platform == 3 and encoding == 1 or platform == 0) and u16(sub) == 4 then
+            local segments = u16(sub + 6) / 2
+            local ends, starts = sub + 14, sub + 16 + segments * 2
+            local deltas, offsets = starts + segments * 2, starts + segments * 4
+            return function(letter)
+                for segment = 0, segments - 1 do
+                    if letter <= u16(ends + segment * 2) then
+                        local first = u16(starts + segment * 2)
+                        if letter < first then
+                            return false
+                        end
+                        local delta, offset = u16(deltas + segment * 2), u16(offsets + segment * 2)
+                        if offset == 0 then
+                            return (letter + delta) % 65536 ~= 0
+                        end
+                        local glyph = u16(offsets + segment * 2 + offset + (letter - first) * 2)
+                        return glyph ~= 0
+                    end
+                end
+                return false
+            end
+        end
+    end
+    return nil
+end
+local function letters(text)
+    local list = {}
+    for char in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+        local first = char:byte(1)
+        local value = #char == 1 and first or first % (2 ^ (7 - #char))
+        for index = 2, #char do
+            value = value * 64 + char:byte(index) % 64
+        end
+        list[#list + 1] = value
+    end
+    return list
+end
+for _, weight in ipairs({ "Regular", "Medium", "SemiBold" }) do
+    local has = fontLetters("Famulus/Media/Fonts/Inter-" .. weight .. ".ttf")
+    check(has ~= nil and has(65) and has(0x416) and not has(0x4E00), "the character map of Inter " .. weight .. " can be read")
+    if has then
+        local missing = {}
+        for _, code in ipairs(codes) do
+            for key, text in pairs(ns.locales[code]) do
+                for _, letter in ipairs(letters(text)) do
+                    if letter >= 32 and not has(letter) then
+                        missing[#missing + 1] = string.format("U+%04X in %s %s", letter, code, key)
+                    end
+                end
+            end
+        end
+        table.sort(missing)
+        check(#missing == 0, "Inter " .. weight .. " has every letter of every language: " .. table.concat(missing, ", ", 1, math.min(#missing, 5)))
+    end
+end
+
+-- Plural forms: each language's rule picks <key>_one, <key>_few or <key>.
+do
+    local cases = {
+        enUS = { [0] = "", [1] = "one", [2] = "", [21] = "" },
+        deDE = { [0] = "", [1] = "one", [2] = "" },
+        frFR = { [0] = "one", [1] = "one", [2] = "", [21] = "" },
+        plPL = { [0] = "", [1] = "one", [2] = "few", [4] = "few", [5] = "", [12] = "", [14] = "", [21] = "", [22] = "few", [112] = "" },
+        ukUA = { [0] = "", [1] = "one", [2] = "few", [5] = "", [11] = "", [12] = "", [21] = "one", [22] = "few", [101] = "one", [111] = "" },
+    }
+    for code, numbers in pairs(cases) do
+        local strings = ns.locales[code]
+        strings.test_count, strings.test_count_one, strings.test_count_few = "", "one", "few"
+        ns:SetLocale(code)
+        for n, form in pairs(numbers) do
+            check(ns.Plural("test_count", n) == form, code .. ": " .. n .. " takes the form \"" .. form .. "\"")
+        end
+        strings.test_count, strings.test_count_one, strings.test_count_few = nil, nil, nil
+    end
+    ns:SetLocale("plPL")
+    check(ns.Plural("ui_fellow_bosses", 3) == (ns.locales.plPL.ui_fellow_bosses_few or ns.locales.plPL.ui_fellow_bosses),
+        "a language without a form of its own for a number uses the key")
+    check(ns.Plural("no_such_key", 3) == "no_such_key", "an unknown key comes back as it is")
+    ns:SetLocale("esMX")
+    check(ns:GetLocaleCode() == "esES", "a Mexican Spanish client speaks Spanish")
+    ns:SetLocale("auto")
+end
+
+-- Upper and lower case beyond A-Z.
+check(ns.Upper("tage äöü ß łódź żółć élan œuvre їжак ґанок є") == "TAGE ÄÖÜ ß ŁÓDŹ ŻÓŁĆ ÉLAN ŒUVRE ЇЖАК ҐАНОК Є",
+    "upper case of German, Polish, French and Ukrainian letters")
+check(ns.Lower("ÄÖÜ ŁÓDŹ ŻÓŁĆ ÉLAN ŒUVRE ЇЖАК ҐАНОК Є ABC") == "äöü łódź żółć élan œuvre їжак ґанок є abc", "and lower case")
+check(ns.Capital("вчора") == "Вчора" and ns.Capital("élan") == "Élan" and ns.Capital("abc") == "Abc" and ns.Capital("") == "",
+    "the first letter in upper case")
 end
 for _, category in ipairs(ns.categories) do
     check(en["cat_" .. category] and en["cat_" .. category .. "_desc"], "category strings for " .. category)
@@ -672,8 +825,8 @@ check(tabButton("Settings").selected, "a page remembers its tab")
 check(entries[2].chosen and detail.title:GetText() == ns.L.f_tooltipAliases, "and the tab its chosen entry")
 mock.Click(entries[1])
 
--- Every page and tab renders, in both languages.
-for _, language in ipairs({ "enUS", "deDE" }) do
+-- Every page and tab renders, in every language; German last, for what follows.
+for _, language in ipairs({ "enUS", "esES", "frFR", "itIT", "plPL", "ukUA", "deDE" }) do
     ns:SetOption("general", "language", language)
     mock.Advance(0.1)
     for _, page in ipairs({ "area_aliases", "area_chronicle", "cat_general", "cat_about" }) do
@@ -3128,7 +3281,7 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
     check(#visibleRows() == 0 and not fellowEntries[3].toggle:IsShown() and not window.detail.toggle:IsShown(),
         "tidying up has a button instead of a switch")
     check(row.label:GetText() == "Remove everyone but friends and guild" and row.action:IsShown() and not row.action.disabled
-        and row.desc:GetText() == "One person is neither on your friends list nor in your guild: Mira Sturmfeder."
+        and row.desc:GetText() == "1 person is neither on your friends list nor in your guild: Mira Sturmfeder."
         and row.action.label:GetText() == "Remove", "tidy up names who would go; Tom is in the group and stays: " .. row.desc:GetText())
     mock.state.friends = { { name = "Mira Sturmfeder", guid = "Player-1-MIRA", connected = false } }
     ns:Fire("FELLOWS_CHANGED")
@@ -3148,7 +3301,7 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
     mock.state.guild = { { name = "Someone Else", guid = "Player-1-ELSE" } }
     mock.Fire("GUILD_ROSTER_UPDATE")
     row = tidy()
-    check(row.desc:GetText():find("^One person") ~= nil and not row.action.disabled and ns:CountRegisteredEvents() == eventsBefore,
+    check(row.desc:GetText():find("^1 person") ~= nil and not row.action.disabled and ns:CountRegisteredEvents() == eventsBefore,
         "once the roster is there it counts again, and stops listening")
     mock.Click(row.action)
     row = tidy()
@@ -3166,7 +3319,7 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
     mock.state.bnOffline = nil
     mock.Fire("BN_CONNECTED")
     row = tidy()
-    check(not row.action.disabled and row.desc:GetText():find("^One person") ~= nil, "once Battle.net is back, it counts again")
+    check(not row.action.disabled and row.desc:GetText():find("^1 person") ~= nil, "once Battle.net is back, it counts again")
     window.search.edit:SetText("everyone but")
     check(#visibleRows() == 1 and visibleRows()[1].item.kind == "action", "the search finds tidying up")
     window.search.edit:SetText("mira sturmfeder")
@@ -3184,7 +3337,7 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
     row = tidy()
     check(FamulusDB.fellows["Player-1-MIRA"] == nil and FamulusDB.fellows["Player-1-TOM"] ~= nil
         and FamulusDB.fellows["Player-1-NEW"] ~= nil and row.desc:GetText():find("Neu Ling", 1, true) ~= nil
-        and lastChat():find("removed 1 who are neither friends nor in your guild", 1, true),
+        and lastChat():find("removed 1 who is neither a friend nor in your guild", 1, true),
         "the second click removes whom the row counted, says how many, and leaves who came later: " .. lastChat())
     FamulusDB.fellows["Player-1-NEW"] = nil
     FamulusDB.fellows["Player-1-MIRA"] = miraData
@@ -3630,22 +3783,25 @@ end
 
 -- The samples speak the addon's language, not the client's (a German client
 -- set to English gets English samples, for screenshots of the English window),
--- and both sets name the same people.
+-- and every set names the same people.
 mock.state.locale = "deDE"
-for _, case in ipairs({ { "enUS", "Mira Stormfeather", "Badlands" }, { "deDE", "Mira Sturmfeder", "Ödland" } }) do
-    ns:SetOption("general", "language", case[1])
+for _, code in ipairs(ns:GetLocaleCodes()) do
+    ns:SetOption("general", "language", code)
+    local mira = Chronicle.SamplePeople()
+    local case = ({ enUS = { "Mira Stormfeather", "Badlands" }, deDE = { "Mira Sturmfeder", "Ödland" } })[code] or { mira }
     SlashCmdList.FAMULUS("chronicle demo")
     SlashCmdList.FAMULUS("fellows demo")
-    local zoneSeen, sameFolk = false, true
+    local zoneSeen, sameFolk = case[2] == nil, true
     for _, entry in ipairs(Chronicle.Entries()) do
-        zoneSeen = zoneSeen or (entry.demo and entry.zone == case[3])
+        zoneSeen = zoneSeen or (entry.demo and entry.zone == case[2])
         if entry.demo and entry.who then
             sameFolk = sameFolk and Fellows.Find(entry.who) ~= nil
         end
     end
-    check(ns:GetLocaleCode() == case[1] and Chronicle.Profile(case[2]) ~= nil and zoneSeen and sameFolk
-        and FamulusDB.fellows["Player-0-FAMDEMO01"].name == case[2],
-        "sample data in " .. case[1] .. " on a German client, the chronicle's companions among the fellow travellers")
+    check(ns:GetLocaleCode() == code and mira == case[1] and (code == "enUS" or mira ~= "Mira Stormfeather")
+        and Chronicle.SampleClass(mira) == "MAGE" and Chronicle.Profile(mira) ~= nil and zoneSeen and sameFolk
+        and FamulusDB.fellows["Player-0-FAMDEMO01"].name == mira,
+        "sample data in " .. code .. " on a German client, the chronicle's companions among the fellow travellers: " .. mira)
     SlashCmdList.FAMULUS("chronicle demo clear")
     SlashCmdList.FAMULUS("fellows demo clear")
 end
@@ -3889,9 +4045,9 @@ mock.Advance(0.1)
 ;(function()
     local stage = window.detail.stage
     local PAGES = { "area_chronicle", "area_fellows", "area_aliases", "cat_general" }
-    -- Every entry of every settings tab, in both languages: its picture is
+    -- Every entry of every settings tab, in every language: its picture is
     -- drawn, and nothing goes wrong on the way.
-    for _, language in ipairs({ "enUS", "deDE" }) do
+    for _, language in ipairs(ns:GetLocaleCodes()) do
         ns:SetOption("general", "language", language)
         mock.Advance(0.1)
         local drawn, missing = 0, {}
@@ -4065,9 +4221,26 @@ mock.Advance(0.1)
     set("general", "language", "auto")
     set("general", "dateFormat", "auto")
     local lang = choose("cat_general", "ui_tab_language", ns.L.g_language)
-    check(stage.current == "lang" and lang.cards[1].tagline:GetText() == "Gemeinsam durch Azeroth"
-        and lang.cards[2].tagline:GetText() == "Together through Azeroth" and lang.cards[2].shape.border.token == "accentLine",
-        "the tagline in both languages, the one shown chosen")
+    local function chosenPills()
+        local chosen, names = {}, {}
+        for _, pill in ipairs(lang.pills) do
+            names[#names + 1] = pill.label:GetText()
+            if pill.shape.border.token == "accentLine" then
+                chosen[#chosen + 1] = pill.code
+            end
+        end
+        return table.concat(chosen, " "), table.concat(names, " ")
+    end
+    local chosen, names = chosenPills()
+    check(stage.current == "lang" and #lang.pills == #ns:GetLocaleCodes() and chosen == "enUS"
+        and names == "English Deutsch Español Français Italiano Polski Українська"
+        and lang.card.tagline:GetText() == "Together through Azeroth",
+        "every language by its own name, the one shown chosen, the tagline in it: " .. names)
+    set("general", "language", "ukUA")
+    chosen = chosenPills()
+    check(chosen == "ukUA" and lang.card.tagline:GetText() == ns.locales.ukUA.ui_tagline
+        and lang.card.small:GetText() == "Українська", "chosen by hand, Ukrainian: " .. lang.card.tagline:GetText())
+    set("general", "language", "auto")
     local chatfam = choose("cat_general", "ui_tab_general", ns.L.g_chatOutput)
     local function line(index)
         local parts = chatfam.lines[index]

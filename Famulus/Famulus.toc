@@ -2,6 +2,10 @@
 ## Title: Famulus
 ## Notes: Play together: a chronicle of your shared journey, your fellow travellers and aliases for your friends.
 ## Notes-deDE: Gemeinsam spielen: eine Chronik eurer gemeinsamen Reise, deine Weggefährten und Aliase für deine Freunde.
+## Notes-esES: Juega en compañía: una crónica de tu viaje compartido, tus compañeros de viaje y alias para tus amigos.
+## Notes-esMX: Juega en compañía: una crónica de tu viaje compartido, tus compañeros de viaje y alias para tus amigos.
+## Notes-frFR: Jouer ensemble : une chronique de votre voyage commun, vos compagnons de route et des alias pour vos amis.
+## Notes-itIT: Gioca insieme: una cronaca del vostro viaggio comune, i tuoi compagni di viaggio e alias per i tuoi amici.
 ## Author: 89pleasure
 #@debug@
 ## Version: dev
@@ -21,6 +25,11 @@ Core\Init.lua
 Core\Locale.lua
 Locales\enUS.lua
 Locales\deDE.lua
+Locales\esES.lua
+Locales\frFR.lua
+Locales\itIT.lua
+Locales\plPL.lua
+Locales\ukUA.lua
 Core\Database.lua
 Core\Features.lua
 Core\ChatService.lua

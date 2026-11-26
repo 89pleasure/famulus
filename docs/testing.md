@@ -8,6 +8,7 @@ the index there says which file it is in.
 
 - `luajit tests/run.lua` loads the addon against a simulated client API (`tests/wowmock.lua`)
   and checks every feature, the window and the translations. Must be green before every commit.
+  What it checks of the languages is in docs/languages.md ("Checks").
 - The mock proves our own logic, not the client's behaviour. For that there is the self-test
   in game, see "Testing in game".
 - Secret values in the mock: `mock.SECRET` refuses indexing, arithmetic, comparison and
@@ -16,7 +17,8 @@ the index there says which file it is in.
 - Sizes in the mock: `SetWidth`/`SetHeight`/`SetSize` store their value in `mockWidth`/`mockHeight`,
   not in `width`/`height`. In the client `SetWidth` sets no field on the frame; whoever reads a
   width as a field must set it themselves (`book.width`). Before, the mock hid such a bug
-  (see "Bug 2026-11-24"). Tests read the size via `GetWidth()`.
+  (see "Bug 2026-11-24"). Tests read the size via `GetWidth()`. The width of a text is its
+  letters times 6.5, not its bytes (since 2026-11-26: Cyrillic has two bytes a letter).
 
 ## State of checks in game
 

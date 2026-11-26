@@ -291,7 +291,7 @@ picture-book look are built and checked against the mock only.
     entry `{ ability = "<id>", name = <spell name>, level }`, state in
     `FamulusCharDB.abilities`; what is already learned when switching on is only remembered.
     - **A new ability** is one row in the table plus `c_ability_<id>` and
-      `c_their_ability_<id>` in both languages (the test checks sentences and picture per row).
+      `c_their_ability_<id>` in every language (the test checks sentences and picture per row).
     - So far: `riding` (spell 33388) and `ridingFast` (33391), both with horseshoe
       (`horseshoe.tga`) and as a milestone, fallback via skill 762 from 75 or 150 points.
       The IDs come from Retail and Classic; whether Forever uses them the same way is not
@@ -348,8 +348,8 @@ picture-book look are built and checked against the mock only.
   travellers work. After a language change, write the samples again; the old ones stay in their
   language. What the client names itself stays in its language: items
   (`C_Item.GetItemNameByID`, "Schlafsack") and classes (`LOCALIZED_CLASS_NAMES_MALE`, "Magier").
-  So for a fully English picture the client must be set to English. The test checks both
-  languages on a German client. Checked against the mock only.
+  So for a fully English picture the client must be set to English. The test checks every
+  language on a German client (see "Samples" in docs/languages.md). Checked against the mock only.
 - **`companions`:** on `FRIENDLIST_UPDATE` compares the levels in the friends list with the last
   remembered state (by GUID). Shows companions under their alias.
 - **`sharing` (the owner's decision, 2026-11-19):** Famulus talks to Famulus via

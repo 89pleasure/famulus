@@ -65,7 +65,8 @@ local function Names(list)
         names[index] = Short(list[index])
     end
     if #list > MAX_NAMES then
-        names[MAX_NAMES] = L.ui_near_others:format(#list - MAX_NAMES + 1)
+        local more = #list - MAX_NAMES + 1
+        names[MAX_NAMES] = ns.Plural("ui_near_others", more):format(more)
     end
     if #names < 2 then
         return names[1] or ""

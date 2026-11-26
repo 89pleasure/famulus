@@ -66,7 +66,7 @@ local function Party(entry)
     end
     local others = tonumber(entry.others)
     if others and others > 0 then
-        return L.c_with_others:format(others)
+        return ns.Plural("c_with_others", others):format(others)
     end
     return nil
 end
@@ -688,9 +688,11 @@ function ChronicleService.TextRun(run, anonymous)
     local title, detail
     if newest.k == "death" then
         if name then
-            title = zone and L.c_their_deaths:format(name, count, zone) or L.c_their_deaths_nowhere:format(name, count)
+            title = zone and ns.Plural("c_their_deaths", count):format(name, count, zone)
+                or ns.Plural("c_their_deaths_nowhere", count):format(name, count)
         else
-            title = zone and L.c_deaths:format(count, zone) or L.c_deaths_nowhere:format(count)
+            title = zone and ns.Plural("c_deaths", count):format(count, zone)
+                or ns.Plural("c_deaths_nowhere", count):format(count)
         end
         if low then
             detail = low == high and L.c_at_level:format(low) or L.c_at_levels:format(low, high)
@@ -959,14 +961,29 @@ end
 local DEMO_ZONES = {
     enUS = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
     deDE = { "Ödland", "Uldaman", "Schlingendorntal", "Tanaris" },
+    esES = { "Tierras Inhóspitas", "Uldaman", "Vega de Tuercespina", "Tanaris" },
+    frFR = { "Terres ingrates", "Uldaman", "Vallée de Strangleronce", "Tanaris" },
+    itIT = { "Maleterre", "Uldaman", "Valle di Rovotorto", "Tanaris" },
+    plPL = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
+    ukUA = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
 }
 local DEMO_NAMES = {
     enUS = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag" },
     deDE = { tailoring = "Schneiderei", mining = "Bergbau", boss = "Archaedas", challenge = "Erkunder des Ödlands", bag = "Schlafsack" },
+    esES = { tailoring = "Sastrería", mining = "Minería", boss = "Archaedas", challenge = "Explorar las Tierras Inhóspitas", bag = "Saco de dormir" },
+    frFR = { tailoring = "Couture", mining = "Minage", boss = "Archaedas", challenge = "Explorer les Terres ingrates", bag = "Sac de couchage" },
+    itIT = { tailoring = "Sartoria", mining = "Estrazione", boss = "Archaedas", challenge = "Esplora Maleterre", bag = "Sacco a pelo" },
+    plPL = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag" },
+    ukUA = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag" },
 }
 local DEMO_PEOPLE = {
     enUS = { "Mira Stormfeather", "Borin Ironbeard", "Lysa Morningdew" },
     deDE = { "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau" },
+    esES = { "Mira Plumatormenta", "Borin Barbahierro", "Lysa Rocíoalba" },
+    frFR = { "Mira Plume-d'orage", "Borin Barbe-de-fer", "Lysa Rosée-du-matin" },
+    itIT = { "Mira Piumatempesta", "Borin Barbaferrea", "Lysa Rugiadalba" },
+    plPL = { "Mira Burzowe Pióro", "Borin Żelazna Broda", "Lysa Poranna Rosa" },
+    ukUA = { "Міра Бурепер", "Борін Залізнобород", "Ліса Ранкороса" },
 }
 
 -- The samples' three people (Mira, Borin, Lysa) in the addon's language.

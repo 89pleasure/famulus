@@ -1,6 +1,9 @@
 -- English (reference locale). Every key used anywhere must exist here.
 -- Naming: cat_<category>, f_<feature>, o_<feature>_<option>, g_<general
 -- option>, msg_<chat message>, ui_<window text>. "_desc" is the help text.
+-- A text with a number that ns.Plural picks may have forms of its own:
+-- <key>_one, <key>_few (see Core/Locale.lua); <key> is the form most
+-- numbers take, here "other".
 
 local _, ns = ...
 local L = ns:NewLocale("enUS")
@@ -20,7 +23,9 @@ L.cat_about_desc = "Version, commands and what is currently running."
 -- General options
 L.msg_book_offline = "%s's recipe book opens only while they are online and on your friends list or in your guild."
 L.msg_demo_added = "%d sample entries written into the chronicle. /fam chronicle demo clear removes them."
+L.msg_demo_added_one = "%d sample entry written into the chronicle. /fam chronicle demo clear removes it."
 L.msg_demo_cleared = "%d sample entries removed from the chronicle."
+L.msg_demo_cleared_one = "%d sample entry removed from the chronicle."
 L.g_chatOutput = "Chat feedback"
 L.g_chatOutput_desc = "Print one short line when Famulus did something for you, such as removing an alias."
 L.g_language = "Language"
@@ -46,6 +51,8 @@ L.g_charProfile = "Settings for this character only"
 L.g_charProfile_desc = "Keep a separate set of settings for this character. It starts as a copy of your account-wide settings."
 
 L.lang_auto = "Game client"
+-- The language's own name, as the language list shows it.
+L.lang_name = "English"
 
 -- Aliases
 L.f_chatAliases = "Aliases in chat"
@@ -88,6 +95,7 @@ L.menu_alias_account_remove = "Remove alias for all characters"
 L.ui_search = "Search settings"
 L.ui_search_title = "Search"
 L.ui_search_results = "%d matching settings"
+L.ui_search_results_one = "%d matching setting"
 L.ui_search_none = "No setting matches \"%s\"."
 L.ui_reset_page = "Reset"
 L.ui_reset_confirm = "Really reset?"
@@ -224,7 +232,7 @@ L.c_empty_desc = "Switch on what the chronicle should write down on the Settings
 L.c_ch_levels = "Level %d to %d"
 L.c_ch_level = "Level %d"
 L.c_ch_events = "%d events"
-L.c_ch_event = "1 event"
+L.c_ch_events_one = "%d event"
 L.c_ch_span = "%s – %s"
 L.c_when_today_morning = "This morning"
 L.c_when_today_midday = "Midday today"
@@ -283,8 +291,8 @@ L.ui_category_off = "OFF"
 -- Settings tabs: entries on the left, the chosen one in full on the right.
 L.ui_state_on = "On"
 L.ui_state_off = "Off"
-L.ui_entry_option = "%s  ·  1 option"
 L.ui_entry_options = "%s  ·  %d options"
+L.ui_entry_options_one = "%s  ·  %d option"
 L.ui_default_on = "Default: on"
 L.ui_default_off = "Default: off"
 L.ui_default_value = "Default: %s"
@@ -399,6 +407,7 @@ L.ui_near_story = "Click for your story"
 L.ui_near_places = "Where your people are"
 L.ui_near_places_note = "%d online"
 L.ui_near_places_more = "%d more zones"
+L.ui_near_places_more_one = "%d more zone"
 L.ui_near_off = "Switched off"
 L.ui_near_off_desc = "Switch on \"Who is nearby\" in Settings. Then your friends and guild members who are online stand here, the nearest first."
 L.ui_near_empty = "Nobody online"
@@ -452,13 +461,13 @@ L.ui_fellow_on = "on %s"
 L.ui_fellow_times = "%d× together"
 L.ui_fellow_hours = "%d h %d min"
 L.ui_fellow_minutes = "%d min"
-L.ui_fellow_boss = "1 boss"
 L.ui_fellow_bosses = "%d bosses"
+L.ui_fellow_bosses_one = "%d boss"
 L.ui_fellow_level_class = "Level %d %s"
 L.ui_fellow_tidy_title = "Tidy up"
 L.ui_fellow_tidy = "Remove everyone but friends and guild"
-L.ui_fellow_tidy_one = "One person is neither on your friends list nor in your guild: %s."
 L.ui_fellow_tidy_some = "%d people are neither on your friends list nor in your guild: %s."
+L.ui_fellow_tidy_some_one = "%d person is neither on your friends list nor in your guild: %s."
 L.ui_fellow_tidy_more = "%s and %d more"
 L.ui_fellow_tidy_none = "All your fellow travellers are on your friends list or in your guild."
 L.ui_fellow_tidy_wait_friends = "Your friends list is still loading."
@@ -495,11 +504,15 @@ L.ui_run_most = "Most time together"
 L.ui_run_most_note = "this week"
 L.msg_fellow_forgotten = "%s removed from your fellow travellers."
 L.msg_fellow_tidied = "Fellow travellers tidied up: removed %d who are neither friends nor in your guild."
+L.msg_fellow_tidied_one = "Fellow travellers tidied up: removed %d who is neither a friend nor in your guild."
 L.msg_fellow_demo_added = "Added %d sample fellow travellers. /fam fellows demo clear removes them."
+L.msg_fellow_demo_added_one = "Added %d sample fellow traveller. /fam fellows demo clear removes them."
 L.msg_fellow_demo_cleared = "Removed %d sample fellow travellers."
+L.msg_fellow_demo_cleared_one = "Removed %d sample fellow traveller."
 L.c_with = "with %s"
 L.c_and = "%s and %s"
 L.c_with_others = "with %d others"
+L.c_with_others_one = "with %d other"
 
 -- About page
 L.about_version = "Version"

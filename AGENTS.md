@@ -4,7 +4,7 @@ Famulus is an addon for **World of Warcraft: Forever** that improves, eases and 
 together among friends and in the community. This file records what the owner wants, which rules
 hold for all work and what you need to know about the Forever client. The knowledge about the
 individual areas is in `docs/` (see "Knowledge in `docs/`").
-As of: 2026-11-25, version 0.1.0.
+As of: 2026-11-26, version 0.1.0.
 
 ## Requirements from the owner
 
@@ -29,7 +29,8 @@ itself to, the following:
      Do not build them back in without asking.
 3. **Analyse the weaknesses of the three role models and learn from them.**
 4. **Optimised for performance.**
-5. **Multilingual.** English and German are enough for now.
+5. **Multilingual.** English, German, French, Spanish, Italian, Polish and Ukrainian (since
+   2026-11-26; before, English and German).
 
 **Publishing:** Since 2026-11-24 a first alpha is to appear on CurseForge, with automatic upload
 (the owner's decision, see "Publishing on CurseForge"; before that, as of 2026-11-16: later, time
@@ -40,7 +41,8 @@ assumptions about your own addon collection, behaviour next to other addons in m
 Way of working: The owner writes German and wants replies in German. **Everything that lives in
 the repo is English** (the owner's requirement, 2026-11-25): code, comments, commit messages, pull
 requests, the README, this file and `docs/` (until 2026-11-25 this file and `docs/` were German).
-German stays only where it is content: the deDE strings, the German website texts. The README has
+Other languages stay only where they are content: the strings in `Locales/`, the German website
+texts. The README has
 been English and kept short since 2026-11-24 at the owner's request (before that German and
 detailed); details belong here or in `docs/`, not there. What Famulus learned from OneForAll,
 FlareUI and Polestar is no longer in it ("since we are now in a quite different place
@@ -57,6 +59,7 @@ in `docs/`; read the matching file before you work in that area, and only then.
 | [docs/chronicle.md](docs/chronicle.md) | Chronicle: book with rail, chapter as a play session (route), picture book, weighting and layout of the cards, pictures, `ownJourney` (zones, professions, abilities, special items), sample entries, `companions`, live feed (`liveFeed`), class and name, what the client offers | you work on the chronicle, the book (`UI.Book`) or the live feed |
 | [docs/sharing.md](docs/sharing.md) | Sharing between players: protocol, guild, relaying, statistics, queue and throttling, catching up in rounds, analysis "Many users" | you work on addon messages or `Sharing.lua` |
 | [docs/fellows.md](docs/fellows.md) | Fellow travellers: data, counting, friends and guild only, cleanup, secret values, window (overview, "Your story", profile card), groups, bond, daily log, sample data, nearby (friends and guild in your zone) | you work on the fellow travellers |
+| [docs/languages.md](docs/languages.md) | Languages: which ones and how they are chosen, clients without a language of their own, plural forms (`ns.Plural`), upper and lower case, fonts, how the translations are written, samples per language | you add or change texts, add a language or work on `Core/Locale.lua` |
 | [docs/aliases.md](docs/aliases.md) | Aliases: data, key, `chatAliases`, `tooltipAliases`, `aliasMenu`, other addons and `guildyAliases`, alias for a Battle.net account | you work on the aliases or on support for other addons |
 | [docs/testing.md](docs/testing.md) | Tests against the mock, state of checks in game (self-tests, bug 2026-11-24), testing in game (paths, `/fam test`, `/fam dev`, Lua errors, BugSack) | you test in game, hunt a bug from the game, work on the mock or want to know what is already confirmed in game |
 | [docs/branding.md](docs/branding.md) | Name, logo, tagline, rejected names and logos | you work on the name, logo or tagline |
@@ -68,7 +71,7 @@ in `docs/`; read the matching file before you work in that area, and only then.
 - **Loaded automatically:** A `CLAUDE.md` in a subfolder imports the matching file
   (`@…/docs/<file>.md`); Claude Code loads it as soon as a file there is read:
   `Famulus/Modules/Chronicle/` (chronicle, sharing), `Famulus/Modules/Fellows/`,
-  `Famulus/Modules/Aliases/`, `Famulus/UI/` (window; it also names which UI files belong to the
+  `Famulus/Modules/Aliases/`, `Famulus/Locales/` (languages), `Famulus/UI/` (window; it also names which UI files belong to the
   chronicle and to the fellow travellers), `tests/` (testing), `website/`, `.github/` (release).
   If you work outside these folders (for example `Core/`, `tools/`), read up yourself. A new
   `CLAUDE.md` under `Famulus/` is kept out of the zip by `.pkgmeta`, `website/CLAUDE.md` is removed
@@ -129,7 +132,7 @@ Researched facts (as of 2026-11-16, the game is patched often):
 | Megabytes of code and data at every login (Polestar: 70–250 MB according to issues) | The window is built on first opening; no libraries |
 | Replaced Blizzard functions, overwritten methods of other addons | Only `hooksecurefunc`; replace nothing, write nothing into other tables |
 | ~90 options, inconsistent defaults, a chat message per action | Few features, one rule for defaults, one summary line per action |
-| FlareUI without German; Polestar languages as extra addons | enUS and deDE built in and checked for parity by the test |
+| FlareUI without German; Polestar languages as extra addons | Seven languages built in and checked for parity by the test |
 
 ## Chronicle and fellow travellers
 
@@ -213,11 +216,13 @@ These points are design decisions; `tests/run.lua` checks most of them.
   `FamulusMinimapButton`.
 - **Cost while idle**, fixed by the test: loading creates two frames; after login with defaults
   no game event is registered, no `OnUpdate`, no timer.
-- **Texts:** Every key in `Locales/enUS.lua` **and** `Locales/deDE.lua`, with the same
-  placeholders. Scheme: `area_<area>`, `cat_<category>`, `f_<feature>`, `o_<feature>_<option>`,
+- **Texts:** Every key of `Locales/enUS.lua` in **every** other locale file, with the same
+  placeholders in the same order. Scheme: `area_<area>`, `cat_<category>`, `f_<feature>`, `o_<feature>_<option>`,
   `g_<general>`, `msg_<chat>`, `c_<chronicle>`, `ui_<window>` (tabs: `ui_tab_<id>`); help text
   ends in `_desc`. Read texts only at run time via `ns.L`, never cache them at load time, or
-  switching the language breaks.
+  switching the language breaks. A text with a number goes through `ns.Plural(key, n)` (Polish and
+  Ukrainian have three forms); upper and lower case only via `ns.Upper`, `ns.Lower`, `ns.Capital`
+  (`string.upper` changes only A–Z). See `docs/languages.md`.
 - **Settings:** Only what differs from the default is saved (`ns:SetOption`).
 - **Window:** Rows are built automatically from features and their `options`
   (`type = "toggle"` or `"select"`; addon options also `"swatch"`); in a settings tab each feature

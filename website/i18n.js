@@ -148,7 +148,7 @@ window.FAMULUS_I18N = {
     hero_cta2: 'Download',
     fact_version: 'Version 0.1.0-alpha.2',
     fact_game: 'WoW Forever 1.60',
-    fact_lang: 'Deutsch und Englisch',
+    fact_lang: 'Sieben Sprachen',
     fact_libs: 'Keine Bibliotheken',
     tagline: 'Gemeinsam durch Azeroth',
 

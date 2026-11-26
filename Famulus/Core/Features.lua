@@ -371,13 +371,17 @@ SlashCmdList.FAMULUS = function(input)
             ns:Print(Feed.IsMoving() and L.msg_feed_moving or L.msg_feed_fixed)
         end
     elseif command == "chronicle demo" then
-        ns:Print(L.msg_demo_added:format(ns.ChronicleService.Demo()))
+        local count = ns.ChronicleService.Demo()
+        ns:Print(ns.Plural("msg_demo_added", count):format(count))
     elseif command == "chronicle demo clear" then
-        ns:Print(L.msg_demo_cleared:format(ns.ChronicleService.ClearDemo()))
+        local count = ns.ChronicleService.ClearDemo()
+        ns:Print(ns.Plural("msg_demo_cleared", count):format(count))
     elseif command == "fellows demo" then
-        ns:Print(L.msg_fellow_demo_added:format(ns.FellowService.Demo()))
+        local count = ns.FellowService.Demo()
+        ns:Print(ns.Plural("msg_fellow_demo_added", count):format(count))
     elseif command == "fellows demo clear" then
-        ns:Print(L.msg_fellow_demo_cleared:format(ns.FellowService.ClearDemo()))
+        local count = ns.FellowService.ClearDemo()
+        ns:Print(ns.Plural("msg_fellow_demo_cleared", count):format(count))
     else
         ns:ToggleOptions()
     end

@@ -470,7 +470,7 @@ function UI.FellowOverview(parent, cardParent, cardWidth)
         list:ClearAllPoints()
         list:SetPoint("TOPLEFT", self, "TOPLEFT", 0, -y)
         for _, head in ipairs(self.heads) do
-            head:SetText(string.upper(L["ui_fellow_col_" .. head.key]))
+            head:SetText(ns.Upper(L["ui_fellow_col_" .. head.key]))
             head:ClearAllPoints()
             head:SetPoint("TOPLEFT", list, "TOPLEFT", head.key == "name" and 16 or width * COLUMNS[head.key], -12)
         end
@@ -488,7 +488,7 @@ function UI.FellowOverview(parent, cardParent, cardWidth)
         end
         self.more:SetShown(model.more > 0)
         if model.more > 0 then
-            self.more:SetText(L.ui_fellow_more:format(model.more) .. "  ·  " .. L.ui_fellow_more_desc)
+            self.more:SetText(ns.Plural("ui_fellow_more", model.more):format(model.more) .. "  ·  " .. L.ui_fellow_more_desc)
             self.more:ClearAllPoints()
             self.more:SetPoint("TOPLEFT", list, "TOPLEFT", 16, -(rowY + 10))
             rowY = rowY + 36

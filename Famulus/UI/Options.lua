@@ -30,7 +30,6 @@ local RAIL_W = CONTENT_W - BOOK_W - RAIL_GAP
 local NAV_ROW = 34
 local BLOCK_GAP, BLOCK_TITLE = 22, 24
 
-local LANGUAGE_NAMES = { enUS = "English", deDE = "Deutsch" }
 local WINDOW_SCALES = { 80, 90, 100, 110, 120, 130, 140 }
 local AREA_ICONS = { aliases = "tag", chronicle = "flag", fellows = "people" }
 -- Icons of the addon's own settings in their entries (features: feature.icon).
@@ -522,7 +521,7 @@ local function SettingsTabs()
         GeneralItem("language", "select", function()
             local list = { { value = "auto", text = L.lang_auto } }
             for _, code in ipairs(ns:GetLocaleCodes()) do
-                list[#list + 1] = { value = code, text = LANGUAGE_NAMES[code] or code }
+                list[#list + 1] = { value = code, text = ns.locales[code].lang_name or code }
             end
             return list
         end),
@@ -890,7 +889,7 @@ local function TitleChapter(chapter, now)
         parts[#parts + 1] = L.c_ch_level:format(low)
     end
     local count = #chapter.entries
-    parts[#parts + 1] = count == 1 and L.c_ch_event or L.c_ch_events:format(count)
+    parts[#parts + 1] = ns.Plural("c_ch_events", count):format(count)
     chapter.sub = table.concat(parts, "  ·  ")
     chapter.entries = nil
 end
@@ -1243,10 +1242,8 @@ local function FellowDesc(guid, person)
     parts[#parts + 1] = L.ui_fellow_times:format(tonumber(person.times) or 1)
     parts[#parts + 1] = Duration(Fellows.Seconds(guid, person, now))
     local bosses = tonumber(person.bosses) or 0
-    if bosses == 1 then
-        parts[#parts + 1] = L.ui_fellow_boss
-    elseif bosses > 1 then
-        parts[#parts + 1] = L.ui_fellow_bosses:format(bosses)
+    if bosses > 0 then
+        parts[#parts + 1] = ns.Plural("ui_fellow_bosses", bosses):format(bosses)
     end
     -- Where it began, unless that was the same day.
     local first = tonumber(person.first)
@@ -1310,9 +1307,7 @@ local function ByTime(a, b, now)
 end
 
 -- "Kennengelernt ...": a sentence fragment as the start of a line.
-local function Capital(text)
-    return (string.gsub(text, "^%l", string.upper))
-end
+local Capital = ns.Capital
 
 -- One person as the overview shows them; all texts made here.
 local function FellowPerson(guid, person, now)
@@ -1326,10 +1321,8 @@ local function FellowPerson(guid, person, now)
     local timeText = Duration(seconds) or L.ui_fellow_minutes:format(0)
 
     local stats = { timeText, L.ui_fellow_times_short:format(times) }
-    if bosses == 1 then
-        stats[#stats + 1] = L.ui_fellow_boss
-    elseif bosses > 1 then
-        stats[#stats + 1] = L.ui_fellow_bosses:format(bosses)
+    if bosses > 0 then
+        stats[#stats + 1] = ns.Plural("ui_fellow_bosses", bosses):format(bosses)
     end
     local last
     if together then
@@ -1470,7 +1463,7 @@ local function FellowStory(guid)
             events[#events + 1] = {
                 kind = "bond",
                 big = true,
-                title = L.ui_fellow_tier_up:format(string.lower(L["ui_bond_" .. tier])),
+                title = L.ui_fellow_tier_up:format(ns.Lower(L["ui_bond_" .. tier])),
                 t = to,
                 from = to,
             }
@@ -1479,7 +1472,7 @@ local function FellowStory(guid)
     for _, event in ipairs(events) do
         if event.kind == "fellow" then
             local unnamed = event.unnamed
-            local bosses = unnamed == 1 and L.ui_fellow_boss or unnamed > 1 and L.ui_fellow_bosses:format(unnamed) or nil
+            local bosses = unnamed > 0 and ns.Plural("ui_fellow_bosses", unnamed):format(unnamed) or nil
             local span = event.timed and Span(event.from, event.t) or nil
             event.title = event.zone and L.ui_run_title:format(event.zone) or L.ui_fellow_together
             event.detail = span and bosses and (span .. "  ·  " .. bosses) or span or bosses
@@ -1769,13 +1762,11 @@ local function RunEvent(each, data)
         Duration(finish - run.f) or L.ui_fellow_minutes:format(0),
     }
     if run.raid and run.n then
-        parts[#parts + 1] = L.ui_run_people:format(run.n)
+        parts[#parts + 1] = ns.Plural("ui_run_people", run.n):format(run.n)
     end
     local bosses = tonumber(run.b) or 0
-    if bosses == 1 then
-        parts[#parts + 1] = L.ui_fellow_boss
-    elseif bosses > 1 then
-        parts[#parts + 1] = L.ui_fellow_bosses:format(bosses)
+    if bosses > 0 then
+        parts[#parts + 1] = ns.Plural("ui_fellow_bosses", bosses):format(bosses)
     end
     -- A raid keeps only the number of people; a party says who, and who
     -- came later or left earlier.
@@ -1799,7 +1790,7 @@ local function RunEvent(each, data)
         for index, guid in ipairs(ByTimeTogether(each.again.guids, data)) do
             names[index] = ShortName(data.byGuid[guid])
         end
-        foot = L.ui_run_again:format(JoinNames(names), each.again.count)
+        foot = ns.Plural("ui_run_again", each.again.count):format(JoinNames(names), each.again.count)
     end
     return {
         kind = "fellow",
@@ -1841,7 +1832,7 @@ local function TierEvent(moment, data)
     return {
         kind = "bond",
         big = moment.tier >= 3, -- like the badge: from Trusted on in the accent
-        title = L.ui_run_tier:format(ShortName(person), string.lower(L["ui_bond_" .. moment.tier])),
+        title = L.ui_run_tier:format(ShortName(person), ns.Lower(L["ui_bond_" .. moment.tier])),
         detail = L.ui_run_tier_detail:format(math.floor(ns.FellowService.TIERS[moment.tier] / 3600)),
         when = ns.FormatTime(moment.t),
         crest = CrestOf(moment.guid, person, data.now),
@@ -2145,7 +2136,7 @@ do
         if #similar > 0 then
             sections[#sections + 1] = {
                 title = L.ui_near_section_similar,
-                note = tostring(#similar) .. "  ·  " .. L.ui_near_similar_note:format(NEAR_SIMILAR),
+                note = tostring(#similar) .. "  ·  " .. ns.Plural("ui_near_similar_note", NEAR_SIMILAR):format(NEAR_SIMILAR),
                 people = similar,
             }
         end
@@ -2156,7 +2147,7 @@ do
                 for index = 1, NEAR_ROWS do
                     shown[index] = others[index]
                 end
-                more = L.ui_near_others:format(#others - NEAR_ROWS)
+                more = ns.Plural("ui_near_others", #others - NEAR_ROWS):format(#others - NEAR_ROWS)
             end
             sections[#sections + 1] = { title = L.ui_near_section_others, note = tostring(#others), people = shown, more = more }
         end
@@ -2217,9 +2208,9 @@ do
             {
                 kind = "places",
                 title = L.ui_near_places,
-                note = L.ui_near_places_note:format(#data.people),
+                note = ns.Plural("ui_near_places_note", #data.people):format(#data.people),
                 places = places,
-                more = #zones > NEAR_PLACES and L.ui_near_places_more:format(#zones - NEAR_PLACES) or nil,
+                more = #zones > NEAR_PLACES and ns.Plural("ui_near_places_more", #zones - NEAR_PLACES):format(#zones - NEAR_PLACES) or nil,
             },
         }
     end
@@ -2397,7 +2388,7 @@ local function TidyClicked(shown)
     end
     local removed = ns.FellowService.RemoveOutsiders(check, tidyShown or {})
     if removed > 0 then
-        ns:Notify(L.msg_fellow_tidied:format(removed))
+        ns:Notify(ns.Plural("msg_fellow_tidied", removed):format(removed))
     end
     RefreshState(false)
 end
@@ -2444,12 +2435,10 @@ local function TidyItem()
             end
             local list = table.concat(names, ", ")
             if #outsiders > TIDY_NAMES then
-                list = L.ui_fellow_tidy_more:format(list, #outsiders - TIDY_NAMES)
+                local more = #outsiders - TIDY_NAMES
+                list = ns.Plural("ui_fellow_tidy_more", more):format(list, more)
             end
-            if #outsiders == 1 then
-                return L.ui_fellow_tidy_one:format(list)
-            end
-            return L.ui_fellow_tidy_some:format(#outsiders, list)
+            return ns.Plural("ui_fellow_tidy_some", #outsiders):format(#outsiders, list)
         end,
         -- The search looks for the deed, not for the names it lists.
         find = function()
@@ -2577,7 +2566,7 @@ end
 -- Search covers every tab of every page; hits are grouped by where they
 -- live, one card per tab.
 local function SearchBlocks(query)
-    query = string.lower(query)
+    query = ns.Lower(query)
     local blocks, total = {}, 0
     for _, id in ipairs(pageOrder) do
         local page = pages[id]
@@ -2589,7 +2578,7 @@ local function SearchBlocks(query)
                 if #page.tabs > 1 then
                     where = pageTitle .. "  ·  " .. tab.label()
                 end
-                local context = string.lower(where)
+                local context = ns.Lower(where)
                 local hits = {}
                 -- A tab that shows only part of a long list searches all of it.
                 for _, block in ipairs(tab.search and tab.search() or tab.blocks()) do
@@ -2597,7 +2586,7 @@ local function SearchBlocks(query)
                         if item.kind ~= "info" and item.kind ~= "aliasEdit" then
                             -- An item whose help text changes (a list of names) says what to search in.
                             local text = item.find and item.find() or (item.label() .. " " .. item.desc())
-                            local haystack = string.lower(text) .. " " .. context
+                            local haystack = ns.Lower(text) .. " " .. context
                             if string.find(haystack, query, 1, true) then
                                 hits[#hits + 1] = item
                             end
@@ -2897,10 +2886,8 @@ do
         end
         local state = item.get() and L.ui_state_on or L.ui_state_off
         local count = #entry.options
-        if count == 1 then
-            return L.ui_entry_option:format(state), "textMuted"
-        elseif count > 1 then
-            return L.ui_entry_options:format(state, count), "textMuted"
+        if count > 0 then
+            return ns.Plural("ui_entry_options", count):format(state, count), "textMuted"
         end
         return state, "textMuted"
     end
@@ -3594,7 +3581,7 @@ function Render()
         blocks, total = SearchBlocks(searchText)
         window.area.name:SetText(L.ui_search_title)
         if total > 0 then
-            window.area.desc:SetText(L.ui_search_results:format(total))
+            window.area.desc:SetText(ns.Plural("ui_search_results", total):format(total))
         else
             window.area.desc:SetText(L.ui_search_none:format(searchText))
         end

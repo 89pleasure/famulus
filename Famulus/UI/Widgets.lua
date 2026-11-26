@@ -1083,7 +1083,7 @@ end
 -- The first letter of a name (UTF-8 aware), upper case.
 function UI.Initial(text)
     local first = string.match(text or "", "^[%z\1-\127\194-\244][\128-\191]*") or "?"
-    return string.upper(first)
+    return ns.Upper(first)
 end
 
 local CLASS_ICONS = "Interface\\TargetingFrame\\UI-Classes-Circles"
