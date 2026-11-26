@@ -391,8 +391,9 @@ local function OnCheckError(message)
     return Describe(message)
 end
 
--- Runs every check and stores the report. Returns the report.
-function ns:RunSelfTest()
+-- Runs every check and stores the report. Returns the report. quiet: no
+-- lines in the chat (the bug report runs it for its own text).
+function ns:RunSelfTest(quiet)
     report = {
         schema = REPORT_SCHEMA,
         time = date and date("%Y-%m-%d %H:%M:%S") or "?",
@@ -415,6 +416,9 @@ function ns:RunSelfTest()
     report = nil
     if ns.global then
         ns.global.selfTest = result
+    end
+    if quiet then
+        return result
     end
 
     local summary = result.summary
@@ -535,6 +539,114 @@ function ns:SetDevMode(enabled)
     end
     SetDevEvents(enabled)
     ns:Print(enabled and L.msg_dev_on or L.msg_dev_off)
+end
+
+---------------------------------------------------------------------------
+-- Bug report: what helps to find a bug, as plain text the player copies into
+-- an issue ("/fam report", About › "Bug report"; UI/Report.lua shows it).
+-- In English, for whoever reads the issue. No names: the log and the trace
+-- hold tags only, and nothing else here names anybody.
+---------------------------------------------------------------------------
+
+local REPORT_CHECKS = 40 -- checks that are not ok, at most
+local REPORT_TRACE = 80 -- the newest lines of the trace
+
+-- An edit box takes "|" as the start of a code, so the text has none.
+local function Plain(text)
+    return (string.gsub(tostring(text), "|", "/"))
+end
+
+function ns:BugReport()
+    local result = self:RunSelfTest(true)
+    local lines = {}
+    local function Line(format, ...)
+        lines[#lines + 1] = Plain(select("#", ...) > 0 and string.format(format, ...) or format)
+    end
+
+    local client = result.client or {}
+    Line("Famulus %s, client %s (build %s, %s), interface %s", tostring(ns.version), client.version, client.build,
+        client.date, client.toc)
+    Line("Made %s, client language %s, Famulus language %s", result.time, client.locale, tostring(ns:GetLocaleCode()))
+    Line("Data version %s, %s profile, developer mode %s", tostring(ns.global and ns.global.dataVersion),
+        ns:UsesCharacterProfile() and "character" or "account", self:IsDevMode() and "on" or "off")
+
+    -- What runs, what is off, and what cannot run here.
+    local on, off, other = {}, {}, {}
+    for _, feature in ipairs(ns.featureList) do
+        local state = result.features[feature.id] or {}
+        if feature.failed then
+            other[#other + 1] = feature.id .. " (failed)"
+        elseif not state.available then
+            other[#other + 1] = feature.id .. (feature:IsShown() and " (not available)" or " (addon not loaded)")
+        elseif feature.enabled then
+            on[#on + 1] = feature.id
+        elseif ns:GetOption(feature.id, "enabled") then
+            off[#off + 1] = feature.id .. " (area off)"
+        else
+            off[#off + 1] = feature.id
+        end
+    end
+    local areasOff = {}
+    for _, area in ipairs(ns.areas or {}) do
+        if not ns:IsCategoryEnabled(area.id) then
+            areasOff[#areasOff + 1] = area.id
+        end
+    end
+    Line("")
+    Line("On: %s", #on > 0 and table.concat(on, ", ") or "nothing")
+    Line("Off: %s", #off > 0 and table.concat(off, ", ") or "nothing")
+    if #other > 0 then
+        Line("Cannot run: %s", table.concat(other, ", "))
+    end
+    if #areasOff > 0 then
+        Line("Areas switched off: %s", table.concat(areasOff, ", "))
+    end
+    local idle = result.idle or {}
+    Line("Running: %s of %s features, %s game events, %s KB memory", tostring(idle.activeFeatures),
+        tostring(idle.totalFeatures), tostring(idle.events), tostring(idle.memoryKB or "?"))
+    local sharing = ns.features.sharing
+    if sharing and sharing.enabled and sharing.Status then
+        Line("Sharing: %d linked, %d friends and guild members online, %d messages waiting", sharing.Status())
+    end
+
+    local summary = result.summary
+    Line("")
+    Line("Self-test: %d ok, %d warnings, %d failed", summary.ok, summary.warn, summary.fail)
+    -- Failures first, then warnings.
+    local listed = 0
+    for _, status in ipairs({ "fail", "warn" }) do
+        for _, check in ipairs(result.checks) do
+            if check.status == status and listed < REPORT_CHECKS then
+                listed = listed + 1
+                Line("[%s] %s / %s: %s", status, tostring(check.group), tostring(check.name), tostring(check.detail))
+            end
+        end
+    end
+    if summary.fail + summary.warn > listed then
+        Line("... and %d more", summary.fail + summary.warn - listed)
+    end
+
+    if not self:IsDevMode() then
+        Line("")
+        Line("Developer mode is off: no log, no trace.")
+        return table.concat(lines, "\n")
+    end
+    local log = ns.global.devLog or {}
+    Line("")
+    Line("Developer log (%d):", #log)
+    for _, entry in ipairs(log) do
+        Line("%s  %s  %s", tostring(entry.time), tostring(entry.kind), tostring(entry.text))
+    end
+    local trace = ns.global.devTrace or {}
+    local first = math.max(1, #trace - REPORT_TRACE + 1)
+    Line("")
+    Line("Trace (the last %d of %d lines):", #trace - first + 1, #trace)
+    for i = first, #trace do
+        local entry = trace[i]
+        local times = (tonumber(entry.n) or 1) > 1 and ("  (" .. entry.n .. " times)") or ""
+        Line("%s  %s  %s%s", tostring(entry.time), tostring(entry.kind), tostring(entry.text), times)
+    end
+    return table.concat(lines, "\n")
 end
 
 ns:On("LOGIN", function()

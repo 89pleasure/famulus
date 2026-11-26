@@ -341,6 +341,9 @@ SlashCmdList.FAMULUS = function(input)
         ns:RunSelfTest()
     elseif command == "dev" then
         ns:SetDevMode(not ns:IsDevMode())
+    elseif command == "report" then
+        -- What helps to find a bug, ready to copy into an issue (UI/Report.lua).
+        ns:ShowBugReport()
     elseif command == "feed" or command == "feed reset" or command == "feed test" then
         local Feed = ns.UI and ns.UI.Feed
         if not Feed then

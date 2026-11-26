@@ -62,5 +62,6 @@ UI\Fellows.lua
 UI\Feed.lua
 UI\Previews.lua
 UI\Welcome.lua
+UI\Report.lua
 UI\Options.lua
 UI\MinimapButton.lua

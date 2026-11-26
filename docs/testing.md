@@ -146,6 +146,22 @@ at `D:\Games\World of Warcraft\_forever_`, the repo at `E:\Develop\wow\famulus`;
   `LUA_WARNING` are collected in `FamulusDB.devLog`. Since 2026-11-25 sharing also writes every
   step of the exchange into `FamulusDB.devTrace` (see "Trace" under "Sharing"). Off by default;
   then it costs nothing. Switching it off clears log and trace.
+- **Bug report (since 2026-11-26, issue #47; checked against the mock only, not yet in game):**
+  `/fam report` or About › "Copy bug report" runs the self-test quietly (`ns:RunSelfTest(true)`)
+  and shows `ns:BugReport()` (`Core/SelfTest.lua`) in a small window of its own (`UI/Report.lua`,
+  strata `DIALOG`, built on first use, no global name): a multi-line edit box with the text
+  selected, so the player copies it with Ctrl+C (`CopyToClipboard` is protected). Typing changes
+  nothing, a click selects it all again, Escape closes it. The text, in English for whoever
+  reads the issue: version, client, languages, data version, profile, developer mode; which
+  features run, are off or cannot run, areas switched off; idle cost; with sharing on its counts
+  (`sharing.Status()`: linked, online, waiting messages); the self-test (failures first, at most
+  40 checks that are not ok); in developer mode the whole `devLog` and the newest 80 lines of the
+  trace. No names (the log and trace hold tags only), and no "|", which an edit box takes as the
+  start of a code. Without developer mode the window's hint asks to turn it on and repeat the
+  problem. The GitHub issue form `.github/ISSUE_TEMPLATE/bug_report.yml` has a field for the
+  text. Open: the sentence on CurseForge and the website (issues #49 and #50). Players without a
+  GitHub account can paste it into a comment on CurseForge. Not seen in game: whether Ctrl+C
+  copies from the edit box in Forever and how a long text scrolls there.
 - At startup the game sets all files in the addon folder to mode 777, and through the symlink
   also in the repo. That is why `git config core.fileMode false` is set locally here; set it again
   after a fresh clone, otherwise all files show up as changed.

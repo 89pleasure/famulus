@@ -1018,6 +1018,20 @@ function sharing:OnDisable()
     nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
 end
 
+-- For the bug report (Core/SelfTest.lua): counts only, never names. How many
+-- are linked, how many friends and guild members are online, and how many
+-- messages wait in the queue.
+function sharing.Status()
+    local function Count(map)
+        local n = 0
+        for _ in pairs(map) do
+            n = n + 1
+        end
+        return n
+    end
+    return Count(linked), Count(online), Waiting(nowLane) + Waiting(laterLane)
+end
+
 -- For the tests.
 sharing.EncodeEntry = EncodeEntry
 sharing.Key = Key
