@@ -62,25 +62,24 @@ local ROUTE_GAP, ROUTE_H, ROUTE_PAD = 8, 22, 9 -- the route below a heading
 local ROUTE_ARROW = 10 -- the arrow between two zones of the route
 local ROUTE_STEP = 6 -- between a plate and an arrow
 
--- Per kind: the picture's icon (none: the number), its colours, and a
--- small icon of the kind (mark) for a card's content to show. Used by the
--- cards' contents and the live feed (UI/Feed.lua) as UI.BookPictures.
+-- Per kind: the picture's icon (none: the number) and its colours. Used by
+-- the cards' contents and the live feed (UI/Feed.lua) as UI.BookPictures.
 local PICTURES = {
-    level = { fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "sparkle" },
-    achievement = { icon = "star", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "star" },
-    zone = { icon = "peaks", fill = "control", border = "controlBorder", ink = "textDim", mark = "peaks" },
-    profession = { icon = "hammer", fill = "control", border = "controlBorder", ink = "textDim", mark = "hammer" },
-    skill = { fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "hammer" },
+    level = { fill = "accentDeep", border = "accentLine", ink = "accent2" },
+    achievement = { icon = "star", fill = "accentDeep", border = "accentLine", ink = "accent2" },
+    zone = { icon = "peaks", fill = "control", border = "controlBorder", ink = "textDim" },
+    profession = { icon = "hammer", fill = "control", border = "controlBorder", ink = "textDim" },
+    skill = { fill = "accentDeep", border = "accentLine", ink = "accent2" },
     -- An item or an ability may name its own picture (story.icon).
-    item = { icon = "chest", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "chest" },
-    ability = { icon = "sparkle", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "sparkle" },
-    death = { icon = "skull", fill = "deathGround", border = "deathLine", ink = "deathInk", mark = "skull", title = "deathInk" },
-    boss = { icon = "swords", fill = "bossGround", border = "bossLine", ink = "bossInk", mark = "swords" },
+    item = { icon = "chest", fill = "accentDeep", border = "accentLine", ink = "accent2" },
+    ability = { icon = "sparkle", fill = "accentDeep", border = "accentLine", ink = "accent2" },
+    death = { icon = "skull", fill = "deathGround", border = "deathLine", ink = "deathInk", title = "deathInk" },
+    boss = { icon = "swords", fill = "bossGround", border = "bossLine", ink = "bossInk" },
     -- A friend's reaction, in the live feed; story.icon names it ("cheer").
-    reaction = { icon = "cheer", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "cheer" },
+    reaction = { icon = "cheer", fill = "accentDeep", border = "accentLine", ink = "accent2" },
     -- The story of a fellow traveller: time together, and the bond's milestones.
-    fellow = { icon = "people", fill = "control", border = "controlBorder", ink = "textDim", mark = "people" },
-    bond = { icon = "people", fill = "accentDeep", border = "accentLine", ink = "accent2", mark = "people" },
+    fellow = { icon = "people", fill = "control", border = "controlBorder", ink = "textDim" },
+    bond = { icon = "people", fill = "accentDeep", border = "accentLine", ink = "accent2" },
 }
 
 ---------------------------------------------------------------------------

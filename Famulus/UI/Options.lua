@@ -821,7 +821,8 @@ local function CardReaction(event, run)
 end
 
 -- A run of entries as a card of the chronicle's book: the look of the
--- newest, one sentence for all; time and place in the foot (UI/ChronicleCard.lua).
+-- newest, one sentence for all; the time in the strip, the place in the
+-- foot (UI/ChronicleCard.lua).
 local function ChronicleRun(run)
     local Chronicle = ns.ChronicleService
     local newest = run[1]
@@ -839,9 +840,10 @@ local function ChronicleRun(run)
         event.title, event.detail = Chronicle.TextRun(told, true)
         event.count = #run
     end
-    local when = #run > 1 and L.c_ch_span:format(ns.FormatTime(run[#run].t), event.when) or event.when
-    event.when = nil
-    event.footer = zone and (when .. "  ·  " .. zone) or when
+    if #run > 1 then
+        event.when = L.c_ch_span:format(ns.FormatTime(run[#run].t), event.when)
+    end
+    event.place = zone
     local special = event.kind == "ability" and Chronicle.Ability(newest.ability)
         or event.kind == "item" and Chronicle.Item(newest.item) or nil
     event.weight = special and special.big and "high" or WEIGHT[event.kind] or "medium"

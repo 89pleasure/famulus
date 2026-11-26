@@ -1,7 +1,6 @@
 -- What a card of the chronicle's book holds (UI/Book.lua): a sunken strip
--- at the top with whose event it is and the icon of its kind, below it
--- the picture, and beside that the text and the time and place in the
--- foot. The card is as high as
+-- at the top with whose event it is and when, below it the picture, and
+-- beside that the text and the place in the foot. The card is as high as
 -- that needs. The book sets the room inside the card's edge (UI.BookPad),
 -- the same on every side, below the strip too; the event's weight sets the
 -- picture and the headline. The text keeps the same distance from the picture.
@@ -11,8 +10,9 @@
 --       weight = "low" or "medium" or "high", -- see WEIGHTS
 --       kind, texture, icon, number, count, item, spell, -- the picture (UI.SetBookPicture)
 --       chip = { text = "Companion", class = "MAGE" or nil },
+--       when = "21:14" or "20:02 – 21:14", -- at the strip's right
 --       title = "Fallen", detail = "at level 13" or nil,
---       footer = "21:14  ·  Duskwood",
+--       place = "Duskwood" or nil, -- the foot; without a place and a reaction, none
 --       reaction = {               -- or nil: a button at the foot's right, as
 --           icon = "cheer",        -- on the live feed's cards (UI.ReactionButton);
 --           lit = true,            -- in the accent once given or received,
@@ -28,7 +28,7 @@ local UI = ns.UI
 local LINE, LINE_GAP = 14, 4 -- the foot, and its distance from the text
 local STRIP = 28 -- the sunken strip at the top that names whose event it is
 local CHIP = 18 -- the class icon in it
-local KIND = 13 -- the icon of the event's kind, on the strip's right
+local TIME_GAP = 8 -- between the name and the time at the strip's right
 local TEXT_GAP = 12 -- between the picture and the text, whatever its size
 local REACT, REACT_ICON = 26, 16 -- the reaction's button at the foot's right, and its icon
 local FOOT_GAP = 10 -- between the foot's text and the reaction
@@ -60,16 +60,17 @@ local function Build(part)
     part.chipClass:SetPoint("LEFT", strip, "LEFT", UI.BookPad, 0)
     part.chipText = UI.Text(strip, 11, "textMuted")
     part.chipText:SetWordWrap(false)
-    -- And on the right, the icon of its kind.
-    part.kindIcon = UI.Icon(strip, "sparkle", KIND, "accent")
-    part.kindIcon:SetPoint("RIGHT", strip, "RIGHT", -UI.BookPad, 0)
+    -- And on the right, when: as wide as its text, the name ends before it.
+    part.time = UI.Text(strip, 11, "textMuted")
+    part.time:SetWordWrap(false)
+    part.time:SetPoint("RIGHT", strip, "RIGHT", -UI.BookPad, 0)
     part.title = UI.Text(part, 13, "text", "medium")
     part.title:SetSpacing(1)
     part.detail = UI.Text(part, 12, "textMuted")
     part.detail:SetSpacing(2)
     part.detail:SetPoint("TOPLEFT", part.title, "BOTTOMLEFT", 0, -4)
-    part.footer = UI.Text(part, 11, "textMuted")
-    part.footer:SetWordWrap(false)
+    part.place = UI.Text(part, 11, "textMuted")
+    part.place:SetWordWrap(false)
     -- The reaction at the foot's right: the same button as on the live
     -- feed's cards. On a friend's card a click reacts or takes it back; on
     -- the player's own it shows on the mouse who reacted. Only the button
@@ -130,15 +131,16 @@ function UI.ChronicleCard(part, story, width)
     local textWidth = width - pad * 2 - size - TEXT_GAP
     UI.SetBookPicture(part, story, size, weight.number)
 
-    -- The strip: whose event it is, and the icon of its kind.
+    -- The strip: whose event it is, and when. The name runs up to the time
+    -- and is cut off there; the time is never.
     local chip = story.chip or {}
     local classShown = UI.SetClass(part.chipClass, chip.class)
     local nameLeft = pad + (classShown and CHIP + 6 or 0)
+    part.time:SetText(story.when or "")
     part.chipText:ClearAllPoints()
+    part.chipText:SetPoint("RIGHT", part.time, "LEFT", -TIME_GAP, 0)
     part.chipText:SetPoint("LEFT", part.strip, "LEFT", nameLeft, 0)
-    part.chipText:SetWidth(math.max(1, width - nameLeft - pad - KIND - 8))
     part.chipText:SetText(chip.text or "")
-    part.kindIcon:SetTexture(UI.media[story.icon or look.mark] or UI.media[look.mark])
 
     -- The text, as high as it is.
     part.title:SetWidth(textWidth)
@@ -166,17 +168,18 @@ function UI.ChronicleCard(part, story, width)
         reactionWidth = FOOT_GAP + react:GetWidth()
     end
 
-    -- The foot: when and where.
-    part.footer:SetShown(story.footer ~= nil)
-    part.footer:SetWidth(math.max(1, textWidth - reactionWidth))
-    part.footer:SetText(story.footer or "")
+    -- The foot: where, beside the reaction. Without either there is none.
+    part.place:SetShown(story.place ~= nil)
+    part.place:SetWidth(math.max(1, textWidth - reactionWidth))
+    part.place:SetText(story.place or "")
+    local foot = story.place ~= nil or reaction ~= nil
 
     -- The strip above, then picture and text side by side: both begin at
     -- the same height, and the foot ends with the taller of the two.
     -- Below the strip the room is the book's at the sides: the strip's line
     -- takes a pixel of it like the frame's hairline does.
     local body = STRIP + pad - 1
-    local blockHeight = textHeight + LINE_GAP + LINE
+    local blockHeight = textHeight + (foot and LINE_GAP + LINE or 0)
     local bodyHeight = math.max(size, blockHeight)
     local height = math.floor(body + bodyHeight + pad + 0.5)
     local left = pad + size + TEXT_GAP
@@ -184,8 +187,8 @@ function UI.ChronicleCard(part, story, width)
     part.picture:SetPoint("TOPLEFT", part, "TOPLEFT", pad, -body)
     part.title:ClearAllPoints()
     part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -body)
-    part.footer:ClearAllPoints()
-    part.footer:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(body + bodyHeight - LINE))
+    part.place:ClearAllPoints()
+    part.place:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(body + bodyHeight - LINE))
     -- The button at the card's right edge, on the foot's line.
     react:ClearAllPoints()
     react:SetPoint("RIGHT", part, "TOPRIGHT", -pad, -(body + bodyHeight - LINE / 2))

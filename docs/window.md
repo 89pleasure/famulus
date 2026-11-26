@@ -116,8 +116,9 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   24-hour switch (CVar `timeMgrUseMilitaryTime`, read by `GameTime_GetFormattedTime` in
   `Blizzard_FrameXMLUtil/GameTimeUtil.lua` on the `forever` branch), but its default in Forever is
   unknown; following it could switch players who never touched it to 12 hours. Checked against the
-  mock only, not yet in game; open: whether "7:05 PM – 9:40 PM" fits the card's foot beside a long
-  zone name (the foot is cut off with "...", the chapter's lines make room by themselves).
+  mock only, not yet in game; open: how much of a long name "7:05 PM – 9:40 PM" leaves in the
+  strip of a bundled card in the chronicle (the name is cut off with "...", the time never; the
+  chapter's lines make room by themselves).
 - **Colours (reworked 2026-11-18, evening):** The owner found the first version (neutral
   greys, accent only as a fill) too arbitrary. Role models for colour concept, accents and effects:
   Polestar Guide and Mastercraft, without copying them. On an HTML mockup the owner chose the concept
@@ -206,8 +207,9 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     three per line, an icon in front, `option.icon`, lit while on) below the group's heading
     (`o_<feature>_<group>`) with "8 of 9 on"; pointing at a chip explains it in the line below
     them (`o_<feature>_<group>_desc` while nothing is pointed at). So far only the live feed's
-    kinds of events form a group ("kinds"; the icons of the chronicle's cards, except flag for
-    level-ups and horseshoe for abilities, so that they differ; reactions show `cheer`).
+    kinds of events form a group ("kinds"; the kinds' own drawings, `ICONS` in `LiveFeed.lua`:
+    skull, swords, star, chest and so on, flag for level-ups and horseshoe for abilities, so that
+    they differ; reactions show `cheer`).
   - **Options of a switched-off feature** stay in full but greyed out, with "Switch on "…" to
     change its options." The folding of option rows (`compact`), their dot and recessed ground,
     `FeatureBlocks` and the accent mark on feature cards are gone.
