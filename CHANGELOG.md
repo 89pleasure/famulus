@@ -3,6 +3,39 @@
 Every release has a section `## <version>` (the tag without the `v`, for example `## 0.2.0-beta.1`).
 That section becomes the changelog of the file on CurseForge.
 
+## 0.1.0-alpha.6
+
+### Welcome
+- The first time you open the window, a welcome page shows what Famulus does. One button switches
+  on recording your journey, following and sharing with your friends, remembering your fellow
+  travellers and "Who is nearby"; "What exactly?" lists them and what goes to friends and guild.
+  "Choose myself" opens the chronicle's settings, "Later" just closes the page. If you already use
+  any of these, you won't see it; "About" > "Welcome" shows it again.
+
+### Chronicle
+- React to a friend's event right from the live feed: a button on their card gives the reaction
+  and closes the card a second later. Take a reaction back in the chronicle.
+- The live feed's cards show a line along their foot that runs out while they stay.
+- An empty chronicle that is already recording says so instead of asking you to switch it on.
+
+### Fellow travellers
+- "Who is nearby" (off by default): a card when you arrive where friends or guild members are, or
+  when one of them arrives in your zone or comes online there. None in instances or in flight, and
+  in cities and inns only if you want. A new tab "Nearby" shows who is here, who is of a similar
+  level and everyone else online, with level, zone, bond and a button to whisper. It reads your
+  friends list, Battle.net friends and guild roster; nothing is sent, and the others need no
+  Famulus.
+
+### Window
+- Famulus now speaks French, Spanish and Italian, next to English and German. Spanish also on
+  Mexican Spanish clients.
+- Settings has a new tab "Language & time" with the language, the time format (24-hour or 12-hour
+  clock with AM and PM) and the date format (the language's order or one of four fixed orders).
+  Resetting "General" no longer resets the language.
+- Every entry of the settings shows a live picture of what it does, in your colour scheme and
+  language.
+- English no longer says "1 bosses" or "with 1 others".
+
 ## 0.1.0-alpha.5
 
 ### Chronicle
