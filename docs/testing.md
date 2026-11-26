@@ -86,6 +86,10 @@ the index there says which file it is in.
   every `FamulusCharDB` carry `dataVersion` (see "Saved data" in AGENTS.md). In game: after the
   first login with this version both files have `dataVersion = 1` and `FamulusDB.journal` is gone
   (`/dump FamulusDB.dataVersion, FamulusCharDB.dataVersion`).
+- **Class abilities in the chronicle (2026-11-27, checked against the mock only, not yet in
+  game):** see "Class abilities" under "Chronicle". In game: `/fam test`, group `chronicle`,
+  names every spell and item ID the client does not know; a druid, paladin or warlock learning
+  one of them shows whether the entry and its name come.
 - **Welcome page (2026-11-26, checked against the mock only, not yet in game):** see "Welcome
   page" in `docs/window.md`. To see it again in game: "About" › "Show welcome page"; as a new
   player would, with `/run FamulusDB.welcome = nil` and the five main features off.

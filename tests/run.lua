@@ -1584,12 +1584,28 @@ do -- professions
 end
 do -- abilities, recognised by their spell
     local count = #Chronicle.Entries()
+    local CLASSES = { WARRIOR = true, PALADIN = true, HUNTER = true, ROGUE = true, PRIEST = true,
+        SHAMAN = true, MAGE = true, WARLOCK = true, DRUID = true }
+    local ids = {}
     for _, ability in ipairs(Chronicle.abilities) do
-        check(type(ability.id) == "string" and type(ability.spell) == "number"
-            and ns.L["c_ability_" .. ability.id] ~= "c_ability_" .. ability.id
-            and ns.L["c_their_ability_" .. ability.id]:find("%s", 1, true) ~= nil
+        local also = ability.also == nil or type(ability.also) == "table"
+        for _, spell in ipairs(ability.also or {}) do
+            also = also and type(spell) == "number"
+        end
+        -- Its own sentences, or none at all: then the game names the spell.
+        local own = ns.L["c_ability_" .. ability.id] ~= "c_ability_" .. ability.id
+        local their = ns.L["c_their_ability_" .. ability.id] ~= "c_their_ability_" .. ability.id
+        local sentences
+        if ability.sentences then
+            sentences = own and their and ns.L["c_their_ability_" .. ability.id]:find("%s", 1, true) ~= nil
+        else
+            sentences = not own and not their
+        end
+        check(type(ability.id) == "string" and not ids[ability.id] and type(ability.spell) == "number" and also
+            and (ability.class == nil or CLASSES[ability.class]) and sentences
             and (ability.picture == nil or ns.UI.media[ability.picture] ~= nil),
-            "ability " .. tostring(ability.id) .. " has a spell, its sentences and a picture that exists")
+            "ability " .. tostring(ability.id) .. " has a spell, a class there is, sentences where it says so and a picture that exists")
+        ids[ability.id] = true
     end
     mock.Fire("SPELLS_CHANGED")
     check(#Chronicle.Entries() == count, "a character on foot has nothing to tell")
@@ -1605,20 +1621,52 @@ do -- abilities, recognised by their spell
     mock.Fire("SKILL_LINES_CHANGED")
     check(#Chronicle.Entries() == count + 2 and Chronicle.Text(Chronicle.Entries()[count + 2]) == "Learned to ride fast",
         "without the spell, the skill line tells")
+    -- A class's ability: only that class asks for it, and the game names it.
+    local spellNames = { [5487] = "Bear Form", [24858] = "Moonkin Form", [13819] = "Summon Warhorse",
+        [1279399] = "Summon Forsaken Warhorse" }
+    C_Spell = { GetSpellName = function(id) return spellNames[id] end }
+    mock.state.spells = { [5487] = true }
+    mock.Fire("SPELLS_CHANGED")
+    check(#Chronicle.Entries() == count + 2 and not Chronicle.HasAbility("bearForm"), "a warrior never asks for a druid's form")
+    mock.state.playerClass = "DRUID"
+    mock.Fire("SPELLS_CHANGED")
+    local bear = Chronicle.Entries()[count + 3]
+    check(#Chronicle.Entries() == count + 3 and bear.ability == "bearForm" and bear.name == "Bear Form"
+        and Chronicle.Text(bear) == "Learned Bear Form" and select(2, Chronicle.Text(bear)) == "at level 13"
+        and Chronicle.Text({ k = "ability", ability = "moonkinForm", name = "Mondkingestalt", who = "Jaina Proudmoore" })
+            == "Jaina Proudmoore learns Moonkin Form",
+        "a druid's form is written down when it is learned, named as this client names the spell")
+    spellNames[5487] = nil
+    check(Chronicle.Text(bear) == "Learned Bear Form" and Chronicle.Text({ k = "ability", ability = "bearForm" }) == "Learned an ability",
+        "where this client cannot name it, the name the entry brought stands")
+    spellNames[5487] = "Bear Form"
+    -- Another race's version of the same ability counts as it.
+    mock.state.playerClass = "PALADIN"
+    mock.state.spells = { [1279399] = true }
+    mock.Fire("SPELLS_CHANGED")
+    local steed = Chronicle.Entries()[count + 4]
+    check(#Chronicle.Entries() == count + 4 and steed.ability == "warhorse" and steed.name == "Summon Forsaken Warhorse",
+        "a spell another race learns instead counts as the same ability")
     check(Chronicle.Text({ k = "ability", ability = "riding", who = "Jaina Proudmoore" }) == "Jaina Proudmoore learns to ride"
         and Chronicle.Text({ k = "ability", ability = "fromLater", name = "Swimming", who = "Jaina Proudmoore" }) == "Jaina Proudmoore learns Swimming",
         "a companion's ability reads as a sentence, even one this version does not know")
     -- A character that can do it already when the chronicle begins tells nothing.
+    mock.state.playerClass = "DRUID"
+    mock.state.spells = { [5487] = true }
     enable("ownJourney", false)
     FamulusCharDB.abilities = nil
     enable("ownJourney")
     mock.Fire("SPELLS_CHANGED")
-    check(#Chronicle.Entries() == count + 2 and FamulusCharDB.abilities.riding and FamulusCharDB.abilities.ridingFast,
+    check(#Chronicle.Entries() == count + 4 and FamulusCharDB.abilities.riding and FamulusCharDB.abilities.ridingFast
+        and FamulusCharDB.abilities.bearForm and not FamulusCharDB.abilities.catForm,
         "abilities from before the chronicle are only taken note of")
     for index = #Chronicle.Entries(), count + 1, -1 do
         Chronicle.Entries()[index] = nil
     end
+    C_Spell = nil
     mock.state.riding = nil
+    mock.state.spells = nil
+    mock.state.playerClass = nil
 end
 do -- special items, recognised by their ID
     local count = #Chronicle.Entries()
@@ -1645,6 +1693,15 @@ do -- special items, recognised by their ID
     enable("ownJourney")
     mock.Fire("BAG_UPDATE_DELAYED")
     check(#Chronicle.Entries() == count + 1 and FamulusCharDB.items[211527], "items from before the chronicle are only taken note of")
+    -- A class's item: only that class asks for it.
+    mock.state.owned = { [211527] = 1, [5176] = 1 }
+    mock.Fire("BAG_UPDATE_DELAYED")
+    check(#Chronicle.Entries() == count + 1 and not Chronicle.HasItem(5176), "a warrior never asks for a shaman's totem")
+    mock.state.playerClass = "SHAMAN"
+    mock.Fire("BAG_UPDATE_DELAYED")
+    check(#Chronicle.Entries() == count + 2 and Chronicle.Entries()[count + 2].item == 5176, "a shaman's totem is written down")
+    Chronicle.Entries()[count + 2] = nil
+    mock.state.playerClass = nil
     Chronicle.Entries()[count + 1] = nil
     mock.state.owned = nil
 end
@@ -4691,6 +4748,23 @@ check(result.idle.events == eventsBefore and ns:CountRegisteredEvents() == event
 check(#mock.frames - framesBeforeTest == 2, "the test creates one hidden probe frame, with a Cooldown in it")
 SlashCmdList.FAMULUS("test")
 check(#mock.frames - framesBeforeTest == 2, "and reuses them on the next run")
+check(findCheck(result, "chronicle", "ability spells").status == "warn" and findCheck(result, "chronicle", "special items").status == "warn",
+    "without the API to look them up, the chronicle's IDs stay unchecked, and the report says so")
+do -- whether the client knows the chronicle's spells and items
+    local unknownSpell, unknownItem = 2651, 5178
+    C_Spell = { GetSpellName = function(id) return id ~= unknownSpell and "Spell" or nil end }
+    C_Item.GetItemInfoInstant = function(id) return id ~= unknownItem and id or nil end
+    result = ns:RunSelfTest(true)
+    local spells, items = findCheck(result, "chronicle", "ability spells"), findCheck(result, "chronicle", "special items")
+    check(spells.status == "warn" and spells.detail:find("2651 (elunesGrace)", 1, true) ~= nil and spells.detail:find("^1 of %d+ unknown")
+        and items.status == "warn" and items.detail:find("5178", 1, true) ~= nil,
+        "the report names the spells and items this client does not know: " .. spells.detail .. "; " .. items.detail)
+    unknownSpell, unknownItem = nil, nil
+    result = ns:RunSelfTest(true)
+    check(findCheck(result, "chronicle", "ability spells").status == "ok" and findCheck(result, "chronicle", "special items").status == "ok",
+        "and is content when it knows them all: " .. findCheck(result, "chronicle", "ability spells").detail)
+    C_Spell, C_Item.GetItemInfoInstant = nil, nil
+end
 
 -- A feature that needs API the client lacks is a failure in the report.
 local needy = ns:NewFeature({ id = "fastLootProbe", category = "chronicle", requires = { "C_Nope.Missing" } })
