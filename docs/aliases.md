@@ -76,10 +76,15 @@ Custom names for other players, modelled on the addon CustomNames
   (the owner's decision, 2026-11-18). Submitted on 2026-11-25 at the owner's request as
   `svengabr/Guildy#2`, after a rebase onto Guildy 1.16.0 (tests 858/0).
   Until it is merged, the integration still works only with the fork.
-  The Guildy installed in the game folder is a clone of the branch (remotes `fork` and `upstream`).
-  Keeping it current: there `git fetch upstream && git rebase upstream/main`, tests (`luajit
+  The Guildy installed in the game folder was a clone of the branch (remotes `fork` and
+  `upstream`); on 2026-11-26 it was replaced by the regular Guildy 1.16.0 (no `.git`, probably the
+  CurseForge app's update), so the aliases are missing in Guildy until the branch is cloned there
+  again (then switch off Guildy's updates in the app).
+  Keeping the clone current: there `git fetch upstream && git rebase upstream/main`, tests (`luajit
   tests/run.lua`), then `git push --force-with-lease fork name-formatter-api`. With the regular
-  Guildy the feature is simply missing. Confirmed in game: aliases
+  Guildy the feature is simply missing; since 2026-11-26 the self-test counts that as ok ("addon
+  Guildy lacks …; the feature is not offered") instead of a failure, and the bug report says
+  "Guildy without the API it needs", because for players this is the usual case. Confirmed in game: aliases
   appear in Guildy. An earlier test via `/run` with a formatter of its own showed nothing;
   the cause was not cleared up, the integration itself works.
 - **Alias for a Battle.net account (the owner's request, 2026-11-23, modelled on

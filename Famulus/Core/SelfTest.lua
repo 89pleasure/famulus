@@ -161,6 +161,12 @@ local function CheckFeatures()
         }
         if not feature:IsShown() then
             Add("feature", feature.id, "ok", "addon " .. feature.addon .. " not loaded")
+        elseif #missing > 0 and feature.addon then
+            -- The other addon is there, in a version without what the feature
+            -- needs (Guildy without the name API of the fork): the feature is
+            -- simply not offered, nothing in Famulus is broken.
+            Add("feature", feature.id, "ok", "addon " .. feature.addon .. " lacks " .. table.concat(missing, ", ")
+                .. "; the feature is not offered")
         elseif #missing > 0 then
             Add("feature", feature.id, "fail", "missing API: " .. table.concat(missing, ", "))
         elseif feature.failed then
@@ -577,7 +583,9 @@ function ns:BugReport()
         if feature.failed then
             other[#other + 1] = feature.id .. " (failed)"
         elseif not state.available then
-            other[#other + 1] = feature.id .. (feature:IsShown() and " (not available)" or " (addon not loaded)")
+            local why = not feature:IsShown() and "addon not loaded"
+                or feature.addon and (feature.addon .. " without the API it needs") or "not available"
+            other[#other + 1] = feature.id .. " (" .. why .. ")"
         elseif feature.enabled then
             on[#on + 1] = feature.id
         elseif ns:GetOption(feature.id, "enabled") then
