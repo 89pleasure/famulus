@@ -529,6 +529,12 @@ local function FeedSeconds()
     return feature.SECONDS[feature:Get("duration")] or feature.SECONDS.normal
 end
 
+-- "Visible for 7 seconds", in the form the number wants.
+local function SecondsText()
+    local seconds = FeedSeconds()
+    return ns.Plural("ui_preview_feed_seconds", seconds):format(seconds)
+end
+
 -- Two of the feed's cards at the top of the night sky, and a caption.
 local function FeedCards(scene, width, height)
     World(scene, width, height)
@@ -589,7 +595,7 @@ SCENES.feed = {
             LayFeed(scene, { FeedStory("ability", true) }, not on, on and L.ui_preview_feed_own_on or L.ui_preview_feed_own_off)
         else
             LayFeed(scene, { FeedStory("level"), FeedStory("boss") }, not feature.enabled,
-                feature.enabled and L.ui_preview_feed_seconds:format(FeedSeconds()) or L.ui_preview_feed_off)
+                feature.enabled and SecondsText() or L.ui_preview_feed_off)
         end
     end,
 }
@@ -706,7 +712,7 @@ SCENES.nearby = {
         else
             local came = guild and NearbyPerson(2, "guild") or NearbyPerson(3, "battlenet")
             LayFeed(scene, { Story(here, zone, false), Story({ came }, zone, true) }, not on,
-                on and L.ui_preview_feed_seconds:format(FeedSeconds()) or L.ui_preview_feed_off)
+                on and SecondsText() or L.ui_preview_feed_off)
         end
     end,
 }
@@ -994,25 +1000,31 @@ SCENES.areas = {
     end,
 }
 
--- Language: the window's tagline in each language, the one shown chosen.
-local LANGUAGES = { { "deDE", "Deutsch" }, { "enUS", "English" } }
+-- Language: every language Famulus speaks, the one shown chosen, and the
+-- window's tagline in it. The names stand in rows, as many as fit.
+local PILL_H, PILL_GAP = 24, 6
 
 SCENES.lang = {
     Build = function(scene, width, height)
         Ground(scene, width, height)
-        scene.cards = {}
-        for index = 1, #LANGUAGES do
-            local card = Panel(scene, "card", "cardBorder", 10)
-            card:SetSize(220, 74)
-            card:SetPoint("TOPLEFT", width / 2 - 230 + (index - 1) * 240, -40)
-            card.small = UI.Text(card, 11, "textMuted", "medium")
-            card.small:SetPoint("TOPLEFT", 14, -14)
-            card.tagline = UI.Text(card, 15, "text", "semibold")
-            card.tagline:SetPoint("TOPLEFT", card.small, "BOTTOMLEFT", 0, -8)
-            card.tagline:SetWidth(192)
-            card.tagline:SetWordWrap(false)
-            scene.cards[index] = card
+        scene.pills = {}
+        for index, code in ipairs(ns:GetLocaleCodes()) do
+            local pill = Panel(scene, "card", "cardBorder", PILL_H / 2)
+            pill:SetHeight(PILL_H)
+            pill.code = code
+            pill.label = Centered(pill, 11, "textMuted", "medium")
+            pill.label:SetPoint("CENTER")
+            scene.pills[index] = pill
         end
+        local card = Panel(scene, "card", "accentLine", 10)
+        card:SetSize(300, 66)
+        card.small = UI.Text(card, 11, "accent", "medium")
+        card.small:SetPoint("TOPLEFT", 14, -12)
+        card.tagline = UI.Text(card, 15, "text", "semibold")
+        card.tagline:SetPoint("TOPLEFT", card.small, "BOTTOMLEFT", 0, -8)
+        card.tagline:SetWidth(272)
+        card.tagline:SetWordWrap(false)
+        scene.card = card
         scene.caption = Caption(scene)
         scene.caption:SetPoint("BOTTOM", 0, 14)
     end,
@@ -1020,15 +1032,39 @@ SCENES.lang = {
     Fill = function(scene)
         local shown = ns:GetLocaleCode()
         local auto = ns:GetOption("general", "language") == "auto"
-        for index, language in ipairs(LANGUAGES) do
-            local card, code = scene.cards[index], language[1]
-            local chosen = code == shown
-            local strings = ns.locales[code]
-            card.small:SetText(chosen and auto and (language[2] .. "  ·  " .. L.ui_preview_lang_auto) or language[2])
-            UI.Ink(card.small, chosen and "accent" or "textMuted")
-            card.tagline:SetText(strings and strings.ui_tagline or L.ui_tagline)
-            card.shape.border:SetColor(chosen and "accentLine" or "cardBorder")
+        -- Measured here, not when built: a font answers only once it is loaded.
+        local rows, row = {}, { width = 0 }
+        for _, pill in ipairs(scene.pills) do
+            local chosen = pill.code == shown
+            pill.label:SetText(ns.locales[pill.code].lang_name or pill.code)
+            UI.Ink(pill.label, chosen and "accent" or "textMuted")
+            pill.shape.border:SetColor(chosen and "accentLine" or "cardBorder")
+            pill.width = math.floor(TextWidth(pill.label) + 20.5)
+            pill:SetWidth(pill.width)
+            local wider = row.width + (#row > 0 and PILL_GAP or 0) + pill.width
+            if #row > 0 and wider > scene.width - 2 * PAD then
+                rows[#rows + 1] = row
+                row, wider = { width = 0 }, pill.width
+            end
+            row[#row + 1], row.width = pill, wider
         end
+        rows[#rows + 1] = row
+        local y = 18
+        for _, each in ipairs(rows) do
+            local x = math.floor((scene.width - each.width) / 2)
+            for _, pill in ipairs(each) do
+                pill:ClearAllPoints()
+                pill:SetPoint("TOPLEFT", x, -y)
+                x = x + pill.width + PILL_GAP
+            end
+            y = y + PILL_H + PILL_GAP
+        end
+        local strings = ns.locales[shown]
+        local name = strings.lang_name or shown
+        scene.card:ClearAllPoints()
+        scene.card:SetPoint("TOP", 0, -(y + 8))
+        scene.card.small:SetText(auto and (name .. "  ·  " .. L.ui_preview_lang_auto) or name)
+        scene.card.tagline:SetText(strings.ui_tagline or L.ui_tagline)
         scene.caption:Set(L.ui_preview_lang_now)
     end,
 }

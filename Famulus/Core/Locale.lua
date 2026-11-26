@@ -1,6 +1,13 @@
 -- Localization. Every string has an identifier key; enUS is the reference and
 -- the fallback. ns.L is a thin proxy, so the language can be switched at
 -- runtime without a reload (the UI re-reads its strings on LOCALE_CHANGED).
+--
+--   ns.L.key              the text in the addon's language
+--   ns.Plural(key, n)     the text for the number n: <key>_one, <key>_few or
+--                         <key>, as the language's grammar wants
+--   ns.PluralForm(n, code) which form that is: "one", "few" or nil
+--   ns.Upper, ns.Lower    upper and lower case beyond A-Z (é, ł, і, ж ...)
+--   ns.Capital(text)      the first letter in upper case
 
 local _, ns = ...
 
@@ -36,14 +43,23 @@ ns.L = setmetatable({}, {
     end,
 })
 
+-- Clients whose language another translation covers.
+local SAME_AS = { enGB = "enUS", esMX = "esES" }
+
+-- Languages that ship but are not offered yet. In game (2026-11-26) Polish
+-- letters showed only in part and Ukrainian ones not at all. Their files stay
+-- and are tested; the language option does not list them, and a saved
+-- choice of one follows the client. See docs/languages.md.
+local NOT_OFFERED = { plPL = true, ukUA = true }
+
 -- code: a locale code such as "deDE", or "auto" to follow the game client.
+-- Polish (plPL) and Ukrainian (ukUA) have no game client: only the language
+-- option chooses them, once it offers them.
 function ns:SetLocale(code)
-    if code == nil or code == "auto" then
+    if code == nil or code == "auto" or NOT_OFFERED[code] then
         code = GetLocale()
     end
-    if code == "enGB" then
-        code = "enUS"
-    end
+    code = SAME_AS[code] or code
     if not locales[code] then
         code = BASE
     end
@@ -61,17 +77,23 @@ function ns:GetLocaleCode()
     return activeCode or BASE
 end
 
--- Locale codes that ship with the addon, reference locale first.
-function ns:GetLocaleCodes()
+-- Locale codes the language option offers, reference locale first; with
+-- `all`, also those that ship but are not offered yet.
+function ns:GetLocaleCodes(all)
     local codes = {}
     for code in pairs(locales) do
-        if code ~= BASE then
+        if code ~= BASE and (all or not NOT_OFFERED[code]) then
             codes[#codes + 1] = code
         end
     end
     table.sort(codes)
     table.insert(codes, 1, BASE)
     return codes
+end
+
+-- Whether the language option offers this locale code.
+function ns:IsLocaleOffered(code)
+    return locales[code] ~= nil and not NOT_OFFERED[code]
 end
 
 -- Times and dates, as the player chose under Settings › General: the clock
@@ -108,4 +130,135 @@ end
 -- written, with their leading zeros.
 function ns.FormatDate(year, month, day, pattern)
     return (string.gsub(pattern or ns.DatePattern(), "{(%a)}", { d = day, m = month, y = year }))
+end
+
+---------------------------------------------------------------------------
+-- Numbers: the form of a text a number takes
+---------------------------------------------------------------------------
+
+-- Which form a whole number takes in a language (the CLDR plural rules):
+-- "one" and "few" have keys of their own (<key>_one, <key>_few); for any
+-- other form (English "other", Polish "many" ...) the text is <key> itself.
+local function OneIsOne(n)
+    return n == 1 and "one" or nil
+end
+
+local function Few(n)
+    local ten, hundred = n % 10, n % 100
+    return ten >= 2 and ten <= 4 and (hundred < 12 or hundred > 14)
+end
+
+local PLURAL_RULES = {
+    fr = function(n)
+        return n <= 1 and "one" or nil -- 0 and 1
+    end,
+    pl = function(n)
+        return n == 1 and "one" or Few(n) and "few" or nil
+    end,
+    uk = function(n)
+        if n % 10 == 1 and n % 100 ~= 11 then
+            return "one" -- 1, 21, 31 ...
+        end
+        return Few(n) and "few" or nil -- 2-4, 22-24 ...
+    end,
+}
+
+-- The form the number n takes in a language (code: a locale code, else the
+-- one spoken now): "one", "few" or nil for the key itself.
+function ns.PluralForm(n, code)
+    n = math.abs(math.floor(tonumber(n) or 0))
+    return (PLURAL_RULES[string.sub(code or activeCode or BASE, 1, 2)] or OneIsOne)(n)
+end
+
+-- The text of a key for the number n, still to be formatted:
+-- ns.Plural("c_ch_events", count):format(count). An untranslated key
+-- follows English and its rule.
+function ns.Plural(key, n)
+    local strings, code = active, activeCode
+    if not strings or strings[key] == nil then
+        strings, code = locales[BASE], BASE
+    end
+    local form = ns.PluralForm(n, code)
+    local text = form and strings[key .. "_" .. form]
+    if text == nil then
+        text = strings[key]
+    end
+    if text == nil then
+        return key
+    end
+    return text
+end
+
+---------------------------------------------------------------------------
+-- Upper and lower case
+---------------------------------------------------------------------------
+
+-- string.upper and string.lower change only A-Z. These also change the
+-- letters of Latin-1, Latin Extended-A and Cyrillic that the languages of
+-- Famulus need (é, ł, ż, і, ї, ж ...); each is two bytes in UTF-8. The
+-- tables are made on first use.
+local UPPER, LOWER
+local TWO_BYTES = "[\195-\211][\128-\191]" -- U+00C0 to U+04FF
+
+local function Char(code)
+    return string.char(0xC0 + math.floor(code / 64), 0x80 + code % 64)
+end
+
+local function MakeCases()
+    UPPER, LOWER = {}, {}
+    local function Pair(upper, lower)
+        local u, l = Char(upper), Char(lower)
+        UPPER[l], LOWER[u] = u, l
+    end
+    -- Letters side by side, upper case first: from, from + 1, ... to.
+    local function Pairs(from, to)
+        for code = from, to - 1, 2 do
+            Pair(code, code + 1)
+        end
+    end
+    for code = 0xC0, 0xDE do -- À-Þ, not ×
+        if code ~= 0xD7 then
+            Pair(code, code + 0x20)
+        end
+    end
+    Pairs(0x100, 0x12F) -- Ā-į
+    Pairs(0x132, 0x137) -- Ĳ-ķ (İ and ı are no pair)
+    Pairs(0x139, 0x148) -- Ĺ-ň (Ł ł, Ń ń)
+    Pairs(0x14A, 0x177) -- Ŋ-ŷ (Ś ś, Œ œ)
+    Pair(0x178, 0xFF) -- Ÿ ÿ
+    Pairs(0x179, 0x17E) -- Ź-ž
+    for code = 0x400, 0x40F do -- Ѐ-Џ (Є, І, Ї ...)
+        Pair(code, code + 0x50)
+    end
+    for code = 0x410, 0x42F do -- А-Я
+        Pair(code, code + 0x20)
+    end
+    Pairs(0x460, 0x481) -- Ѡ-ҁ
+    Pairs(0x48A, 0x4BF) -- Ҋ-ҿ (Ґ ґ)
+    Pair(0x4C0, 0x4CF) -- Ӏ ӏ
+    Pairs(0x4C1, 0x4CE) -- Ӂ-ӎ
+    Pairs(0x4D0, 0x4FF) -- Ӑ-ӿ
+end
+
+function ns.Upper(text)
+    if not UPPER then
+        MakeCases()
+    end
+    return (string.gsub(string.upper(text), TWO_BYTES, UPPER))
+end
+
+function ns.Lower(text)
+    if not LOWER then
+        MakeCases()
+    end
+    return (string.gsub(string.lower(text), TWO_BYTES, LOWER))
+end
+
+-- "kennengelernt ..." becomes "Kennengelernt ...", "вчора ..." "Вчора ...".
+function ns.Capital(text)
+    local first, rest = string.match(text, "^([%z\1-\127\194-\244][\128-\191]*)(.*)$")
+    if not first then
+        return text
+    end
+    return ns.Upper(first) .. rest
 end

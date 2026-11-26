@@ -226,7 +226,7 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
       (the entry `AliasMenu` adds), `bnet` (a Battle.net friend under the alias, with three
       characters), `guildy` (Guildy's list). Switched off, the alias is missing.
     - **Settings:** `areas` (the sidebar's three entries, a switched-off one with "OFF"), `lang`
-      (the tagline in both languages, the one shown chosen), `time` (both clocks on an evening of
+      (every language by its own name, the one shown chosen, and the tagline in it), `time` (both clocks on an evening of
       play, 19:05 to 21:40, the chosen one in the accent), `date` (the four orders with today's
       date, each named in the language's letters, "YYYY-MM-DD" or "TT.MM.JJJJ"; while it follows
       the language, the language's order says so), `chatfam` (the addon's own chat line

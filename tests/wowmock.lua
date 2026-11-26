@@ -139,7 +139,9 @@ function Widget:GetText()
     return self.text or ""
 end
 function Widget:GetStringWidth()
-    return #(self.text or "") * 6.5
+    -- Letters, not bytes: "ä" or "ж" is one letter in two bytes.
+    local _, letters = string.gsub(self.text or "", "[^\128-\191]", "")
+    return letters * 6.5
 end
 Widget.GetUnboundedStringWidth = Widget.GetStringWidth
 -- The size lives in fields of the mock's own. In the client, SetWidth sets no

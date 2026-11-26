@@ -2,7 +2,7 @@
 
 An addon for **World of Warcraft: Forever** (interface 16001) about playing together: a chronicle of
 the journey you share with your friends, the fellow travellers you grouped with, and aliases for
-other players. English and German, no libraries, no dependencies.
+other players. English, German, French, Spanish and Italian; no libraries, no dependencies.
 
 > **Alpha.** Much of Famulus has only been tested against a mock of the game client so far.
 
@@ -61,7 +61,7 @@ prints the report.
 ```
 Famulus/          the addon; Famulus.toc lists every file
   Core/           namespace, settings, feature registry, shared services, self-test
-  Locales/        enUS.lua (reference) and deDE.lua
+  Locales/        enUS.lua (reference) and one file per other language
   Modules/<Area>/ one file per feature; shared code is <Name>Service.lua
   UI/             window, chronicle book, fellow overview, live cards, minimap button
   Media/          textures (tools/make_media.py), the feed's sound (tools/make_sound.js) and
