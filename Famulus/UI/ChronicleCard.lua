@@ -13,9 +13,13 @@
 --       chip = { text = "Companion", class = "MAGE" or nil },
 --       title = "Fallen", detail = "at level 13" or nil,
 --       footer = "21:14  ·  Duskwood",
---       reaction = { icon = "cheer", lit = true, count = 3 } or nil, -- at the
---               -- foot's right: the reaction, in the accent once given or
---               -- received, and how many there are
+--       reaction = {               -- or nil: a button at the foot's right, as
+--           icon = "cheer",        -- on the live feed's cards (UI.ReactionButton);
+--           lit = true,            -- in the accent once given or received,
+--           count = 3,             -- and how many there are
+--           onClick = function() end,    -- optional: what a click on it does
+--           tooltip = function(tip) end, -- optional: what the mouse on it shows
+--       },
 --   }
 
 local _, ns = ...
@@ -26,8 +30,7 @@ local STRIP = 28 -- the sunken strip at the top that names whose event it is
 local CHIP = 18 -- the class icon in it
 local KIND = 13 -- the icon of the event's kind, on the strip's right
 local TEXT_GAP = 12 -- between the picture and the text, whatever its size
-local REACTION = 18 -- the reaction's icon, at the foot's right
-local REACTION_GAP = 4 -- between it and its count
+local REACT, REACT_ICON = 26, 16 -- the reaction's button at the foot's right, and its icon
 local FOOT_GAP = 10 -- between the foot's text and the reaction
 
 -- How much an event weighs: its picture and headline. The book makes a
@@ -67,10 +70,54 @@ local function Build(part)
     part.detail:SetPoint("TOPLEFT", part.title, "BOTTOMLEFT", 0, -4)
     part.footer = UI.Text(part, 11, "textMuted")
     part.footer:SetWordWrap(false)
-    -- A reaction at the foot's right: its icon, and how many there are.
-    part.reaction = UI.Icon(part, "cheer", REACTION, "textMuted")
-    part.reactionCount = UI.Text(part, 11, "textMuted", "semibold")
-    part.reactionCount:SetWordWrap(false)
+    -- The reaction at the foot's right: the same button as on the live
+    -- feed's cards. On a friend's card a click reacts or takes it back; on
+    -- the player's own it shows on the mouse who reacted. Only the button
+    -- reacts, not the card.
+    local react = UI.ReactionButton(part, REACT, REACT_ICON)
+    part.react = react
+    local function HideTip(self)
+        if GameTooltip.IsOwned and GameTooltip:IsOwned(self) then
+            GameTooltip:Hide()
+        end
+    end
+    react:SetScript("OnEnter", function(self)
+        local reaction = self.reaction
+        if not reaction then
+            return
+        end
+        self.over = true
+        if reaction.onClick then
+            self.hover:Fade(true)
+        end
+        self:Paint()
+        if reaction.tooltip then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            reaction.tooltip(GameTooltip)
+            GameTooltip:Show()
+        end
+    end)
+    react:SetScript("OnLeave", function(self)
+        self.over = false
+        self.hover:Fade(false)
+        if self.reaction then
+            self:Paint()
+        end
+        HideTip(self)
+    end)
+    react:SetScript("OnClick", function(self)
+        local reaction = self.reaction
+        if reaction and reaction.onClick then
+            -- What the tooltip said no longer holds after the click.
+            HideTip(self)
+            reaction.onClick()
+        end
+    end)
+    react:SetScript("OnHide", function(self)
+        self.over = false
+        self.hover:Hide()
+        HideTip(self)
+    end)
 end
 
 function UI.ChronicleCard(part, story, width)
@@ -108,16 +155,15 @@ function UI.ChronicleCard(part, story, width)
 
     -- The reaction, at the foot's right: muted until given or received.
     local reaction, reactionWidth = story.reaction, 0
-    local counted = reaction ~= nil and (reaction.count or 0) > 0
-    part.reaction:SetShown(reaction ~= nil)
-    part.reactionCount:SetShown(counted)
+    local react = part.react
+    react.reaction = reaction
+    react:SetShown(reaction ~= nil)
     if reaction then
-        local ink = reaction.lit and "accent" or "textMuted"
-        part.reaction:SetTexture(UI.media[reaction.icon] or UI.media.cheer)
-        UI.Tint(part.reaction, ink)
-        UI.Ink(part.reactionCount, ink)
-        part.reactionCount:SetText(counted and tostring(reaction.count) or "")
-        reactionWidth = FOOT_GAP + REACTION + (counted and REACTION_GAP + part.reactionCount:GetStringWidth() or 0)
+        react.over = false
+        react.hover:Hide()
+        react:Set(reaction.icon, reaction.lit, reaction.count)
+        react:EnableMouse(reaction.onClick ~= nil or reaction.tooltip ~= nil)
+        reactionWidth = FOOT_GAP + react:GetWidth()
     end
 
     -- The foot: when and where.
@@ -140,15 +186,8 @@ function UI.ChronicleCard(part, story, width)
     part.title:SetPoint("TOPLEFT", part, "TOPLEFT", left, -body)
     part.footer:ClearAllPoints()
     part.footer:SetPoint("TOPLEFT", part, "TOPLEFT", left, -(body + bodyHeight - LINE))
-    -- The count at the card's right edge, the icon before it; on the foot's line.
-    local footMiddle = -(body + bodyHeight - LINE / 2)
-    part.reactionCount:ClearAllPoints()
-    part.reactionCount:SetPoint("RIGHT", part, "TOPRIGHT", -pad, footMiddle)
-    part.reaction:ClearAllPoints()
-    if counted then
-        part.reaction:SetPoint("RIGHT", part.reactionCount, "LEFT", -REACTION_GAP, 0)
-    else
-        part.reaction:SetPoint("RIGHT", part, "TOPRIGHT", -pad, footMiddle)
-    end
+    -- The button at the card's right edge, on the foot's line.
+    react:ClearAllPoints()
+    react:SetPoint("RIGHT", part, "TOPRIGHT", -pad, -(body + bodyHeight - LINE / 2))
     return height
 end

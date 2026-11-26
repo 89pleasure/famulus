@@ -120,18 +120,13 @@ local function Layout()
     end
 end
 
--- The button's look: muted until the player has reacted, then in the accent
--- on the ground of an accent, as a lit chip in the window.
+-- The button's look (UI.ReactionButton): muted until the player has reacted,
+-- then in the accent on the ground of an accent, as a lit chip in the window.
 local function PaintReaction(button)
     local reaction = button.card.reaction
-    if not reaction then
-        return
+    if reaction then
+        button:Set(reaction.icon, reaction.given())
     end
-    local given = reaction.given() and true or false
-    button.ground.fill:SetColor(given and "accentDeep" or "control")
-    button.ground.border:SetColor(given and "accentLine" or "controlBorder")
-    button.icon:SetTexture(UI.media[reaction.icon] or UI.media.cheer)
-    UI.Tint(button.icon, given and "accent" or button.over and "text" or "textMuted")
 end
 
 -- The button to react, without a tooltip: the click and the lit button say
@@ -140,17 +135,11 @@ end
 -- later. A click reacts, and the card goes CLOSE later whatever the mouse
 -- does; a reaction given is taken back in the chronicle only.
 local function NewReactButton(card)
-    local button = CreateFrame("Button", nil, card)
+    local button = UI.ReactionButton(card, REACT, REACT_ICON)
     button.card = card
-    button:SetSize(REACT, REACT)
     button:SetPoint("RIGHT", card, "RIGHT", -REACT_RIGHT, 0)
     button:SetFrameLevel(card:GetFrameLevel() + 3)
     button:EnableMouse(true)
-    button.ground = UI.Card(button, "control", "controlBorder", 8)
-    button.hover = UI.Round(button, "hover", 8, { layer = "ARTWORK" })
-    button.hover:Hide()
-    button.icon = UI.Icon(button, "cheer", REACT_ICON, "textMuted", "OVERLAY")
-    button.icon:SetPoint("CENTER")
     button:SetScript("OnEnter", function(self)
         self.over = true
         card.held = true

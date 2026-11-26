@@ -3016,8 +3016,9 @@ do -- an item is shown with the game's icon of it, in its own colours
     check(mock.links and #mock.links == 2 and mock.links[1] == "trade:Player-1-JAINA:2656:186"
         and mock.links[2] == "trade:Player-1-GJAINA:2656:186" and #mock.opened == 1,
         "online, as a friend or in the guild, the book opens from a link built for them")
-    -- With reactions (sharing on): a click on a friend's card reacts and the
-    -- recipe book moves to the picture; the player's own cards show who reacted.
+    -- With reactions (sharing on): a friend's card has a button to react, as
+    -- on the live feed's cards, and the card still opens the recipe book; the
+    -- player's own cards show on their button who reacted.
     enable("sharing")
     local ownLevel = { level = 15, t = time() - 30 }
     Chronicle.Add("level", ownLevel)
@@ -3055,38 +3056,47 @@ do -- an item is shown with the game's icon of it, in its own colours
         lines[#lines + 1] = text
     end
     theirs = theirSkill()
-    check(theirs.reaction:IsShown() and not theirs.reactionCount:IsShown() and theirs.story.reaction.icon == "clap"
-        and not theirs.story.reaction.lit and theirs.card.mouseEnabled and theirs.picture.mouseEnabled,
-        "a friend's card shows its reaction, muted; card and picture can be clicked")
+    check(theirs.react:IsShown() and not theirs.react.count:IsShown() and theirs.story.reaction.icon == "clap"
+        and not theirs.story.reaction.lit and theirs.react.mouseEnabled and theirs.react.ground.fill.token == "control"
+        and theirs.react:GetWidth() == 26 and theirs.card.mouseEnabled and not theirs.picture.mouseEnabled,
+        "a friend's card shows a button to react, muted, as on the live feed; the card can still be clicked")
+    theirs.react.scripts.OnEnter(theirs.react)
+    check(said == "Click to react" and theirs.react.over, "the button says what a click does")
+    theirs.react.scripts.OnLeave(theirs.react)
+    said = nil
     theirs.card.scripts.OnEnter(theirs.card)
-    check(said == "Click to react", "the card says what a click does")
-    theirs.picture.scripts.OnEnter(theirs.picture)
-    theirs.picture.scripts.OnMouseUp(theirs.picture, "LeftButton")
-    check(said == "Open the recipe book" and #mock.links == 3 and theirEntry.mine == nil, "the picture opens the recipe book")
     theirs.card.scripts.OnMouseUp(theirs.card, "LeftButton")
     mock.Advance(0.1)
+    check(said == nil and #mock.links == 3 and theirEntry.mine == nil,
+        "a click on the card opens the recipe book again and reacts to nothing; the card has no tooltip of its own")
+    mock.Click(theirSkill().react)
+    mock.Advance(0.1)
     theirs = theirSkill()
-    check(theirEntry.mine == "clap" and theirs.story.reaction.lit and #mock.links == 3, "a click on the card reacts, and the reaction lights up")
-    theirs.card.scripts.OnEnter(theirs.card)
+    check(theirEntry.mine == "clap" and theirs.story.reaction.lit and theirs.react.ground.fill.token == "accentDeep"
+        and #mock.links == 3, "a click on the button reacts, and the button lights up")
+    theirs.react.scripts.OnEnter(theirs.react)
     check(said == "You reacted. Click again to take it back." and lines[1] == "Jaina Proudmoore will see it as soon as you are both online.",
-        "until she is told, the card says she will be")
-    theirs.card.scripts.OnMouseUp(theirs.card, "LeftButton")
+        "until she is told, the button says she will be")
+    mock.Click(theirs.react)
     mock.Advance(0.1)
     check(theirEntry.mine == nil and not theirSkill().story.reaction.lit, "a second click takes it back")
     local own = mySkill()
     own.card.scripts.OnMouseUp(own.card, "LeftButton")
-    check(not own.reaction:IsShown() and #mock.opened == 2, "the player's own profession has no reaction and still opens on a click")
+    check(not own.react:IsShown() and #mock.opened == 2, "the player's own profession has no reaction and still opens on a click")
     local level = myLevel()
-    check(level and level.reaction:IsShown() and level.reactionCount:IsShown() and level.reactionCount:GetText() == "2"
-        and level.story.reaction.icon == "cheer" and level.story.reaction.lit and level.card.mouseEnabled,
-        "the player's own event shows how many reacted")
-    level.card.scripts.OnEnter(level.card)
+    check(level and level.react:IsShown() and level.react.count:IsShown() and level.react.count:GetText() == "2"
+        and level.react:GetWidth() > 26 and level.story.reaction.icon == "cheer" and level.story.reaction.lit
+        and level.react.ground.fill.token == "accentDeep" and level.react.mouseEnabled and not level.card.mouseEnabled,
+        "the player's own event shows on its button how many reacted; the card itself catches no mouse")
+    level.react.scripts.OnEnter(level.react)
     check(said == "Reactions from" and lines[1] == "Jaina Proudmoore" and lines[2] == "Mira Stormfeather",
         "and who, on the mouse")
+    mock.Click(level.react)
+    check(level.story.reaction.lit and level.react.count:GetText() == "2", "a click on it does nothing")
     sharing:Set("reactions", false)
     mock.Advance(0.1)
-    check(not theirSkill().reaction:IsShown() and theirSkill().story.onPicture == nil and theirSkill().picture.mouseEnabled == false
-        and not myLevel().reaction:IsShown() and myLevel().card.mouseEnabled == false,
+    check(not theirSkill().react:IsShown() and theirSkill().picture.mouseEnabled == false
+        and not myLevel().react:IsShown() and myLevel().card.mouseEnabled == false,
         "with reactions switched off, the cards are as before")
     GameTooltip.SetText, GameTooltip.AddLine = setText, addLine
     sharing:Set("reactions", true)

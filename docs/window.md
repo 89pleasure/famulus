@@ -296,7 +296,11 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   The glowing dot in the accent (the book's line, the head of a live feed card) is a widget since
   2026-11-27, the owner's request: `UI.GlowDot(parent, size, layer)` gives the dot with its glow
   (`accentGlow`, three times as large, a layer below), `UI.SetDot(dot, size, shown)` changes
-  size or visibility of both. Use it wherever such a dot is wanted.
+  size or visibility of both. Use it wherever such a dot is wanted. The same for the button of a
+  reaction (live feed and the chronicle's book, since 2026-11-27): `UI.ReactionButton(parent,
+  size, iconSize)` draws a rounded square with the icon, muted or lit (`accentDeep`, accent icon),
+  `button:Set(icon, lit, count)` (with a count it widens), `button.over` and `button:Paint()` for
+  the hover tint; the scripts stay with its owner.
   All checked against the mock only; open in game are above all `SetGradient` on image textures
   (round corners of switch, button, logo), horizontal gradients and the strength of the glow effects.
 - **Shape:** round corners from quarter circles of `circle.tga` plus three rectangles (`UI.Round`,

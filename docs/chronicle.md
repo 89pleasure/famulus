@@ -357,8 +357,9 @@ picture-book look are built and checked against the mock only.
   whispered addon messages to friends and guild; protocol, relaying, statistics and
   queue are in [sharing.md](sharing.md).
 - **Reactions (the owner's request, 2026-11-25: "celebrate the achievements of other players
-  like on social media"; checked against the mock only, not yet seen in game):** A click on a
-  friend's card in the book reacts to their event, a second click takes it back. The message
+  like on social media"; checked against the mock only, not yet seen in game):** A click on the
+  reaction button of a friend's card in the book reacts to their event, a second click takes it
+  back (since 2026-11-27 only the button, see "On the card"). The message
   and when it goes are under "Reactions" in [sharing.md](sharing.md); an option of `sharing`
   (`reactions`, default on), no feature of its own, so no service for the exchange is needed
   yet (see "No service of its own" there).
@@ -378,21 +379,25 @@ picture-book look are built and checked against the mock only.
     clapping hands looked like a rune, because the lines were drawn for the book's large pictures
     and came out thinner than a pixel. Since then the four are drawn with a stronger line
     (`REACTION_PEN`, 5 instead of 3.6 at 64 px), the arm without the crease of the fist, the hands
-    as two plain palms without thumbs leaning together, and shown at 18 px.
-  - **On the card (`CardReaction` in `UI/Options.lua`, `UI/ChronicleCard.lua`):** at the right
-    of the foot, on the line of time and place. A friend's card: the icon, muted until the
-    player reacted, then in the accent; the card glows under the mouse and its tooltip says
-    "Click to react", "You reacted. Click again to take it back." and, while the friend has not
-    been told yet, "… will see it as soon as you are both online.". The player's own card: the
-    icon in the accent with the number of people who reacted, their names (with alias) in the
-    tooltip; no reaction to oneself. A bundled card reacts to its newest entry; a click on a
+    as two plain palms without thumbs leaning together, and shown at 18 px (since 2026-11-27 in
+    the book's reaction button at 16 px).
+  - **On the card (`CardReaction` in `UI/Options.lua`, `UI/ChronicleCard.lua`):** a button at
+    the right of the foot, on the line of time and place: the same button as on the live feed's
+    cards (`UI.ReactionButton` in `UI/Widgets.lua`; here 26 px with a 16 px icon, as the foot is
+    only 14 px tall; on the feed 32 and 18), a rounded square with the reaction's icon. Since
+    2026-11-27 (the owner's request, "the same as on the feed cards") only the
+    button reacts; until then a click anywhere on a friend's card did, and the card carried the
+    tooltip. A friend's card: the button muted until the player reacted, then in the accent on
+    `accentDeep`; it glows under the mouse and its tooltip says "Click to react", "You
+    reacted. Click again to take it back." and, while the friend has not been told yet, "… will
+    see it as soon as you are both online.". The player's own card: the button in the accent,
+    wider with the number of people who reacted, their names (with alias) in its tooltip, a
+    click does nothing; no reaction to oneself. A bundled card reacts to its newest entry; a click on a
     bundle with a reaction anywhere in it takes them all back; on the player's own bundle the
     people who reacted to any entry count once.
-  - **Professions (the assistant's decision, proposed 2026-11-25 without objection):** on a
-    friend's profession card the click now reacts, and the recipe book opens from a click on the
-    picture (tooltip "Open the recipe book"; `story.onPicture`, `story.pictureHint` in
-    `UI/Book.lua`). The player's own profession card still opens on a click, as it has no
-    reaction. Without reactions everything is as before.
+  - **Professions:** a click on a friend's profession card opens the recipe book, as on the
+    player's own card. From 2026-11-25 to 2026-11-27 the click on the card reacted and the book
+    opened from the picture (`story.onPicture`, gone since the button reacts).
   - **Live feed:** a friend's reaction to one of the player's events appears as a card ("Mira
     celebrates with you", below it the event), with the reaction as the picture (kind
     `reaction` in `UI.BookPictures`). Its own switch `reaction` (default on), signal
@@ -400,8 +405,9 @@ picture-book look are built and checked against the mock only.
     greeting is still news.
   - **Reacting from the live feed:** a friend's card in the feed carries a button at the band's
     right end (32 px, the kind's reaction icon; `story.reaction` in `UI/Feed.lua`, built by
-    `Reaction` in `LiveFeed.lua`). A click gives the reaction as a click on the card in the book
-    does (`ChronicleService.React`, sent by `Sharing.lua` as before): the button lights up
+    `Reaction` in `LiveFeed.lua`; the look is `UI.ReactionButton`, shared with the book). A click
+    gives the reaction as the button in the book does (`ChronicleService.React`, sent by
+    `Sharing.lua` as before): the button lights up
     (accent icon on `accentDeep`), and the card closes a second later (`CLOSE`), whether the
     mouse is still on it or not. The feed only gives: a reaction is taken back in the
     chronicle, so a lit button does nothing more. No tooltip: the click and the lit button say
