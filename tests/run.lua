@@ -4592,6 +4592,21 @@ ns.features.fastLootProbe = nil
 table.remove(ns.featureList)
 check(needy.enabled == false, "the probe feature never ran")
 
+-- Another addon in a version without what its feature needs (the regular Guildy, without the
+-- fork's name API) is no failure: the feature is simply not offered.
+do
+    local api = GuildyAPI
+    GuildyAPI = nil
+    result = ns:RunSelfTest(true)
+    local guildyCheck = findCheck(result, "feature", "guildyAliases")
+    check(guildyCheck.status == "ok" and guildyCheck.detail:find("^addon Guildy lacks GuildyAPI%.RegisterNameFormatter") ~= nil
+        and result.summary.fail == 0, "Guildy without its API is ok in the self-test, with the reason: " .. guildyCheck.detail)
+    check(ns:BugReport():find("Cannot run: guildyAliases (Guildy without the API it needs)", 1, true) ~= nil,
+        "the bug report says why it cannot run")
+    GuildyAPI = api
+    FamulusDB.selfTest = nil
+end
+
 -- Developer mode.
 mock.reset()
 SlashCmdList.FAMULUS("dev")

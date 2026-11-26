@@ -146,7 +146,7 @@ at `D:\Games\World of Warcraft\_forever_`, the repo at `E:\Develop\wow\famulus`;
   `LUA_WARNING` are collected in `FamulusDB.devLog`. Since 2026-11-25 sharing also writes every
   step of the exchange into `FamulusDB.devTrace` (see "Trace" under "Sharing"). Off by default;
   then it costs nothing. Switching it off clears log and trace.
-- **Bug report (since 2026-11-26, issue #47; checked against the mock only, not yet in game):**
+- **Bug report (since 2026-11-26, issue #47; copying confirmed in game on 2026-11-26):**
   `/fam report` or About › "Copy bug report" runs the self-test quietly (`ns:RunSelfTest(true)`)
   and shows `ns:BugReport()` (`Core/SelfTest.lua`) in a small window of its own (`UI/Report.lua`,
   strata `DIALOG`, built on first use, no global name): a multi-line edit box with the text
@@ -160,8 +160,11 @@ at `D:\Games\World of Warcraft\_forever_`, the repo at `E:\Develop\wow\famulus`;
   start of a code. Without developer mode the window's hint asks to turn it on and repeat the
   problem. The GitHub issue form `.github/ISSUE_TEMPLATE/bug_report.yml` has a field for the
   text. Open: the sentence on CurseForge and the website (issues #49 and #50). Players without a
-  GitHub account can paste it into a comment on CurseForge. Not seen in game: whether Ctrl+C
-  copies from the edit box in Forever and how a long text scrolls there.
+  GitHub account can paste it into a comment on CurseForge. In game (2026-11-26, deDE): the
+  window opens and Ctrl+C copies the whole text; the owner's first report showed 9263 KB of
+  memory and guildyAliases as a failed check, because the regular Guildy had replaced the fork
+  (see "guildyAliases" in docs/aliases.md; since then no failure). Not seen yet: how a long text
+  (developer mode with a full trace) scrolls.
 - At startup the game sets all files in the addon folder to mode 777, and through the symlink
   also in the repo. That is why `git config core.fileMode false` is set locally here; set it again
   after a fresh clone, otherwise all files show up as changed.
