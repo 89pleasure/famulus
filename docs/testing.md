@@ -22,6 +22,15 @@ the index there says which file it is in.
 
 ## State of checks in game
 
+- **Memory in game (2026-11-27, client 1.60.1 build 71139, deDE, 10 of 11 features, developer
+  mode on, `/fam report`):** 2960 KB eight seconds after `/reload` without the window, 9158 KB
+  after the window had been opened (on 2026-11-26 9263 KB). The mock with the owner's saved data
+  estimates about 1.8 MB held before and 9.2 MB with every page and picture (see "Memory" in
+  `docs/window.md`); the figure in game also counts garbage not yet collected, and right after a
+  login that is the loading itself and the self-test, so the 2960 are not all held. The shared
+  paint records and spans since then are checked against the mock only. To tell held memory from
+  garbage in game: `/run collectgarbage("collect") UpdateAddOnMemoryUsage()
+  print(GetAddOnMemoryUsage("Famulus"))` (not yet tried; the client may refuse it to addons).
 - **Bug 2026-11-24 (found and fixed in game, fix confirmed in game):** The window opened without
   content and with almost no text; after a click on "Fellow travellers" everything came back, a
   click on "Chronicle" left the fellow travellers highlighted and cut them off at 600 px. Cause:

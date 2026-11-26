@@ -3219,6 +3219,65 @@ mock.Click(navButton("Aliases"))
 SlashCmdList.FAMULUS("")
 
 ---------------------------------------------------------------------------
+section("Widgets: painting")
+---------------------------------------------------------------------------
+
+do -- colours by token: they follow the scheme, fading and gradients; shapes of one size share their spans
+    local UI = ns.UI
+    local frame = CreateFrame("Frame", nil, UIParent)
+    local function Recorded(texture)
+        texture.SetColorTexture = function(self, r, g, b, a)
+            self.fill = { r, g, b, a }
+        end
+        texture.SetGradient = function(self, orientation, from, to)
+            self.gradient = { orientation, from, to }
+        end
+        return texture
+    end
+    local function Same(x, y)
+        return math.abs(x - y) < 1e-9
+    end
+    local texture = Recorded(frame:CreateTexture())
+    UI.Paint(texture, "card", 0.5)
+    local card = UI.colors.card
+    check(texture.fill[1] == card[1] and Same(texture.fill[4], card[4] * 0.5), "a painted texture takes its token's colour and the alpha on top")
+    UI.SetLevel(texture, 0.5)
+    check(Same(texture.fill[4], card[4] * 0.25), "a level fades it on top of that")
+    UI.Paint(texture, "accent")
+    check(texture.fill[1] == UI.colors.accent[1] and Same(texture.fill[4], UI.colors.accent[4] * 0.5), "painted again, it keeps its level")
+    UI.SetLevel(texture, 1)
+    check(Same(texture.fill[4], UI.colors.accent[4]), "back at level 1 it is whole")
+    local other = Recorded(frame:CreateTexture())
+    UI.Paint(other, "accent")
+    local scheme = ns:GetOption("general", "accent")
+    ns:SetOption("general", "accent", scheme == "mint" and "rose" or "mint")
+    check(texture.fill[1] == UI.colors.accent[1] and other.fill[1] == UI.colors.accent[1] and Same(other.fill[4], UI.colors.accent[4]),
+        "another scheme repaints every region with the same token")
+    ns:SetOption("general", "accent", scheme)
+    UI.Shade(texture, "HORIZONTAL", "accent", "accent2")
+    UI.SetLevel(texture, 0.25)
+    check(texture.gradient[1] == "HORIZONTAL" and Same(texture.gradient[2].a, UI.colors.accent[4] * 0.25), "a gradient fades by its own level")
+    UI.Paint(texture, "card")
+    check(Same(texture.fill[4], card[4]), "painted after a gradient, it starts at level 1 again")
+
+    local shape = UI.Round(frame, "card", 6)
+    for _, part in ipairs(shape.parts) do
+        Recorded(part)
+    end
+    shape:SetGradient("HORIZONTAL", "accent", "accent2", 100, 20)
+    local accent, accent2 = UI.colors.accent, UI.colors.accent2
+    local first, last = shape.parts[1].gradient, shape.parts[2].gradient -- top left and top right corner
+    check(first[2].r == accent[1] and Same(last[3].r, accent2[1]) and Same(shape.parts[5].gradient[2].r, accent[1] + (accent2[1] - accent[1]) * 0.06),
+        "a rounded shape spreads its gradient over its parts by where each lies")
+    local spanless = true
+    for _, part in ipairs(shape.parts) do
+        spanless = spanless and rawget(part, "span") == nil
+    end
+    check(#shape.parts == 7 and spanless and UI.Round(frame, "card", 6).spans == shape.spans and UI.Round(frame, "card", 8).spans ~= shape.spans,
+        "shapes of the same size share where their parts lie; their textures carry nothing for it")
+end
+
+---------------------------------------------------------------------------
 section("Widgets: crest")
 ---------------------------------------------------------------------------
 

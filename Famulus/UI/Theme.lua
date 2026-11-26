@@ -316,12 +316,38 @@ end
 -- image) or "ink" (SetTextColor). alpha multiplies the token's alpha.
 ---------------------------------------------------------------------------
 
-local painted = setmetatable({}, { __mode = "k" })
+-- The window paints thousands of regions with a few dozen colours, so a
+-- region does not get a record of its own: it points to the one record of its
+-- mode, token and alpha, and a level for fading (UI.SetLevel) is kept apart,
+-- only while it is not 1. A record per region would cost about 0.2 KB each,
+-- a good part of the window's memory.
+local painted = setmetatable({}, { __mode = "k" }) -- region -> shared record
+local levels = setmetatable({}, { __mode = "k" }) -- painted region -> level other than 1
 local shaded = setmetatable({}, { __mode = "k" }) -- textures with a gradient, see UI.Shade
+local records = {} -- mode -> token -> alpha -> { mode, token, alpha }
+
+local function Record(mode, token, alpha)
+    local byToken = records[mode]
+    if not byToken then
+        byToken = {}
+        records[mode] = byToken
+    end
+    local byAlpha = byToken[token]
+    if not byAlpha then
+        byAlpha = {}
+        byToken[token] = byAlpha
+    end
+    local record = byAlpha[alpha]
+    if not record then
+        record = { mode = mode, token = token, alpha = alpha }
+        byAlpha[alpha] = record
+    end
+    return record
+end
 
 local function Apply(region, entry)
     local r, g, b, a = UI.Color(entry.token)
-    a = a * entry.alpha * (entry.level or 1)
+    a = a * entry.alpha * (levels[region] or 1)
     if entry.mode == "fill" then
         region:SetColorTexture(r, g, b, a)
     elseif entry.mode == "tint" then
@@ -337,14 +363,12 @@ local function Paint(mode, region, token, alpha)
     if shaded[region] then
         -- A gradient lives in the vertex colours; a plain fill must clear it.
         shaded[region] = nil
+        levels[region] = nil
         region:SetVertexColor(1, 1, 1, 1)
     end
-    local entry = painted[region]
-    if not entry then
-        entry = {}
-        painted[region] = entry
-    end
-    entry.mode, entry.token, entry.alpha = mode, token, alpha or 1
+    -- A level set while it was painted stays.
+    local entry = Record(mode, token, alpha or 1)
+    painted[region] = entry
     Apply(region, entry)
 end
 
@@ -402,7 +426,7 @@ function UI.Shade(texture, orientation, fromToken, toToken, opts)
         Paint(opts.textured and "tint" or "fill", texture, fromToken, opts.alpha)
         return
     end
-    painted[texture] = nil
+    painted[texture], levels[texture] = nil, nil
     local entry = shaded[texture]
     if not entry then
         entry = {}
@@ -422,8 +446,8 @@ end
 function UI.SetLevel(region, level)
     local entry = painted[region]
     if entry then
-        if (entry.level or 1) ~= level then
-            entry.level = level
+        if (levels[region] or 1) ~= level then
+            levels[region] = level ~= 1 and level or nil
             Apply(region, entry)
         end
         return
