@@ -99,8 +99,10 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
       ("Your friends list is still loading."). Requested with `C_FriendList.ShowFriends`. An
       empty list counts as real only once the client has sent it; if it has entries, it counts
       immediately.
-    - `guild`: in a guild, but `GetNumGuildMembers()` returns 0 ("Your guild roster is still
-      loading."). Requested with `C_GuildInfo.GuildRoster`.
+    - `guild`: in a guild, but `GetNumGuildMembers()` returns 0 and no roster from earlier in
+      the session is kept ("Your guild roster is still loading."). Requested with
+      `C_GuildInfo.GuildRoster`. Since 2026-11-26 an empty roster later in the session no longer
+      waits: the last one stands in for it (see "Empty guild roster" in docs/sharing.md).
     - `battlenet`: `BNConnected()` returns false; without a connection the client knows no
       Battle.net friends ("Battle.net is not connected right now …"). It waits for
       `BN_CONNECTED`; nothing can be requested.

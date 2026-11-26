@@ -945,7 +945,7 @@ end
 function sharing:GUILD_ROSTER_UPDATE()
     guild, guildOnline = {}, {}
     local members, present = 0, 0
-    ns.SocialService.EachGuildMember(function(name, isOnline, isMobile)
+    local keeping = ns.SocialService.EachGuildMember(function(name, isOnline, isMobile)
         if name then
             local key = Key(name)
             guild[key] = Plain(name)
@@ -956,12 +956,16 @@ function sharing:GUILD_ROSTER_UPDATE()
             end
         end
     end)
-    local roster = members .. "/" .. present
+    local roster = members .. "/" .. present .. (keeping and "/kept" or "")
     if roster ~= tracedRoster then
         tracedRoster = roster
         local inGuild = IsInGuild and IsInGuild()
-        Trace("guild roster: %d members, %d online%s", members, present,
-            members == 0 and not ns.IsSecret(inGuild) and inGuild and " (empty, though in a guild)" or "")
+        if keeping then
+            Trace("guild roster came empty, keeping the last one: %d members, %d online", members, present)
+        else
+            Trace("guild roster: %d members, %d online%s", members, present,
+                members == 0 and not ns.IsSecret(inGuild) and inGuild and " (empty, though in a guild)" or "")
+        end
     end
     Refresh()
     -- Greet the guild once its roster is known: the answers come by whisper

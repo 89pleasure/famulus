@@ -34,13 +34,15 @@
 --   SocialService.EachFriend(visit)
 --       visit(info) for every entry of the friends list: the client's
 --       FriendInfo, whose fields still need checking.
---   SocialService.EachGuildMember(visit)
+--   SocialService.EachGuildMember(visit) -> keeping
 --       visit(name, online, mobile, guid, class, level, zone) for every
 --       member of the guild roster; nobody outside a guild. A secret or
 --       missing name, GUID, class, level or zone comes as nil, online and
 --       mobile as true or false. The zone is where they were when the
 --       roster came; the client sends a new roster only when asked
---       (C_GuildInfo.GuildRoster).
+--       (C_GuildInfo.GuildRoster). If the client's roster is empty or names
+--       nobody while the player is in a guild, the last one that named
+--       anyone this session stands in for it, and keeping is true.
 --   SocialService.EachBattleNetFriend(visit, index)
 --       visit(battleTag, games) for every Battle.net friend, or only the one
 --       at index. games: the client's game accounts they are online with
@@ -137,18 +139,45 @@ local function InGuild()
     return IsInGuild and Yes(IsInGuild()) and GetGuildRosterInfo ~= nil
 end
 
+-- The client may hand over an empty guild roster for a moment while the player is in a guild
+-- (Guildy saw it in Forever); a guild always has at least the player, so such a roster is never
+-- true. Then the last roster that named anyone stands in for it, until a full one comes again
+-- or the player is no longer in a guild. Two tables of columns, filled in place and swapped, so
+-- reading the roster leaves no garbage.
+local function NewRoster()
+    return { n = 0, named = false, names = {}, online = {}, mobile = {}, guids = {}, classes = {}, levels = {}, zones = {} }
+end
+local kept, incoming = NewRoster(), NewRoster()
+
 function SocialService.EachGuildMember(visit)
     if not InGuild() then
-        return
+        kept.n, kept.named = 0, false
+        return false
     end
-    for i = 1, Number(GetNumGuildMembers) do
+    local n, named = Number(GetNumGuildMembers), false
+    for i = 1, n do
         local name, _, _, level, _, zone, _, _, online, _, class, _, _, mobile, _, _, guid = GetGuildRosterInfo(i)
         if ns.IsSecret(level) or type(level) ~= "number" or level < 1 then
             level = nil
         end
-        visit(IsPlainText(name) and name or nil, Yes(online), Yes(mobile), IsPlainText(guid) and guid or nil, ClassFile(class),
-            level, IsPlainText(zone) and zone or nil)
+        name = IsPlainText(name) and name or nil
+        named = named or name ~= nil
+        incoming.names[i], incoming.online[i], incoming.mobile[i] = name, Yes(online), Yes(mobile)
+        incoming.guids[i], incoming.classes[i] = IsPlainText(guid) and guid or nil, ClassFile(class)
+        incoming.levels[i], incoming.zones[i] = level, IsPlainText(zone) and zone or nil
     end
+    incoming.n, incoming.named = n, named
+    -- An empty roster, or one that names nobody, keeps the last one that did.
+    local keeping = not named and kept.named
+    if not keeping then
+        kept, incoming = incoming, kept
+    end
+    local roster = kept -- a visit that reads the roster again swaps the tables
+    for i = 1, roster.n do
+        visit(roster.names[i], roster.online[i], roster.mobile[i], roster.guids[i], roster.classes[i], roster.levels[i],
+            roster.zones[i])
+    end
+    return keeping
 end
 
 function SocialService.EachBattleNetFriend(visit, index)
@@ -296,14 +325,14 @@ function SocialService.Circle()
         end)
     end
 
-    if InGuild() and Number(GetNumGuildMembers) < 1 then
-        -- In a guild, yet nobody in it: the roster has not come yet.
+    local keeping = SocialService.EachGuildMember(function(name, _, _, guid)
+        Note(guid, name)
+    end)
+    if InGuild() and Number(GetNumGuildMembers) < 1 and not keeping then
+        -- In a guild, yet nobody in it and no roster from before: it has not come yet.
         waiting = waiting or "guild"
         Wait(waits.guild)
     end
-    SocialService.EachGuildMember(function(name, _, _, guid)
-        Note(guid, name)
-    end)
 
     -- Without Battle.net the client lists no Battle.net friends at all.
     if BNConnected then
