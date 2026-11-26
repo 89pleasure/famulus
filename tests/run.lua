@@ -817,7 +817,8 @@ check(window.area.name:GetText() == ns.L.cat_general and tabButton(ns.L.ui_tab_g
 mock.Click(window.resetButton)
 mock.Click(window.resetButton)
 mock.Advance(0.1)
-check(ns:IsCategoryEnabled("aliases"), "reset there switches the main features back on")
+check(ns:IsCategoryEnabled("aliases") and ns:GetOption("general", "language") == "enUS",
+    "reset there switches the main features back on; the language, on a tab of its own, stays")
 mock.Click(navButton("Aliases"))
 mock.Click(tabButton("Names"))
 mock.Click(editor.save)
@@ -911,19 +912,42 @@ check(FamulusDB.aliases == nil, "the tests leave no alias behind")
 -- Settings: general tab.
 mock.Click(navButton("Settings"))
 mock.Click(tabButton("General"))
-check(tabButton("General").selected and tabButton("Appearance"), "the settings page has a general and an appearance tab")
+check(tabButton("General").selected and tabButton("Appearance") and tabButton("Language & time"),
+    "the settings page has a general, an appearance and a language & time tab")
 local generalRows = visibleEntries()
-check(#generalRows == 9, "the three main features, language, time and date format, chat feedback, minimap button and character profile (got "
-    .. #generalRows .. ")")
-check(generalRows[4].value:IsShown() and generalRows[4].value:GetText() == ns.L.lang_auto and not generalRows[4].toggle:IsShown(),
-    "a choice shows its value in the entry instead of a switch")
+check(#generalRows == 6, "the three main features, chat feedback, minimap button and character profile (got " .. #generalRows .. ")")
 local generalIcons = {}
 for index, entry in ipairs(generalRows) do
     generalIcons[index] = entry.entry.item.icon
 end
-check(table.concat(generalIcons, " ") == "flag people tag globe clock calendar chat compass person" and generalRows[4].tile.token == "control",
-    "the addon's own settings have icons as well; only a running switch lights its tile: " .. table.concat(generalIcons, " "))
-mock.Click(generalRows[4]) -- language
+check(table.concat(generalIcons, " ") == "flag people tag chat compass person",
+    "the addon's own settings have icons as well: " .. table.concat(generalIcons, " "))
+
+-- Character profile.
+enable("tooltipAliases", false)
+mock.Click(generalRows[6].switch)
+mock.Advance(0.1)
+check(ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "character profile starts as a copy")
+enable("tooltipAliases")
+mock.Click(generalRows[6].switch)
+mock.Advance(0.1)
+check(not ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "switching back restores the account settings")
+enable("tooltipAliases")
+
+-- Settings: language & time tab.
+ns:SetOption("general", "language", "auto")
+mock.Advance(0.1)
+mock.Click(tabButton("Language & time"))
+local languageRows = visibleEntries()
+local languageIcons = {}
+for index, entry in ipairs(languageRows) do
+    languageIcons[index] = entry.entry.item.icon
+end
+check(#languageRows == 3 and table.concat(languageIcons, " ") == "globe clock calendar",
+    "language, time format and date format, with their icons: " .. table.concat(languageIcons, " "))
+check(languageRows[1].value:IsShown() and languageRows[1].value:GetText() == ns.L.lang_auto and not languageRows[1].toggle:IsShown()
+    and languageRows[1].tile.token == "control", "a choice shows its value in the entry instead of a switch; only a running switch lights its tile")
+mock.Click(languageRows[1]) -- language
 check(detail.title:GetText() == "Language" and detail.dropdown:IsShown() and not detail.toggle:IsShown()
     and detail.pills[1].text:GetText() == "Default: " .. ns.L.lang_auto and not detail.pills[2]:IsShown(),
     "chosen, the detail offers the dropdown and names the default")
@@ -959,18 +983,18 @@ do
         end
         return false
     end
-    check(generalRows[5].value:GetText() == "21:40" and generalRows[6].value:GetText() == ns.L.g_dateFormat_auto,
+    check(languageRows[2].value:GetText() == "21:40" and languageRows[3].value:GetText() == ns.L.g_dateFormat_auto,
         "the time format shows its example, the date format follows the language")
     check(at(21, 40) == "21:40" and at(0, 5) == "00:05" and ns.FormatDate("2026", "11", "19") == "2026-11-19",
         "by default the 24-hour clock and the language's order")
-    mock.Click(generalRows[5])
+    mock.Click(languageRows[2])
     check(detail.title:GetText() == "Time format" and detail.dropdown:IsShown() and detail.pills[1].text:GetText() == "Default: 21:40",
         "chosen, the time format offers its clocks and names the default by its example")
     check(pickValue("12h") and ns:GetOption("general", "timeFormat") == "12h", "the dropdown switches to the 12-hour clock")
     check(at(21, 40) == "9:40 PM" and at(9, 7) == "9:07 AM" and at(0, 5) == "12:05 AM" and at(12, 0) == "12:00 PM"
         and at(23, 59) == "11:59 PM", "on the 12-hour clock, with AM and PM; midnight is 12 AM, noon 12 PM")
-    check(visibleEntries()[5].value:GetText() == "9:40 PM" and not window.resetButton.disabled, "the entry shows the new example")
-    mock.Click(visibleEntries()[6])
+    check(visibleEntries()[2].value:GetText() == "9:40 PM" and not window.resetButton.disabled, "the entry shows the new example")
+    mock.Click(visibleEntries()[3])
     check(detail.title:GetText() == "Date format" and detail.pills[1].text:GetText() == "Default: " .. ns.L.g_dateFormat_auto,
         "the date format names its default")
     ns:SetOption("general", "language", "deDE")
@@ -995,17 +1019,6 @@ do
     check(ns:GetOption("general", "timeFormat") == "24h" and ns:GetOption("general", "dateFormat") == "auto", "reset brings back 24 hours and the language's order")
     mock.Click(visibleEntries()[1])
 end
-
--- Character profile.
-enable("tooltipAliases", false)
-mock.Click(generalRows[9].switch)
-mock.Advance(0.1)
-check(ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "character profile starts as a copy")
-enable("tooltipAliases")
-mock.Click(generalRows[9].switch)
-mock.Advance(0.1)
-check(not ns:UsesCharacterProfile() and not ns.features.tooltipAliases.enabled, "switching back restores the account settings")
-enable("tooltipAliases")
 
 -- Settings: appearance tab.
 mock.Click(tabButton("Appearance"))
@@ -4031,14 +4044,14 @@ mock.Advance(0.1)
     set("categories", "fellows", false)
     check(areas.panel.rows[2].badge:IsShown() and areas.panel.rows[2].badge.text:GetText() == "OFF", "a switched-off one marked OFF")
     set("categories", "fellows", true)
-    local clock = choose("cat_general", "ui_tab_general", ns.L.g_timeFormat)
+    local clock = choose("cat_general", "ui_tab_language", ns.L.g_timeFormat)
     check(stage.current == "time" and clock.cards[1].example:GetText() == "19:05 – 21:40" and clock.cards[2].example:GetText() == "7:05 PM – 9:40 PM"
         and clock.cards[1].shape.border.token == "accentLine" and clock.cards[2].shape.border.token == "cardBorder",
         "both clocks on an evening of play, the one chosen in the accent")
     set("general", "timeFormat", "12h")
     check(clock.cards[2].shape.border.token == "accentLine" and clock.cards[1].shape.border.token == "cardBorder", "the 12-hour clock chosen")
     set("general", "timeFormat", "24h")
-    local dates = choose("cat_general", "ui_tab_general", ns.L.g_dateFormat)
+    local dates = choose("cat_general", "ui_tab_language", ns.L.g_dateFormat)
     local today = date("%Y-%m-%d")
     check(stage.current == "date" and #dates.cards == 4 and dates.cards[1].example:GetText() == today
         and dates.cards[1].small:GetText() == "YYYY-MM-DD  ·  " .. ns.L.ui_preview_date_auto and dates.cards[1].shape.border.token == "accentLine"
@@ -4051,7 +4064,7 @@ mock.Advance(0.1)
     check(dates.cards[2].small:GetText() == "TT.MM.JJJJ", "the order in letters of the language")
     set("general", "language", "auto")
     set("general", "dateFormat", "auto")
-    local lang = choose("cat_general", "ui_tab_general", ns.L.g_language)
+    local lang = choose("cat_general", "ui_tab_language", ns.L.g_language)
     check(stage.current == "lang" and lang.cards[1].tagline:GetText() == "Gemeinsam durch Azeroth"
         and lang.cards[2].tagline:GetText() == "Together through Azeroth" and lang.cards[2].shape.border.token == "accentLine",
         "the tagline in both languages, the one shown chosen")

@@ -486,31 +486,6 @@ local function SettingsTabs()
         switches[#switches + 1] = CategoryItem(category)
     end
     local general = SimpleTab("general", {
-        GeneralItem("language", "select", function()
-            local list = { { value = "auto", text = L.lang_auto } }
-            for _, code in ipairs(ns:GetLocaleCodes()) do
-                list[#list + 1] = { value = code, text = LANGUAGE_NAMES[code] or code }
-            end
-            return list
-        end),
-        -- Each clock and order by an example: today at 21:40, today's date.
-        GeneralItem("timeFormat", "select", function()
-            local today = date("*t")
-            local evening = time({ year = today.year, month = today.month, day = today.day, hour = 21, min = 40 })
-            local list = {}
-            for index, format in ipairs(ns.TIME_FORMATS) do
-                list[index] = { value = format, text = ns.FormatTime(evening, format) }
-            end
-            return list
-        end),
-        GeneralItem("dateFormat", "select", function()
-            local year, month, day = string.match(date("%Y-%m-%d"), "^(%d+)-(%d+)-(%d+)$")
-            local list = { { value = "auto", text = L.g_dateFormat_auto } }
-            for _, pattern in ipairs(ns.DATE_FORMATS) do
-                list[#list + 1] = { value = pattern, text = ns.FormatDate(year, month, day, pattern) }
-            end
-            return list
-        end),
         GeneralItem("chatOutput", "toggle"),
         GeneralItem("minimapButton", "toggle"),
         profileItem,
@@ -541,7 +516,36 @@ local function SettingsTabs()
             return list
         end),
     })
-    return { general, appearance }
+
+    -- How Famulus writes: its language, the clock and the order of a date.
+    local language = SimpleTab("language", {
+        GeneralItem("language", "select", function()
+            local list = { { value = "auto", text = L.lang_auto } }
+            for _, code in ipairs(ns:GetLocaleCodes()) do
+                list[#list + 1] = { value = code, text = LANGUAGE_NAMES[code] or code }
+            end
+            return list
+        end),
+        -- Each clock and order by an example: today at 21:40, today's date.
+        GeneralItem("timeFormat", "select", function()
+            local today = date("*t")
+            local evening = time({ year = today.year, month = today.month, day = today.day, hour = 21, min = 40 })
+            local list = {}
+            for index, format in ipairs(ns.TIME_FORMATS) do
+                list[index] = { value = format, text = ns.FormatTime(evening, format) }
+            end
+            return list
+        end),
+        GeneralItem("dateFormat", "select", function()
+            local year, month, day = string.match(date("%Y-%m-%d"), "^(%d+)-(%d+)-(%d+)$")
+            local list = { { value = "auto", text = L.g_dateFormat_auto } }
+            for _, pattern in ipairs(ns.DATE_FORMATS) do
+                list[#list + 1] = { value = pattern, text = ns.FormatDate(year, month, day, pattern) }
+            end
+            return list
+        end),
+    })
+    return { general, appearance, language }
 end
 
 ---------------------------------------------------------------------------

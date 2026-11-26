@@ -49,9 +49,10 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   `UI/Options.lua`). `aliases`: tab "Names" with the card "New alias" and the card
   "Your aliases" (avatar with initial), tab "Settings" (until 2026-11-23 "Display") with the alias
   features. `chronicle`: see "Chronicle". `fellows`: see "Fellow travellers". The settings have the
-  tabs "General" (language, time format, date format, feedback in chat, minimap icon, character
-  profile; see "Time and date format") and "Appearance"
-  (colour scheme, embers, window size). The first page on opening is the first in the sidebar,
+  tabs "General" (master switches, feedback in chat, minimap icon, character profile),
+  "Appearance" (colour scheme, embers, window size) and "Language & time" (German "Sprache &
+  Zeit": language, time format, date format; see "Time and date format"; tab id `language`).
+  The first page on opening is the first in the sidebar,
   so since 2026-11-24 the chronicle (before that the aliases).
 - **Master switch** (since 2026-11-24, the owner's decision: "Only the master switches"):
   the three categories as the first entries, under the heading "Features", in Settings › General
@@ -69,7 +70,9 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   Settings"); no tabs in the results view. It leaves out the content of a switched-off feature,
   but finds its master switch. On a page without a sidebar the
   hits take the full width.
-- **Time and date format (since 2026-11-26):** Settings › General, below the language.
+- **Time and date format (since 2026-11-26):** Settings › Language & time, below the language.
+  The three have a tab of their own, so that General keeps the master switches and how the addon
+  behaves, and resetting General no longer resets the language.
   `general.timeFormat`: `"24h"` (default, 21:40) or `"12h"` (9:40 PM; midnight 12 AM, noon
   12 PM; `g_timeFormat_am`/`_pm`). `general.dateFormat`: `"auto"` (default, the language's order,
   `c_date`: enUS 2026-11-19, deDE 19.11.2026) or one of `ns.DATE_FORMATS` (`{y}-{m}-{d}`,
@@ -152,7 +155,7 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   fixed panel that follows the mouse (variant A, the assistant's recommendation); also rejected:
   C (tiles, options in a drawer) and D (a list that unfolds, explanations as tooltips). Every tab
   with settings (`tab.split`: Chronicle, Fellow travellers and Aliases › Settings, Settings ›
-  General and Appearance) shows, instead of cards of rows (`Render` → `RenderSplit`):
+  General, Appearance and Language & time) shows, instead of cards of rows (`Render` → `RenderSplit`):
   - **On the left the entries** (`LIST_W` 296 px, scrolls on its own): one per item that is no
     option of another (features, master switches, the addon's own options, tidying up), 56 px
     tall: its icon on a small tile (30 px, lit in the accent while a switch is on), the name,
