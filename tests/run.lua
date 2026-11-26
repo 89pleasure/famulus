@@ -330,6 +330,44 @@ mock.Fire("ADDON_LOADED", "SomeOtherAddon")
 check(FamulusDB == nil, "other addons' ADDON_LOADED is ignored")
 mock.Fire("ADDON_LOADED", "Famulus")
 check(type(FamulusDB) == "table" and type(FamulusDB.profile) == "table", "database is created")
+
+-- Data version: a new file starts at the current version, an old one runs every step in order.
+check(ns.DATA_VERSION == #ns.MIGRATIONS and ns.DATA_VERSION >= 1, "the data version is the number of migration steps")
+check(FamulusDB.dataVersion == ns.DATA_VERSION and FamulusCharDB.dataVersion == ns.DATA_VERSION,
+    "a new install starts both saved files at the current data version")
+for step, migration in ipairs(ns.MIGRATIONS) do
+    local parts = 0
+    for part, migrate in pairs(migration) do
+        parts = parts + 1
+        check((part == "account" or part == "character") and type(migrate) == "function",
+            "migration step " .. step .. " has only an account and a character part (" .. tostring(part) .. ")")
+    end
+    check(parts > 0, "migration step " .. step .. " does something")
+end
+do
+    local fresh = ns.MigrateSaved(nil, "account")
+    local keys = 0
+    for _ in pairs(fresh) do
+        keys = keys + 1
+    end
+    check(fresh.dataVersion == ns.DATA_VERSION and keys == 1, "a new file skips every step and holds only its version")
+
+    local old = { profile = { general = { accent = "ember" } }, journal = { "vendor" }, seen = true }
+    check(ns.MigrateSaved(old, "account") == old, "an old file is migrated in place")
+    check(old.dataVersion == ns.DATA_VERSION, "an old file without a version runs up to the current one")
+    check(old.journal == nil, "step 1 drops the removed journal")
+    check(old.profile.general.accent == "ember" and old.seen == true, "migrating keeps the player's settings")
+
+    local newer = { dataVersion = ns.DATA_VERSION + 1, journal = { "kept" } }
+    ns.MigrateSaved(newer, "account")
+    check(newer.dataVersion == ns.DATA_VERSION + 1 and newer.journal ~= nil,
+        "a file from a newer Famulus is left as it is")
+
+    local character = { zones = { "Elwynn Forest" }, useCharacter = false }
+    ns.MigrateSaved(character, "character")
+    check(character.dataVersion == ns.DATA_VERSION and character.zones[1] == "Elwynn Forest",
+        "a character's file carries its own version and keeps its journey")
+end
 mock.Fire("PLAYER_LOGIN")
 
 local active, total = ns:CountActiveFeatures()

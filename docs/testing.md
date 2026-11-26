@@ -73,6 +73,10 @@ the index there says which file it is in.
   "Time and date format" in `docs/window.md`. Open in game: the 12-hour clock in the chronicle's
   card feet and chapter headings, the two new icons (`/fam test`, group `media`: `clock`,
   `calendar`).
+- **Data version (2026-11-26, checked against the mock only, not yet in game):** `FamulusDB` and
+  every `FamulusCharDB` carry `dataVersion` (see "Saved data" in AGENTS.md). In game: after the
+  first login with this version both files have `dataVersion = 1` and `FamulusDB.journal` is gone
+  (`/dump FamulusDB.dataVersion, FamulusCharDB.dataVersion`).
 - **Welcome page (2026-11-26, checked against the mock only, not yet in game):** see "Welcome
   page" in `docs/window.md`. To see it again in game: "About" › "Show welcome page"; as a new
   player would, with `/run FamulusDB.welcome = nil` and the five main features off.
