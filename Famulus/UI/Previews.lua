@@ -498,7 +498,7 @@ local function FeedStory(kind, own)
     if not entry then
         return nil
     end
-    local story = UI.ChronicleStory(entry)
+    local story = UI.FeedStory(entry)
     -- A friend's card brings the button to react while reactions are on,
     -- as in the feed (Modules/Chronicle/LiveFeed.lua); here it does nothing.
     local reaction = not own and Chronicle.ReactionsOn() and Chronicle.Reaction(entry)
@@ -574,7 +574,7 @@ local function LayFeed(scene, stories, faint, caption)
         if stories[index] then
             card:ClearAllPoints()
             card:SetPoint("TOPLEFT", scene, "TOPLEFT", left, -y)
-            y = y + UI.Feed.HEIGHT + FEED_GAP
+            y = y + card:GetHeight() + FEED_GAP
         end
     end
     scene.caption:Set(caption)

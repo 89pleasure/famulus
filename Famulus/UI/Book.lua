@@ -360,8 +360,7 @@ local function CreateEvent(book)
 
     -- The dot that sits on the line (the line itself belongs to the chapter).
     -- A glowing dot in the accent, like what is active elsewhere in the window.
-    event.dot = UI.Icon(event, "circle", DOTS.medium, "accent", "ARTWORK")
-    event.glow = UI.Halo(event, event.dot, DOTS.medium * 3, "accentGlow", "BORDER")
+    event.dot = UI.GlowDot(event, DOTS.medium)
     -- A short line from the dot to its card, so that with cards on both
     -- sides it is plain which dot belongs to which.
     event.tick = event:CreateTexture(nil, "BACKGROUND")
@@ -424,8 +423,7 @@ local function EventSet(event, story, onLeft, width)
     event.onLeft = onLeft
     local column = math.floor((width - AXIS) / 2 * (WIDTHS[story.weight] or 1) + 0.5)
     local dot = DOTS[story.weight] or story.big and DOTS.high or DOTS.medium
-    event.dot:SetSize(dot, dot)
-    event.glow:SetSize(dot * 3, dot * 3)
+    UI.SetDot(event.dot, dot)
     event.tick:SetSize(AXIS / 2 - dot / 2, UI.Pixel(event))
     local card = event.card
 

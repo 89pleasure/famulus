@@ -127,7 +127,8 @@ picture-book look are built and checked against the mock only.
      ("Received: Schlafsack" instead of "Mira receives: Schlafsack"); the name (or alias) stands
      with the initial in the sunken strip at the bottom (since 2026-11-25 in the card's head, see
      "Weighting"). `ChronicleService.Text(entry, true)` returns
-     the heading without the name; the live feed has no strip and uses `story.fullTitle`.
+     the heading without the name; since 2026-11-27 the live feed too names the person in a
+     head row of its own (see "Three rows" under "Live feed"); `story.fullTitle` is gone.
      Since 2026-11-24 with class icon and "Alias (character name)", see "Class and name".
   2. **Icons fill the frame:** The frame now has only slightly rounded corners (5 px), the icon
      sits two pixels from the edge and is cropped more (10 % per side), so that the black
@@ -178,7 +179,7 @@ picture-book look are built and checked against the mock only.
     on the left stands the class icon where the class is known, otherwise the name starts at the
     edge (the assistant's decision: literally "the initial icon can go", the class icon
     stays). The dots on the line are glowing dots in accent colour like the former
-    "x of y active" display (`UI.Halo` with `accentGlow`, three times the size of the dot), in
+    "x of y active" display (`UI.GlowDot`, glow three times the size of the dot), in
     all books, so also with the fellow travellers (book design). The book sets the size by
     weight (`DOTS`: light 5, medium 7, heavy 9 px; without weight medium, with `big`
     heavy; the owner's request, the assistant chose the sizes).
@@ -217,8 +218,8 @@ picture-book look are built and checked against the mock only.
   - **The place never stands in the text:** The book reads the sentences with the zone hidden
     (`Placeless` in `UI/Options.lua`): "Fallen" instead of "Fallen in Darkshore", "Discovered a
     new zone" (`c_zone_nowhere`) instead of "Arrived in Feralas", "in Uldaman" drops out of the
-    line below a boss, "with Mira and Tom" stays. The live feed has no foot and
-    still names the place.
+    line below a boss, "with Mira and Tom" stays. Since 2026-11-27 the live feed reads them
+    the same way and names the place first in its line below (see "Three rows").
   - **The book sets the design, each feature the content of its cards** (the owner's
     requirement, 2026-11-25, after the first version had also rebuilt the boss cards in "Your
     story": "that way each feature can decide for itself what the card's content is, but we
@@ -473,12 +474,31 @@ picture-book look are built and checked against the mock only.
       time stamp, no timer.
     - The game only finds a file that was in the addon folder at login or the last `/reload`.
     Checked against the mock only, not yet heard in game.
-  - The card uses the book's pictures (`UI.BookPictures`, `UI.ChronicleStory`): icon, number
+  - The card uses the book's pictures (`UI.BookPictures`, `UI.FeedStory`): icon, number
     or item icon. At most three cards one below the other, the newest on top. The cards do not
     catch the mouse, so clicks go through to the world; only the reaction button does (see
     "Reacting from the live feed"). While the mouse is on it the card stays past its time, a
     card already fading comes back, and once the mouse has left it goes 1.5 seconds later
     (`LINGER`). After a reaction the card goes anyway (see there).
+  - **Three rows (the owner's choice, 2026-11-27, variant A on the canvas "Famulus
+    Live-Feed-Karten", claude.ai artifact `Nc3TTNw84YyQTuXhekkBNQ`):** The text stood on one
+    line as a whole sentence ("Papa (Borin Ironbeard) defeats Edwin VanCleef"), so the band grew
+    up to 460 px and long sentences were cut off. Since then the card orders its text like a card
+    of the book: a head row with a glowing dot in the accent and whose it is, small (11 px
+    semibold, `textDim`; `story.chip`, as in the book); the dot is the one on the book's line
+    (6 px, `UI.GlowDot`), in place of the class icon of the first version, which
+    at 14 px was only a speck of colour in game (the owner's idea, 2026-11-27); the event without name and place (14 px
+    medium); below it the place first, then what else the line says (12 px, `textMuted`). With
+    all three rows the band is 76 px tall, else 64; it is 230 to 340 px wide and cuts off what is
+    longer. `UI.FeedStory` in `UI/Options.lua` reads an entry that way (`Placeless`, as the book).
+    A friend's reaction: the friend in the head, "Celebrates with you" (`c_reacted_<reaction>`,
+    without the name since then), the event below. "Who is nearby": the names in the head,
+    "Also in Tanaris" or "Now in Tanaris too"
+    (`ui_near_here`, `ui_near_came`, the zone only), levels below. The player's own events have
+    no head. `/fam feed test` shows all three rows with the player's own name and zone.
+    Rejected: B (the name as the title), C (the event as the title, the name below), D (the
+    sentence wrapping onto two lines), E (the name as a tag on the band's top edge). Checked
+    against the mock only, not yet seen in game.
   - **Running-out line (since 2026-11-25):** along the card's foot (2 px, 10 px in from its
     ends, accent gradient) a line shrinks to the left over the duration plus the fade-out, so it
     is gone when the card is (`card.bar`, a `Scale` animation of the client; hidden when it ends,
@@ -494,7 +514,7 @@ picture-book look are built and checked against the mock only.
     narrow compared with the crest. Rejected: medallion (round, text slides out from under it),
     banner (picture centred above centred text), a crest that only sticks out upwards (B2), and
     the first crest with a 40 px tall banner without margin on the left. The banner is as wide as
-    its text needs (230 to 460 px); the cards stand left-aligned one above the other (the owner's
+    its text needs (230 to 460 px, since 2026-11-27 to 340 px, see "Three rows"); the cards stand left-aligned one above the other (the owner's
     requirement), not centred; milestones (`story.big`) carry an accent border (see
     below). The crest was seen in game (the owner then asked for left-aligned cards).
   - **Crest in the banner (the owner's decision, 2026-11-19, after looking in game):** The

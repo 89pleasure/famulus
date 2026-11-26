@@ -123,24 +123,26 @@ local function OnChronicleChanged(entry)
         return
     end
     local UI = ns.UI
-    if not (UI and UI.Feed and UI.ChronicleStory) then
+    if not (UI and UI.Feed and UI.FeedStory) then
         return
     end
     Show(kind, function()
-        local story = UI.ChronicleStory(entry)
+        local story = UI.FeedStory(entry)
         story.reaction = Reaction(entry)
         return story
     end)
 end
 
--- The card of a friend's reaction to one of the player's events: who, and
--- to what. Also the picture of the feed in its settings (UI/Previews.lua).
+-- The card of a friend's reaction to one of the player's events: who in its
+-- head, the reaction, and below it the event. Also the picture of the feed in
+-- its settings (UI/Previews.lua).
 function feed.ReactionStory(entry, who, reaction)
     local Chronicle, L = ns.ChronicleService, ns.L
     return {
         kind = "reaction",
         icon = reaction,
-        fullTitle = L["c_reacted_" .. reaction]:format(Chronicle.Label({ who = who })),
+        chip = { text = Chronicle.Label({ who = who }), class = Chronicle.Class(who) },
+        title = L["c_reacted_" .. reaction],
         detail = (Chronicle.Text(entry)),
     }
 end

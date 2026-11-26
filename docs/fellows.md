@@ -329,9 +329,10 @@ website does not show it yet.
   (`SocialService.EachGuildMember`, values 4 and 6). A whisper uses the name as the list wrote it,
   realm and all (`ChatFrameUtil.SendTell`, as Blizzard's friends frame does).
 - **Cards** (the assistant's rules): one when the player arrives in a zone (`ZONE_CHANGED_NEW_AREA`,
-  `PLAYER_ENTERING_WORLD`, switching on) for everyone there ("Also in Tanaris: Mira and Kael",
-  three names at most, then "and 2 more"), three seconds later so the lists can answer; one when
-  someone arrives in the player's zone or comes online there ("Lysa is in Tanaris now too"). Whoever
+  `PLAYER_ENTERING_WORLD`, switching on) for everyone there (head "Mira and Kael", title "Also in
+  Tanaris"; three names at most, then "and 2 more"), three seconds later so the lists can answer; one when
+  someone arrives in the player's zone or comes online there (head "Lysa", title "Now in Tanaris
+  too"; the card's rows since 2026-11-27, see "Three rows" in docs/chronicle.md). Whoever
   turns up within two seconds shares a card. None in cities and inns (`IsResting`, unless
   `cities`), in instances, in flight; landing (`PLAYER_CONTROL_GAINED` after a look found the player
   on a taxi) is arriving, control back after a stun is not. The same person in the same zone at most

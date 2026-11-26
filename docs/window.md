@@ -293,6 +293,10 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   follows the theme like `UI.Paint`); `Shape:SetGradient` spreads a gradient over the parts of a
   round shape and needs its size. Glow needs no new texture: `UI.Shadow` with an
   accent colour name instead of `shadow`, `UI.Halo` and the glow behind the logo use `shadow.tga`.
+  The glowing dot in the accent (the book's line, the head of a live feed card) is a widget since
+  2026-11-27, the owner's request: `UI.GlowDot(parent, size, layer)` gives the dot with its glow
+  (`accentGlow`, three times as large, a layer below), `UI.SetDot(dot, size, shown)` changes
+  size or visibility of both. Use it wherever such a dot is wanted.
   All checked against the mock only; open in game are above all `SetGradient` on image textures
   (round corners of switch, button, logo), horizontal gradients and the strength of the glow effects.
 - **Shape:** round corners from quarter circles of `circle.tga` plus three rectangles (`UI.Round`,

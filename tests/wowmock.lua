@@ -312,8 +312,9 @@ function Widget:IsPlaying()
     return self.playing == true
 end
 
-function Widget:CreateTexture()
+function Widget:CreateTexture(_, layer, _, sublevel)
     local texture = NewWidget("Texture", self)
+    texture.layer, texture.sublevel = layer, sublevel
     self.regions = self.regions or {}
     self.regions[#self.regions + 1] = texture
     return texture
