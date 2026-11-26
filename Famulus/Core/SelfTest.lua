@@ -363,6 +363,56 @@ local function CheckNames()
     end
 end
 
+-- The chronicle knows abilities and items by the game's IDs, most of them
+-- taken from Classic: whether this client knows each one. One that it does
+-- not know is never recorded; the line names it.
+local function CheckChronicleIds()
+    local Chronicle = ns.ChronicleService
+    if not Chronicle then
+        return
+    end
+    local IsPlainText = ns.ChatService.IsPlainText
+    if C_Spell and C_Spell.GetSpellName then
+        local total, missing = 0, {}
+        for _, ability in ipairs(Chronicle.abilities) do
+            local spells = { ability.spell }
+            for _, spell in ipairs(ability.also or {}) do
+                spells[#spells + 1] = spell
+            end
+            for _, spell in ipairs(spells) do
+                total = total + 1
+                if not IsPlainText(C_Spell.GetSpellName(spell)) then
+                    missing[#missing + 1] = spell .. " (" .. ability.id .. ")"
+                end
+            end
+        end
+        if #missing == 0 then
+            Add("chronicle", "ability spells", "ok", "the client knows all " .. total)
+        else
+            Add("chronicle", "ability spells", "warn", string.format("%d of %d unknown to the client, never recorded: %s",
+                #missing, total, table.concat(missing, ", ")))
+        end
+    else
+        Add("chronicle", "ability spells", "warn", "C_Spell.GetSpellName is missing; the IDs cannot be checked")
+    end
+    if C_Item and C_Item.GetItemInfoInstant then
+        local missing = {}
+        for _, item in ipairs(Chronicle.items) do
+            if C_Item.GetItemInfoInstant(item.item) == nil then
+                missing[#missing + 1] = tostring(item.item)
+            end
+        end
+        if #missing == 0 then
+            Add("chronicle", "special items", "ok", "the client knows all " .. #Chronicle.items)
+        else
+            Add("chronicle", "special items", "warn", string.format("%d of %d unknown to the client, never recorded: %s",
+                #missing, #Chronicle.items, table.concat(missing, ", ")))
+        end
+    else
+        Add("chronicle", "special items", "warn", "C_Item.GetItemInfoInstant is missing; the IDs cannot be checked")
+    end
+end
+
 local function CheckIdleCost()
     local active, total = ns:CountActiveFeatures()
     local memory
@@ -390,6 +440,7 @@ local CHECKS = {
     CheckMedia,
     CheckFonts,
     CheckNames,
+    CheckChronicleIds,
     CheckIdleCost,
 }
 

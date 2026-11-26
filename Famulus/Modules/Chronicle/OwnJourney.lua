@@ -93,9 +93,17 @@ end
 
 -- Abilities (ChronicleService.abilities): learning one is an event. What
 -- the character can do when the chronicle begins is only taken note of.
+-- Knows returns the spell it found the ability by (or true by its skill).
 local function Knows(ability)
-    if IsPlayerSpell and IsPlayerSpell(ability.spell) then
-        return true
+    if IsPlayerSpell then
+        if IsPlayerSpell(ability.spell) then
+            return ability.spell
+        end
+        for _, spell in ipairs(ability.also or {}) do
+            if IsPlayerSpell(spell) then
+                return spell
+            end
+        end
     end
     local skill = ability.skill
     local info = skill and C_SkillInfo and C_SkillInfo.GetSkillLineInfoByID and C_SkillInfo.GetSkillLineInfoByID(skill.line)
@@ -103,15 +111,34 @@ local function Knows(ability)
     return type(rank) == "number" and not ns.IsSecret(rank) and rank >= skill.rank
 end
 
+-- The character's class as the game names it in code ("DRUID"), or nil.
+-- Rows of another class are never asked for.
+local function OwnClass()
+    local _, classFile = UnitClass("player")
+    if ns.IsSecret(classFile) or type(classFile) ~= "string" then
+        return nil
+    end
+    return classFile
+end
+
+local function ForClass(row, class)
+    return row.class == nil or class == nil or row.class == class
+end
+
 function journey:CheckAbilities()
+    local class = OwnClass()
     for _, ability in ipairs(Chronicle.abilities) do
-        if Knows(ability) and Chronicle.SeeAbility(ability.id) and self.skillsKnown then
-            local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(ability.spell)
-            Chronicle.Add("ability", {
-                ability = ability.id,
-                name = ns.ChatService.IsPlainText(name) and name or nil,
-                level = UnitLevel("player"),
-            })
+        if ForClass(ability, class) and not Chronicle.HasAbility(ability.id) then
+            local spell = Knows(ability)
+            if spell and Chronicle.SeeAbility(ability.id) and self.skillsKnown then
+                local name = C_Spell and C_Spell.GetSpellName
+                    and C_Spell.GetSpellName(type(spell) == "number" and spell or ability.spell)
+                Chronicle.Add("ability", {
+                    ability = ability.id,
+                    name = ns.ChatService.IsPlainText(name) and name or nil,
+                    level = UnitLevel("player"),
+                })
+            end
         end
     end
 end
@@ -123,9 +150,10 @@ function journey:CheckItems()
     if not (C_Item and C_Item.GetItemCount) then
         return
     end
+    local class = OwnClass()
     for _, item in ipairs(Chronicle.items) do
         local id = item.item
-        if not Chronicle.HasItem(id) then
+        if ForClass(item, class) and not Chronicle.HasItem(id) then
             local count = C_Item.GetItemCount(id, true)
             if type(count) == "number" and not ns.IsSecret(count) and count > 0 and Chronicle.SeeItem(id) and self.skillsKnown then
                 local name = C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)

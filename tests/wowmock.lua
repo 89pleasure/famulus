@@ -898,9 +898,10 @@ function UnitGUID(unit)
     end
     return member and member.guid or nil
 end
+-- mock.state.playerClass: the player's class file (default "WARRIOR")
 function UnitClass(unit)
     local member = GroupMember(unit)
-    local file = member and member.class or "WARRIOR"
+    local file = member and member.class or unit == "player" and mock.state.playerClass or "WARRIOR"
     return file:sub(1, 1) .. file:sub(2):lower(), file, 1
 end
 function UnitIsConnected(unit)

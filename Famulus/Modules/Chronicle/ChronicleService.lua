@@ -94,27 +94,83 @@ local function Label(entry)
 end
 
 -- Abilities whose learning is an event, recognised by their spell. To add
--- one: a line here and its two sentences per language (c_ability_<id>,
--- c_their_ability_<id>). Modules/Chronicle/OwnJourney.lua does the looking.
---   id       name of the ability in entries, texts and FamulusCharDB.abilities
---   spell    the spell the character knows once it is learned
---   skill    optional { line = <skill line>, rank = <points> }: counts as
---            learned too, where the client does not list the spell
---   picture  optional name in UI.media for the book
---   big      optional: a milestone of the book
+-- one: a line here; the sentence names the spell as the game does ("Learned
+-- Bear Form"). Modules/Chronicle/OwnJourney.lua does the looking.
+--   id         name of the ability in entries and FamulusCharDB.abilities
+--   spell      the spell the character knows once it is learned; the book
+--              shows its icon and its tooltip
+--   also       optional: other spells that count as the same ability (the
+--              version another race learns)
+--   class      optional: only this class learns it ("DRUID"); others never
+--              ask for it
+--   skill      optional { line = <skill line>, rank = <points> }: counts as
+--              learned too, where the client does not list the spell
+--   sentences  optional: has its own two sentences per language
+--              (c_ability_<id>, c_their_ability_<id>) instead
+--   picture    optional name in UI.media for the book
+--   big        optional: a milestone of the book
+-- The class abilities are those a class quest teaches, the levels in the
+-- comments. IDs from Wowhead for Classic and Forever; "/fam test" says
+-- whether the client knows each spell.
 ChronicleService.abilities = {
-    { id = "riding", spell = 33388, skill = { line = 762, rank = 75 }, picture = "horseshoe", big = true },
-    { id = "ridingFast", spell = 33391, skill = { line = 762, rank = 150 }, picture = "horseshoe", big = true },
+    { id = "riding", spell = 33388, skill = { line = 762, rank = 75 }, picture = "horseshoe", big = true, sentences = true },
+    { id = "ridingFast", spell = 33391, skill = { line = 762, rank = 150 }, picture = "horseshoe", big = true, sentences = true },
+    -- Warrior
+    { id = "defensiveStance", class = "WARRIOR", spell = 71 }, -- 10
+    { id = "berserkerStance", class = "WARRIOR", spell = 2458 }, -- 30
+    -- Paladin; the Forsaken learn their own steeds
+    { id = "redemption", class = "PALADIN", spell = 7328 }, -- 12
+    { id = "senseUndead", class = "PALADIN", spell = 5502 }, -- 20
+    { id = "warhorse", class = "PALADIN", spell = 13819, also = { 1279399 }, picture = "horseshoe", big = true }, -- 40
+    { id = "charger", class = "PALADIN", spell = 23214, also = { 1296534 }, picture = "horseshoe", big = true }, -- 60
+    -- Hunter
+    { id = "tameBeast", class = "HUNTER", spell = 1515 }, -- 10
+    -- Rogue
+    { id = "poisons", class = "ROGUE", spell = 2842, skill = { line = 40, rank = 1 } }, -- 20
+    -- Priest: what each race learns by its own quest
+    { id = "desperatePrayer", class = "PRIEST", spell = 13908 }, -- 10, dwarf
+    { id = "starshards", class = "PRIEST", spell = 10797 }, -- 10, night elf
+    { id = "hexOfWeakness", class = "PRIEST", spell = 9035 }, -- 10, troll
+    { id = "touchOfWeakness", class = "PRIEST", spell = 2652 }, -- 10, undead
+    { id = "feedback", class = "PRIEST", spell = 13896 }, -- 20, human
+    { id = "elunesGrace", class = "PRIEST", spell = 2651 }, -- 20, night elf
+    { id = "shadowguard", class = "PRIEST", spell = 18137 }, -- 20, troll
+    { id = "chastise", class = "PRIEST", spell = 1277331 }, -- 20, dwarf
+    { id = "darkSacrifice", class = "PRIEST", spell = 1277324 }, -- 20, undead
+    -- Mage
+    { id = "polymorphPig", class = "MAGE", spell = 28272 }, -- 60
+    -- Warlock
+    { id = "summonImp", class = "WARLOCK", spell = 688 }, -- 1
+    { id = "summonVoidwalker", class = "WARLOCK", spell = 697 }, -- 10
+    { id = "summonSuccubus", class = "WARLOCK", spell = 712 }, -- 20
+    { id = "summonIncubus", class = "WARLOCK", spell = 713 }, -- 20
+    { id = "summonFelhunter", class = "WARLOCK", spell = 691 }, -- 30
+    { id = "felsteed", class = "WARLOCK", spell = 5784, picture = "horseshoe", big = true }, -- 40
+    { id = "inferno", class = "WARLOCK", spell = 1122 }, -- 50
+    { id = "ritualOfDoom", class = "WARLOCK", spell = 18540 }, -- 60
+    { id = "dreadsteed", class = "WARLOCK", spell = 23161, picture = "horseshoe", big = true }, -- 60
+    -- Druid; moonkin is a talent, not a quest
+    { id = "bearForm", class = "DRUID", spell = 5487 }, -- 10
+    { id = "curePoison", class = "DRUID", spell = 8946 }, -- 14
+    { id = "aquaticForm", class = "DRUID", spell = 1066 }, -- 16
+    { id = "catForm", class = "DRUID", spell = 768 }, -- 20
+    { id = "moonkinForm", class = "DRUID", spell = 24858 }, -- 40
 }
 
 -- Items whose first arrival in the character's bags is an event, recognised
 -- by their item ID. To add one: a line here; the sentence names the item as
 -- the game does. Modules/Chronicle/OwnJourney.lua does the looking.
 --   item     the game's item ID
+--   class    optional: only this class gets it; others never ask for it
 --   picture  optional name in UI.media for the book (default: a chest)
 --   big      optional: a milestone of the book
 ChronicleService.items = {
     { item = 211527 }, -- the sleeping bag
+    -- The shaman's totems, each from a class quest (level 4, 10, 20, 30)
+    { item = 5175, class = "SHAMAN" }, -- Earth Totem
+    { item = 5176, class = "SHAMAN" }, -- Fire Totem
+    { item = 5177, class = "SHAMAN" }, -- Water Totem
+    { item = 5178, class = "SHAMAN" }, -- Air Totem
 }
 
 function ChronicleService.Item(itemID)
@@ -144,6 +200,16 @@ function ChronicleService.Ability(id)
         end
     end
     return nil
+end
+
+-- The name of an entry's ability: as this client names its spell, else as
+-- the one who learned it did.
+local function AbilityName(entry, known)
+    local name = known and C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(known.spell)
+    if IsPlainText(name) then
+        return name
+    end
+    return entry.name or L.c_an_ability
 end
 
 -- title(entry): the headline. detail(entry): the line below it, or nil.
@@ -206,20 +272,21 @@ local kinds = {
         end,
     },
     ability = {
-        -- A known ability has its own sentence; one this version does not
-        -- know (a companion's newer addon) is named as the game names it.
+        -- Riding has its own sentences; every other ability is named as the
+        -- game names its spell, also one this version does not know (a
+        -- companion's newer addon).
         title = function(e)
-            local known = type(e.ability) == "string" and ChronicleService.Ability(e.ability)
+            local known = type(e.ability) == "string" and ChronicleService.Ability(e.ability) or nil
             if e.who then
-                if known then
+                if known and known.sentences then
                     return L["c_their_ability_" .. e.ability]:format(Label(e))
                 end
-                return L.c_their_profession:format(Label(e), e.name or L.c_an_ability)
+                return L.c_their_profession:format(Label(e), AbilityName(e, known))
             end
-            if known then
+            if known and known.sentences then
                 return L["c_ability_" .. e.ability]
             end
-            return L.c_profession:format(e.name or L.c_an_ability)
+            return L.c_profession:format(AbilityName(e, known))
         end,
         detail = function(e)
             return e.level and L.c_at_level:format(tonumber(e.level) or 0) or nil
@@ -861,6 +928,11 @@ function ChronicleService.SeeSkill(skillLine, rank)
 end
 
 -- Marks an ability as learned by this character; true if it was new.
+-- HasAbility asks without marking.
+function ChronicleService.HasAbility(id)
+    return type(FamulusCharDB) == "table" and type(FamulusCharDB.abilities) == "table" and FamulusCharDB.abilities[id] == true
+end
+
 function ChronicleService.SeeAbility(id)
     if type(FamulusCharDB) ~= "table" or type(id) ~= "string" then
         return false

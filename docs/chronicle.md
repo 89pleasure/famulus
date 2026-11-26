@@ -285,17 +285,37 @@ picture-book look are built and checked against the mock only.
   - **Abilities (the owner's request, 2026-11-19):** What the character learns and can be
     recognised by its spell is in a table: `ChronicleService.abilities` with `id`, `spell`
     (main detection via `IsPlayerSpell`, the owner's decision), optionally `skill`
-    (`{ line, rank }`, fallback via `C_SkillInfo.GetSkillLineInfoByID`), `picture` (name in
-    `UI.media`) and `big` (milestone in the book). `ownJourney` checks the table in a loop
-    on `SPELLS_CHANGED` and `SKILL_LINES_CHANGED` (`CheckAbilities`). One kind `ability` for all:
-    entry `{ ability = "<id>", name = <spell name>, level }`, state in
-    `FamulusCharDB.abilities`; what is already learned when switching on is only remembered.
-    - **A new ability** is one row in the table plus `c_ability_<id>` and
-      `c_their_ability_<id>` in every language (the test checks sentences and picture per row).
-    - So far: `riding` (spell 33388) and `ridingFast` (33391), both with horseshoe
-      (`horseshoe.tga`) and as a milestone, fallback via skill 762 from 75 or 150 points.
-      The IDs come from Retail and Classic; whether Forever uses them the same way is not
-      checked in game.
+    (`{ line, rank }`, fallback via `C_SkillInfo.GetSkillLineInfoByID`), `also` (other spells
+    that count as the same ability, another race's version), `class` (only this class asks for
+    it), `sentences`, `picture` (name in `UI.media`) and `big` (milestone in the book).
+    `ownJourney` checks the table in a loop on `SPELLS_CHANGED` and `SKILL_LINES_CHANGED`
+    (`CheckAbilities`), only rows of the character's class (`UnitClass`) it has not learned yet.
+    One kind `ability` for all: entry `{ ability = "<id>", name = <spell name>, level }`, state
+    in `FamulusCharDB.abilities`; what is already learned when switching on is only remembered.
+    - **A new ability is one row in the table.** The sentence names the spell as the reader's
+      client names it (`C_Spell.GetSpellName` of `spell`; "Learned Bear Form", the texts
+      `c_profession`/`c_their_profession`), otherwise with the name sent along. Only a row with
+      `sentences` (riding) has its own `c_ability_<id>` and `c_their_ability_<id>` in every
+      language; the test checks that the others have none. The book shows the spell's icon and
+      tooltip; without `picture` the strip shows the sparkle.
+    - `riding` (spell 33388) and `ridingFast` (33391), both with horseshoe (`horseshoe.tga`) and
+      as a milestone, fallback via skill 762 from 75 or 150 points.
+    - **Class abilities (since 2026-11-27):** what a class quest teaches, for every class; the
+      table names the level per row. The class mounts (paladin, warlock) are milestones with the
+      horseshoe like riding. The Forsaken paladin's steeds are `also` of `warhorse` and
+      `charger`; the sentence then names the main spell. The shaman's totems are items (see
+      "Special items"). Moonkin is a talent, not a quest; a talent reset and relearning it
+      writes nothing again. Poisons fall back on skill line 40.
+      - The IDs come from Wowhead (Classic and Forever) and warcraft.wiki.gg, researched by the
+        assistant; none checked in game. `/fam test` names every spell and item the client does
+        not know (group `chronicle`, `CheckChronicleIds` in `Core/SelfTest.lua`); such a row
+        is never recorded. Doubtful: `elunesGrace` (2651, reworked in Forever), `feedback`,
+        `senseUndead`, `summonIncubus`.
+      - Missing for want of IDs: the priests' Forever racials Divine Grace (human, 10),
+        Confounding Flash (gnome, 10), Contingency Plan (gnome, 20); class quests of the
+        Skyborne; Teleport: Moonglade (unclear whether quest or trainer). Left out on purpose:
+        the mage's Study (Forever, for library books), the hunter's further pet spells and the
+        totem spells (one entry per quest), level-60 quest weapons.
     - If a version does not know a companion's `id` (newer addon), it shows the
       spell name sent along ("… learns Swimming").
     - **No spell service and no profession service (checked 2026-11-19):** Only `ownJourney`
@@ -305,15 +325,16 @@ picture-book look are built and checked against the mock only.
       `ProfessionService` pays off as soon as a feature outside the chronicle needs the same data
       (for example durability or profession helpers); then move the queries there.
   - **Special items (the owner's request, 2026-11-19):** the same principle via the
-    item ID. Table `ChronicleService.items` with `item` (ID), optionally `picture` (default:
-    chest, `chest.tga`) and `big`. `ownJourney` checks on `BAG_UPDATE_DELAYED` with
+    item ID. Table `ChronicleService.items` with `item` (ID), optionally `class`, `picture`
+    (default: chest, `chest.tga`) and `big`. `ownJourney` checks on `BAG_UPDATE_DELAYED` with
     `C_Item.GetItemCount(id, true)` (bags and bank) and only queries items the
     character has never had (`FamulusCharDB.items`); once they have all of them, the event costs
     nothing. Kind `item`: `{ item = <ID>, name, level, zone }`. The sentence names the item the
     way the reader's client names it (`C_Item.GetItemNameByID`), otherwise with the name sent
     along; there are no sentences of their own per item. **A new item is one row in the
     table.** What is already in the bags when switching on is only remembered. So far: 211527
-    (the German "Schlafsack", a sleeping bag; ID from the owner). In the book an item shows the
+    (the German "Schlafsack", a sleeping bag; ID from the owner) and the shaman's four totems
+    from their class quests (5175 to 5178, `class = "SHAMAN"`). In the book an item shows the
     icon the game gives it (the owner's request; `C_Item.GetItemIconByID`, `story.texture` in
     `UI/Book.lua`): in its own colours, so without `UI.Tint`, with a cropped edge in the round
     frame. The small icon (in the strip, formerly on the dot of the timeline) stays the chest; if
