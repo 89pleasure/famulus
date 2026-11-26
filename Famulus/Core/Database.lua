@@ -1,7 +1,7 @@
 -- Settings storage.
---   FamulusDB      account-wide: { profile = {...}, window = {...}, seen = bool,
+--   FamulusDB      account-wide: { dataVersion = n, profile = {...}, window = {...}, seen = bool,
 --                  welcome = bool (the welcome page was answered, UI/Welcome.lua) }
---   FamulusCharDB  per character: { useCharacter = bool, profile = {...} }
+--   FamulusCharDB  per character: { dataVersion = n, useCharacter = bool, profile = {...} }
 -- A profile is { [section] = { [key] = value } }. Only values that differ
 -- from the default are stored, so the saved file stays tiny and a changed
 -- default in a later version reaches everybody who never touched the option.
@@ -141,18 +141,43 @@ function ns:SetUseCharacterProfile(enabled)
     self:Fire("PROFILE_CHANGED")
 end
 
-local function InitDatabase()
-    if type(FamulusDB) ~= "table" then
-        FamulusDB = {}
+-- Saved data carries a version, so a later Famulus knows what shape an older file has. Step n
+-- brings a file from version n - 1 to n. Each step has a part for the account's FamulusDB and one
+-- for a character's FamulusCharDB, either may be missing. Each file keeps its own version, because
+-- a character that has not logged in for a while catches up only when it does.
+-- Only add steps at the end, and never change one that has been released: players' files have
+-- already run it. A step must cope with any field missing.
+local MIGRATIONS = {
+    -- 1: the journal left with the quality-of-life features (2026-11-23).
+    { account = function(db) db.journal = nil end },
+}
+ns.MIGRATIONS = MIGRATIONS
+ns.DATA_VERSION = #MIGRATIONS
+
+-- Brings one saved file ("account" or "character") up to DATA_VERSION and returns it. A new file
+-- starts at the current version and skips every step. A file from a newer Famulus is left as it
+-- is, so going back to an older version does not run old steps on newer data.
+function ns.MigrateSaved(saved, part)
+    if type(saved) ~= "table" then
+        return { dataVersion = ns.DATA_VERSION }
     end
+    local version = tonumber(saved.dataVersion) or 0
+    for step = version + 1, ns.DATA_VERSION do
+        local migrate = MIGRATIONS[step][part]
+        if migrate then
+            migrate(saved)
+        end
+        saved.dataVersion = step -- a step that fails leaves the file at the last one that ran
+    end
+    return saved
+end
+
+local function InitDatabase()
+    FamulusDB = ns.MigrateSaved(FamulusDB, "account")
     if type(FamulusDB.profile) ~= "table" then
         FamulusDB.profile = {}
     end
-    -- shortcut: drops the removed journal's data; delete this line once both dev machines have logged in.
-    FamulusDB.journal = nil
-    if type(FamulusCharDB) ~= "table" then
-        FamulusCharDB = {}
-    end
+    FamulusCharDB = ns.MigrateSaved(FamulusCharDB, "character")
     if FamulusCharDB.useCharacter and type(FamulusCharDB.profile) == "table" then
         profile = FamulusCharDB.profile
     else

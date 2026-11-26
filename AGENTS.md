@@ -225,6 +225,11 @@ These points are design decisions; `tests/run.lua` checks most of them.
   Ukrainian have three forms); upper and lower case only via `ns.Upper`, `ns.Lower`, `ns.Capital`
   (`string.upper` changes only A–Z). See `docs/languages.md`.
 - **Settings:** Only what differs from the default is saved (`ns:SetOption`).
+- **Saved data:** `FamulusDB` and `FamulusCharDB` each carry a `dataVersion`. Whoever renames,
+  restructures or removes a saved field adds a step at the end of `MIGRATIONS` in
+  `Core/Database.lua` (an `account` and/or `character` part) instead of reading old shapes
+  everywhere. Never change a step that has been released; players' files have already run it.
+  New fields need no step, as long as the code copes with their absence.
 - **Window:** Rows are built automatically from features and their `options`
   (`type = "toggle"` or `"select"`; addon options also `"swatch"`); in a settings tab each feature
   is an entry with the icon it names (`icon`, a name from `UI.media`). New widgets belong in
