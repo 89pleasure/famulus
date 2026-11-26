@@ -1,0 +1,29 @@
+name: Bug report
+description: Something in Famulus does not work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. In the game, type `/fam report` (or open Famulus › About › "Copy bug report"), press Ctrl+C (Cmd+C on a Mac) and paste the text below. It contains no names.
+
+        If the problem is about sharing with friends or the guild, turn on developer mode with `/fam dev` first, make the problem happen again, then open the report: it then also shows what Famulus did step by step.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Bug report from the game
+      description: The text from `/fam report`.
+      render: text
+  - type: textarea
+    id: errors
+    attributes:
+      label: Lua errors
+      description: If BugSack or the game showed an error, paste it here.
+      render: text

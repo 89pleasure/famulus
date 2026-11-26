@@ -226,6 +226,16 @@ function Widget:GetNormalizedCursorPosition()
 end
 function Widget:SetFocus()
     mock.focus = self
+    if self.scripts.OnEditFocusGained then
+        self.scripts.OnEditFocusGained(self)
+    end
+end
+function Widget:SetMultiLine(multi)
+    self.multiLine = multi
+end
+-- Edit boxes: the whole text is selected until the cursor moves.
+function Widget:HighlightText()
+    self.highlighted = true
 end
 function Widget:ClearFocus()
     if mock.focus == self then

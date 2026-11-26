@@ -2572,6 +2572,32 @@ local function BuildPages()
                 OpenWelcome()
             end,
         },
+        -- What helps to find a bug, ready to copy into an issue (UI/Report.lua).
+        {
+            kind = "action",
+            id = "report",
+            label = function()
+                return L.about_report
+            end,
+            desc = function()
+                return L.about_report_value
+            end,
+            button = function()
+                return L.about_report_button
+            end,
+            confirm = function()
+                return L.about_report_button
+            end,
+            armed = function()
+                return false
+            end,
+            usable = function()
+                return true
+            end,
+            click = function()
+                ns:ShowBugReport()
+            end,
+        },
     }
     AddPage({
         id = "about",

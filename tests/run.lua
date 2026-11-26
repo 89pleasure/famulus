@@ -4624,6 +4624,90 @@ SlashCmdList.FAMULUS("dev")
 FamulusDB.selfTest = nil
 check(ns:CountRegisteredEvents() == eventsBefore, "idle cost is back to normal afterwards")
 
+-- The bug report: what helps to find a bug, as text to copy into an issue, without names.
+do
+    setState({ units = { player = { name = "Ilsa", surname = "Kerbholz" } },
+        guild = { { name = "Mel Sternlicht", online = true, guid = "Player-1-MEL" } } })
+    mock.reset()
+    SlashCmdList.FAMULUS("report")
+    local Report = ns.UI.Report
+    local dialog = Report.Frame()
+    local edit = dialog.edit
+    local text = edit:GetText()
+    check(Report.IsShown() and dialog.title:GetText() == "Bug report", "/fam report opens the bug report")
+    check(#mock.chat == 0 and type(FamulusDB.selfTest) == "table", "it runs the self-test quietly, without a line in the chat")
+    check(text:find("Famulus " .. ns.version .. ", client 1.60.1", 1, true) ~= nil and text:find("Data version 1,", 1, true) ~= nil
+        and text:find("\nOn: ", 1, true) ~= nil and text:find("\nSelf-test: ", 1, true) ~= nil
+        and text:find("\nRunning: ", 1, true) ~= nil, "it names version, client, data version, features and self-test:\n" .. text)
+    check(text:find("Developer mode is off: no log, no trace.", 1, true) ~= nil
+        and dialog.hint:GetText():find(ns.L.ui_report_dev, 1, true) ~= nil,
+        "without developer mode it says so, and the hint tells how to turn it on")
+    check(dialog.hint:GetText():find("github.com/89pleasure/famulus/issues", 1, true) ~= nil, "the hint says where to paste it")
+    check(mock.focus == edit and edit.highlighted and edit.multiLine, "the text is selected, ready for Ctrl+C")
+    check(not text:find("Ilsa", 1, true) and not text:find("Kerbholz", 1, true) and not text:find("Mel", 1, true),
+        "the report names nobody")
+    check(edit:GetHeight() > 300 and dialog.scroll.content:GetHeight() == edit:GetHeight(), "the field scrolls as far as the text reaches")
+    local warnings = FamulusDB.selfTest.summary.warn
+    check(select(2, text:gsub("\n%[warn%] ", "")) == math.min(warnings, 40)
+        and (warnings <= 40 or text:find("\n... and " .. (warnings - 40) .. " more", 1, true) ~= nil),
+        "it lists at most 40 checks that are not ok, and says how many more there are")
+
+    -- Read only: what is typed goes; a click selects it all again.
+    edit.text, edit.highlighted = "typed", false
+    edit.scripts.OnTextChanged(edit, true)
+    check(edit:GetText() == text and edit.highlighted, "typing changes nothing, and the text is selected again")
+    edit.highlighted = false
+    edit.scripts.OnMouseUp(edit)
+    check(edit.highlighted, "a click into the text selects it all again")
+    edit.scripts.OnEscapePressed(edit)
+    check(not Report.IsShown() and mock.focus ~= edit, "Escape closes it")
+
+    -- In developer mode the log and the newest lines of the trace come along; "|" never does.
+    SlashCmdList.FAMULUS("dev")
+    ns:DevLog("SHARE", "throttled | again")
+    ns:DevTrace("SEND", "sent H to AW-799")
+    local frames = #mock.frames
+    mock.reset()
+    SlashCmdList.FAMULUS("report")
+    text = edit:GetText()
+    check(text:find("Developer log (1):", 1, true) ~= nil and text:find("SHARE  throttled / again", 1, true) ~= nil
+        and text:find("Trace (the last 2 of 2 lines):", 1, true) ~= nil and text:find("SEND  sent H to AW-799", 1, true) ~= nil
+        and not text:find("|", 1, true), "in developer mode the log and the trace come along, without \"|\":\n" .. text)
+    check(not dialog.hint:GetText():find(ns.L.ui_report_dev, 1, true), "the hint no longer asks for developer mode")
+    check(#mock.frames == frames, "the window is built once and reused")
+
+    -- While sharing runs, it counts who is linked and what waits, never by name.
+    enable("sharing")
+    SlashCmdList.FAMULUS("report")
+    text = edit:GetText()
+    check(text:find("\nSharing: %d+ linked, %d+ friends and guild members online, %d+ messages waiting") ~= nil
+        and text:find("sharing", 1, true) ~= nil, "with sharing on, the report counts its state")
+    enable("sharing", false)
+    SlashCmdList.FAMULUS("dev")
+    dialog:Hide()
+
+    -- "About" has a button for it.
+    if not window:IsShown() then
+        SlashCmdList.FAMULUS("")
+    end
+    mock.Click(navButton("About"))
+    local row
+    for _, each in ipairs(visibleRows()) do
+        if each.item.id == "report" then
+            row = each
+        end
+    end
+    check(row ~= nil and row.label:GetText() == "Bug report" and row.action.label:GetText() == "Copy bug report",
+        "\"About\" offers the bug report")
+    mock.Click(row.action)
+    check(Report.IsShown() and mock.focus == edit, "its button opens the report")
+    dialog:Hide()
+    window:Hide()
+    FamulusDB.selfTest = nil
+    setState({})
+    check(ns:CountRegisteredEvents() == eventsBefore, "the report leaves nothing listening")
+end
+
 ---------------------------------------------------------------------------
 section("Saved settings")
 ---------------------------------------------------------------------------

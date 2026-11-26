@@ -88,6 +88,10 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   - Checked against the mock only, not yet seen in game. Open in game: whether the page fits with
     the list open in French (the column is 760 wide so that a tile's line takes at most three
     lines), how logo, glow and the big button look, whether dragging the page moves the window.
+- **Bug report (`UI/Report.lua`, since 2026-11-26, issue #47):** a small window of its own above
+  the main one (640 × 500, strata `DIALOG`, the window's card, shadow and scale), from
+  `/fam report` or About › "Copy bug report". What it shows and why: see "Bug report" in
+  docs/testing.md.
 - **Reset** acts on the tab (features of the whole section, addon options only their
   key; on Settings › General also the three master switches). The first click asks
   ("Really reset?", red), a second within four seconds carries it out; greyed out on
