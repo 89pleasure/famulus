@@ -4500,7 +4500,7 @@ do
                 characterLevel = 41, className = "Mage" } } },
             { battleTag = "Re#3", games = { { characterName = "Other Game", playerGuid = "Player-1-OTHER", areaName = "Tanaris", wowProjectID = 1 } } },
             { battleTag = "Pv#4", games = { { characterName = "Rhea Dunkelhain", playerGuid = "Player-2-RHEA", areaName = "Tanaris",
-                characterLevel = 40, className = "Hunter", realmID = 2, realmDisplayName = "PvP" } } },
+                characterLevel = 40, className = "Hunter", mode = "PvP" } } },
             { battleTag = "Ho#5", games = { { characterName = "Grosh Steinhauer", playerGuid = "Player-1-GROSH", areaName = "Tanaris",
                 characterLevel = 40, className = "Shaman", factionName = "Horde" } } },
         },
@@ -4528,10 +4528,22 @@ do
     check(#Nearby.People(false) == 5 and not find(Nearby.People(false), "Kael Dornhain"), "without the guild only friends count")
     check(find(people, "Rhea Dunkelhain").out == "Realm PvP" and find(people, "Rhea Dunkelhain").bnet == "|Kq4|k"
         and find(people, "Grosh Steinhauer").out == "Horde" and not mira.out and not borin.out and not kael.out,
-        "a Battle.net friend on another realm or of the other faction is out of reach")
-    mock.state.bnFriends[4].games[1].realmDisplayName = nil
-    check(find(Nearby.People(true), "Rhea Dunkelhain").out == "Other realm", "a realm the client does not name")
-    mock.state.bnFriends[4].games[1].realmDisplayName = "PvP"
+        "a Battle.net friend in another mode or of the other faction is out of reach")
+    check(find(people, "Rhea Dunkelhain").mode == "PvP" and not find(people, "Rhea Dunkelhain").faction
+        and find(people, "Grosh Steinhauer").faction == "Horde" and not find(people, "Grosh Steinhauer").mode,
+        "the mode from the rich presence against the player's own, the faction apart")
+    check(borin.bnet == "|Kq1|k" and not mira.bnet and not kael.bnet,
+        "the Battle.net account of whoever was met on Battle.net first, for the whisper")
+    check(Nearby.Mode("Forever - RP-PvP - Stranglethorn Vale") == "RP-PvP" and Nearby.Mode("Forever - Normal - Hillsbrad - Foothills") == "Normal"
+        and Nearby.Mode("Tanaris") == nil and Nearby.Mode("Forever - Tanaris") == nil and Nearby.Mode(nil) == nil,
+        "the mode is the middle of at least three parts")
+    mock.state.bnFriends[5].games[1].mode = "PvP"
+    check(find(Nearby.People(true), "Grosh Steinhauer").out == "Realm PvP  ·  Horde", "another mode and the other faction: both")
+    mock.state.bnFriends[5].games[1].mode = nil
+    mock.state.noOwnGame = true
+    check(not find(Nearby.People(true), "Rhea Dunkelhain").out and find(Nearby.People(true), "Grosh Steinhauer").out == "Horde",
+        "without the player's own mode only the faction counts")
+    mock.state.noOwnGame = nil
     mock.state.instanceType = "party"
     check(Nearby.Quiet(true) == "instance", "in a dungeon nobody is told about")
     mock.state.instanceType, mock.state.resting = nil, true
@@ -4652,7 +4664,7 @@ do
             { battleTag = "Bo#1", games = { { characterName = "Borin Eisenbart", playerGuid = "Player-1-BORIN", areaName = "Desolace",
                 characterLevel = 39, className = "Warrior" } } },
             { battleTag = "Pv#2", games = { { characterName = "Rhea Dunkelhain", playerGuid = "Player-2-RHEA", areaName = "Tanaris",
-                characterLevel = 40, className = "Rogue", realmID = 2, realmDisplayName = "PvP" } } },
+                characterLevel = 40, className = "Rogue", mode = "PvP" } } },
             { battleTag = "Ho#3", games = { { characterName = "Grosh Steinhauer", playerGuid = "Player-1-GROSH", areaName = "Tanaris",
                 characterLevel = 40, className = "Warrior", factionName = "Horde" } } },
         },
@@ -4693,6 +4705,9 @@ do
         and rows[2].whisper.tip == "Whisper", "the button opens a whisper, with the realm; its tooltip names it")
     mock.Click(rows[7].whisper)
     check(mock.count("ChatFrameUtil.SendBNetTell") == 1 and mock.calls[#mock.calls][2] == "|Kq2|k", "out of reach, the whisper goes by Battle.net")
+    mock.Click(rows[3].whisper)
+    check(mock.count("ChatFrameUtil.SendBNetTell") == 2 and mock.calls[#mock.calls][2] == "|Kq1|k" and mock.count("ChatFrameUtil.SendTell") == 1,
+        "a Battle.net friend gets a Battle.net whisper, even on the player's realm")
     mock.Click(rows[1])
     mock.Advance(0.1)
     check(window.fellows.card:IsShown() and window.fellows.card.name:GetText() == "Mira Sturmfeder",
@@ -5014,6 +5029,22 @@ SlashCmdList.FAMULUS("test")
 result = FamulusDB.selfTest
 check(findCheck(result, "names", "guild roster").detail == "2 members (nil online), 1 listed as offline, 1 with a GUID",
     "for the guild: how many, how many offline, how many with a GUID: " .. findCheck(result, "names", "guild roster").detail)
+setState({ bnFriends = {
+    { battleTag = "Bo#1", games = { { characterName = "Borin Eisenbart" } } },
+    { battleTag = "Pv#2", games = { { characterName = "Rhea Dunkelhain", mode = "PvP" } } },
+    { battleTag = "Xx#3", games = { { characterName = "Odd Presence", richPresence = "Tanaris" } } },
+} })
+SlashCmdList.FAMULUS("test")
+result = FamulusDB.selfTest
+check(findCheck(result, "names", "Battle.net modes").status == "ok" and findCheck(result, "names", "Battle.net modes").detail
+    == "own mode Normal; friends: Normal 1, PvP 1, 1 without; faction named for 3",
+    "for Battle.net's modes: the player's own, the friends', the factions, without names: "
+    .. findCheck(result, "names", "Battle.net modes").detail)
+mock.state.noOwnGame = true
+SlashCmdList.FAMULUS("test")
+result = FamulusDB.selfTest
+check(findCheck(result, "names", "Battle.net modes").status == "warn", "without the player's own mode the report warns")
+mock.state.noOwnGame = nil
 setState({})
 SlashCmdList.FAMULUS("test")
 result = FamulusDB.selfTest

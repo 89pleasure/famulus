@@ -50,9 +50,10 @@ GitHub.
 #### Fellow travellers
 - Whisper someone right from the overview, a list row or their card. The card's buttons are now
   icons in one row.
-- Nearby: Battle.net friends on another realm or faction can't play with you, so they no longer
-  get a card or appear under "Here in …". They stand last under "Out of reach", with the realm or
-  faction as the reason.
+- Nearby: Battle.net friends in another mode (Normal, PvP, RP, RP-PvP) or of the other faction
+  can't play with you, so they no longer get a card or appear under "Here in …". They stand last
+  under "Out of reach", with the mode and the faction as the reason. A Battle.net friend's
+  whisper goes by Battle.net, so it reaches them in any mode.
 - Classes and factions are named in their colours, softened so they don't outshine the rest.
 
 #### Window
