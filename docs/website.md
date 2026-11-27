@@ -517,6 +517,11 @@ owner.
   `?lang=de` also names the English page as canonical; search engines may treat it as a duplicate and
   index only the English page. Still missing: `og:image` (an absolute URL to a preview image of
   1200 × 630).
+- **Pictures for CurseForge (`assets/curseforge/`, since 2026-11-27):** the banner, the areas'
+  heads and the framed screenshots of the CurseForge description, drawn from this page by
+  `tools/make_curseforge_art.js` (see "Description with pictures" in docs/release.md). The page
+  itself does not use them; it only publishes them, so the description can load them from
+  famulus.camp. Redraw them when a screenshot here or an area's title changes.
 - **Deliberately not included yet:** Guildy (only once the PR there is accepted), a preview image
   for shared links (see "Head and link previews"), WOFF2 fonts (the TTFs from the addon are
   loaded, ~100 KB each).
