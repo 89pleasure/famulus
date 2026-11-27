@@ -240,7 +240,18 @@
   const form = $('#alias-form');
   const nameField = $('#alias-name');
   const aliasField = $('#alias-alias');
-  const state = { master: true, chat: true, tooltip: true, menu: true, style: 'alias', tab: 'names', editing: null, tip: MIRA };
+  // master stays on: since 2026-11-24 the addon has it under Settings › General,
+  // which the demo does not show. entry: the feature chosen in Settings.
+  const state = { master: true, chat: true, tooltip: true, menu: true, account: true, style: 'alias', tab: 'names', entry: 'chat', editing: null, tip: MIRA };
+
+  // The aliases' features in Settings, as their entries in the addon. Guildy
+  // is left out, as everywhere on the page.
+  const ALIAS_FEATURES = [
+    { key: 'chat', icon: 'chat', name: 'f_chat', desc: 'f_chat_d', options: 1 },
+    { key: 'tooltip', icon: 'tooltip', name: 'f_tooltip', desc: 'f_tooltip_d' },
+    { key: 'menu', icon: 'menu', name: 'f_menu', desc: 'f_menu_d' },
+    { key: 'account', icon: 'link', name: 'f_account', desc: 'f_account_d' },
+  ];
 
   const CHAT = [
     { channel: 'guild', who: MIRA, text: 'chat_1' },
@@ -347,9 +358,9 @@
   }
 
   // Reset works on the settings section only, like in the addon: the
-  // features there and the master switch. The first click asks; a second
-  // one within four seconds resets.
-  const DEFAULTS = { master: true, chat: true, tooltip: true, menu: true, style: 'alias' };
+  // features there. The first click asks; a second one within four seconds
+  // resets.
+  const DEFAULTS = { chat: true, tooltip: true, menu: true, account: true, style: 'alias' };
   const resetButton = $('#alias-reset');
   let asking = 0;
   const atDefaults = () => Object.entries(DEFAULTS).every(([key, value]) => state[key] === value);
@@ -380,33 +391,93 @@
     }
     stopAsking();
     Object.assign(state, DEFAULTS);
-    $('#alias-style').value = state.style;
     refresh(true);
   });
 
+  function switchButton(key, label) {
+    const button = make('button', 'switch');
+    button.type = 'button';
+    button.setAttribute('role', 'switch');
+    button.setAttribute('aria-checked', String(state[key]));
+    button.setAttribute('aria-label', label);
+    button.dataset.switch = key;
+    const track = make('span', 'switch__track');
+    track.append(make('span', 'switch__knob'));
+    button.append(track);
+    return button;
+  }
+
+  // Settings: an entry per feature (its icon, name, state and options, and
+  // its switch), and the chosen one in full: its area, name and switch,
+  // whether it is on and its default, its description and its options.
+  function renderSettings() {
+    // Drawn anew on every change; the focus stays on what had it.
+    const had = document.activeElement;
+    const keep = had && demo.contains(had) && (had.dataset.switch || had.dataset.entry || had.id)
+      ? { switch: had.dataset.switch, entry: had.dataset.entry, id: had.id, inDetail: !!had.closest('#alias-detail') }
+      : null;
+
+    const list = $('#alias-entries');
+    list.textContent = '';
+    for (const feature of ALIAS_FEATURES) {
+      const on = state[feature.key];
+      const chosen = state.entry === feature.key;
+      const row = make('div', `fentry${chosen ? ' is-chosen' : ''}${on ? ' is-on' : ''}`);
+      const pick = make('button', 'fentry__pick');
+      pick.type = 'button';
+      pick.dataset.entry = feature.key;
+      pick.setAttribute('aria-pressed', String(chosen));
+      const mark = make('span', 'fentry__icon');
+      mark.append(icon(feature.icon, 16));
+      const text = make('span', 'fentry__text');
+      const said = t(on ? 'on' : 'off');
+      text.append(make('strong', '', t(feature.name)), make('span', '', feature.options ? t('w_entry_option', said, feature.options) : said));
+      pick.append(mark, text);
+      row.append(pick, switchButton(feature.key, t(feature.name)));
+      list.append(row);
+    }
+
+    const feature = ALIAS_FEATURES.find(each => each.key === state.entry);
+    const on = state[feature.key];
+    const detail = $('#alias-detail');
+    detail.textContent = '';
+    const head = make('div', 'fdetail__head');
+    head.append(make('h4', '', t(feature.name)), switchButton(feature.key, t(feature.name)));
+    const pills = make('div', 'fdetail__pills');
+    pills.append(make('span', `pill${on ? ' is-on' : ''}`, t(on ? 'on' : 'off')), make('span', 'pill', t('w_default_on')));
+    detail.append(make('p', 'fdetail__area', t('w_aliases')), head, pills, make('p', 'fdetail__desc', t(feature.desc)));
+    if (feature.key === 'chat') {
+      const option = make('div', `fopt${on ? '' : ' is-off'}`);
+      const words = make('label', 'fopt__text');
+      words.htmlFor = 'alias-style';
+      words.append(make('strong', '', t('o_style')), make('span', '', t('o_style_d')));
+      const select = make('select');
+      select.id = 'alias-style';
+      select.disabled = !on;
+      for (const value of ['alias', 'both']) {
+        const choice = make('option', '', t(`o_style_${value}`));
+        choice.value = value;
+        choice.selected = state.style === value;
+        select.append(choice);
+      }
+      option.append(words, select);
+      detail.append(make('p', 'fdetail__options', t('w_options')), option);
+    }
+
+    if (keep) {
+      const scope = keep.inDetail ? detail : list;
+      const again = keep.id ? $(`#${keep.id}`, demo)
+        : keep.switch ? $(`[data-switch="${keep.switch}"]`, scope)
+          : $(`[data-entry="${keep.entry}"]`, list);
+      if (again) again.focus({ preventScroll: true });
+    }
+  }
+
   function renderWindow() {
-    for (const button of $$('[data-switch]', demo)) {
-      const on = state[button.dataset.switch];
-      button.setAttribute('aria-checked', String(on));
-      const label = $('.switch__label', button);
-      if (label) label.textContent = t(on ? 'on' : 'off');
-    }
-    for (const card of $$('[data-feature]', demo)) {
-      card.classList.toggle('is-on', state.master && state[card.dataset.feature]);
-    }
-    demo.classList.toggle('is-off', !state.master);
     for (const tab of $$('[data-tab]', demo)) chooseTab(tab, tab.dataset.tab === state.tab);
     for (const pane of $$('[data-pane]', demo)) pane.hidden = pane.dataset.pane !== state.tab;
-    $('#alias-tabtitle').textContent = t(`w_tab_${state.tab}`);
-    $('#alias-tabdesc').textContent = t(`w_tabdesc_${state.tab}`);
+    renderSettings();
     renderReset();
-
-    // The counters: three alias features to switch here and two more the
-    // demo leaves on; in all, the five of the aliases, four of the chronicle
-    // (the live feed is on) and one of the fellow travellers.
-    const running = state.master ? ['chat', 'tooltip', 'menu'].filter(key => state[key]).length + 2 : 0;
-    $('#alias-count').textContent = state.master ? `${running}/5` : t('off');
-    $('#active-count').textContent = t('w_active', running + 1, 10);
   }
 
   function refresh(mark) {
@@ -418,12 +489,18 @@
     renderFellows(); // and among the fellow travellers
   }
 
-  for (const button of $$('[data-switch]', demo)) {
-    button.addEventListener('click', () => {
-      state[button.dataset.switch] = !state[button.dataset.switch];
+  // The switches and entries are drawn anew, so the window listens for them.
+  demo.addEventListener('click', event => {
+    const toggle = event.target.closest('[data-switch]');
+    const entry = event.target.closest('[data-entry]');
+    if (toggle) {
+      state[toggle.dataset.switch] = !state[toggle.dataset.switch];
       refresh(true);
-    });
-  }
+    } else if (entry) {
+      state.entry = entry.dataset.entry;
+      renderSettings();
+    }
+  });
   for (const tab of $$('[data-tab]', demo)) {
     tab.addEventListener('click', () => {
       state.tab = tab.dataset.tab;
@@ -432,7 +509,8 @@
     });
   }
   tablist($('.fwin__tabs', demo));
-  $('#alias-style').addEventListener('change', event => {
+  demo.addEventListener('change', event => {
+    if (event.target.id !== 'alias-style') return;
     state.style = event.target.value;
     renderReset();
     renderChat(true);
