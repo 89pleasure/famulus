@@ -322,11 +322,12 @@ owner.
   and without manual work, with a custom domain. Because the repo is public, GitHub Pages (free):
   `.github/workflows/website.yml` publishes the folder `website/` unchanged as soon as a
   push to `main` changes something in it; manually via Actions › Website › Run workflow. Once per
-  repository: Settings › Pages › Source "GitHub Actions". The owner gets the domain;
-  it is entered under Settings › Pages › Custom domain (with the workflow no `CNAME` file is
-  needed), and at the DNS provider A and AAAA records pointing to GitHub for the domain without
-  `www`, a CNAME to `89pleasure.github.io` for `www`. Without a domain the page is at
-  `89pleasure.github.io/famulus/`; that works because all paths are relative. GitHub sees the
+  repository: Settings › Pages › Source "GitHub Actions". The page is live at
+  **`https://famulus.camp/`** (since 2026-11-27): the domain is entered under Settings › Pages ›
+  Custom domain (with the workflow no `CNAME` file is needed), and at the DNS provider A and AAAA
+  records point to GitHub for the domain without `www`, a CNAME to `89pleasure.github.io` for
+  `www`. HTTPS is enforced; `http://`, `www.famulus.camp` and `89pleasure.github.io/famulus/`
+  redirect (301) to `https://famulus.camp/`. All paths in the page stay relative. GitHub sees the
   visitors' IP addresses; the privacy policy says so (see "Footer and legal page"). Since
   2026-11-25 two jobs, build
   and deploy, as in GitHub's own Pages workflow: in one job `deploy-pages` twice looked for the
@@ -366,13 +367,17 @@ owner.
   title and description switch with the language. `favicon.ico` (32 px, for browsers without SVG
   icons) and `apple-touch-icon.png` (180 px) lie at the root of `website/`, scaled with `sips`
   from `docs/curseforge/logo.png`; the SVG logo stays the main icon. `<meta name="color-scheme">`
-  keeps the page dark before the CSS loads. **Once the domain exists:** add
-  `<link rel="canonical">`, `og:url`, `og:image` (needs an absolute URL and a preview image,
-  1200 × 630) and `hreflang` alternates for `?lang=de`; until then search engines see only the
-  English page.
-- **Deliberately not included yet:** Guildy (only once the PR there is accepted), the domain (the owner gets it), a preview image for shared
-  links (see "Head and link previews"), WOFF2 fonts (the TTFs from the addon are loaded, ~100 KB
-  each).
+  keeps the page dark before the CSS loads. URLs in the head are absolute, on `famulus.camp`:
+  `index.html` has `<link rel="canonical" href="https://famulus.camp/">`, the same `og:url`
+  and `hreflang` alternates `en` and `x-default` (`https://famulus.camp/`) and `de`
+  (`https://famulus.camp/?lang=de`); `legal.html` only its canonical
+  (`https://famulus.camp/legal.html`). The HTML is the same for both languages, so `?lang=de`
+  also names the English page as canonical; search engines may treat it as a duplicate and
+  index only the English page. Still missing: `og:image` (an absolute URL to a preview image of
+  1200 × 630).
+- **Deliberately not included yet:** Guildy (only once the PR there is accepted), a preview image
+  for shared links (see "Head and link previews"), WOFF2 fonts (the TTFs from the addon are
+  loaded, ~100 KB each).
 - **Checked** in the app's built-in browser (Chromium): at 1440 and 375 px width all
   sections, at 1024 and 680 px by spot checks; German and English; the colour schemes Lemon,
   Mint, Rose and Lilac; the three demos used; no messages in the console. Not checked:
