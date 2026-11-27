@@ -42,9 +42,11 @@ owner.
   01 Chronicle (the picture book with the tabs Everyone, My journey, Companions) →
   02 Fellow travellers → 03 Live feed (can be triggered, position can be moved) → 04 Aliases (the
   window rebuilt and usable, below it chat and tooltip "in game") → 05 Screenshots ("What Famulus
-  looks like in the game", since 2026-11-27, see "Gallery") → 06 Installation → footer with
-  a note on Blizzard's trademark. Tinted background (`section--tinted`) and glow still alternate
-  from section to section. The skip link and "What it does" lead to the chronicle (the arrow in the
+  looks like in the game", since 2026-11-27, see "Gallery") → 06 Installation → 07 Help (see
+  "Help") → footer with a note on Blizzard's trademark. Tinted background (`section--tinted`) and
+  glow still alternate from section to section; the campfire of the foot (`section--last`,
+  `#scene-foot`) stands behind the last section, since 2026-11-27 the help instead of the
+  installation. The skip link and "What it does" lead to the chronicle (the arrow in the
   header has been gone since the window in the header).
   Before: 01 Aliases, 02 Chronicle, 03 Fellow travellers, 04 Live feed. The demos show invented
   people and the samples from `/fam chronicle demo`, with our own drawings instead of
@@ -248,6 +250,24 @@ owner.
     now, and a link would fight the swipe). Checked at 1440 and 375 px, English and German:
     moves on after six seconds, arrows, dots and pause, no horizontal scrolling, no console
     messages.
+- **Help (07, since 2026-11-27):** "Questions around the campfire": on the left ten questions
+  as an accordion (`details`, keys `hp_q_*`/`hp_a_*`), grouped under Getting started, Friends &
+  privacy and In the game; on the right a panel that stays in view while they scroll past
+  (`position: sticky`; below 980 px it follows the questions): three steps to `/fam report`, the
+  main button to a new issue with the template `bug_report.yml` (no hint on `/fam dev` below it:
+  the page does not advertise developer mode), and links to an idea, a question (new issue with the label `enhancement` or
+  `question`) and the open issues. No number of open issues: the page asks no other server.
+  **Open:** GitHub only sets a label from the link for people who may label issues, so a
+  stranger's idea or question arrives without one; templates of their own (like
+  `bug_report.yml`) would fix that. The answers come from the code and the docs, not from the
+  game; what they name (commands, languages, what is sent, the game version) has to follow the
+  addon. They name no commands for sample data (`/fam … demo`, `/fam feed test`), and the
+  answer on friends says that Famulus is at its best when friends use it too, with the live
+  feed as the reason. Not in the navigation. Links inside running text get a line (`.release p a`, `.faq__a a`); the
+  page's links are bare otherwise, so the issue link in the release box looked like plain text
+  until then. Built from three variants (accordion with cards below; this one; topics as tabs
+  with the links in a larger footer). Checked at 1440, 820 and 375 px in English and German: no
+  horizontal scrolling, no console messages, every key in both languages.
 - **Languages:** English is in the HTML (`data-i18n="key"`), German in `i18n.js`; what
   scripts put together is there in both languages. **English is the default** (the owner's
   request, 2026-11-25; before that the page followed the browser's language, so a German
@@ -429,4 +449,5 @@ owner.
 - **Keep in step with changes to the addon:** the screenshot in the header as soon as the window
   visibly changes; the aliases' features in Settings (`ALIAS_FEATURES` in `main.js`), new main
   features as entries in the window's sidebar and as their own section with an entry in the
-  navigation; the bond tiers (`TIERS` in `main.js`) like `FellowService.TIERS`.
+  navigation; the bond tiers (`TIERS` in `main.js`) like `FellowService.TIERS`; the answers of
+  the help (`hp_a_*`) when a command, a language or what Famulus sends changes.
