@@ -501,6 +501,29 @@ window.FAMULUS_I18N = {
     hp_panel_s3: 'Füge ihn in ein neues Issue ein und schreib, was passiert ist.',
     hp_panel_btn: 'Fehler auf GitHub melden',
 
-    ft_legal: 'Famulus ist ein Fanprojekt und steht in keiner Verbindung zu Blizzard Entertainment. World of Warcraft ist eine Marke von Blizzard Entertainment, Inc. Schrift: Inter, SIL Open Font License 1.1.',
+    ft_blurb: 'Ein Addon fürs gemeinsame Spielen in World of Warcraft: Forever, mit deinen Freunden, deiner Gilde und allen, die du unterwegs triffst.',
+    ft_changes: 'Was ist neu',
+    ft_nav: 'Fußzeile',
+    ft_h_explore: 'Entdecken',
+    ft_shots: 'Screenshots',
+    ft_help: 'Hilfe & FAQ',
+    ft_h_community: 'Community',
+    ft_soon: 'Bald',
+    ft_bug: 'Fehler melden',
+    ft_h_legal: 'Rechtliches',
+    ft_privacy: 'Datenschutz',
+    ft_rights: 'Urheberrecht & Marken',
+    ft_licence: 'Lizenz',
+    ft_legal: 'Famulus ist ein Fanprojekt, steht in keiner Verbindung zu Blizzard Entertainment und wird nicht von Blizzard unterstützt. World of Warcraft und Blizzard Entertainment sind Marken oder eingetragene Marken von Blizzard Entertainment, Inc. Die Screenshots zeigen Spielinhalte © Blizzard Entertainment, Inc. Schrift: Inter, SIL Open Font License 1.1.',
+    ft_copy: '© 2026 89pleasure. Alle Rechte vorbehalten.',
+
+    // Only on legal.html (legal.js); the legal texts themselves stand there
+    // in both languages, so that the main page does not load them.
+    lg_meta_title: 'Datenschutz & Rechtliches – Famulus',
+    lg_meta_desc: 'Datenschutzerklärung, Urheberrecht und Marken der Website von Famulus, einem Addon für World of Warcraft: Forever.',
+    lg_back: 'Zurück zu Famulus',
+    lg_eyebrow: 'Rechtliches',
+    lg_title: 'Datenschutz & Rechtliches',
+    lg_lead: 'Was mit deinen Daten passiert, wenn du diese Website besuchst (kurz gesagt: so wenig wie möglich), und wem gehört, was du auf ihr siehst.',
   },
 };
