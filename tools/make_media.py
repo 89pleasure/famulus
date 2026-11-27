@@ -8,6 +8,7 @@ any image library. Run:  python3 tools/make_media.py
 
 import math
 import os
+import re
 import struct
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Famulus", "Media")
@@ -293,54 +294,207 @@ picture("horseshoe.tga", [arc(16, 14.5, 9.5, 115, 425)], [(8.6, 12, 1.1), (23.4,
 
 
 # Reactions to a friend's event (ChronicleService.REACTION_SETS).
-# They are shown small (18 px at the foot of a card), so their lines are
-# stronger and their shapes plain. No two points of a path may be the same:
-# a segment needs a length.
+# They are shown small (16-18 px), where our own line pictures looked like
+# runes, so they come from Phosphor Icons in the Bold weight (MIT, see
+# tools/phosphor/LICENSE), a set drawn for small sizes. Each SVG is filled
+# paths on a 256 grid; they are flattened to polygons and filled with the
+# nonzero rule.
+PHOSPHOR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phosphor")
+SVG_NUMBER = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
+
+
+def svg_tokens(d):
+    """Commands and numbers of a path; arc flags may stand without separators."""
+    tokens, i, arc_index = [], 0, -1
+    while i < len(d):
+        ch = d[i]
+        if ch.isalpha():
+            tokens.append(ch)
+            arc_index = 0 if ch in "Aa" else -1
+            i += 1
+        elif ch in " ,\t\r\n":
+            i += 1
+        elif arc_index in (3, 4) and ch in "01":
+            tokens.append(float(ch))
+            arc_index += 1
+            i += 1
+        else:
+            match = SVG_NUMBER.match(d, i)
+            tokens.append(float(match.group()))
+            if arc_index >= 0:
+                arc_index = (arc_index + 1) % 7
+            i = match.end()
+    return tokens
+
+
+def svg_arc(p0, rx, ry, rotation, large, sweep, p1, steps=16):
+    """Points of an SVG elliptical arc after p0, ending in p1 (SVG 1.1, F.6.5)."""
+    if rx == 0 or ry == 0 or p0 == p1:
+        return [p1]
+    rx, ry = abs(rx), abs(ry)
+    phi = math.radians(rotation)
+    c, s = math.cos(phi), math.sin(phi)
+    dx, dy = (p0[0] - p1[0]) / 2, (p0[1] - p1[1]) / 2
+    x1, y1 = c * dx + s * dy, -s * dx + c * dy
+    scale = (x1 * x1) / (rx * rx) + (y1 * y1) / (ry * ry)
+    if scale > 1:
+        rx, ry = rx * math.sqrt(scale), ry * math.sqrt(scale)
+    num = rx * rx * ry * ry - rx * rx * y1 * y1 - ry * ry * x1 * x1
+    den = rx * rx * y1 * y1 + ry * ry * x1 * x1
+    root = math.sqrt(max(0.0, num / den)) * (-1 if large == sweep else 1)
+    cx1, cy1 = root * rx * y1 / ry, -root * ry * x1 / rx
+    cx = c * cx1 - s * cy1 + (p0[0] + p1[0]) / 2
+    cy = s * cx1 + c * cy1 + (p0[1] + p1[1]) / 2
+    start = math.atan2((y1 - cy1) / ry, (x1 - cx1) / rx)
+    end = math.atan2((-y1 - cy1) / ry, (-x1 - cx1) / rx)
+    delta = end - start
+    if sweep and delta < 0:
+        delta += 2 * math.pi
+    elif not sweep and delta > 0:
+        delta -= 2 * math.pi
+    points = []
+    for k in range(1, steps + 1):
+        t = start + delta * k / steps
+        ex, ey = rx * math.cos(t), ry * math.sin(t)
+        points.append((cx + c * ex - s * ey, cy + s * ex + c * ey))
+    points[-1] = p1
+    return points
+
+
+def bezier(points, steps):
+    """Points of a quadratic or cubic Bezier curve after its start."""
+    out = []
+    for k in range(1, steps + 1):
+        t = k / steps
+        u = 1 - t
+        w = (u * u, 2 * u * t, t * t) if len(points) == 3 else (u**3, 3 * u * u * t, 3 * u * t * t, t**3)
+        out.append(tuple(sum(wj * p[axis] for wj, p in zip(w, points)) for axis in (0, 1)))
+    return out
+
+
+def svg_polygons(d, steps=16):
+    """Closed polygons of an SVG path (every command; curves flattened)."""
+    tokens = svg_tokens(d)
+    polygons, current = [], []
+    pos = start = (0.0, 0.0)
+    control = None  # the last control point, for S and T
+    command, i = None, 0
+
+    def take(n):
+        nonlocal i
+        values = tokens[i : i + n]
+        i += n
+        return values
+
+    while i < len(tokens):
+        if isinstance(tokens[i], str):
+            command = tokens[i]
+            i += 1
+            if command in "Zz":
+                if len(current) > 2:
+                    polygons.append(current)
+                current, pos, control = [], start, None
+                continue
+        relative = command.islower()
+        ox, oy = pos if relative else (0.0, 0.0)
+        kind = command.upper()
+        if kind == "M":
+            x, y = take(2)
+            if len(current) > 2:
+                polygons.append(current)
+            pos = start = (ox + x, oy + y)
+            current, control = [pos], None
+            command = "l" if relative else "L"  # further pairs are lines
+            continue
+        if kind == "L":
+            x, y = take(2)
+            new = [(ox + x, oy + y)]
+        elif kind == "H":
+            (x,) = take(1)
+            new = [(ox + x, pos[1])]
+        elif kind == "V":
+            (y,) = take(1)
+            new = [(pos[0], oy + y)]
+        elif kind == "C":
+            v = take(6)
+            c1, c2, end = (ox + v[0], oy + v[1]), (ox + v[2], oy + v[3]), (ox + v[4], oy + v[5])
+            new, control = bezier([pos, c1, c2, end], steps), c2
+        elif kind == "S":
+            v = take(4)
+            c1 = (2 * pos[0] - control[0], 2 * pos[1] - control[1]) if control else pos
+            c2, end = (ox + v[0], oy + v[1]), (ox + v[2], oy + v[3])
+            new, control = bezier([pos, c1, c2, end], steps), c2
+        elif kind == "Q":
+            v = take(4)
+            c1, end = (ox + v[0], oy + v[1]), (ox + v[2], oy + v[3])
+            new, control = bezier([pos, c1, end], steps), c1
+        elif kind == "T":
+            v = take(2)
+            c1 = (2 * pos[0] - control[0], 2 * pos[1] - control[1]) if control else pos
+            new, control = bezier([pos, c1, (ox + v[0], oy + v[1])], steps), c1
+        elif kind == "A":
+            rx, ry, rotation, large, sweep, x, y = take(7)
+            new = svg_arc(pos, rx, ry, rotation, int(large), int(sweep), (ox + x, oy + y), steps)
+        else:
+            raise ValueError("unknown path command " + command)
+        if kind not in "CSQT":
+            control = None
+        if not current:
+            current = [pos]
+        current += new
+        pos = new[-1]
+    if len(current) > 2:
+        polygons.append(current)
+    return polygons
+
+
+def fill_nonzero(polygons, size, n=8):
+    """Coverage grid [y][x] of polygons (in pixels) under the nonzero rule."""
+    edges = []
+    for polygon in polygons:
+        for k in range(len(polygon)):
+            (ax, ay), (bx, by) = polygon[k - 1], polygon[k]
+            if ay != by:
+                edges.append((ax, ay, bx, by, 1 if by > ay else -1))
+    grid = [[0.0] * size for _ in range(size)]
+    for row in range(size * n):
+        sy = (row + 0.5) / n
+        crossings = sorted(
+            (ax + (sy - ay) * (bx - ax) / (by - ay), w)
+            for ax, ay, bx, by, w in edges
+            if min(ay, by) <= sy < max(ay, by)
+        )
+        winding, line = 0, grid[row // n]
+        for k in range(len(crossings) - 1):
+            winding += crossings[k][1]
+            if winding != 0:  # samples whose centre lies in [x, next x)
+                first = max(0, math.ceil(crossings[k][0] * n - 0.5))
+                last = min(size * n - 1, math.ceil(crossings[k + 1][0] * n - 0.5) - 1)
+                for col in range(first, last + 1):
+                    line[col // n] += 1.0 / (n * n)
+    return grid
+
+
+def phosphor(name, icon, size=64):
+    """Writes the Phosphor icon tools/phosphor/<icon>.svg as a white texture."""
+    with open(os.path.join(PHOSPHOR, icon + ".svg"), encoding="utf-8") as handle:
+        svg = handle.read()
+    view = float(re.search(r'viewBox="0 0 ([\d.]+)', svg).group(1))
+    polygons = []
+    for d in re.findall(r'\sd="([^"]+)"', svg):
+        polygons += [[(x * size / view, y * size / view) for x, y in p] for p in svg_polygons(d)]
+    grid = fill_nonzero(polygons, size)
+    write_tga(name, size, lambda x, y: white(grid[int(y)][int(x)]))
+
+
+phosphor("sad.tga", "smiley-sad-bold")  # a death
+phosphor("cheer.tga", "confetti-bold")  # a level, a special event: a party popper
+phosphor("strong.tga", "hand-fist-bold")  # a boss
+phosphor("clap.tga", "hands-clapping-bold")  # a profession
+
+# Heart and flame are still our own line drawings, with a stronger pen.
 REACTION_PEN = 5
 
-
-def turn(points, degrees, cx, cy):
-    """Points turned about (cx, cy); positive degrees turn clockwise on screen."""
-    a = math.radians(degrees)
-    c, s = math.cos(a), math.sin(a)
-    return [(cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c) for x, y in points]
-
-
-# A sad face with a tear: a death.
-picture(
-    "sad.tga",
-    [arc(14.5, 25.5, 4.5, 220, 320), [(21.5, 16.3)] + arc(21.5, 19.5, 1.3, -30, 210) + [(21.5, 16.3)]],
-    [(16, 16, 11.5), (11.5, 13, 0.6), (20, 13, 0.6)],
-    REACTION_PEN,
-)
-
-# A party popper with confetti flying out of it: a level, a special event.
-CHEER = [
-    [(4.5, 27.5), (8.5, 14.5), (17.5, 23.5), (4.5, 27.5)],
-    [(19.5, 12.5), (25, 7)],
-    [(12.5, 10.5), (14, 7.5), (12, 5), (13, 2.5)],
-    [(21.5, 18), (24.5, 16.5), (27, 18.5), (29.5, 17)],
-]
-picture("cheer.tga", CHEER, [(19.5, 3.8, 0.5), (28.2, 11.5, 0.5), (6.2, 8, 0.5)], REACTION_PEN)
-
-# A flexed arm with its fist: a boss.
-STRONG = [
-    [(3, 28), (20, 28)] + arc(20, 21, 7, 90, 0, 12)[1:] + [(27, 14.5)]
-    + arc(21.5, 9.5, 5.5, 25, -200, 24) + [(17.5, 13), (20.8, 14.5), (20.6, 16.8)]
-    + arc(12.5, 20.5, 7.5, -25, -170, 20) + [(3, 20)],
-]
-picture("strong.tga", STRONG, (), REACTION_PEN)
-
-# Two palms meeting, with the burst of the clap above them: a profession.
-PALM = turn([(8.5, 29)] + arc(12, 15.5, 3.5, 180, 360, 14) + [(15.5, 25.5), (14, 29)], 20, 15.5, 12)
-CLAP = [
-    PALM,
-    [(32 - x, y) for x, y in PALM],
-    [(16, 7), (16, 2.5)],
-    [(9.5, 8), (7, 4.5)],
-    [(22.5, 8), (25, 4.5)],
-]
-picture("clap.tga", CLAP, (), REACTION_PEN)
 
 # A heart: comfort after a death. The classic heart curve, closed at its
 # notch on top.
