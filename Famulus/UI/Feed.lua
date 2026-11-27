@@ -399,6 +399,9 @@ local function NewCard(parent)
     card.dim:SetAllPoints(card.photo)
     UI.Paint(card.dim, "shadow")
     card.number = crest:CreateFontString(nil, "OVERLAY")
+    -- A font before any text: the client refuses SetText without one, and
+    -- Fill writes the number before the layout sizes it.
+    UI.SetDisplayFont(card.number, 22)
     card.number:SetPoint("CENTER", 0, -1)
     card.number:SetShadowOffset(1, -1)
     card.number:SetShadowColor(0, 0, 0, 0.9)
