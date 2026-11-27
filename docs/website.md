@@ -77,10 +77,11 @@ owner.
     "Settings" and "About", below 900 px one column (sidebar as a strip below the header), below
     680 px only the selected area with its name. The limits 900 and 680 are chosen so that the
     header fits into the window in English and German (measured 2026-11-24).
-  - **The window lags behind the addon (as of 2026-11-24):** It still shows the intermediate
-    state with tabs in the header, master switch in the sidebar and "x of 10 active". The owner's
-    decision: only catch up once the window in the addon has settled ("the windows will change a
-    lot anyway").
+  - **The window lagged behind the addon (2026-11-24 to 2026-11-27):** it showed the
+    intermediate state with tabs in the header, master switch in the sidebar and "x of 10
+    active"; the owner's decision then: only catch up once the window in the addon has settled.
+    Caught up on 2026-11-27 (the owner: go on with the steps of #50), see "Aliases window"
+    below.
   - **Chronicle:** chapter head on one line, repetitions bundled (for that, yesterday's sample
     data has three deaths in Uldaman and two levels for Borin), beside it the rail as in the
     addon (Everyone: week and companions; My journey: week and professions; Companions:
@@ -372,13 +373,31 @@ owner.
     time together; the stretch card is "On the road in <zone>" with "18:50 to 21:15" (no
     duration, as in the addon). A day of the log is one session, as in the addon. Not built:
     "Forget", the card of Nearby, "Where your people are", the tab "Groups".
-  - **Still behind:** the aliases window (intermediate state, see above) and the screenshot.
+  - **Still behind then:** the aliases window and the screenshot; both caught up the same day.
   - Checked in the built-in browser at 1440 and 375 px, English and German: book (positions of
     cards and dots measured), live feed (three cards), Nearby, the story's buttons, whisper;
     no horizontal scrolling, no console messages.
+- **Aliases window (2026-11-27, issue #50; built after the owner's screenshot of Aliases ›
+  Settings, details the assistant's decisions, not yet seen by the owner):** as the window in
+  the addon since 2026-11-24 (see "Layout" in docs/window.md): a head across the top (logo and
+  name, then the area "Aliases" with its line, close), a sidebar that is the same on every page
+  (search, Chronicle, Fellow travellers, Aliases with the glowing bar, below a line Settings and
+  About; only Aliases works), and in the content the tabs "Names" and "Settings" with a line
+  under the chosen one and "Reset" at their right (on Settings only, asks first). The master
+  switch, the counters ("5/5", "6 of 10 active") and the tab's title and description are gone,
+  as in the addon (`state.master` stays on). Settings is a list of the features (`ALIAS_FEATURES`
+  in `main.js`: chat, tooltip, menu, Battle.net characters; Guildy left out as everywhere on the
+  page), each with its icon (`i-chat`, `i-tooltip`, `i-menu`, `i-link`, from
+  `tools/make_media.py`), name, "On · 1 option" and its switch, and beside it the chosen one in
+  full: area, name, switch, "On" and "Default: on", description and, for chat, the option
+  "Display". No live picture: the game view below the window shows the effect. "Characters of
+  Battle.net friends" switches nothing else in the demo (in the addon it only stops learning new
+  characters). Below 900 px one column with the areas as a row (search, Settings and About
+  hidden), below 680 px only the active area keeps its name and the settings stack. Checked at
+  1440, 1024 and 375 px, English and German: switches in the list and in the detail change the
+  chat and the tooltip, "Display" too, Reset asks and resets, no horizontal scrolling, no
+  console messages.
 - **Keep in step with changes to the addon:** the screenshot in the header as soon as the window
-  visibly changes; the counters
-  in the rebuilt window (`renderWindow` in `main.js`: 5 alias features, 10 in total; in the HTML
-  Chronicle 1/4 and Fellow travellers 0/1), new main features as tabs in the header and as their
-  own section with an entry in the navigation; the bond tiers (`TIERS` in `main.js`)
-  like `FellowService.TIERS`.
+  visibly changes; the aliases' features in Settings (`ALIAS_FEATURES` in `main.js`), new main
+  features as entries in the window's sidebar and as their own section with an entry in the
+  navigation; the bond tiers (`TIERS` in `main.js`) like `FellowService.TIERS`.
