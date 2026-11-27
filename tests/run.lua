@@ -1445,9 +1445,14 @@ do
     local done = shownRows()
     check(page.done:IsShown() and #done == 7 and done[1].name:GetText() == ns.L.f_ownJourney
         and done[1].note:GetText() == "From the start" and done[3].name:GetText() == ns.L.f_sharing
-        and done[3].note:GetText() == "Goes to friends and guild members who use Famulus" and done[4].name:GetText() == ns.L.f_liveFeed
+        and done[3].note:GetText() == "" and done[3].name:GetText() == ns.L.f_sharing and done[4].name:GetText() == ns.L.f_liveFeed
         and done[7].name:GetText() == "Aliases" and done[7].note:GetText() == "Already running",
         "the end lists what runs now: the journey from the start, the steps, and the aliases that ran already")
+    local roomy = true
+    for _, row in ipairs(done) do
+        roomy = roomy and row.name:GetStringWidth() + row.note:GetStringWidth() + 64 <= row:GetWidth()
+    end
+    check(roomy, "every name fits beside its note")
     mock.Click(page.open)
     local lines = 0
     for _, line in ipairs(mock.chat) do
