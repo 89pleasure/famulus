@@ -91,7 +91,8 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     is shown only they move). Three views:
     - **Start:** logo with glow, "Welcome to Famulus", the website's hero ("For everyone you play
       with." and its lead), the website's four parts as tiles (chronicle, fellow travellers, live
-      feed, aliases; "Already on" on what runs), "Set up now" (the owner's wording), "Switch
+      feed, aliases; "Already on" on what runs), the colour scheme as swatches (`UI.Swatches`,
+      the owner's request, 2026-11-27; the window follows at once), "Set up now" (the owner's wording), "Switch
       everything on", a note that each step shows an example and that sharing reaches only
       friends and guild with Famulus, "Later".
     - **A step** per feature in `Welcome.STEPS` the client can run, five: the four and, after

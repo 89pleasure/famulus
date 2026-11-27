@@ -305,6 +305,18 @@ function Welcome.Build(window, size, actions)
     end
     page.tiles = tiles
 
+    -- The colour scheme, chosen right here: the window follows at once.
+    local scheme = CreateFrame("Frame", nil, start)
+    scheme:SetHeight(26)
+    scheme.label = UI.Text(scheme, 12, "textMuted", "medium")
+    scheme.label:SetPoint("LEFT")
+    scheme.swatches = UI.Swatches(scheme, function(value)
+        ns:SetOption("general", "accent", value)
+        page:Refresh()
+    end)
+    scheme.swatches:SetPoint("LEFT", scheme.label, "RIGHT", 10, 0)
+    page.scheme = scheme
+
     local buttons = CreateFrame("Frame", nil, start)
     buttons:SetHeight(BIG_H)
     page.setup = BigButton(buttons, function()
@@ -335,6 +347,9 @@ function Welcome.Build(window, size, actions)
         for index, tile in ipairs(tiles) do
             tileHeight = math.max(tileHeight, FillTile(tile, AREAS[index]))
         end
+        scheme.label:SetText(L.g_accent)
+        scheme.swatches:SetValues(UI.accents, ns:GetOption("general", "accent"))
+        scheme:SetWidth(scheme.label:GetStringWidth() + 10 + scheme.swatches:GetWidth())
         page.setup:SetLabel(L.ui_welcome_setup)
         page.all:SetLabel(L.ui_welcome_all)
         buttons:SetWidth(page.setup:GetWidth() + 12 + page.all:GetWidth())
@@ -347,7 +362,8 @@ function Welcome.Build(window, size, actions)
             { title, title:GetStringHeight(), 8 },
             { lede, lede:GetStringHeight(), 12 },
             { tiles[1], tileHeight, 28 }, -- the row of tiles, laid out below
-            { buttons, BIG_H, 30 },
+            { scheme, 26, 20 },
+            { buttons, BIG_H, 24 },
             { note, note:GetStringHeight(), 14 },
             { page.later, page.later:GetHeight(), 8 },
         }

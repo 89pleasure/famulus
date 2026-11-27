@@ -716,6 +716,15 @@ do
         and page.note:GetText():find("only to friends and guild", 1, true) ~= nil,
         "set up step by step or all at once; sharing reaches only friends and guild")
     check(page.embers.playing, "the page's own sparks rise")
+    local dots = page.scheme.swatches.dots
+    check(page.scheme:IsShown() and page.scheme.label:GetText() == "Colour scheme" and #dots == #ns.UI.accents
+        and dots[1].selected, "the colour scheme can be chosen on the page, the default marked")
+    mock.Click(dots[2])
+    mock.Advance(0.1)
+    check(ns:GetOption("general", "accent") == ns.UI.accents[2] and page.scheme.swatches.dots[2].selected
+        and not page.scheme.swatches.dots[1].selected and page.start:IsShown(), "a click changes it at once; the page stays")
+    ns:SetOption("general", "accent", ns.UI.accents[1])
+    mock.Advance(0.1)
     mock.Click(page.setup)
     check(page.step:IsShown() and not page.start:IsShown() and page.count:GetText() == "Step 1 of 5"
         and page.name:GetText() == ns.L.f_companions and page.tag.text:GetText() == "Only for you"
