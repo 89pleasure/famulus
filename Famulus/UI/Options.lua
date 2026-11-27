@@ -2123,10 +2123,17 @@ do
             parts[#parts + 1] = person.name
         end
         parts[#parts + 1] = ClassWord(person.class)
+        -- Out of reach: the other mode, the other faction in its colour, or both.
+        if person.mode then
+            parts[#parts + 1] = L.ui_near_realm:format(person.mode)
+        end
         if person.faction then
-            parts[#parts + 1] = UI.Colored("faction" .. person.faction, person.out)
-        else
-            parts[#parts + 1] = person.out or L["ui_near_from_" .. person.from]
+            parts[#parts + 1] = UI.Colored("faction" .. person.faction, _G["FACTION_" .. string.upper(person.faction)] or person.faction)
+        end
+        if not person.out then
+            parts[#parts + 1] = L["ui_near_from_" .. person.from]
+        elseif not (person.mode or person.faction) then
+            parts[#parts + 1] = person.out
         end
         local diff
         if person.level and data.level and person.level ~= data.level then

@@ -600,18 +600,25 @@ C_FriendList = {
 -- Battle.net friends:
 -- mock.state.bnFriends = { { battleTag = "Anna#1234", games = { { characterName = "Jaina Proudmoore",
 -- playerGuid = "Player-1-JAINA", areaName = "Tanaris", characterLevel = 40, className = "Mage" } } }, ... }
--- A game without wowProjectID counts as this game, without realmID or
--- factionName as the player's realm (mock.state.realmID, else 1) and faction
--- (mock.state.faction, else "Alliance"); the first one is what the friends
--- list shows. A friend without games is offline.
+-- A game without wowProjectID counts as this game, without mode or
+-- factionName as the player's mode (mock.state.mode, else "Normal") and
+-- faction (mock.state.faction, else "Alliance"); the first one is what the
+-- friends list shows. A friend without games is offline. As in Forever (in
+-- game 2026-11-27) the mode is only in the rich presence, "Forever - Normal
+-- - Tanaris"; the player's own comes from GetGameAccountInfoByGUID, unless
+-- mock.state.noOwnGame.
 WOW_PROJECT_ID = 99
 BNET_CLIENT_WOW = "WoW"
-local function bnGame(friend, index)
+local function presence(mode, zone)
+    return "Forever - " .. (mode or mock.state.mode or "Normal") .. " - " .. (zone or "")
+end
+local function bnGame(friend, index, friendIndex)
     local game = friend and friend.games and friend.games[index]
     if not game then
         return nil
     end
     return {
+        gameAccountID = friendIndex * 100 + index,
         characterName = game.characterName,
         playerGuid = game.playerGuid,
         wowProjectID = game.wowProjectID or WOW_PROJECT_ID,
@@ -619,14 +626,10 @@ local function bnGame(friend, index)
         areaName = game.areaName,
         characterLevel = game.characterLevel,
         className = game.className,
-        realmID = game.realmID or mock.state.realmID or 1,
-        realmDisplayName = game.realmDisplayName,
+        richPresence = game.richPresence or presence(game.mode, game.areaName),
         factionName = game.factionName or mock.state.faction or "Alliance",
         isOnline = true,
     }
-end
-function GetRealmID()
-    return mock.state.realmID or 1
 end
 function UnitFactionGroup(unit)
     if unit == "player" then
@@ -649,14 +652,33 @@ C_BattleNet = {
         if not friend then
             return nil
         end
-        return { battleTag = friend.battleTag, accountName = "|Kq" .. index .. "|k", gameAccountInfo = bnGame(friend, 1) or { isOnline = false } }
+        return { battleTag = friend.battleTag, accountName = "|Kq" .. index .. "|k", gameAccountInfo = bnGame(friend, 1, index) or { isOnline = false } }
     end,
     GetFriendNumGameAccounts = function(index)
         local friend = (mock.state.bnFriends or {})[index]
         return friend and #(friend.games or {}) or 0
     end,
     GetFriendGameAccountInfo = function(index, gameIndex)
-        return bnGame((mock.state.bnFriends or {})[index], gameIndex)
+        return bnGame((mock.state.bnFriends or {})[index], gameIndex, index)
+    end,
+    -- The player's own game account, or a friend's character.
+    GetGameAccountInfoByGUID = function(guid)
+        record("C_BattleNet.GetGameAccountInfoByGUID", guid)
+        if guid == UnitGUID("player") then
+            if mock.state.noOwnGame then
+                return nil
+            end
+            return { clientProgram = BNET_CLIENT_WOW, wowProjectID = WOW_PROJECT_ID, isOnline = true,
+                richPresence = presence(nil, mock.state.zone), factionName = mock.state.faction or "Alliance" }
+        end
+        for index, friend in ipairs(mock.state.bnFriends or {}) do
+            for gameIndex, game in ipairs(friend.games or {}) do
+                if game.playerGuid == guid then
+                    return bnGame(friend, gameIndex, index)
+                end
+            end
+        end
+        return nil
     end,
     -- The account of the friend who plays that character right now; with
     -- stranger = true one the client knows, but not as a friend's.
@@ -665,7 +687,7 @@ C_BattleNet = {
             for gameIndex, game in ipairs(friend.games or {}) do
                 if game.playerGuid == guid then
                     return { battleTag = friend.battleTag, isFriend = not friend.stranger, isBattleTagFriend = not friend.stranger,
-                        gameAccountInfo = bnGame(friend, gameIndex) }
+                        gameAccountInfo = bnGame(friend, gameIndex, index) }
                 end
             end
         end

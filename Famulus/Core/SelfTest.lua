@@ -58,10 +58,10 @@ local EXPECT_PRESENT = {
     "BNConnected",
     -- What Modules/Fellows/NearbyService.lua uses to tell who is nearby:
     -- Battle.net friends in this game, who of them is out of reach, quiet
-    -- places, and the whisper (by Battle.net across realms).
+    -- places, and the whisper (to Battle.net friends by Battle.net).
     "BNET_CLIENT_WOW",
     "WOW_PROJECT_ID",
-    "GetRealmID",
+    "C_BattleNet.GetGameAccountInfoByGUID",
     "UnitFactionGroup",
     "IsResting",
     "UnitOnTaxi",
@@ -293,10 +293,17 @@ local function CheckNames()
     if BNGetNumFriends and C_BattleNet and C_BattleNet.GetFriendAccountInfo then
         local total = BNGetNumFriends()
         local inGame, shapes = 0, {}
-        -- "Who is nearby" tells who is on another realm by realmID; whether
-        -- the client fills it, and what it calls the realms (Forever's modes).
-        local ownRealm = GetRealmID and GetRealmID()
-        local sameRealm, otherRealm, realms = 0, 0, {}
+        -- "Who is nearby" tells who is out of reach by the mode in the rich
+        -- presence ("Forever - PvP - ...") and the faction: the player's own
+        -- mode, the friends' modes, and for how many the faction is named.
+        local Mode = ns.NearbyService.Mode
+        local ownMode
+        local guid = UnitGUID and UnitGUID("player")
+        if C_BattleNet.GetGameAccountInfoByGUID and ns.ChatService.IsPlainText(guid) then
+            local ok, own = pcall(C_BattleNet.GetGameAccountInfoByGUID, guid)
+            ownMode = ok and not ns.IsSecret(own) and type(own) == "table" and Mode(own.richPresence) or nil
+        end
+        local modes, factions, noMode = {}, 0, 0
         if not ns.IsSecret(total) and type(total) == "number" then
             for i = 1, total do
                 local info = C_BattleNet.GetFriendAccountInfo(i)
@@ -305,16 +312,14 @@ local function CheckNames()
                 if ns.ChatService.IsPlainText(name) and game.wowProjectID == WOW_PROJECT_ID then
                     inGame = inGame + 1
                     shapes[string.find(name, "%s") and "space" or string.find(name, "-", 1, true) and "hyphen" or "one word"] = true
-                    local realm = game.realmID
-                    if not ns.IsSecret(realm) and type(realm) == "number" and not ns.IsSecret(ownRealm) and type(ownRealm) == "number" then
-                        if realm == ownRealm then
-                            sameRealm = sameRealm + 1
-                        else
-                            otherRealm = otherRealm + 1
-                        end
+                    local mode = Mode(game.richPresence)
+                    if mode then
+                        modes[mode] = (modes[mode] or 0) + 1
+                    else
+                        noMode = noMode + 1
                     end
-                    if ns.ChatService.IsPlainText(game.realmDisplayName) then
-                        realms[game.realmDisplayName] = true
+                    if ns.ChatService.IsPlainText(game.factionName) then
+                        factions = factions + 1
                     end
                 end
             end
@@ -329,8 +334,13 @@ local function CheckNames()
         end
         Add("names", "Battle.net friends", "ok", string.format("%s friends, %d on a character of this game (project %s), names: %s",
             Describe(total), inGame, Describe(WOW_PROJECT_ID), Sorted(shapes)))
-        Add("names", "Battle.net realms", "ok", string.format("own realm %s, %d on it, %d on another, realm names: %s",
-            Describe(ownRealm), sameRealm, otherRealm, Sorted(realms)))
+        local counted = {}
+        for mode, count in pairs(modes) do
+            counted[mode .. " " .. count] = true
+        end
+        Add("names", "Battle.net modes", ownMode and "ok" or "warn", string.format(
+            "own mode %s; friends: %s, %d without; faction named for %d",
+            ownMode or "unknown (only the faction tells who is out of reach)", Sorted(counted), noMode, factions))
     else
         Add("names", "Battle.net friends", "warn", "BNGetNumFriends or C_BattleNet.GetFriendAccountInfo is missing")
     end
