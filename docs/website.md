@@ -228,7 +228,10 @@ owner.
     elsewhere closes it. The language's button shows the code ("DE"), the menu the codes and
     the languages' own names (Deutsch, English); its name says "Language: <name>".
   - The foot (`#scene-foot`) and the small scenes of the demos take the world's colours but
-    keep their own drawing (no tower, castle or northern lights there).
+    keep their own drawing (no tower, castle or northern lights there). The foot's fire shows
+    no flame, only its light behind the hill and its sparks, so there `--fire` and `--fire2`
+    are the accent (`.scene--foot` in `styles.css`; until then a yellow glow stood in every
+    world, the owner noticed).
   - Checked in the built-in browser at 1440, 1024 and 375 px and with headless Chrome at 1440,
     1900 and 1920, English and German: every world with its scheme (header, demos, foot); the
     menu by click, arrow keys, End, Escape and a click outside; the names after a change of
