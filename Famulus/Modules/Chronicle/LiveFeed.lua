@@ -167,6 +167,41 @@ local function Join(story, other)
     story.reaction = nil
 end
 
+-- A made-up friend's card (/fam feed test) has the button too; it only
+-- lights up and sends nothing.
+local function SampleReaction(entry)
+    local Chronicle = ns.ChronicleService
+    local icon = entry.who and Chronicle.ReactionsOn() and Chronicle.Reaction(entry)
+    if not icon then
+        return nil
+    end
+    local given = false
+    return {
+        icon = icon,
+        given = function()
+            return given
+        end,
+        give = function()
+            given = true
+        end,
+    }
+end
+
+-- The card of an entry, as the book tells it, with the button to react and,
+-- for a friend's event others may share, what lets theirs join it.
+-- sample: a made-up entry, whose button sends nothing.
+local function Story(entry, kind, sample)
+    local story = ns.UI.FeedStory(entry)
+    story.reaction = sample and SampleReaction(entry) or Reaction(entry)
+    local bundle = BundleKey(entry, kind)
+    if bundle then
+        story.bundle, story.join = bundle, Join
+        story.names = { Short(entry) }
+        story.place = type(entry.zone) == "string" and entry.zone ~= "" and entry.zone or nil
+    end
+    return story
+end
+
 local function OnChronicleChanged(entry)
     if not feed.enabled or type(entry) ~= "table" or entry.demo then
         return
@@ -192,15 +227,7 @@ local function OnChronicleChanged(entry)
         return
     end
     Show(kind, function()
-        local story = UI.FeedStory(entry)
-        story.reaction = Reaction(entry)
-        local bundle = BundleKey(entry, kind)
-        if bundle then
-            story.bundle, story.join = bundle, Join
-            story.names = { Short(entry) }
-            story.place = type(entry.zone) == "string" and entry.zone ~= "" and entry.zone or nil
-        end
-        return story
+        return Story(entry, kind)
     end)
 end
 
@@ -225,6 +252,44 @@ local function OnReaction(entry, who, reaction)
     Show("reaction", function()
         return feed.ReactionStory(entry, who, reaction)
     end)
+end
+
+-- /fam feed test: a burst of sample cards, to see place, look, timing and
+-- sound with one account. First the player's own level with all three rows
+-- (the player's name and zone; its button lights up and sends nothing), then
+-- at the same moment the samples' friends: a boss two of them defeated (one
+-- card for both), a death and an item. They wait as a stack behind the first,
+-- come in one after another, and the older ones shrink to rows; with "keep"
+-- they stay. Nothing is stored or sent, and the switches of the kinds do not
+-- apply. One sound, as for news that comes together.
+function feed.Test()
+    local UI = ns.UI
+    local Feed = UI and UI.Feed
+    if not (Feed and UI.FeedStory) then
+        return
+    end
+    local L, Chronicle = ns.L, ns.ChronicleService
+    local IsPlainText = ns.ChatService.IsPlainText
+    local seconds = feed.SECONDS[feed:Get("duration")] or feed.SECONDS.normal
+    local level = UnitLevel and tonumber(UnitLevel("player")) or 1
+    local who = Chronicle.Character() or (UnitName and UnitName("player"))
+    local zone = GetRealZoneText and GetRealZoneText()
+    Feed.Show({
+        kind = "level",
+        chip = IsPlainText(who) and { text = who } or nil,
+        title = L.c_level:format(level),
+        detail = IsPlainText(zone) and zone or nil,
+        number = level,
+        big = true,
+        reaction = SampleReaction({ k = "level", who = who or true }),
+    }, seconds)
+    local mira, borin = Chronicle.SamplePeople()
+    local boss, alsoBoss = Chronicle.Sample("boss"), Chronicle.Sample("boss")
+    alsoBoss.who, alsoBoss.with = mira, { borin }
+    for _, entry in ipairs({ boss, alsoBoss, Chronicle.Sample("death"), Chronicle.Sample("item") }) do
+        Feed.Show(Story(entry, entry.k, true), seconds)
+    end
+    feed:Chime()
 end
 
 function feed:OnEnable()

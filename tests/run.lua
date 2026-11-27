@@ -1844,6 +1844,12 @@ do -- the live feed: what was just written down appears on screen for a while
     mock.state.units = unitsBefore
     check(#Feed.Shown() == 1 and Feed.Shown()[1].number:GetText() == "13" and sounds() == heard + 1,
         "/fam feed test shows a sample card, with its sound")
+    local mira, borin = ns.ChronicleService.SamplePeople()
+    local waiting = Feed.Waiting()
+    check(#waiting == 3 and waiting[1].count == 2 and waiting[1].chip.text == borin:match("^%S+") .. " and " .. mira:match("^%S+")
+        and Feed.deck.count.text:GetText() == "+3",
+        "and at once the samples' friends: a boss two of them share, a death, an item, waiting behind it: "
+        .. tostring(waiting[1] and waiting[1].chip.text))
     local sample = Feed.Shown()[1]
     check(sample.head:IsShown() and sample.head:GetText() == (ns.ChronicleService.Character() or "Ilsa")
         and sample.detail:GetText() == GetRealZoneText() and sample:GetHeight() == 76,
@@ -2303,15 +2309,24 @@ do
     sharing:Set("reactions", true)
     Feed.Clear()
 
-    -- The sample card shows the button too; it lights up and sends nothing.
+    -- The sample cards show the button too; it lights up and sends nothing.
     SlashCmdList.FAMULUS("feed test")
     card = Feed.Shown()[1]
     button = card.react
     check(button:IsShown(), "/fam feed test shows the button to react")
     button.scripts.OnClick(button)
     check(button.ground.fill.token == "accentDeep", "on the sample card it lights up")
+    mock.Advance(1.6)
+    check(not card:IsShown(), "and the card closes")
+    -- The samples' friends come one after another: the boss two of them
+    -- defeated (one card, no button: whose would it be?), then a death.
+    mock.Advance(0.6)
+    local friend = Feed.Shown()[1]
+    check(friend.react:IsShown() and not Feed.Shown()[2].react:IsShown(), "a sample friend's card has the button as well")
+    friend.react.scripts.OnClick(friend.react)
+    check(friend.react.ground.fill.token == "accentDeep", "it lights up")
     mock.Advance(3)
-    check(#Feed.Shown() == 0 and #mock.sent == 0, "and the card closes; nothing is sent: " .. sent())
+    check(#mock.sent == 0, "and nothing is sent: " .. sent())
     Feed.Clear()
     mock.Advance(10)
     mock.sent = {}
