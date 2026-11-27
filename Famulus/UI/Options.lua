@@ -2586,11 +2586,20 @@ function layouts.fellows()
 end
 
 local function BuildPages()
+    -- What an area's card in the sidebar counts.
+    local counts = {
+        chronicle = function()
+            return #ns.ChronicleService.Entries()
+        end,
+        fellows = ns.FellowService.Count,
+        aliases = ns.AliasService.Count,
+    }
     for _, area in ipairs(ns.areas) do
         AddPage({
             id = area.id,
             area = area,
             icon = AREA_ICONS[area.id] or "sparkle",
+            count = counts[area.id],
             title = function()
                 return L["area_" .. area.id]
             end,
@@ -3102,7 +3111,7 @@ do
         -- The icon on a small tile in front of the name.
         local tile = CreateFrame("Frame", nil, entry)
         tile:SetSize(ICON_TILE, ICON_TILE)
-        tile:SetPoint("LEFT", 12, 0)
+        tile:SetPoint("LEFT", 10, 0)
         entry.tile = UI.Round(tile, "control", 8)
         entry.icon = UI.Icon(tile, "sparkle", 16, "textMuted")
         entry.icon:SetPoint("CENTER")
@@ -3605,9 +3614,10 @@ local function RefreshNav()
             local on = AreaOn(page.area)
             button.label:SetAlpha(on and 1 or 0.45)
             button.icon:SetAlpha(on and 1 or 0.45)
+            local count = page.count
+            button.count:SetText(on and count and tostring(count()) or "")
             button.pill:SetShown(not on)
-            button.count:SetText(L.ui_category_off)
-            button.pill:SetWidth(button.count:GetStringWidth() + 14)
+            button.pill:Set(L.ui_category_off, false)
         end
     end
     window.tagline:SetText(L.ui_tagline)
@@ -4103,23 +4113,27 @@ end
 -- Window
 ---------------------------------------------------------------------------
 
--- A page's entry in the sidebar: icon, name and, for a main feature, its
--- counter. The chosen one: the accent fading out to the right, and a glowing
--- bar at its left edge.
+-- A page's entry in the sidebar. A main feature is a card: its icon on a
+-- tile, its name and below it what it counts (or OFF); the addon's own pages
+-- are plain rows with icon and name. The chosen one: the accent fading out to
+-- the right, and a glowing bar at its left edge.
 local function CreateNavButton(parent, page)
-    local width = SIDEBAR - 24
+    local width, height = SIDEBAR - 24, page.area and 64 or NAV_ROW -- a main feature is a card
     local button = CreateFrame("Button", nil, parent)
-    button:SetSize(width, NAV_ROW)
+    button:SetSize(width, height)
     button.navId = page.id
 
-    button.fill = UI.Round(button, "accentFade", 8)
-    button.fill:SetGradient("HORIZONTAL", "accentFade", "accentFadeEnd", width, NAV_ROW)
+    if page.area then
+        UI.Card(button, "card", "cardBorder", 10)
+    end
+    button.fill = UI.Round(button, "accentFade", page.area and 10 or 8, { sublevel = 2 })
+    button.fill:SetGradient("HORIZONTAL", "accentFade", "accentFadeEnd", width, height)
     button.fill:Hide()
-    local hover = UI.Round(button, "hover", 8, { sublevel = 1 })
+    local hover = UI.Round(button, "hover", page.area and 10 or 8, { sublevel = 3 })
     hover:Hide()
 
     button.bar = CreateFrame("Frame", nil, button)
-    button.bar:SetSize(3, NAV_ROW - 16)
+    button.bar:SetSize(3, height - (page.area and 28 or 16))
     button.bar:SetPoint("LEFT")
     local stroke = button.bar:CreateTexture(nil, "ARTWORK")
     stroke:SetAllPoints(button.bar)
@@ -4127,21 +4141,29 @@ local function CreateNavButton(parent, page)
     UI.Shadow(button.bar, 6, 1, 0, "accentGlow")
     button.bar:Hide()
 
-    button.icon = UI.Icon(button, page.icon, 16, "textMuted")
-    button.icon:SetPoint("LEFT", 14, 0)
-    button.label = UI.Text(button, 13, "textDim", "medium")
-    button.label:SetPoint("LEFT", button.icon, "RIGHT", 10, 0)
-    button.label:SetJustifyV("MIDDLE")
-
     if page.area then
-        -- "OFF" beside a switched-off main feature.
-        button.pill = CreateFrame("Frame", nil, button)
-        button.pill:SetHeight(18)
-        button.pill:SetPoint("RIGHT", -10, 0)
-        button.count = UI.Text(button.pill, 11, "textMuted", "medium")
-        button.count:SetPoint("CENTER")
-        button.count:SetJustifyH("CENTER")
+        local tile = CreateFrame("Frame", nil, button)
+        tile:SetSize(34, 34)
+        tile:SetPoint("LEFT", 10, 0)
+        UI.Round(tile, "control", 9)
+        button.icon = UI.Icon(tile, page.icon, 20, "textMuted")
+        button.icon:SetPoint("CENTER")
+        button.count = UI.Text(button, 12, "textMuted", "semibold")
+        button.count:SetPoint("RIGHT", -14, 0)
+        button.count:SetJustifyH("RIGHT")
         button.count:SetJustifyV("MIDDLE")
+        button.pill = UI.Pill(button) -- "OFF" in place of the number
+        button.pill:SetPoint("RIGHT", -10, 0)
+        button.label = UI.Text(button, 14, "textDim", "medium")
+        button.label:SetPoint("LEFT", tile, "RIGHT", 10, 0)
+        button.label:SetPoint("RIGHT", button.count, "LEFT", -8, 0)
+        button.label:SetJustifyV("MIDDLE")
+    else
+        button.icon = UI.Icon(button, page.icon, 16, "textMuted")
+        button.icon:SetPoint("LEFT", 14, 0)
+        button.label = UI.Text(button, 13, "textDim", "medium")
+        button.label:SetPoint("LEFT", button.icon, "RIGHT", 10, 0)
+        button.label:SetJustifyV("MIDDLE")
     end
 
     button:SetScript("OnEnter", function(self)
@@ -4361,7 +4383,7 @@ local function BuildSidebar()
     for _, id in ipairs(pageOrder) do
         if not pages[id].bottom then
             navButtons[id]:SetPoint("TOPLEFT", 12, -top)
-            top = top + NAV_ROW + 2
+            top = top + navButtons[id]:GetHeight() + 8
         end
     end
     local line = UI.Line(sidebar, "windowBorder")

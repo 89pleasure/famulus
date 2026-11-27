@@ -15,7 +15,7 @@ itself to, the following:
 1. **Modern, clear layout.** Polestar is the owner's favourite so far.
 2. **Playing together at the centre (the owner's decision, 2026-11-23).** Famulus is to improve,
    ease or extend playing among friends and in the community. The features are the
-   **chronicle**, the **fellow travellers** and the **aliases** (since 2026-11-23). No unit frames,
+   **chronicle**, the **fellow travellers** (shown as "Fellowship", see docs/fellows.md) and the **aliases** (since 2026-11-23). No unit frames,
    action bars, guides, damage meters or the like.
    - **Order (the owner's decision, 2026-11-24):** The aliases come last of the three everywhere,
      in the addon (sidebar, master switches) as on the website (navigation, sections, texts) and

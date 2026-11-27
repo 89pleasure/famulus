@@ -736,7 +736,7 @@ check(ns.areas[1].id == "chronicle" and ns.areas[2].id == "fellows" and ns.areas
 check(tabButton("Everyone") and tabButton("Everyone").selected
     and window.area.name:GetText() == "Chronicle" and window.area.desc:GetText() == ns.L.area_chronicle_desc,
     "the first page is the chronicle: named in the sidebar, the content headed by its first tab")
-check(navButton("Chronicle") and navButton("Fellow travellers") and navButton("Aliases") and navButton("Settings") and navButton("About"),
+check(navButton("Chronicle") and navButton("Fellowship") and navButton("Aliases") and navButton("Settings") and navButton("About"),
     "the head lists the main features and the addon's own pages")
 mock.Click(navButton("Aliases"))
 check(tabButton("Names") and tabButton("Names").selected and window.area.name:GetText() == "Aliases"
@@ -745,8 +745,9 @@ check(not navButton("Quality of Life") and not navButton("Journal"), "and nothin
 check(window.search:GetParent() == window.sidebar and window.search:IsShown(), "the search sits at the top of the sidebar")
 check(navButton("Aliases"):GetParent() == window.sidebar and navButton("Settings"):GetParent() == window.sidebar
     and navButton("About"):GetParent() == window.sidebar, "the main features and the addon's own pages are entries in the sidebar")
-check(navButton("Aliases").selected and not navButton("Aliases").pill:IsShown(),
-    "the main feature is selected and shows no counter")
+check(navButton("Aliases").selected and navButton("Aliases"):GetHeight() > navButton("Settings"):GetHeight()
+    and navButton("Aliases").count:GetText() == "0" and not navButton("Aliases").pill:IsShown(),
+    "the main feature is a selected card that counts its aliases: " .. tostring(navButton("Aliases").count:GetText()))
 mock.Click(tabButton("Settings"))
 check(tabButton("Settings").selected and not tabButton("Names").selected, "a click on a tab chooses it")
 do
@@ -865,7 +866,7 @@ check(entries[1].sub:GetText() == "Off  ·  1 option" and not entries[1].toggle.
 check(not window.resetButton.disabled, "reset becomes available once something differs from the defaults")
 check(chatLine(2) == "[Guild] [Borin Ironbeard]: Who's coming to Uldaman?" and not select(2, chatLine(2))
     and chatLine(4) == "Borin Ironbeard has come online.", "switched off, the picture's chat shows the name: " .. chatLine(2))
-check(not navButton("Aliases").pill:IsShown(), "the sidebar counts nothing")
+check(tostring(ns.AliasService.Count()) == navButton("Aliases").count:GetText(), "the sidebar card counts the aliases: " .. tostring(navButton("Aliases").count:GetText()))
 ns:SetOption("chatAliases", "style", "both")
 mock.Advance(0.3)
 check(optionRow.dropdown.text:GetText() == ns.L.o_chatAliases_style_both, "a chosen value shows while greyed out as well")
@@ -1043,7 +1044,7 @@ check(#aliasRows == 2, "the list tab shows the input row and an empty hint (got 
 local editor = aliasRows[1].editor
 check(editor ~= nil and editor:IsVisible() and aliasRows[2].item.kind == "info", "the input row comes before the hint")
 check(editor.name.placeholder:GetText() == "Character or BattleTag#1234" and editor.save.label:GetText() == "Save", "the input row is labelled")
-check(not navButton("Aliases").pill:IsShown(), "the sidebar entry shows no counter")
+check(navButton("Aliases").count:GetText() ~= "" and not navButton("Aliases").pill:IsShown(), "the sidebar card shows its count, not OFF")
 mock.Click(tabButton("Settings"))
 check(#visibleEntries() == 5 and window.resetButton:IsShown(), "the display tab lists the five features, and reset")
 -- The master switches in Settings › General.
@@ -1059,7 +1060,7 @@ check(itemOf(switches[1]).section == "categories" and itemOf(switches[1]).key ==
     "settings › general starts with the three main features, in the sidebar's order")
 mock.Click(switches[3].switch)
 mock.Advance(0.1)
-check(not ns:IsCategoryEnabled("aliases") and navButton("Aliases").pill:IsShown() and navButton("Aliases").count:GetText() == "OFF"
+check(not ns:IsCategoryEnabled("aliases") and navButton("Aliases").pill:IsShown() and navButton("Aliases").pill.text:GetText() == "OFF" and navButton("Aliases").count:GetText() == ""
     and navButton("Aliases").label:GetAlpha() < 1,
     "switching one off greys it in the head")
 check(not window.resetButton.disabled, "and makes settings › general resettable")
@@ -2904,7 +2905,7 @@ mock.Click(tabButton("Everyone")) -- the page remembers the tab the window tests
 mock.Advance(0.1)
 check(window.area.name:GetText() == "Chronicle" and tabButton("Everyone").selected and tabButton("Everyone") and tabButton("My journey") and tabButton("Friends") and tabButton("Settings"),
     "the chronicle has its own page: everyone, my journey, companions, recording")
-check(not navButton("Chronicle").pill:IsShown(), "the chronicle's entry shows no counter")
+check(navButton("Chronicle").count:GetText() == tostring(#ns.ChronicleService.Entries()), "the chronicle's card counts its entries: " .. tostring(navButton("Chronicle").count:GetText()))
 -- The entries are told as a picture book: chapters, and events on a line.
 -- A card's content is a frame of its own (event.content); the tests read
 -- the card and its content as one.
@@ -3943,15 +3944,15 @@ check(not fellows.events.FRIENDLIST_UPDATE and not fellows.events.PLAYER_GUILD_U
 
 -- The page.
 SlashCmdList.FAMULUS("")
-mock.Click(navButton("Fellow travellers"))
+mock.Click(navButton("Fellowship"))
 mock.Advance(0.1)
-check(window.sidebar:IsShown() and window.area.name:GetText() == "Fellow travellers" and window.area.desc:GetText() == ns.L.area_fellows_desc
+check(window.sidebar:IsShown() and window.area.name:GetText() == "Fellowship" and window.area.desc:GetText() == ns.L.area_fellows_desc
     and pageTab("Overview") and pageTab("Overview").selected and pageTab("Settings") and not pageTab("Most often"),
     "fellow travellers: the sidebar as everywhere, the name in the head, overview and settings as tabs")
 check(window.fellows:GetHeight() > 200, "the overview has a height, so the client can place what is in it")
 check(window.fellows:GetWidth() == 1180 - 224 - 2 * 28 and not window.fellows.card:IsShown(),
     "the overview takes the content's width; no card beside it")
-check(not navButton("Fellow travellers").pill:IsShown(), "no counter in the sidebar")
+check(navButton("Fellowship").count:GetText() == tostring(ns.FellowService.Count()), "the sidebar card counts the fellow travellers: " .. tostring(navButton("Fellowship").count:GetText()))
 local overview = window.fellows
 check(overview and overview:IsShown() and overview.tiles[1].guid == "Player-1-MIRA" and overview.tiles[2].guid == "Player-1-TOM"
     and not (overview.tiles[3] and overview.tiles[3]:IsShown()) and not overview.list:IsShown(),
@@ -4082,7 +4083,7 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
     mock.state.friends = { { name = "Mira Sturmfeder", guid = "Player-1-MIRA", connected = false } }
     ns:Fire("FELLOWS_CHANGED")
     row = tidy()
-    check(row.desc:GetText() == "All your fellow travellers are on your friends list or in your guild." and row.action.disabled,
+    check(row.desc:GetText() == "Everyone in your fellowship is on your friends list or in your guild." and row.action.disabled,
         "with everyone a friend, there is nothing to tidy up")
     mock.state.friends = nil
     -- In a guild whose roster has not come yet, it waits rather than take members for strangers.
@@ -4153,7 +4154,7 @@ do -- tidying up: whoever is neither a friend nor in the guild goes, after askin
 end
 mock.Click(navButton("Chronicle"))
 check(window.area.name:GetText() == "Chronicle" and pageTab("Everyone"), "another page from the sidebar, with its own tabs")
-mock.Click(navButton("Fellow travellers"))
+mock.Click(navButton("Fellowship"))
 check(pageTab("Settings").selected, "the page remembers its tab")
 
 -- The card gives someone an alias; the overview then shows it.
@@ -4165,7 +4166,7 @@ mock.Advance(0.1)
 check(window.area.name:GetText() == "Aliases" and tabButton("Names").selected and editor.name.edit:GetText() == "Tom Hartwig",
     "the alias button opens the alias input with the name")
 ns.AliasService.Set("Tom Hartwig", "Tommy")
-mock.Click(navButton("Fellow travellers"))
+mock.Click(navButton("Fellowship"))
 mock.Advance(0.1)
 check(overview.tiles[2].name:GetText() == "Tommy", "under an alias, the tile shows it")
 mock.Click(overview.tiles[2])
@@ -4359,7 +4360,7 @@ check(window.bookFilter.toStory:IsShown() and window.bookFilter.toStory.label:Ge
     "above her events, the way to your story with her")
 mock.Click(window.bookFilter.toStory)
 mock.Advance(0.1)
-check(window.area.name:GetText() == "Fellow travellers" and overview.card:IsShown() and overview.card.name:GetText() == "Lysa Morgentau"
+check(window.area.name:GetText() == "Fellowship" and overview.card:IsShown() and overview.card.name:GetText() == "Lysa Morgentau"
     and window.fellowBook:IsShown() and window.tabs.back:IsShown(), "and back to her story")
 ns:SetOption("categories", "chronicle", false)
 mock.Advance(0.1)
@@ -4381,7 +4382,7 @@ ns:Fire("FELLOWS_CHANGED")
 mock.Advance(0.1)
 mock.Click(overview.tiles[1])
 mock.Click(navButton("Aliases"))
-mock.Click(navButton("Fellow travellers"))
+mock.Click(navButton("Fellowship"))
 check(not window.fellowBook:IsShown() and overview:IsShown() and pageTab("Overview"), "leaving the page closes the story")
 -- Someone from before the day log: just the first meeting.
 FamulusDB.fellows["Player-1-OLD"] = { name = "Old Friend", first = clock - 40 * 86400, firstZone = "Duskwood",
@@ -4540,7 +4541,7 @@ do -- the samples' days are told from their evenings, so both agree
 end
 
 -- The timeline: every group as a book, the week beside it.
-mock.Click(navButton("Fellow travellers"))
+mock.Click(navButton("Fellowship"))
 mock.Advance(0.1)
 check(pageTab("Overview") and pageTab("Groups") and pageTab("Settings"), "fellow travellers: overview, groups and settings")
 mock.Click(pageTab("Groups"))
@@ -4606,7 +4607,7 @@ check(not demoLeft, "and their evenings")
 do -- no group at all: the timeline says how to begin
     local keptRuns = FamulusDB.fellowRuns
     FamulusDB.fellowRuns = nil
-    mock.Click(navButton("Fellow travellers"))
+    mock.Click(navButton("Fellowship"))
     mock.Click(pageTab("Groups"))
     mock.Advance(0.1)
     check(#visibleRows() == 1 and visibleRows()[1].label:GetText() == "No groups yet" and not window.railScroll:IsShown(),
@@ -4855,7 +4856,7 @@ do
         times = 4, seconds = 40000, bosses = 2 } }
     Aliases.Set("Kael Dornhain", "Kiki")
     SlashCmdList.FAMULUS("")
-    mock.Click(navButton("Fellow travellers"))
+    mock.Click(navButton("Fellowship"))
     mock.Click(pageTab("Nearby"))
     mock.Advance(0.1)
     local list = window.nearby

@@ -150,7 +150,7 @@ window.FAMULUS_I18N.en = {
   fw_story_with: 'Your story with %s',
   fw_alias: 'Set alias',
   fw_chronicle: 'In the chronicle',
-  fw_back: 'All fellow travellers',
+  fw_back: 'Whole fellowship',
   fw_span: '%s to %s',
   fw_run: 'On the road in %s',
   fw_day_time: '%s together',

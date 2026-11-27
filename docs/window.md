@@ -20,12 +20,18 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   - **Header** (76 high, across the full width, dark ground like the sidebar): on the left logo, name
     and tagline; next to them name and description of the selected page (`window.area`, during a
     search "Search" and the number of hits); on the right only Close.
-  - **Sidebar:** search at the top, below it the main features as entries with an icon
-    (`navButtons`; a switched-off one greyed out with "OFF"; selected entry: fading gradient, glowing
-    bar), at the bottom after a line "Settings" and "About". The former line "x of y active"
-    is removed, as is the line "Active" under "About" (the owner's decision,
-    2026-11-24: it dates from the time of the many QoL features). The active/total counters on the
-    entries are removed too.
+  - **Sidebar:** search at the top, below it the main features as cards (`navButtons`, 64 high,
+    since 2026-11-27 at the owner's request: with three entries the rows left the sidebar
+    empty): the icon on a tile, the name (wraps to a second line if long), and at the right a
+    small live number without a label (12 px, semibold, `textMuted`) (`page.count`: the chronicle's entries, the fellow
+    travellers, the aliases), redrawn with the window's refresh on `CHRONICLE_CHANGED`,
+    `FELLOWS_CHANGED` and `ALIASES_CHANGED`. The owner first chose a live count as a subtitle
+    below the name, then after a look in game the bare number at the right instead, at first larger, then as muted as the subtitle had been. A
+    switched-off one is greyed out with an "OFF" pill in place of the number; the selected one
+    has the fading gradient and the glowing bar. At the bottom after a line "Settings" and
+    "About" as plain rows. Seen in game and confirmed by the owner (2026-11-27: "good like this");
+    the former line "x of y active" and the line "Active"
+    under "About" are removed (the owner's decision, 2026-11-24).
   - **Content:** at the very top the page's sub-areas as tabs (`window.tabs`, 48 high, stroke with
     gradient under the selected one), "Reset" to the right of them. The views of an area stand
     by name at the left; its settings tab (`CategoryTab`, `tab.icon = "gear"`) stands at the right

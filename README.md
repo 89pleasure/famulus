@@ -1,7 +1,7 @@
 # Famulus
 
 An addon for **World of Warcraft: Forever** (interface 16001) about playing together: a chronicle of
-the journey you share with your friends, the fellow travellers you grouped with, and aliases for
+the journey you share with your friends, the fellowship of everyone you grouped with, and aliases for
 other players. English, German, French, Spanish and Italian; no libraries, no dependencies.
 
 > **Alpha.** Much of Famulus has only been tested against a mock of the game client so far.
@@ -19,7 +19,7 @@ other players. English, German, French, Spanish and Italian; no libraries, no de
   deaths, bosses, challenges, discovered zones, professions, abilities and special items. It can
   share this with friends and guild members who use Famulus too, and shows their news live as a
   card on screen. A click on a friend's card celebrates it with them, or mourns a death.
-- **Fellow travellers:** remembers who you grouped with: when, where, how often, for how long, and
+- **Fellowship:** remembers who you grouped with: when, where, how often, for how long, and
   which bosses you beat together. Your closest companions and your bond with them, from Encounter to
   Inseparable. Optionally friends and guild only. Shows who of your friends and guild is in your
   zone or at your level, with a card when you meet up in a zone. Nothing of this is sent anywhere.
@@ -33,8 +33,8 @@ other players. English, German, French, Spanish and Italian; no libraries, no de
 | Chronicle | Follow my friends (level-ups on your friends list) | off |
 | Chronicle | Share with friends (addon messages between Famulus users) | off |
 | Chronicle | Show events on screen | **on** |
-| Fellow travellers | Remember my fellow travellers | off |
-| Fellow travellers | Who is nearby (friends and guild in your zone) | off |
+| Fellowship | Remember my fellowship | off |
+| Fellowship | Who is nearby (friends and guild in your zone) | off |
 | Aliases | In chat, in the tooltip, in the context menu | **on** |
 | Aliases | Characters of Battle.net friends | **on** |
 | Aliases | In Guildy (only when Guildy is loaded) | **on** |

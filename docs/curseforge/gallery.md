@@ -15,7 +15,7 @@ The first picture shows real friends' names (the owner allowed them on the websi
 | File | Title | Description |
 |---|---|---|
 | `01-window-lemon.jpg` | The chronicle | Your journey and your friends' as a picture book, one chapter per play session, with your week and your friends beside it. |
-| `02-fellows.jpg` | Fellow travellers | Your closest companions and everyone you grouped with. |
+| `02-fellows.jpg` | Fellowship | Your closest companions and everyone you grouped with. |
 | `03-story.jpg` | Your story | Your bond with Mira, your numbers and every session together. |
 | `04-groups.jpg` | Groups | Who was out with whom, and who you play with most often. |
 | `05-feed.jpg` | Live feed | The newest card on top, older ones as rows. |

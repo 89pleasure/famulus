@@ -53,7 +53,8 @@ GitHub.
 - Guild members with Famulus are no longer taken for strangers when the game briefly reports an
   empty guild roster.
 
-#### Fellow travellers
+#### Fellowship
+- The fellow travellers are now called the fellowship.
 - Whisper someone right from the overview, a list row or their card. The card's buttons are now
   icons in one row.
 - Nearby: Battle.net friends in another mode (Normal, PvP, RP, RP-PvP) or of the other faction
@@ -63,7 +64,8 @@ GitHub.
 - Classes and factions are named in their colours, softened so they don't outshine the rest.
 
 #### Window
-- The settings of the chronicle, the fellow travellers and the aliases are a gear at the right end
+- The chronicle, the fellowship and the aliases are cards in the sidebar, each with its count.
+- The settings of the chronicle, the fellowship and the aliases are a gear at the right end
   of their tabs.
 - `/fam report` or "About" > "Copy bug report" shows a text to copy with Ctrl+C and paste into a
   report. It holds no names.
