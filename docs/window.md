@@ -246,7 +246,9 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
       `UI.Feed.Fill`; never on screen), their running-out line looping over the duration, a
       friend's card with its button to react while reactions are on (it catches no mouse there); pointed
       at a kind, a card of that kind (reactions via `liveFeed.ReactionStory`), at "own" one of the
-      player's.
+      player's. The older card is a slim row, as on screen (`UI.Feed.Fill(card, story, true)`);
+      while the last three stay (`keep`), it rests (`card.body` at `UI.Feed.REST`) and the
+      caption says how long a card is new (`ui_preview_feed_keep`).
     - **Fellow travellers:** `fellows`: the overview's tiles (`UI.FellowTile`,
       `UI.FillFellowTile`, the person from `UI.FellowSample`); pointed at "raids" a list of which
       groups count, at "friendsOnly" whom it remembers. `tidy`: who stays, who goes (struck out).

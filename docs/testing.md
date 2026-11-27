@@ -74,6 +74,14 @@ the index there says which file it is in.
 - **Sound of the live feed (2026-11-25, checked against the mock only, not yet in game):** see
   "Sound" under "Live feed". Open in game: whether `click.ogg` plays after a `/reload`
   (`/fam feed test`), whether it is too loud or too quiet next to the game's sounds.
+- **Live feed: waiting, sliding, keeping the last three (2026-11-27, checked against the mock
+  only, not yet in game):** see "Sliding in, waiting its turn, keeping the last three" under
+  "Live feed". Open in game: whether the cards glide and shrink to rows smoothly (`SetPoint` and
+  `SetSize` on every frame for 0.4 s), how the stack's edges and its badge look above the top
+  card, whether a resting row (content at 0.6) is still readable. With one account, `/fam feed
+  test` several times quickly shows the waiting, the stack and the rows; with "Keep the last
+  three" on, the cards stay and rest. A first version (three large cards, the whole card faded
+  to 0.72 at rest) was seen in game: the translucent cards took on too much of the accent.
 - **Settings tabs (2026-11-25, checked against the mock only, not yet in game):** see "Settings
   tabs" in `docs/window.md`. Open in game: whether the list and the detail scroll by the mouse
   wheel, whether the switch in an entry and the one beside the name react (each has a hit area of

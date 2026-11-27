@@ -356,8 +356,9 @@ website does not show it yet.
   The detail line of one person: level, class, then the bond's tier for a fellow traveller, else
   where the player knows them from ("Friends list", "Guild", "Battle.net"); of several, their
   levels. Crests: the closest bond first; one crest of 48 px or two of 40 side by side
-  (`story.people` in `UI/Feed.lua`). Place and duration are the live feed's; the sound is the same
-  file (`UI.Feed.Chime`), with an option of its own.
+  (`story.people` in `UI/Feed.lua`). Place, duration and "Keep the last three" are the live
+  feed's (its cards wait their turn and stay like the live feed's); the sound is the same file
+  (`UI.Feed.Chime`), with an option of its own.
 - **Fresh lists:** friends list and Battle.net report changes themselves (`FRIENDLIST_UPDATE`,
   `BN_FRIEND_INFO_CHANGED`); the guild roster only comes when asked. While the feature is on, a
   ticker asks for both every 60 seconds (`POLL`; `NearbyService.Ask`, at most every ten seconds),

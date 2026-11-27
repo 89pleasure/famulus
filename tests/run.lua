@@ -1761,10 +1761,14 @@ do -- the live feed: what was just written down appears on screen for a while
     check(#Feed.Shown() == 1, "a kind that is switched off and old news stay off screen")
     ns:SetOption("liveFeed", "own", false)
     Chronicle.Add("boss", { name = "Hogger", t = time() - 22, probe = true })
-    check(#Feed.Shown() == 1, "switched off again, the player's own events stay off screen")
+    check(#Feed.Shown() == 1 and #Feed.Waiting() == 0, "switched off again, the player's own events stay off screen")
     ns:SetOption("liveFeed", "own", true)
     Chronicle.Add("item", { item = 211527, name = "Cozy Sleeping Bag", who = "Jaina Proudmoore", probe = true })
-    check(#Feed.Shown() == 2 and Feed.Shown()[1].head:GetText() == "Jaina Proudmoore" and Feed.Shown()[1].head:IsShown()
+    check(#Feed.Shown() == 1 and #Feed.Waiting() == 1 and Feed.deck.count:IsShown() and Feed.deck.count.text:GetText() == "+1",
+        "a card right after another waits its turn behind it: the newest stays on top a moment")
+    mock.Advance(1.7)
+    check(#Feed.Shown() == 2 and #Feed.Waiting() == 0 and not Feed.deck.count:IsShown()
+        and Feed.Shown()[1].head:GetText() == "Jaina Proudmoore" and Feed.Shown()[1].head:IsShown()
         and Feed.Shown()[1].title:GetText() == "Received: Cozy Sleeping Bag" and Feed.Shown()[1].photo:IsShown(),
         "a companion's event appears above the older card, whose it is in its head: "
         .. Feed.Shown()[1].head:GetText() .. " / " .. Feed.Shown()[1].title:GetText())
@@ -1779,12 +1783,25 @@ do -- the live feed: what was just written down appears on screen for a while
     for skill = 1, 3 do
         Chronicle.Add("skill", { skill = skill, name = "Craft " .. skill, rank = 75, probe = true })
     end
-    check(#Feed.Shown() == 3 and Feed.Shown()[3].title:GetText() == "Craft 1 raised to 75", "at most three cards; the oldest makes room")
+    check(#Feed.Shown() == 2 and #Feed.Waiting() == 3 and Feed.deck.count.text:GetText() == "+3"
+        and Feed.deck.edges[1]:IsShown() and Feed.deck.edges[2]:IsShown(),
+        "many at once wait as a stack behind the top card, with their number")
+    mock.Advance(1.3)
+    check(#Feed.Shown() == 3 and #Feed.Waiting() == 2 and Feed.Shown()[1].title:GetText() == "Craft 1 raised to 75",
+        "the next comes in once the newest has had its moment, the sooner the more wait")
+    mock.Advance(2.9)
+    check(#Feed.Shown() == 3 and #Feed.Waiting() == 0 and Feed.Shown()[3].title:GetText() == "Craft 1 raised to 75"
+        and not Feed.deck.count:IsShown() and not Feed.deck.edges[1]:IsShown(),
+        "one after another they come in; at most three cards, the oldest is pushed out, and nothing waits any more")
+    local newest, older = Feed.Shown()[1], Feed.Shown()[2]
+    check(not newest.slim and newest:GetHeight() == 64 and older.slim and older:GetHeight() == 34 and Feed.Shown()[3].slim
+        and older.title:IsShown() and not older.detail:IsShown() and not older.sep:IsShown() and older.crest:GetWidth() == 24,
+        "only the newest card is large; the older ones are slim rows: a small crest and what happened")
     ns:SetOption("liveFeed", "own", false)
-    mock.Advance(6.5)
+    mock.Advance(3)
     check(#Feed.Shown() == 3, "a card stays for its time")
-    mock.Advance(2)
-    check(#Feed.Shown() == 0 and not card:IsShown() and not card.barGroup:IsPlaying(), "then it fades out and is gone")
+    mock.Advance(3.8)
+    check(#Feed.Shown() == 0 and not newest:IsShown() and not newest.barGroup:IsPlaying(), "then it fades out and is gone")
     Chronicle.Add("level", { level = 15, who = "Jaina Proudmoore", t = time() - 23, probe = true })
     check(#Feed.Shown() == 1 and Feed.Shown()[1].number:IsShown() and Feed.Shown()[1].number:GetText() == "15",
         "a companion's level-up appears with its number")
@@ -1839,6 +1856,100 @@ do -- the live feed: what was just written down appears on screen for a while
     Feed.Fill(sample, { kind = "zone", title = "Arrived" })
     check(sample:GetHeight() == 64 and sample:GetWidth() == 230 and not sample.head:IsShown() and not sample.detail:IsShown(),
         "one row stays in the band of 64, at least 230 wide")
+    Feed.Clear()
+    forget()
+end
+do -- the live feed keeps the last three if asked; the same event of several friends shares a card
+    local Feed = ns.UI.Feed
+    local function forget()
+        local entries = Chronicle.Entries()
+        for index = #entries, 1, -1 do
+            if entries[index].probe then
+                table.remove(entries, index)
+            end
+        end
+    end
+    -- Resting: a row, its content faint, its band opaque, its line gone.
+    local function rests(card)
+        return card.resting and card.slim and card:GetHeight() == 34 and card:GetAlpha() == 1
+            and math.abs(card.body:GetAlpha() - Feed.REST) < 0.01 and not card.bar:IsShown()
+    end
+    Feed.Clear()
+    mock.Advance(3)
+    check(ns:GetOption("liveFeed", "keep") == false and not Feed.IsKeeping(), "from the start the cards fade out after their time")
+    ns:SetOption("liveFeed", "keep", true)
+    check(Feed.IsKeeping(), "asked for, the last three stay")
+    Chronicle.Add("level", { level = 30, who = "Jaina Proudmoore", t = time() - 40, probe = true })
+    local first = Feed.Shown()[1]
+    mock.Advance(7.6)
+    check(#Feed.Shown() == 1 and first:IsShown() and rests(first),
+        "past its time a kept card rests as a row: its content fainter, its band opaque, without its line")
+    for level = 31, 34 do
+        Chronicle.Add("level", { level = level, who = "Jaina Proudmoore", t = time() - 10 - level, probe = true })
+    end
+    mock.Advance(4.3)
+    check(#Feed.Shown() == 3 and #Feed.Waiting() == 0 and Feed.Shown()[1].number:GetText() == "34"
+        and Feed.Shown()[3].number:GetText() == "32", "kept or not, a fourth card pushes the oldest out")
+    local row = Feed.Shown()[2]
+    check(row.slim and row.head:IsShown() and row.head:GetText() == "Jaina Proudmoore" and row.sep:IsShown()
+        and not row.headDot:IsShown() and row.number:IsShown() and not row.badge:IsShown(),
+        "a friend's row names them, a dot, then what happened")
+    mock.Advance(8)
+    local resting = 0
+    for _, card in ipairs(Feed.Shown()) do
+        resting = resting + (card:IsShown() and rests(card) and 1 or 0)
+    end
+    check(#Feed.Shown() == 3 and resting == 3, "and the three stay on screen, resting")
+    local given = false
+    Feed.Show({ kind = "level", chip = { text = "Jaina Proudmoore" }, title = "Reached level 35", number = 35,
+        reaction = { icon = "cheer", given = function() return given end, give = function() given = true end } }, 4)
+    local reacted = Feed.Shown()[1]
+    reacted.react.scripts.OnClick(reacted.react)
+    mock.Advance(2)
+    check(given and Feed.Shown()[1] == reacted and reacted:IsShown() and reacted:GetAlpha() == 1,
+        "kept, a card stays after a reaction, its button lit")
+    mock.Advance(3)
+    check(rests(reacted), "(it rests once its time is up)")
+    reacted.react.scripts.OnEnter(reacted.react)
+    check(reacted.body:GetAlpha() == 1 and reacted.react:GetWidth() == 24, "the mouse on its button brings a resting row up")
+    reacted.react.scripts.OnLeave(reacted.react)
+    mock.Advance(0.6)
+    check(rests(reacted) and #Feed.Shown() == 3, "and it rests again once the mouse has left")
+    SlashCmdList.FAMULUS("feed")
+    check(Feed.IsMoving() and Feed.mover:GetHeight() >= 76 + 2 * 34, "the mark to move the feed shows the room three cards take")
+    SlashCmdList.FAMULUS("feed")
+    ns:SetOption("liveFeed", "keep", false)
+    mock.Advance(0.6)
+    check(#Feed.Shown() == 0 and not Feed.IsKeeping() and Feed.mover:GetHeight() == 64, "switched off, the resting cards go")
+
+    -- The same event of several friends at once shares a card.
+    local friends = { "Jaina Proudmoore", "Thrall Doomhammer", "Varian Wrynn", "Tyrande Whisperwind", "Malfurion Stormrage" }
+    for index, who in ipairs(friends) do
+        Chronicle.Add("boss", { id = 7, name = "Hogger", zone = "Elwynn Forest", who = who, t = time() - 50 - index, probe = true })
+    end
+    local bundle = Feed.Shown()[1]
+    check(#Feed.Shown() == 1 and #Feed.Waiting() == 0 and bundle.badge:IsShown() and bundle.badgeText:GetText() == "5"
+        and bundle.head:GetText() == "Jaina, Thrall and 3 more" and bundle.detail:GetText() == "Elwynn Forest"
+        and not bundle.react:IsShown(),
+        "the same boss of several friends at once shares one card: who in its head, how many in the crest's corner, "
+        .. "the place below: " .. tostring(bundle.head:GetText()) .. " / " .. tostring(bundle.detail:GetText()))
+    mock.Advance(0.5)
+    Chronicle.Add("level", { level = 36, who = "Jaina Proudmoore", t = time() - 60, probe = true })
+    Chronicle.Add("death", { zone = "Duskwood", who = "Thrall Doomhammer", t = time() - 61, probe = true })
+    Chronicle.Add("death", { zone = "Duskwood", who = "Varian Wrynn", t = time() - 62, probe = true })
+    Chronicle.Add("death", { zone = "Westfall", who = "Tyrande Whisperwind", t = time() - 63, probe = true })
+    check(#Feed.Waiting() == 3 and Feed.Waiting()[2].count == 2 and Feed.Waiting()[2].chip.text == "Thrall and Varian",
+        "a story that waits takes in the same event of others too; another place is another event")
+    ns:SetOption("liveFeed", "own", true)
+    Chronicle.Add("death", { zone = "Duskwood", t = time() - 64, probe = true })
+    check(#Feed.Waiting() == 4, "the player's own events keep a card of their own")
+    ns:SetOption("liveFeed", "own", false)
+    Feed.Clear()
+    mock.Advance(3)
+    Chronicle.Add("boss", { id = 8, name = "Edwin VanCleef", who = "Jaina Proudmoore", t = time() - 70, probe = true })
+    mock.Advance(6.2)
+    Chronicle.Add("boss", { id = 8, name = "Edwin VanCleef", who = "Thrall Doomhammer", t = time() - 71, probe = true })
+    check(#Feed.Shown() == 2 and not Feed.Shown()[1].badge:IsShown(), "seconds later, the same event is news of its own")
     Feed.Clear()
     forget()
 end
@@ -3209,9 +3320,9 @@ do
         return list
     end
     local kinds = chips()
-    check(recording[4].sub:GetText() == "On  ·  13 options" and #visibleRows() == 3 and #kinds == 10
+    check(recording[4].sub:GetText() == "On  ·  14 options" and #visibleRows() == 4 and #kinds == 10
         and detail.chipsTitle:GetText() == "Kinds of events" and detail.chipsCount:GetText() == "9 of 10 on",
-        "the live feed: duration, sound and own events as rows, ten kinds as chips, nine of them on")
+        "the live feed: duration, keeping the last three, sound and own events as rows, ten kinds as chips, nine of them on")
     check(kinds[2].label:GetText() == "Deaths" and kinds[2].on and kinds[2].option.icon == "skull" and ns.UI.media.skull
         and kinds[9].label:GetText() == "New zones" and not kinds[9].on and not kinds[9].lit.parts[1]:IsShown() and kinds[10].label:GetText() == "Reactions" and kinds[10].option.icon == "cheer",
         "each chip with its kind's icon, lit while on")
