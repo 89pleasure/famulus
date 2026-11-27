@@ -90,12 +90,11 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
   stays: a tag with "beta" in it still uploads as type beta.
 - **Token:** The owner stored the repository secret `CF_API_KEY` personally
   (2026-11-24); the token did not pass through the assistant.
-- **Open:**
-  - Project page: summary chosen by the owner ("Your companion for playing together: Famulus
-    helps you stay close to the friends and fellow adventurers who make your journey so
-    special."; set in the project's settings, not in the repo). Since 2026-11-27 the
-    description opens with the tagline "Together through Azeroth" instead (see docs/branding.md);
-    whether the summary follows is the owner's call; the description is a draft by the assistant in
+- **Project page** (set by hand in the project's settings; the workflow uploads only files):
+  - Summary (set by the owner, 2026-11-27): the website's hero lead, "Famulus captures what WoW
+    Forever is all about: spending time in Azeroth together. It makes the MMORPG we all love even
+    better and more open to everyone." (before: "Your companion for playing together: …"). It is
+    also the page's meta description. The description is the assistant's text in
     `docs/curseforge/description.html` (English, without Guildy, because its integration only
     works with the fork). It links the website (famulus.camp, its FAQ and privacy policy) and
     GitHub; CurseForge forbids only external download links. Categories: the assistant advises against "Companions" (on CurseForge
@@ -113,14 +112,14 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
     itself (Headless Chrome via the DevTools protocol; 1672 px wide, twice the column) into
     `website/assets/curseforge/`, so the description loads them from famulus.camp once the
     website with them is published. Redraw them when the website's screenshots or the areas'
-    titles change. Not checked: which formats the description editor of the authors' console
-    offers (the comment at the top of the file assumes a source or HTML view).
-  - **State of the live page (read 2026-11-27):** "Unlisted", categories "Chat & Communication"
-    and "Guild", still the alpha description (aliases first, a chapter per day, English and
-    German), no gallery, no links to source or issues. The repo's description, the gallery
-    (`docs/curseforge/gallery.md`) and the links (Source and Issues on GitHub, the website)
-    are entered by hand in the project's settings; nothing of it is uploaded by the workflow.
-  - Not set up: Wago, GitHub releases, an approval environment for the secrets.
+    titles change, and paste the description again when its text changes.
+  - **State of the live page (read 2026-11-27, evening):** the HTML description with all ten
+    pictures and the accent colours, a gallery of seven pictures with the texts of
+    `docs/curseforge/gallery.md`, an "Issues" tab leading to GitHub, categories "Chat &
+    Communication" and "Guild". Still "Unlisted": the newest file is `v0.1.0-alpha.6`; the
+    project appears in the app with its first release file (`v0.1.0`). CurseForge caches the
+    page: right after a change a plain reload may still show the old summary.
+- **Open:** Wago, GitHub releases, an approval environment for the secrets (none set up).
 - Run on GitHub (2026-11-24): the test workflow, a trial run without upload and the upload
   of `v0.1.0-alpha.1` ("Uploading Famulus-v0.1.0-alpha.1-forever.zip (1.60.1 alpha) … Success!").
   A tag without upload (approval, Wago, GitHub releases) is not set up.
