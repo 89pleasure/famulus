@@ -1760,7 +1760,7 @@
   };
 
   // -------------------------------------------------------------------------
-  // 05 In the game: one screenshot at a time. It moves on by itself every
+  // 05 Screenshots: one screenshot at a time. It moves on by itself every
   // EVERY ms, but not with reduced motion, not while paused, not while the
   // mouse or the focus is on the slider, not while it is off screen or the
   // tab is in the background. Arrows, dots, the arrow keys and a swipe move it.
