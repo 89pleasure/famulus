@@ -561,6 +561,139 @@
     refresh(true);
   });
 
+  // The section's title names a friend by example: the character's name in
+  // its class colour, the alias in the accent behind it. Both fade out, the
+  // next name fades in and its alias follows a moment later, so the naming
+  // reads as a second step. It only moves while it is on screen; with
+  // reduced motion the first example stands. The first two are the lead's
+  // tank and the demo's Papa, then one for fun.
+  const TITLE_EXAMPLES = [
+    { name: 'Grimtusk', cls: 'warrior', alias: 'Tom' },
+    { name: KAELRIC.split(' ')[0], cls: PEOPLE[KAELRIC].cls, alias: 'Papa' },
+    { name: 'Balduk', cls: 'hunter', alias: 'BigBossDaddy' },
+    { name: 'Dârkñêss', cls: 'warlock', alias: 'Ben' },
+    { name: MIRA.split(' ')[0], cls: PEOPLE[MIRA].cls, alias: 'Lena' },
+  ];
+  const HOLD = 3200; // a complete example stands this long
+  const FADE_OUT = 420; // the alias first, the name FADE_STAGGER later
+  const FADE_STAGGER = 120;
+  const NAME_IN = 650;
+  const ALIAS_AFTER = 600; // the alias starts fading in this long after the name
+  const ALIAS_IN = 800;
+  const SOFT = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+  const FADED = { opacity: 0, filter: 'blur(6px)' };
+  const CLEAR = { opacity: 1, transform: 'none', filter: 'blur(0)' };
+  const titleEl = $('#alias-title');
+  const title = { at: 0, phase: 'out', timer: 0, seen: false, live: null, leaving: [] };
+
+  // One line of the title: the language's sentence around name and alias.
+  function titleLine(example) {
+    const [before, between, after] = t('al_title', '\u0001', '\u0001').split('\u0001');
+    const name = make('span', `aka__name cls cls--${example.cls}`, example.name);
+    const word = make('span', 'aka__alias', example.alias);
+    const line = make('span');
+    line.append(before, name, between, word, after);
+    return { line, name, word };
+  }
+
+  // The title stays on one line wherever its longest example fits the page's
+  // content (on a desktop it does, past the 780 px of the head); on a phone
+  // it wraps. Decided for all examples at once, so it does not change from
+  // one to the next.
+  function fitTitle() {
+    titleEl.classList.remove('is-wrapping');
+    const room = titleEl.closest('.wrap').clientWidth;
+    const widest = Math.max(...$$('.aka__ghost', titleEl).map(ghost => ghost.getBoundingClientRect().width));
+    titleEl.classList.toggle('is-wrapping', widest > room);
+  }
+
+  // Every example stands invisible in the same grid cell as the one that
+  // moves, so the title keeps the height of its longest example and the
+  // text below does not jump.
+  // The example on screen is drawn complete; a fade that was under way when
+  // the language changes starts over with the example it left.
+  function drawTitle() {
+    for (const fade of title.leaving) fade.cancel();
+    title.leaving = [];
+    title.phase = 'out';
+    clearTimeout(title.timer);
+    title.timer = 0;
+    const first = TITLE_EXAMPLES[0];
+    const said = make('span', 'sr-only', t('al_title', first.name, first.alias));
+    const stage = make('span', 'aka__stage');
+    stage.setAttribute('aria-hidden', 'true');
+    for (const example of TITLE_EXAMPLES) {
+      const ghost = titleLine(example).line;
+      ghost.className = 'aka__ghost';
+      stage.append(ghost);
+    }
+    title.live = titleLine(TITLE_EXAMPLES[title.at]);
+    title.live.line.className = 'aka__live';
+    stage.append(title.live.line);
+    titleEl.textContent = '';
+    titleEl.append(said, stage);
+    fitTitle();
+    scheduleTitle();
+  }
+
+  function titleLater(ms) {
+    title.timer = setTimeout(titleStep, ms);
+  }
+
+  function titleStep() {
+    title.timer = 0;
+    const live = title.live;
+    if (title.phase === 'out') {
+      const gone = { ...FADED, transform: 'translateY(-0.12em)' };
+      title.leaving = [
+        live.word.animate([CLEAR, gone], { duration: FADE_OUT, easing: 'ease-in', fill: 'forwards' }),
+        live.name.animate([CLEAR, gone], { duration: FADE_OUT, delay: FADE_STAGGER, easing: 'ease-in', fill: 'forwards' }),
+      ];
+      title.phase = 'in';
+      return titleLater(FADE_OUT + FADE_STAGGER);
+    }
+    for (const fade of title.leaving) fade.cancel();
+    title.leaving = [];
+    title.at = (title.at + 1) % TITLE_EXAMPLES.length;
+    const example = TITLE_EXAMPLES[title.at];
+    live.name.textContent = example.name;
+    live.name.className = `aka__name cls cls--${example.cls}`;
+    live.word.textContent = example.alias;
+    const coming = { ...FADED, transform: 'translateY(0.18em)' };
+    live.name.animate([coming, CLEAR], { duration: NAME_IN, easing: SOFT });
+    // "backwards" keeps the alias invisible while it waits for the name.
+    live.word.animate([coming, CLEAR], { duration: ALIAS_IN, delay: ALIAS_AFTER, easing: SOFT, fill: 'backwards' });
+    title.phase = 'out';
+    return titleLater(ALIAS_AFTER + ALIAS_IN + HOLD);
+  }
+
+  function scheduleTitle() {
+    const run = title.seen && !document.hidden && !motion.matches;
+    if (!run) {
+      clearTimeout(title.timer);
+      title.timer = 0;
+    } else if (!title.timer) {
+      // A complete example stands a while first; a half-finished change goes on.
+      titleLater(title.phase === 'out' ? HOLD : 0);
+    }
+  }
+
+  new IntersectionObserver(entries => {
+    title.seen = entries[entries.length - 1].isIntersecting;
+    scheduleTitle();
+  }, { threshold: 0.5 }).observe(titleEl);
+  document.addEventListener('visibilitychange', scheduleTitle);
+  motion.addEventListener('change', drawTitle);
+  // The width changes with the window, and once Inter has loaded.
+  let fitting = 0;
+  addEventListener('resize', () => {
+    cancelAnimationFrame(fitting);
+    fitting = requestAnimationFrame(fitTitle);
+  });
+  if (document.fonts) document.fonts.ready.then(fitTitle);
+  renderers.push(drawTitle);
+  drawTitle();
+
   // -------------------------------------------------------------------------
   // 02 Chronicle: the picture book. The entries are the addon's own samples
   // (/fam chronicle demo), told the way the book tells them.

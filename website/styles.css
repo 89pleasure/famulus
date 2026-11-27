@@ -288,6 +288,19 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .section__head { max-width: 780px; margin-bottom: clamp(44px, 6vw, 76px); }
 .section__head h2 { margin: 20px 0 22px; }
 
+/* The aliases' title (main.js): the character's name in its class colour,
+   the alias in the accent behind it; both fade to the next example. One line
+   wherever the longest example fits the page's width (it may reach past the
+   780 px of the head); where it does not, on a phone, main.js lets it wrap.
+   Every example stands invisible in the same cell, so the title is as tall
+   as the longest one and the text below does not jump. */
+.aka__stage { display: grid; white-space: nowrap; }
+.aka.is-wrapping .aka__stage { white-space: normal; }
+.aka__stage > * { grid-area: 1 / 1; justify-self: start; }
+.aka__ghost { visibility: hidden; }
+.aka__name, .aka__alias { display: inline-block; }
+.aka__alias { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 0.02em; }
+
 .glow { position: absolute; z-index: -1; width: min(70vw, 900px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 10%, transparent), transparent); pointer-events: none; will-change: transform; }
 .glow--right { right: -22%; top: 2%; }
 .glow--left { left: -24%; top: 18%; }

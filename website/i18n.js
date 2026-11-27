@@ -6,6 +6,8 @@
 // everything. Placeholders are %s and %d, filled in order.
 window.FAMULUS_I18N = {
   en: {
+    // Character name, alias. Words between the two, or they read as one name.
+    al_title: 'To you, %s is just %s.',
     on: 'On',
     off: 'Off',
     w_reset: 'Reset',
@@ -196,7 +198,7 @@ window.FAMULUS_I18N = {
 
     // 01 Aliases
     al_eyebrow: 'Aliase',
-    al_title: 'Nenn sie, wie du sie kennst.',
+    al_title: 'Nenn %s einfach %s.',
     al_lead: 'Dein Tank heißt im Spiel „Grimtusk“, für dich ist er Tom. Gib Spielern einen Alias, und Famulus zeigt ihn im Chat und im Tooltip. Nur du siehst ihn; Flüstern, Einladen und Links erreichen weiter den Charakter.',
     al_hint: 'Probier es aus: Gib Yorick Talwind einen Alias, ändere einen oder schalte im Tab Einstellungen die Anzeige um.',
     al_p1_t: 'Ein Alias für den ganzen Account',
