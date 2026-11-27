@@ -100,12 +100,12 @@ const PICTURES = [
         <p class="eyebrow"><span class="eyebrow__mark"></span><span>An addon for World of Warcraft: Forever</span></p>
         <h1 class="cf-name"><img src="assets/logo.svg" alt="">Famulus</h1>
         <p class="cf-tagline">Together <em>through Azeroth.</em></p>
-        <ul class="hero__facts"><li>Chronicle</li><li>Fellow travellers</li><li>Aliases</li><li>Five languages</li></ul>\`;
+        <ul class="hero__facts"><li>Chronicle</li><li>Fellowship</li><li>Aliases</li><li>Five languages</li></ul>\`;
       hero.id = 'cf-target';
     `,
   },
   head('head-chronicle', '01', 'Chronicle', 'Your journey, told like a picture book.', 'i-flag'),
-  head('head-fellows', '02', 'Fellow travellers', 'Remember who was there.', 'i-people'),
+  head('head-fellows', '02', 'Fellowship', 'Remember who was there.', 'i-people'),
   head('head-aliases', '03', 'Aliases',
     'To you, <span class="cls--warrior">Grimtusk</span> is just <em>Tom.</em>', 'i-tag'),
   shot('shot-chronicle', 'window-lemon'),

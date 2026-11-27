@@ -1,11 +1,11 @@
 ## Interface: 16001
 ## Title: Famulus
-## Notes: Play together: a chronicle of your shared journey, your fellow travellers and aliases for your friends.
-## Notes-deDE: Gemeinsam spielen: eine Chronik eurer gemeinsamen Reise, deine Weggefährten und Aliase für deine Freunde.
-## Notes-esES: Juega en compañía: una crónica de tu viaje compartido, tus compañeros de viaje y alias para tus amigos.
-## Notes-esMX: Juega en compañía: una crónica de tu viaje compartido, tus compañeros de viaje y alias para tus amigos.
-## Notes-frFR: Jouer ensemble : une chronique de votre voyage commun, vos compagnons de route et des alias pour vos amis.
-## Notes-itIT: Gioca insieme: una cronaca del vostro viaggio comune, i tuoi compagni di viaggio e alias per i tuoi amici.
+## Notes: Play together: a chronicle of your shared journey, your fellowship and aliases for your friends.
+## Notes-deDE: Gemeinsam spielen: eine Chronik eurer gemeinsamen Reise, deine Gemeinschaft und Aliase für deine Freunde.
+## Notes-esES: Juega en compañía: una crónica de tu viaje compartido, tu comunidad y alias para tus amigos.
+## Notes-esMX: Juega en compañía: una crónica de tu viaje compartido, tu comunidad y alias para tus amigos.
+## Notes-frFR: Jouer ensemble : une chronique de votre voyage commun, votre communauté et des alias pour vos amis.
+## Notes-itIT: Gioca insieme: una cronaca del vostro viaggio comune, la tua compagnia e alias per i tuoi amici.
 ## Author: 89pleasure
 #@debug@
 ## Version: dev

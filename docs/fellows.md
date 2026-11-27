@@ -4,6 +4,14 @@ Part of the project notes; requirements, rules and the index of all files are in
 [AGENTS.md](../AGENTS.md). References of the form "see X" point to a heading or a bold entry;
 the index there says which file it is in.
 
+**Name (2026-11-27, the owner's choice):** players see the area as "Fellowship" (German
+"Gemeinschaft", French "Communauté", Spanish "Comunidad", Italian "Compagnia", Polish
+"Drużyna", Ukrainian "Братство"), in the addon, on the website and on CurseForge; the people
+in it are "companions" (as in "Closest companions"). Before: "Fellow travellers" /
+"Weggefährten" ("Gefährten" / "Companions" was proposed and declined). These notes and the code
+keep "fellow travellers" and `fellows`, so no saved data changed. The window's screenshots on
+the website still show the old name until the next capture.
+
 Idea from a list of ideas by the assistant (2026-11-23), picked by the owner: Famulus remembers
 who the player was in a group with. Reasoning: Forever lacks "Recently played together" (Recent
 Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature does not need Famulus on the other side.
