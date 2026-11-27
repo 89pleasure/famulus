@@ -24,8 +24,8 @@ other players. English, German, French, Spanish and Italian; no libraries, no de
   Inseparable. Optionally friends and guild only. Shows who of your friends and guild is in your
   zone or at your level, with a card when you meet up in a zone. Nothing of this is sent anywhere.
 - **Aliases:** names of your own for other players that only you see, in chat, in the tooltip and in
-  the Guildy addon, set from the right-click menu. One alias for a Battle.net friend covers all of
-  their characters. Whispers, invites and links keep using the real name.
+  the [Guildy](https://www.curseforge.com/wow/addons/guildy) addon, set from the right-click menu. One
+  alias for a Battle.net friend covers all of their characters. Whispers, invites and links keep using the real name.
 
 | Area | Feature | Default |
 |---|---|---|
