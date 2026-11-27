@@ -97,8 +97,14 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
     description opens with the tagline "Together through Azeroth" instead (see docs/branding.md);
     whether the summary follows is the owner's call; the description is a draft by the assistant in
     `docs/curseforge/description.md` (English, Markdown, without Guildy, because its integration only
-    works with the fork). Categories: the assistant advises against "Companions" (on CurseForge
+    works with the fork). It links the website (famulus.camp, its FAQ and privacy policy) and
+    GitHub; CurseForge forbids only external download links. Categories: the assistant advises against "Companions" (on CurseForge
     pets and mounts) and recommends "Chat & Communication" with "Guild".
+  - **State of the live page (read 2026-11-27):** "Unlisted", categories "Chat & Communication"
+    and "Guild", still the alpha description (aliases first, a chapter per day, English and
+    German), no gallery, no links to source or issues. The repo's description, the gallery
+    (`docs/curseforge/gallery.md`) and the links (Source and Issues on GitHub, the website)
+    are entered by hand in the project's settings; nothing of it is uploaded by the workflow.
   - Not set up: Wago, GitHub releases, an approval environment for the secrets.
 - Run on GitHub (2026-11-24): the test workflow, a trial run without upload and the upload
   of `v0.1.0-alpha.1` ("Uploading Famulus-v0.1.0-alpha.1-forever.zip (1.60.1 alpha) … Success!").

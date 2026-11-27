@@ -66,7 +66,7 @@ in `docs/`; read the matching file before you work in that area, and only then.
 | [docs/branding.md](docs/branding.md) | Name, logo, tagline, rejected names and logos | you work on the name, logo or tagline |
 | [docs/website.md](docs/website.md) | Website: technology, layout, demos, campfire in the header, window in the header (screenshot), footer and legal page, languages, hosting, what to update when the addon changes | you work on `website/` or the window changes visibly |
 | [docs/release.md](docs/release.md) | Publishing on CurseForge: packager, tags and file types, release steps, version, licence, project logo, project ID, open items | you prepare a release or work on workflows, `.pkgmeta`, `LICENSE` |
-| `docs/curseforge/` | Description and logo of the CurseForge project page | the project page changes |
+| `docs/curseforge/` | Description, logo and gallery of the CurseForge project page | the project page changes |
 | `docs/superpowers/` | Specs and plans of single projects (as of their date) | the origin of a decision is unclear |
 
 - **Loaded automatically:** A `CLAUDE.md` in a subfolder imports the matching file

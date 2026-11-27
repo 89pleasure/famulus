@@ -6,9 +6,11 @@ That section becomes the changelog of the file on CurseForge.
 ## 0.1.0
 
 The first beta, and the first version of Famulus you can find in the CurseForge app. If you are
-new: welcome! Below is what Famulus does today, then what changed since the last alpha. Things
-will still move, and sharing gets better with everyone who tells me what they see: type
-`/fam report` and paste the text into a comment on CurseForge or an issue on GitHub.
+new: welcome! Below is what Famulus does today, then what changed since the last alpha. Famulus
+also has a website now, famulus.camp, with screenshots, demos to try in the browser and answers
+to common questions. Things will still move, and sharing gets better with everyone who tells me
+what they see: type `/fam report` and paste the text into a comment on CurseForge or an issue on
+GitHub.
 
 ### What Famulus does
 - **Chronicle:** your journey as a picture book, one chapter per play session: levels, deaths,
@@ -33,14 +35,29 @@ will still move, and sharing gets better with everyone who tells me what they se
   the live feed; a click on the card itself no longer reacts.
 - Live feed cards tell whose event it is, what happened and where in three rows, so long events
   are no longer cut off.
+- Only the newest live feed card is large; the two before it move down as slim rows.
+  When many come at once, each gets its moment on top while the rest wait in a stack behind it,
+  with their number.
+- When several friends beat the same boss, fall in the same zone or complete the same challenge
+  within a few seconds, they share one card with their names.
+- New under "Show events on screen": "Keep the last three" lets the cards stay as rows instead of
+  fading out.
+- `/fam feed test` shows a burst of sample cards, so you can see the stack and the rows. Nothing is
+  stored or sent.
 - Guild members with Famulus are no longer taken for strangers when the game briefly reports an
   empty guild roster.
 
 #### Fellow travellers
 - Whisper someone right from the overview, a list row or their card. The card's buttons are now
   icons in one row.
+- Nearby: Battle.net friends on another realm or faction can't play with you, so they no longer
+  get a card or appear under "Here in …". They stand last under "Out of reach", with the realm or
+  faction as the reason.
+- Classes and factions are named in their colours, softened so they don't outshine the rest.
 
 #### Window
+- The settings of the chronicle, the fellow travellers and the aliases are a gear at the right end
+  of their tabs.
 - `/fam report` or "About" > "Copy bug report" shows a text to copy with Ctrl+C and paste into a
   report. It holds no names.
 - The window needs noticeably less memory once it has been opened.

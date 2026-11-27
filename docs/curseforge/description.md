@@ -2,17 +2,18 @@
 
 **Together through Azeroth.**
 
-World of Warcraft is at its best with other people: the friend who levels alongside you, the
-guildmate who is always up for one more dungeon, the stranger from last night's group who turned
-out to be great company. Famulus is not another UI suite. It adds three things for playing
-together and leaves the rest of your interface alone:
+WoW Forever is all about spending time in Azeroth together: the friend who levels alongside you,
+the guildmate who is always up for one more dungeon, the stranger from last night's group who
+turned out to be great company. Famulus makes that time even better. It is not another UI suite:
+it adds three things for playing together and leaves the rest of your interface alone:
 
 - **Chronicle**: your and your friends' journey as a picture book, with live cards when they level
   or beat a boss
 - **Fellow travellers**: everyone you grouped with, your bond with them, and who is nearby right now
 - **Aliases**: your own names for other players, in chat and tooltips
 
-Made for World of Warcraft: Forever.
+Made for World of Warcraft: Forever. See it in action, with screenshots and demos you can try in
+your browser, on **[famulus.camp](https://famulus.camp)**.
 
 *Famulus is Latin for the assistant of a scholar or a magician.*
 
@@ -32,7 +33,9 @@ the chronicle remembers who was there.
 - **Share it** with friends and guild members who use Famulus too, no matter where they are. If a
   friend is offline when you log in, a mutual friend's Famulus passes on what you missed.
 - **React** to your friends' moments: cheer a level-up, mourn a death, applaud a profession.
-- **Live feed:** cards on screen when your friends level up, fall or beat a boss.
+- **Live feed:** a card on screen when a friend levels up, falls or beats a boss, and you react
+  with one click. Older cards move down as slim rows, and friends who beat a boss together share
+  one card. You choose where it sits and which events it shows.
 - **A side column** with your week in numbers, your professions, and your friends with their level
   and online status.
 
@@ -40,13 +43,14 @@ the chronicle remembers who was there.
 
 Famulus remembers everyone you grouped with: when and where you met, how often, for how long, and
 which bosses you beat together. The more time you spend together, the stronger your bond, from
-*Encounter* to *Acquainted*, *Trusted* and *Inseparable*. Click someone to see your story together, or whisper them with one click.
-Optionally keep only friends and guild members; one click clears out everyone else. Battlegrounds
-and arenas never count.
+*Encounter* to *Acquainted*, *Trusted* and *Inseparable*. Click someone to see your story together,
+or whisper them with one click. Optionally keep only friends and guild members; one click clears
+out everyone else. Battlegrounds and arenas never count.
 All of this stays on your computer and is never sent anywhere.
 
 **Who is nearby:** see which of your friends and guild members are in your zone right now, with
-their level, and get a card when one of them arrives. Nothing is sent, and they need no Famulus.
+their level, and get a card when one of them arrives. Friends on another realm or faction are
+listed apart. Nothing is sent, and they need no Famulus.
 
 ## Aliases: know who's who
 
@@ -63,7 +67,8 @@ Whispers, invites and links keep using the real name.
 
 Type **/fam** (or /famulus), click the minimap button or use the addon menu on the minimap. The
 first time, a welcome page switches on the main features with one click, or lets you choose
-yourself. The search finds every setting. English, German, French, Spanish and Italian.
+yourself. The search finds every setting. Five colour schemes; English, German, French, Spanish
+and Italian.
 
 ## Light on your game
 
@@ -78,9 +83,17 @@ yourself. The search finds every setting. English, German, French, Spanish and I
 
 The chronicle only talks to people on your friends list or in your guild who use Famulus
 themselves, and only once you switch sharing on. Your fellow travellers and aliases never leave
-your computer.
+your computer. More in the [privacy policy](https://famulus.camp/legal.html#privacy).
+
+## Links
+
+- Website: [famulus.camp](https://famulus.camp)
+- Questions: [Help & FAQ](https://famulus.camp/#help)
+- Bugs and ideas: [GitHub issues](https://github.com/89pleasure/famulus/issues)
+- Source code: [GitHub](https://github.com/89pleasure/famulus)
 
 ---
 
 *Famulus is a fan-made addon and not affiliated with Blizzard Entertainment. World of Warcraft is a
-trademark of Blizzard Entertainment, Inc.*
+trademark of Blizzard Entertainment, Inc. The screenshots show game content © Blizzard
+Entertainment, Inc.*
