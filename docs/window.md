@@ -73,33 +73,58 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   "OFF", its tabs are greyed out, and instead of the content its page shows
   a notice with the button "Switch on in settings" (`window.offNotice`), which
   opens Settings › General.
-- **Welcome page (`UI/Welcome.lua`, since 2026-11-26, issue #46):** With the defaults a new
-  player sees almost nothing, so the window opens on a page that says what Famulus does and
-  switches the main features on with one click. The rule for defaults stays as it is.
+- **Welcome page (`UI/Welcome.lua`, since 2026-11-26, issue #46; set up step by step since
+  2026-11-27, the owner's request, chosen on the mockup "Famulus-Einrichtung in Schritten", claude.ai
+  artifact `BhZh9kh6ZaBWSaaX84Rxxi`):** With the defaults a new player sees only the journey
+  (`ownJourney`, on from the start since 2026-11-27, the owner's decision: it is the core), so the
+  window opens on a page that says what Famulus does, in the website's words, and walks through
+  the four main features that stay off by default. The rule for defaults stays as it is.
   - **When:** until the player chooses (`FamulusDB.welcome`, account-wide) and only while none of
-    the five in `Welcome.FEATURES` (ownJourney, companions, sharing, rememberFellows,
-    nearbyFriends) is on; whoever switched one on never gets it, whether `seen` is set or not.
-    Closing (X, Escape) is no choice, "Later" and "Choose myself" are. An alias asked for from a
+    the four in `Welcome.FEATURES` (companions, sharing, rememberFellows, nearbyFriends) is on;
+    whoever switched one on never gets it. Closing (X, Escape) is no choice and starts it again
+    from the beginning; "Later", "Switch everything on" and the end are. An alias asked for from a
     player's menu (`ns:EditAlias`) opens the aliases page instead, without choosing. Again from
     "About" (row "Welcome", button "Show welcome page").
   - **Look:** an opaque page of its own below the head (frame level +100) that covers sidebar and
     content; the head keeps logo, name, tagline and close, the page's name is hidden
-    (`window.area`). It draws the window's ground itself (grain, dusk, a glow behind the 96 px
-    logo, sparks of its own; while it is shown only they move). Below the title the three areas
-    as tiles (the aliases lit, they already run), the big button "Record the journey and share it
-    with friends" (`button.padding`), how many it switches on and that sharing reaches only
-    friends and guild with Famulus. "What exactly?" opens the five, two to a line, each with "Only
-    for you" or, for sharing, "Goes to friends and guild" (`shareInk`), and what already runs
-    (aliases, live feed). Links "Choose myself" (Chronicle › Settings) and "Later" (Chronicle).
-  - **The click** switches on the five the client can run and the master switches of their areas,
-    writes one chat line (`msg_welcome_on`) and opens Chronicle › Everyone. An empty book says
-    "Your chronicle is running" (`c_empty_on`) while anything records into it.
-  - Rejected on the mockup ("Famulus-Willkommensseite", claude.ai artifact
+    (`window.area`). It draws the window's ground itself (grain, dusk, sparks of its own; while it
+    is shown only they move). Three views:
+    - **Start:** logo with glow, "Welcome to Famulus", the website's hero ("For everyone you play
+      with." and its lead), the website's four parts as tiles (chronicle, fellow travellers, live
+      feed, aliases; "Already on" on what runs), "Set up now" (the owner's wording), "Switch
+      everything on", a note that each step shows an example and that sharing reaches only
+      friends and guild with Famulus, "Later".
+    - **A step** per feature in `Welcome.STEPS` the client can run, five: the four and, after
+      sharing, the live feed with the reactions (the owner's request after the first look in game,
+      2026-11-27). "Step 2 of 5" with a bar per step, the area, the
+      feature's name (since 2026-11-27 in the owner's wording "Record my fellowship", German
+      "Gemeinschaft aufzeichnen", and "Nearby", German "In der Nähe"), "Only for you" or, for
+      sharing, "Goes to friends and guild members who use Famulus" (`shareInk`), a lead and two points (`ui_welcome_<id>_lede`, `_p1_t`, `_p1`,
+      `_p2_t`, `_p2`), and the one option worth deciding at once (`option` in `Welcome.STEPS`,
+      `owner` if it belongs to another feature: the reactions are sharing's, with a shorter text
+      of their own here, `desc`; friends and guild
+      only, include the guild) as a row with its switch, which works
+      at once; pointing at it focuses the picture. On the right the feature's picture from the
+      settings (`feature.preview`, `UI.Previews`) on a larger stage (340 high), lit
+      (`stage.lit`): it shows the feature as if it were on. At the foot "Back", "Skip" and "Switch
+      on and continue" (on the last "Switch on and finish"). A step that is on already says
+      "Continue" and "Switch off and continue" instead (the owner found no way to skip sharing
+      when it was on): skipping always leaves the feature off.
+    - **End:** "All done.", what runs now in two columns (the journey "From the start", the steps,
+      skipped ones marked, the aliases "Already running"), "Open the chronicle", "Back".
+  - **Switching:** a step switches its feature and the master switch of its area on at once
+    (`Welcome.Enable`); "Switch everything on" switches on the four the client can run
+    (`Welcome.SwitchOn`). Either way one chat line (`msg_welcome_on`) says how many, and the end
+    opens Chronicle › Everyone. An empty book says "Your chronicle is running" (`c_empty_on`).
+  - Rejected on the first mockup ("Famulus-Willkommensseite", claude.ai artifact
     `4QWBiRsCVYusMxfEbDAmn8`): the three areas as cards with every switch, and one question "with
-    friends / only for me / decide myself".
-  - Checked against the mock only, not yet seen in game. Open in game: whether the page fits with
-    the list open in French (the column is 760 wide so that a tile's line takes at most three
-    lines), how logo, glow and the big button look, whether dragging the page moves the window.
+    friends / only for me / decide myself". Replaced on 2026-11-27: the one big button with a list
+    "What exactly?" and "Choose myself".
+  - Checked against the mock only, not yet seen in game. Open in game: how the pictures look on the
+    larger stage (the book and the tiles are made smaller to fit only when needed, the sharing
+    scene centres itself in the height), whether the text column fits in French (the mock says the
+    tallest step ends at 480 of 568), whether dragging the page moves the window. The screenshot
+    `welcome` on the website and on CurseForge still shows the old page; take it again in game.
 - **Bug report (`UI/Report.lua`, since 2026-11-26, issue #47):** a small window of its own above
   the main one (640 × 500, strata `DIALOG`, the window's card, shadow and scale), from
   `/fam report` or About › "Copy bug report". What it shows and why: see "Bug report" in

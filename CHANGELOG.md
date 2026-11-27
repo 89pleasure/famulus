@@ -21,13 +21,16 @@ GitHub.
   together and how close you are. "Nearby" shows who of your friends and guild is in your zone
   right now.
 - **Aliases:** your own names for other players, in chat, tooltips and the online notices.
-- **Welcome page:** one click switches on the main features. Nothing that listens to the game or
-  sends anything to others runs before you choose it.
+- **Welcome page:** set up the main features step by step, each with an example of what it does,
+  or all at once with one click. Your own journey is recorded from the start and stays with you;
+  nothing that sends anything to others runs before you choose it.
 - English, German, French, Spanish and Italian.
 
 ### New since 0.1.0-alpha.6
 
 #### Chronicle
+- Your own journey is recorded from the start; it is the heart of Famulus and stays with you. You
+  can switch it off under Chronicle > Settings.
 - The abilities class quests teach now go into the chronicle and reach your friends, like riding:
   stances, forms, pets, totems, Poisons and the class mounts.
 - A card names the person and the time in the strip at its top, and the place at its foot.
@@ -65,6 +68,9 @@ GitHub.
 
 #### Window
 - The chronicle, the fellowship and the aliases are cards in the sidebar, each with its count.
+- The welcome page tells what Famulus does in the words of the website and walks you through the
+  main features one at a time: what each does, an example, the one option worth deciding now,
+  switch on or skip. "Switch everything on" still does it in one click.
 - The settings of the chronicle, the fellowship and the aliases are a gear at the right end
   of their tabs.
 - `/fam report` or "About" > "Copy bug report" shows a text to copy with Ctrl+C and paste into a

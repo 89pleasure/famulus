@@ -208,15 +208,16 @@ These points are design decisions; `tests/run.lua` checks most of them.
 - **`requires`:** Give every client API needed as a path (`"C_FriendList.GetNumFriends"`). If it
   is missing, the feature stays off and shows as "not available".
 - **Defaults:** Anything that acts on the player's behalf, sends messages to other players or
-  listens to game events is `default = false`. Only harmless things are on. Exception:
+  listens to game events is `default = false`. Only harmless things are on. Exceptions:
   `accountAliases` listens only once the player has created an alias for a Battle.net account
-  (see "Aliases").
+  (see "Aliases"); `ownJourney` is on from the start (the owner's decision, 2026-11-27: the
+  journey is the core of the addon, and it stays with the player).
 - **Chat:** Feedback via `ns:Notify` (can be switched off), at most one line per action.
 - **Global names:** only `FamulusDB`, `FamulusCharDB`, `SLASH_FAMULUS1/2`,
   `Famulus_OnAddonCompartmentClick` and the named frames `FamulusOptionsFrame` and
   `FamulusMinimapButton`.
 - **Cost while idle**, fixed by the test: loading creates two frames; after login with defaults
-  no game event is registered, no `OnUpdate`, no timer.
+  only `ownJourney`'s events are registered, no `OnUpdate`, no timer.
 - **Texts:** Every key of `Locales/enUS.lua` in **every** other locale file, with the same
   placeholders in the same order. Scheme: `area_<area>`, `cat_<category>`, `f_<feature>`, `o_<feature>_<option>`,
   `g_<general>`, `msg_<chat>`, `c_<chronicle>`, `ui_<window>` (tabs: `ui_tab_<id>`); help text
