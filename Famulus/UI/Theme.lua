@@ -215,12 +215,30 @@ local washes = {
     minimapLand = { 0.42, 0.49, 0.29, 0.7 },
     minimapWater = { 0.17, 0.26, 0.33, 0.8 },
     minimapRim = hex("8a7a55"),
-    classWARRIOR = hex("c69b6d"),
-    classMAGE = hex("3fc7eb"),
-    classPRIEST = hex("ffffff"),
-    classHUNTER = hex("aad372"),
-    classROGUE = hex("fff468"),
-    classDRUID = hex("ff7c0a"),
+    gameClassWARRIOR = hex("c69b6d"),
+    gameClassPALADIN = hex("f48cba"),
+    gameClassHUNTER = hex("aad372"),
+    gameClassROGUE = hex("fff468"),
+    gameClassPRIEST = hex("ffffff"),
+    gameClassSHAMAN = hex("0070dd"),
+    gameClassMAGE = hex("3fc7eb"),
+    gameClassWARLOCK = hex("8788ee"),
+    gameClassDRUID = hex("ff7c0a"),
+    -- The window's own words for classes and factions (UI.Colored): the
+    -- game's colours at about half their saturation and of like lightness,
+    -- so that none outshines the accent. The priest's white would be the
+    -- text's, so ivory.
+    classWARRIOR = hex("b9a692"),
+    classPALADIN = hex("d396b1"),
+    classHUNTER = hex("adc093"),
+    classROGUE = hex("d7d288"),
+    classPRIEST = hex("dedacf"),
+    classSHAMAN = hex("5f95ca"),
+    classMAGE = hex("7fb9c9"),
+    classWARLOCK = hex("9696cf"),
+    classDRUID = hex("ce9a6c"),
+    factionHorde = hex("c7837f"),
+    factionAlliance = hex("829ac8"),
 }
 
 -- hue and saturation tint the grounds; tones are the accent's base tone, its
@@ -387,6 +405,17 @@ end
 
 function UI.Ink(fontString, token, alpha)
     Paint("ink", fontString, token, alpha)
+end
+
+-- A word in its own colour within a line ("Mage" in "Mage · Guild"), as the
+-- game's colour code. Only for fixed tokens (classes, factions): a word
+-- written this way does not follow a change of scheme. Without a word, nil.
+function UI.Colored(token, text)
+    if text == nil or text == "" then
+        return text
+    end
+    local r, g, b = UI.Color(token)
+    return string.format("|cff%02x%02x%02x%s|r", math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5), text)
 end
 
 local function ApplyShade(texture, entry)

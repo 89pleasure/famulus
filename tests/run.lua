@@ -3753,7 +3753,7 @@ check(overview and overview:IsShown() and overview.tiles[1].guid == "Player-1-MI
     and not (overview.tiles[3] and overview.tiles[3]:IsShown()) and not overview.list:IsShown(),
     "up to three people are tiles, the most time together first; no list below")
 check(overview.tiles[1].numeral:GetText() == "I" and overview.tiles[1].name:GetText() == "Mira Sturmfeder"
-    and overview.tiles[1].sub:GetText() == "Level 20 Mage" and overview.tiles[1].badge.text:GetText() == "Acquainted"
+    and overview.tiles[1].sub:GetText() == "Level 20 " .. ns.UI.Colored("classMAGE", "Mage") .. "" and overview.tiles[1].badge.text:GetText() == "Acquainted"
     and overview.tiles[1].stats:GetText() == "1 h 10 min  ·  2×  ·  1 boss" and overview.tiles[1].crest.icon:IsShown(),
     "a tile: rank, name, level and class, bond, numbers: " .. overview.tiles[1].stats:GetText())
 check(overview.tiles[2].footText:GetText() == "In your group now" and overview.tiles[1].footText:GetText() == "Last together today in Westfall",
@@ -4543,7 +4543,7 @@ do
     mock.Advance(2)
     card = Feed.Shown()[1]
     check(card and card.head:GetText() == "Lysa" and card.title:GetText() == "Now in Tanaris too"
-        and card.detail:GetText() == "Level 38  ·  Priest  ·  Friends list"
+        and card.detail:GetText() == "Level 38  ·  " .. ns.UI.Colored("classPRIEST", "Priest") .. "  ·  Friends list"
         and card.solo:IsShown() and not card.pair[1]:IsShown() and not card.crest:IsShown(),
         "someone arrives: a card of their own with one crest: " .. tostring(card and card.title:GetText()))
     Feed.Clear()
@@ -4567,7 +4567,7 @@ do
     mock.Advance(3.5)
     card = Feed.Shown()[1]
     check(card and card.head:GetText() == "Hagen" and card.title:GetText() == "Now in Tanaris too"
-        and card.detail:GetText() == "Level 60  ·  Warrior  ·  Guild",
+        and card.detail:GetText() == "Level 60  ·  " .. ns.UI.Colored("classWARRIOR", "Warrior") .. "  ·  Guild",
         "asked for, cards come there too: " .. tostring(card and card.detail:GetText()))
     ns:SetOption("nearbyFriends", "cities", false)
     mock.state.resting = nil
@@ -4588,7 +4588,7 @@ do
     mock.Advance(3.5)
     card = Feed.Shown()[1]
     check(card and card.head:GetText() == "Ena" and card.title:GetText() == "Also in Desolace"
-        and card.detail:GetText() == "Level 36  ·  Mage  ·  Guild" and card.solo:IsShown(),
+        and card.detail:GetText() == "Level 36  ·  " .. ns.UI.Colored("classMAGE", "Mage") .. "  ·  Guild" and card.solo:IsShown(),
         "the player arrives: whoever is there already: " .. tostring(card and card.title:GetText()))
     Feed.Clear()
     mock.state.friends[5] = { name = "Selina Abendrot", guid = "Player-1-SELINA", connected = true, level = 23, area = "Feralas", className = "Rogue" }
@@ -4631,6 +4631,8 @@ do
                 characterLevel = 39, className = "Warrior" } } },
             { battleTag = "Pv#2", games = { { characterName = "Rhea Dunkelhain", playerGuid = "Player-2-RHEA", areaName = "Tanaris",
                 characterLevel = 40, className = "Rogue", realmID = 2, realmDisplayName = "PvP" } } },
+            { battleTag = "Ho#3", games = { { characterName = "Grosh Steinhauer", playerGuid = "Player-1-GROSH", areaName = "Tanaris",
+                characterLevel = 40, className = "Warrior", factionName = "Horde" } } },
         },
     })
     FamulusDB.fellows = { ["Player-1-MIRA"] = { name = "Mira Sturmfeder", level = 41, class = "MAGE", first = time() - 86400, last = time() - 3600,
@@ -4645,26 +4647,29 @@ do
         "the tab: the list, the zones beside it")
     local sections = list.sections
     check(sections[1].title:GetText() == "Here in Tanaris  ·  2" and sections[2].title:GetText() == "Similar level  ·  2  ·  up to 5 levels apart"
-        and sections[3].title:GetText() == "Also online  ·  1" and sections[4].title:GetText() == "Out of reach  ·  1  ·  other realm or faction",
+        and sections[3].title:GetText() == "Also online  ·  1" and sections[4].title:GetText() == "Out of reach  ·  2  ·  other realm or faction",
         "here, then a similar level, then everyone else, and last who is out of reach: " .. sections[1].title:GetText())
     local rows = list.rows
-    check(rows[1].name:GetText() == "Mira Sturmfeder" and rows[1].sub:GetText() == "Mage  ·  Friends list" and rows[1].level:GetText() == "41"
+    check(rows[1].name:GetText() == "Mira Sturmfeder" and rows[1].sub:GetText() == ns.UI.Colored("classMAGE", "Mage") .. "  ·  Friends list" and rows[1].level:GetText() == "41"
         and rows[1].diff:GetText() == "+1" and rows[1].place:GetText() == "Tanaris" and rows[1].badge:IsShown()
         and rows[1].badge.text:GetText() == "Trusted", "a fellow traveller first, with the bond")
-    check(rows[2].name:GetText() == "Kiki" and rows[2].sub:GetText() == "Kael Dornhain  ·  Rogue  ·  Guild" and not rows[2].badge:IsShown(),
+    check(rows[2].name:GetText() == "Kiki" and rows[2].sub:GetText() == "Kael Dornhain  ·  " .. ns.UI.Colored("classROGUE", "Rogue") .. "  ·  Guild" and not rows[2].badge:IsShown(),
         "under an alias the name stands below it; no bond without a group together")
     check(rows[3].name:GetText() == "Borin Eisenbart" and rows[3].place:GetText() == "Desolace" and rows[4].name:GetText() == "Lysa Morgentau"
         and rows[4].diff:GetText() == "−2" and rows[5].name:GetText() == "Hagen Steinfaust", "the nearest level first")
-    check(rows[6].name:GetText() == "Rhea Dunkelhain" and rows[6].sub:GetText() == "Rogue  ·  Realm PvP" and rows[6].place:GetText() == "Tanaris"
-        and rows[6]:GetAlpha() < 1 and rows[1]:GetAlpha() == 1, "out of reach: the realm instead of the list, the zone not in the accent, faint: "
-        .. tostring(rows[6].sub:GetText()))
+    check(rows[7].name:GetText() == "Rhea Dunkelhain" and rows[7].sub:GetText() == ns.UI.Colored("classROGUE", "Rogue") .. "  ·  Realm PvP"
+        and rows[7].place:GetText() == "Tanaris" and rows[7]:GetAlpha() < 1 and rows[1]:GetAlpha() == 1,
+        "out of reach: the realm instead of the list, the zone not in the accent, faint: " .. tostring(rows[7].sub:GetText()))
+    check(rows[6].name:GetText() == "Grosh Steinhauer" and rows[6].sub:GetText() == ns.UI.Colored("classWARRIOR", "Warrior") .. "  ·  "
+        .. ns.UI.Colored("factionHorde", "Horde") and ns.UI.Colored("factionHorde", "Horde") == "|cffc7837fHorde|r",
+        "the other faction in its colour: " .. tostring(rows[6].sub:GetText()))
     local places = window.rail.cards[1].places
     check(window.rail.cards[1].note:GetText() == "5 online" and places[1].name:GetText() == "Tanaris" and places[1].count:GetText() == "2"
         and places[1].line:GetText() == "Level 41–42" and places[2].count:GetText() == "1", "where your people are: the player's zone first")
     mock.Click(rows[2].whisper)
     check(mock.count("ChatFrameUtil.SendTell") == 1 and mock.calls[#mock.calls][2] == "Kael Dornhain-Realm"
         and rows[2].whisper.tip == "Whisper", "the button opens a whisper, with the realm; its tooltip names it")
-    mock.Click(rows[6].whisper)
+    mock.Click(rows[7].whisper)
     check(mock.count("ChatFrameUtil.SendBNetTell") == 1 and mock.calls[#mock.calls][2] == "|Kq2|k", "out of reach, the whisper goes by Battle.net")
     mock.Click(rows[1])
     mock.Advance(0.1)

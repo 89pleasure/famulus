@@ -1249,6 +1249,12 @@ local function ClassName(file)
     return type(name) == "string" and name or nil
 end
 
+-- The same in the class's colour, for a line that shows it. Not for what the
+-- search reads: it would find the colour code.
+local function ClassWord(file)
+    return UI.Colored("class" .. tostring(file), ClassName(file))
+end
+
 -- Who they are, when and where you were together, and how much.
 local function FellowDesc(guid, person)
     local Fellows = ns.FellowService
@@ -1346,7 +1352,7 @@ local function FellowPerson(guid, person, now)
     local seconds = Fellows.Seconds(guid, person, now)
     local tier, progress, toNext = Fellows.Tier(seconds)
     local alias = ns.AliasService.Get(person.name)
-    local level, class = tonumber(person.level), ClassName(person.class)
+    local level, class = tonumber(person.level), ClassWord(person.class)
     local together = Fellows.IsTogether(guid)
     local times, bosses = tonumber(person.times) or 1, tonumber(person.bosses) or 0
     local timeText = Duration(seconds) or L.ui_fellow_minutes:format(0)
@@ -2112,8 +2118,12 @@ do
         if alias then
             parts[#parts + 1] = person.name
         end
-        parts[#parts + 1] = ClassName(person.class)
-        parts[#parts + 1] = person.out or L["ui_near_from_" .. person.from]
+        parts[#parts + 1] = ClassWord(person.class)
+        if person.faction then
+            parts[#parts + 1] = UI.Colored("faction" .. person.faction, person.out)
+        else
+            parts[#parts + 1] = person.out or L["ui_near_from_" .. person.from]
+        end
         local diff
         if person.level and data.level and person.level ~= data.level then
             diff = (person.level > data.level and "+" or "−") .. math.abs(person.level - data.level)

@@ -13,7 +13,8 @@
 --       friends list), "battlenet" or "guild". grouped: in the player's
 --       group right now. out: why the player cannot play with them, a
 --       Battle.net friend on another realm or of the other faction ("Realm
---       PvP", "Horde"); nil if they can. bnet: their Battle.net account, for a
+--       PvP", "Horde"); nil if they can. faction: "Horde" or "Alliance"
+--       if it is the faction. bnet: their Battle.net account, for a
 --       whisper across realms. here, level: the player's own zone and level.
 --   NearbyService.Here() -> zone, level
 --       The player's own zone and level, without looking at the lists.
@@ -109,7 +110,8 @@ local function PlaysThisGame(game)
 end
 
 -- Why the player cannot group with this character, as the window says it:
--- "Realm PvP", or their faction ("Horde"). nil if they can.
+-- "Realm PvP", or their faction ("Horde") and the faction's token. nil if
+-- they can.
 local function OutOfReach(game)
     local L = ns.L
     local realm, mine = game.realmID, GetRealmID and GetRealmID()
@@ -120,7 +122,7 @@ local function OutOfReach(game)
     local faction = Plain(game.factionName)
     local own = UnitFactionGroup and Plain((UnitFactionGroup("player")))
     if faction and own and faction ~= own then
-        return Plain(_G["FACTION_" .. string.upper(faction)]) or faction
+        return Plain(_G["FACTION_" .. string.upper(faction)]) or faction, faction
     end
     return nil
 end
@@ -135,7 +137,7 @@ function NearbyService.People(withGuild)
     -- Someone met again on another list fills what the first did not tell.
     -- from: what the first list said, unless a later one ranks higher.
     local RANK = { friend = 1, battlenet = 2, guild = 3 }
-    local function Note(name, guid, levelNow, class, zone, from, zoneTrusted, out, bnet)
+    local function Note(name, guid, levelNow, class, zone, from, zoneTrusted, out, faction, bnet)
         if not IsPlainText(name) or (guid and guid == own) then
             return
         end
@@ -150,7 +152,7 @@ function NearbyService.People(withGuild)
         if not person then
             -- Only someone met first on Battle.net can be out of reach: on
             -- the friends list or in the guild they share the player's realm.
-            person = { key = key, name = name, full = full, from = from, out = out, bnet = bnet }
+            person = { key = key, name = name, full = full, from = from, out = out, faction = faction, bnet = bnet }
             byKey[key] = person
             people[#people + 1] = person
         elseif RANK[from] < RANK[person.from] then
@@ -180,8 +182,9 @@ function NearbyService.People(withGuild)
     Social.EachBattleNetFriend(function(_, games, account)
         for _, game in ipairs(games) do
             if PlaysThisGame(game) then
+                local out, faction = OutOfReach(game)
                 Note(game.characterName, Plain(game.playerGuid), Level(game.characterLevel), Social.ClassFromName(game.className),
-                    Plain(game.areaName), "battlenet", false, OutOfReach(game), Plain(account))
+                    Plain(game.areaName), "battlenet", false, out, faction, Plain(account))
             end
         end
     end)

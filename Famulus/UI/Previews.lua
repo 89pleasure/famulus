@@ -782,7 +782,7 @@ SCENES.tooltip = {
         local aliased = ns.features.tooltipAliases.enabled
         local _, borin = Samples().SamplePeople()
         tip.title:SetText(borin)
-        UI.Ink(tip.title, "classWARRIOR")
+        UI.Ink(tip.title, "gameClassWARRIOR")
         tip.guild:SetText("<" .. L.ui_preview_guild .. ">")
         tip.level:SetText(L.ui_preview_tooltip_level)
         tip.label:SetText(L.tt_alias)
@@ -956,7 +956,7 @@ SCENES.guildy = {
                 name = ns.AliasService.Format(L.ui_preview_alias, person.name, feature:Get("style"))
             end
             row.name:SetText(name)
-            UI.Ink(row.name, "class" .. person.class)
+            UI.Ink(row.name, "gameClass" .. person.class)
             row.level:SetText(tostring(person.level))
             row.class:SetText(ClassName(person.class))
             wide = math.max(wide, TextWidth(row.name))
