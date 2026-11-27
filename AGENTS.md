@@ -270,6 +270,10 @@ node tools/make_shot.js <screenshot.jpg> <x> <y> <width> <height> website/assets
 ```
 
 ```bash
+node tools/make_curseforge_art.js   # pictures of the CurseForge description, from the website
+```
+
+```bash
 node tools/make_sound.js   # the live feed's sound; needs ffmpeg (FFMPEG=<path> if not on the PATH)
 ```
 

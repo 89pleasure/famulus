@@ -83,7 +83,7 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
 - **0.1.0 as a release, described as a beta (the owner's decision, 2026-11-26, issue #49):**
   after `v0.1.0-alpha.6` the next file is the tag `v0.1.0`, uploaded as type release, so that
   Famulus appears in the CurseForge app and real players can test sharing. That it is a beta is
-  said in the text, not in the file type: the note at the top of `docs/curseforge/description.md`
+  said in the text, not in the file type: the note at the top of `docs/curseforge/description.html`
   and the introduction of the section `## 0.1.0` in `CHANGELOG.md`. Because most players see
   Famulus for the first time with it, that section first says what Famulus does and then what
   changed since the last alpha (the assistant's proposal). The rule of `tools/release_check.sh`
@@ -96,10 +96,25 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
     special."; set in the project's settings, not in the repo). Since 2026-11-27 the
     description opens with the tagline "Together through Azeroth" instead (see docs/branding.md);
     whether the summary follows is the owner's call; the description is a draft by the assistant in
-    `docs/curseforge/description.md` (English, Markdown, without Guildy, because its integration only
+    `docs/curseforge/description.html` (English, without Guildy, because its integration only
     works with the fork). It links the website (famulus.camp, its FAQ and privacy policy) and
     GitHub; CurseForge forbids only external download links. Categories: the assistant advises against "Companions" (on CurseForge
     pets and mounts) and recommends "Chat & Communication" with "Guild".
+  - **Description with pictures (since 2026-11-27, the owner's request: "smarter, with graphics,
+    the accent colour and pictures"; look and texts the assistant's decisions):** HTML instead of
+    Markdown (until then `description.md`), because only HTML carries colours: a banner (the
+    website's campfire scene with logo, name and tagline), a head per area like the website's
+    section heads (number, name, title, the area's icon in the accent), six framed screenshots,
+    the areas' names and a few words in Lemon's accent (`#f2d640`), the smaller headings with an
+    accent dot. Read on curseforge.com the same day (Plater, Details!, Bagnon and others): the
+    page is dark (`#0d0d0d`, text `#999`, 836 px wide), inline `color` and `font-size` styles
+    survive, pictures from other hosts (imgur, raw.githubusercontent.com, own sites) load
+    directly. The pictures are drawn by `node tools/make_curseforge_art.js` from the website
+    itself (Headless Chrome via the DevTools protocol; 1672 px wide, twice the column) into
+    `website/assets/curseforge/`, so the description loads them from famulus.camp once the
+    website with them is published. Redraw them when the website's screenshots or the areas'
+    titles change. Not checked: which formats the description editor of the authors' console
+    offers (the comment at the top of the file assumes a source or HTML view).
   - **State of the live page (read 2026-11-27):** "Unlisted", categories "Chat & Communication"
     and "Guild", still the alpha description (aliases first, a chapter per day, English and
     German), no gallery, no links to source or issues. The repo's description, the gallery
