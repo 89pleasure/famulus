@@ -333,57 +333,49 @@
         <header class="section__head">
           <p class="eyebrow reveal"><span class="eyebrow__num">05</span><span data-i18n="sh_eyebrow">In the game</span></p>
           <h2 class="reveal" style="--i:1" data-i18n="sh_title">See it in the game.</h2>
-          <p class="lead reveal" style="--i:2" data-i18n="sh_lead">Screenshots from World of Warcraft: Forever, with the addon's sample data. A click opens the large picture.</p>
+          <p class="lead reveal" style="--i:2" data-i18n="sh_lead">Screenshots from World of Warcraft: Forever, with the addon's sample data.</p>
         </header>
-        <div class="gallery">
-          <figure class="gallery__item reveal" style="--i:0">
-            <a href="assets/shots/fellows-1770.webp" target="_blank" rel="noopener">
-              <img src="assets/shots/fellows-1180.webp" srcset="assets/shots/fellows-1180.webp 1180w, assets/shots/fellows-1770.webp 1770w"
-                sizes="(max-width: 760px) calc(100vw - 48px), 560px" width="1180" height="730" loading="lazy"
-                alt="The fellow travellers in the Famulus window: three tiles for the closest companions, a list of everyone else." data-i18n-attr="alt:sh_fellows_alt">
-            </a>
-            <figcaption data-i18n="sh_fellows">Fellow travellers: your closest companions and everyone you grouped with.</figcaption>
-          </figure>
-          <figure class="gallery__item reveal" style="--i:1">
-            <a href="assets/shots/story-1770.webp" target="_blank" rel="noopener">
-              <img src="assets/shots/story-1180.webp" srcset="assets/shots/story-1180.webp 1180w, assets/shots/story-1770.webp 1770w"
-                sizes="(max-width: 760px) calc(100vw - 48px), 560px" width="1180" height="730" loading="lazy"
-                alt="A fellow traveller's card on the left, the book of your sessions together on the right." data-i18n-attr="alt:sh_story_alt">
-            </a>
-            <figcaption data-i18n="sh_story">Your story with Mira: your bond, your numbers and every session together.</figcaption>
-          </figure>
-          <figure class="gallery__item reveal" style="--i:0">
-            <a href="assets/shots/groups-1770.webp" target="_blank" rel="noopener">
-              <img src="assets/shots/groups-1180.webp" srcset="assets/shots/groups-1180.webp 1180w, assets/shots/groups-1770.webp 1770w"
-                sizes="(max-width: 760px) calc(100vw - 48px), 560px" width="1180" height="730" loading="lazy"
-                alt="The groups tab: sessions with the people in each group, and the most frequent group beside it." data-i18n-attr="alt:sh_groups_alt">
-            </a>
-            <figcaption data-i18n="sh_groups">Groups: who was out with whom, and who you play with most often.</figcaption>
-          </figure>
-          <figure class="gallery__item reveal" style="--i:1">
-            <a href="assets/shots/feed-1110.webp" target="_blank" rel="noopener">
-              <img src="assets/shots/feed-1110.webp" srcset="assets/shots/feed-1110.webp 1110w"
-                sizes="(max-width: 760px) calc(100vw - 48px), 560px" width="1110" height="687" loading="lazy"
-                alt="Live feed cards over the game world: a friend has fallen, below it a boss and a level-up as rows." data-i18n-attr="alt:sh_feed_alt">
-            </a>
-            <figcaption data-i18n="sh_feed">The live feed in the game: the newest card on top, older ones as rows.</figcaption>
-          </figure>
-          <figure class="gallery__item reveal" style="--i:0">
-            <a href="assets/shots/welcome-1770.webp" target="_blank" rel="noopener">
-              <img src="assets/shots/welcome-1180.webp" srcset="assets/shots/welcome-1180.webp 1180w, assets/shots/welcome-1770.webp 1770w"
-                sizes="(max-width: 760px) calc(100vw - 48px), 560px" width="1180" height="730" loading="lazy"
-                alt="The welcome page with the three areas, the main button and the list of what it switches on." data-i18n-attr="alt:sh_welcome_alt">
-            </a>
-            <figcaption data-i18n="sh_welcome">The welcome page: one click switches on the main features.</figcaption>
-          </figure>
-          <figure class="gallery__item reveal" style="--i:1">
-            <a href="assets/shots/aliases-1770.webp" target="_blank" rel="noopener">
-              <img src="assets/shots/aliases-1180.webp" srcset="assets/shots/aliases-1180.webp 1180w, assets/shots/aliases-1770.webp 1770w"
-                sizes="(max-width: 760px) calc(100vw - 48px), 560px" width="1180" height="730" loading="lazy"
-                alt="The aliases settings: the features on the left, the chosen one with a picture of the chat on the right." data-i18n-attr="alt:sh_aliases_alt">
-            </a>
-            <figcaption data-i18n="sh_aliases">Aliases in the settings, with a live picture of the chat.</figcaption>
-          </figure>
+        <!-- One screenshot at a time, large: it moves on by itself every few
+             seconds (not with reduced motion, not while the mouse or the focus
+             is on it, not off screen), by the arrows, the dots or a swipe.
+             main.js drives it (the slider of 05). -->
+        <div class="slider reveal" id="shots-slider" role="region" aria-roledescription="carousel" aria-label="Screenshots" data-i18n-attr="aria-label:sh_slider">
+          <div class="slider__view">
+            <div class="slider__track" id="shots-track" aria-live="off">
+            <figure class="slide" aria-roledescription="slide">
+              <img src="assets/shots/fellows-1180.webp" srcset="assets/shots/fellows-1180.webp 1180w, assets/shots/fellows-1770.webp 1770w" sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730" loading="lazy" alt="The fellow travellers in the Famulus window: three tiles for the closest companions, a list of everyone else." data-i18n-attr="alt:sh_fellows_alt">
+              <figcaption data-i18n="sh_fellows">Fellow travellers: your closest companions and everyone you grouped with.</figcaption>
+            </figure>
+            <figure class="slide" aria-roledescription="slide">
+              <img src="assets/shots/story-1180.webp" srcset="assets/shots/story-1180.webp 1180w, assets/shots/story-1770.webp 1770w" sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730" loading="lazy" alt="A fellow traveller's card on the left, the book of your sessions together on the right." data-i18n-attr="alt:sh_story_alt">
+              <figcaption data-i18n="sh_story">Your story with Mira: your bond, your numbers and every session together.</figcaption>
+            </figure>
+            <figure class="slide" aria-roledescription="slide">
+              <img src="assets/shots/groups-1180.webp" srcset="assets/shots/groups-1180.webp 1180w, assets/shots/groups-1770.webp 1770w" sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730" loading="lazy" alt="The groups tab: sessions with the people in each group, and the most frequent group beside it." data-i18n-attr="alt:sh_groups_alt">
+              <figcaption data-i18n="sh_groups">Groups: who was out with whom, and who you play with most often.</figcaption>
+            </figure>
+            <figure class="slide" aria-roledescription="slide">
+              <img src="assets/shots/feed-1110.webp" srcset="assets/shots/feed-1110.webp 1110w" sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1110" height="687" loading="lazy" alt="Live feed cards over the game world: a friend has fallen, below it a boss and a level-up as rows." data-i18n-attr="alt:sh_feed_alt">
+              <figcaption data-i18n="sh_feed">The live feed in the game: the newest card on top, older ones as rows.</figcaption>
+            </figure>
+            <figure class="slide" aria-roledescription="slide">
+              <img src="assets/shots/welcome-1180.webp" srcset="assets/shots/welcome-1180.webp 1180w, assets/shots/welcome-1770.webp 1770w" sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730" loading="lazy" alt="The welcome page with the three areas, the main button and the list of what it switches on." data-i18n-attr="alt:sh_welcome_alt">
+              <figcaption data-i18n="sh_welcome">The welcome page: one click switches on the main features.</figcaption>
+            </figure>
+            <figure class="slide" aria-roledescription="slide">
+              <img src="assets/shots/aliases-1180.webp" srcset="assets/shots/aliases-1180.webp 1180w, assets/shots/aliases-1770.webp 1770w" sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730" loading="lazy" alt="The aliases settings: the features on the left, the chosen one with a picture of the chat on the right." data-i18n-attr="alt:sh_aliases_alt">
+              <figcaption data-i18n="sh_aliases">Aliases in the settings, with a live picture of the chat.</figcaption>
+            </figure>
+            </div>
+          </div>
+          <!-- Two large arrows outside the picture, in the page's margin; on
+               narrower screens, where that margin is too small, on its edges. -->
+          <button type="button" class="slider__arrow slider__arrow--prev" id="shots-prev" aria-label="Previous screenshot" data-i18n-attr="aria-label:sh_prev"><svg class="icon" width="28" height="28"><use href="#i-chevron"/></svg></button>
+          <button type="button" class="slider__arrow slider__arrow--next" id="shots-next" aria-label="Next screenshot" data-i18n-attr="aria-label:sh_next"><svg class="icon" width="28" height="28"><use href="#i-chevron"/></svg></button>
+          <div class="slider__bar">
+            <div class="slider__dots" id="shots-dots"></div>
+            <button type="button" class="slider__btn slider__pause" id="shots-pause" aria-pressed="false" aria-label="Pause" data-i18n-attr="aria-label:sh_pause"><span aria-hidden="true"></span></button>
+          </div>
         </div>
       </div>
     </section>

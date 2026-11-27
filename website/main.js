@@ -1741,6 +1741,107 @@
   };
 
   // -------------------------------------------------------------------------
+  // 05 In the game: one screenshot at a time. It moves on by itself every
+  // EVERY ms, but not with reduced motion, not while paused, not while the
+  // mouse or the focus is on the slider, not while it is off screen or the
+  // tab is in the background. Arrows, dots, the arrow keys and a swipe move it.
+  // -------------------------------------------------------------------------
+
+  const slider = $('#shots-slider');
+  const track = $('#shots-track');
+  const slides = $$('.slide', track);
+  const dots = $('#shots-dots');
+  const pauseButton = $('#shots-pause');
+  const EVERY = 6000;
+  let shown = 0;
+  let paused = false; // by the button
+  let held = false; // by the mouse or the focus
+  let seen = false; // on screen
+  let turn = 0;
+
+  function drawSlides() {
+    track.style.transform = `translateX(${-100 * shown}%)`;
+    slides.forEach((slide, index) => {
+      slide.setAttribute('aria-label', t('sh_goto', index + 1, slides.length));
+      slide.setAttribute('aria-hidden', String(index !== shown));
+      slide.inert = index !== shown;
+    });
+    dots.textContent = '';
+    slides.forEach((_, index) => {
+      const dot = make('button', `slider__dot${index === shown ? ' is-shown' : ''}`);
+      dot.type = 'button';
+      dot.setAttribute('aria-label', t('sh_goto', index + 1, slides.length));
+      dot.setAttribute('aria-current', String(index === shown));
+      dot.append(make('i'));
+      dot.addEventListener('click', () => show(index, true));
+      dots.append(dot);
+    });
+    const running = !paused && !motion.matches;
+    slider.classList.toggle('is-running', running && !held && seen && !document.hidden);
+    pauseButton.setAttribute('aria-pressed', String(paused));
+    pauseButton.hidden = motion.matches;
+  }
+
+  function schedule() {
+    clearTimeout(turn);
+    const run = !paused && !held && seen && !document.hidden && !motion.matches;
+    slider.classList.toggle('is-running', run);
+    if (run) turn = setTimeout(() => show(shown + 1, false), EVERY);
+  }
+
+  // by: true when the reader chose it, so the new slide is read out.
+  function show(index, by) {
+    shown = (index + slides.length) % slides.length;
+    track.setAttribute('aria-live', by ? 'polite' : 'off');
+    drawSlides();
+    // The dot's fill starts over with the slide.
+    const dot = $('.slider__dot.is-shown', dots);
+    if (dot) {
+      dot.classList.remove('is-shown');
+      void dot.offsetWidth;
+      dot.classList.add('is-shown');
+    }
+    schedule();
+  }
+
+  $('#shots-prev').addEventListener('click', () => show(shown - 1, true));
+  $('#shots-next').addEventListener('click', () => show(shown + 1, true));
+  pauseButton.addEventListener('click', () => {
+    paused = !paused;
+    drawSlides();
+    schedule();
+  });
+  slider.addEventListener('keydown', event => {
+    if (event.key === 'ArrowLeft') show(shown - 1, true);
+    else if (event.key === 'ArrowRight') show(shown + 1, true);
+  });
+  slider.addEventListener('pointerenter', () => { held = true; schedule(); });
+  slider.addEventListener('pointerleave', () => { held = slider.contains(document.activeElement); schedule(); });
+  slider.addEventListener('focusin', () => { held = true; schedule(); });
+  slider.addEventListener('focusout', event => {
+    held = slider.contains(event.relatedTarget) || slider.matches(':hover');
+    schedule();
+  });
+  // A swipe: far enough sideways, and more sideways than down.
+  let from = null;
+  track.addEventListener('pointerdown', event => { from = { x: event.clientX, y: event.clientY }; });
+  track.addEventListener('pointerup', event => {
+    if (!from) return;
+    const dx = event.clientX - from.x;
+    const dy = event.clientY - from.y;
+    from = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) show(shown + (dx < 0 ? 1 : -1), true);
+  });
+  new IntersectionObserver(entries => {
+    seen = entries[entries.length - 1].isIntersecting;
+    schedule();
+  }, { threshold: 0.4 }).observe(slider);
+  document.addEventListener('visibilitychange', schedule);
+  motion.addEventListener('change', () => { drawSlides(); schedule(); });
+  renderers.push(drawSlides);
+  drawSlides();
+
+  // -------------------------------------------------------------------------
   // The landscapes. Ridges from far to near; see scene.js for the fields.
   // -------------------------------------------------------------------------
 
