@@ -447,7 +447,7 @@ picture-book look are built and checked against the mock only.
     enough (an earlier version had one; it was too much text). Only while reactions are on
     (`ChronicleService.ReactionsOn`, shared with the book); no button on the player's own
     cards, on reaction cards or on `friendLevel`. `/fam feed test` shows the button on its
-    sample card too; there it only lights up and closes the card and sends nothing, so the look
+    sample cards too; there it only lights up and closes the card and sends nothing, so the look
     can be checked with one account.
   - **Data:** on a friend's entry `mine` (the player's reaction) and `told` (what the friend was
     last told); on an own entry `r = { [<name>] = <reaction> }`. Never sent with the entry
@@ -570,6 +570,16 @@ picture-book look are built and checked against the mock only.
       it. The anchor itself (and so the clamping to the screen) keeps the size of one card.
     - Rejected: A (three large cards, about 250 px for good; built first, then the owner
       preferred B) and C (no waiting; the feed grows to seven for a burst and shrinks back).
+    - **Sample burst (`/fam feed test`, `feed.Test` in `LiveFeed.lua`):** so that waiting,
+      rows and bundles can be seen with one account, the command shows a burst instead of one
+      card: first the player's own level with all three rows (the player's name and zone), then
+      at the same moment four of the chronicle's samples (`ChronicleService.Sample`): Borin's
+      boss and the same boss of Mira (one card for both), Borin's death and Mira's item. They
+      wait as a stack, come in one after another and shrink to rows; with "keep" they stay.
+      The cards are built as real ones are (`Story` in `LiveFeed.lua`, shared with
+      `OnChronicleChanged`), only their buttons light up and send nothing (`SampleReaction`).
+      The kinds' switches do not apply; nothing is stored or sent; one sound. A bundle needs
+      friends, so only the sample shows one with one account.
   - **Three rows (the owner's choice, 2026-11-27, variant A on the canvas "Famulus
     Live-Feed-Karten", claude.ai artifact `Nc3TTNw84YyQTuXhekkBNQ`):** The text stood on one
     line as a whole sentence ("Papa (Borin Ironbeard) defeats Edwin VanCleef"), so the band grew
@@ -585,7 +595,8 @@ picture-book look are built and checked against the mock only.
     without the name since then), the event below. "Who is nearby": the names in the head,
     "Also in Tanaris" or "Now in Tanaris too"
     (`ui_near_here`, `ui_near_came`, the zone only), levels below. The player's own events have
-    no head. `/fam feed test` shows all three rows with the player's own name and zone.
+    no head. `/fam feed test` shows all three rows with the player's own name and zone (see
+    "Sample burst").
     Rejected: B (the name as the title), C (the event as the title, the name below), D (the
     sentence wrapping onto two lines), E (the name as a tag on the band's top edge). Checked
     against the mock only, not yet seen in game.

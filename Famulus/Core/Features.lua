@@ -350,34 +350,8 @@ SlashCmdList.FAMULUS = function(input)
             return
         end
         if command == "feed test" then
-            -- A sample card, to see place, look and timing, and to hear the
-            -- sound: all three rows, with the player's own name and zone. Its
-            -- button to react lights up and sends nothing.
-            local level = UnitLevel and tonumber(UnitLevel("player")) or 1
-            local who = ns.ChronicleService.Character() or (UnitName and UnitName("player"))
-            local class = UnitClass and select(2, UnitClass("player"))
-            local zone = GetRealZoneText and GetRealZoneText()
-            local IsPlainText = ns.ChatService.IsPlainText
-            local given = false
-            local reaction = ns.ChronicleService.ReactionsOn() and {
-                icon = "cheer",
-                given = function()
-                    return given
-                end,
-                give = function()
-                    given = true
-                end,
-            } or nil
-            Feed.Show({
-                kind = "level",
-                chip = IsPlainText(who) and { text = who, class = IsPlainText(class) and class or nil } or nil,
-                title = L.c_level:format(level),
-                detail = IsPlainText(zone) and zone or nil,
-                number = level,
-                big = true,
-                reaction = reaction,
-            }, ns.features.liveFeed.SECONDS[ns:GetOption("liveFeed", "duration")])
-            ns.features.liveFeed:Chime()
+            -- A burst of sample cards (Modules/Chronicle/LiveFeed.lua).
+            ns.features.liveFeed.Test()
         elseif command == "feed reset" then
             Feed.ResetPlace()
             ns:Print(L.msg_feed_reset)
