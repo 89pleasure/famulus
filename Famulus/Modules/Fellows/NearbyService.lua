@@ -204,8 +204,5 @@ function NearbyService.Quiet(inCities)
 end
 
 function NearbyService.Whisper(person)
-    local name = person.full or person.name
-    if ChatFrameUtil and ChatFrameUtil.SendTell and IsPlainText(name) then
-        ChatFrameUtil.SendTell(name)
-    end
+    ns.ChatService.Whisper(person.full or person.name)
 end

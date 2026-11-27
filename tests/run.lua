@@ -3643,6 +3643,27 @@ do -- under the mouse a tile lights up, like a clickable card in the book
     mock.Advance(0.5)
     check(tile.hover.level == 0, "and fades when the mouse leaves")
 end
+-- Whom the last whisper the window opened went to.
+local function lastWhisper()
+    for index = #mock.calls, 1, -1 do
+        if mock.calls[index][1] == "ChatFrameUtil.SendTell" then
+            return mock.calls[index][2]
+        end
+    end
+end
+do -- opposite the rank, a speech bubble opens a whisper to them
+    local tile = overview.tiles[1]
+    local before = mock.count("ChatFrameUtil.SendTell")
+    check(tile.whisper:IsShown() and tile.whisper.mockPoint[1] == "TOPRIGHT", "a tile has a whisper button opposite its rank")
+    GameTooltip:Hide()
+    tile.whisper.scripts.OnEnter(tile.whisper)
+    check(GameTooltip:IsShown() and GameTooltip:GetText() == "Whisper", "under the mouse a tooltip names it")
+    tile.whisper.scripts.OnLeave(tile.whisper)
+    mock.Click(tile.whisper)
+    mock.Advance(0.1)
+    check(mock.count("ChatFrameUtil.SendTell") == before + 1 and lastWhisper() == "Mira Sturmfeder"
+        and overview:IsShown() and not overview.card:IsShown(), "it opens a whisper to them; the overview stays, no story opens")
+end
 
 -- A click on a tile opens the person's story: their card on the left.
 mock.Click(overview.tiles[2])
@@ -3664,6 +3685,46 @@ do
         "the numbers in one strip: the time in large digits and small units, then times and bosses")
     check(overview.card.first:GetText() == "Met today in The Deadmines" and overview.card.firstLevel:GetText() == "at level 18",
         "when you met, and on a line of its own the player's level then: " .. tostring(overview.card.first:GetText()))
+end
+do -- the card: its buttons as icons in one row, each named by a tooltip
+    local card = overview.card
+    local function at(button, point, x)
+        local anchor = button.mockPoint
+        return anchor[1] == point and anchor[2] == card and anchor[3] == "BOTTOM" and anchor[4] == x and anchor[5] == 36
+    end
+    local icons = not (card.whisper.label:IsShown() or card.alias.label:IsShown() or card.forget.label:IsShown())
+    check(icons and card.whisper:GetWidth() == 40 and card.whisper:GetHeight() == 40 and card.whisper.variant == "primary"
+        and card.alias:GetWidth() == 34 and card.forget:GetWidth() == 34 and card.forget:GetHeight() == 34
+        and card.alias.variant == "secondary" and card.forget.variant == "secondary",
+        "the card's buttons are icons: the whisper a little larger and in the accent, alias and forget alike")
+    check(at(card.whisper, "CENTER", 0) and at(card.alias, "RIGHT", -30) and at(card.forget, "LEFT", 30),
+        "the whisper on the card's middle axis, the alias to its left, forget to its right, all on one line")
+    check(card.whisper.tip == "Whisper" and card.alias.tip == "Set alias" and card.forget.tip == "Forget"
+        and card.whisper.label:GetText() == "Whisper", "each named by its tooltip")
+    local IsOwned = GameTooltip.IsOwned
+    GameTooltip.IsOwned = function(_, owner)
+        return owner == card.alias
+    end
+    GameTooltip:Hide()
+    card.alias.scripts.OnEnter(card.alias)
+    local named = GameTooltip:IsShown() and GameTooltip:GetText() == "Set alias"
+    card.alias.scripts.OnLeave(card.alias)
+    check(named and not GameTooltip:IsShown(), "under the mouse the tooltip names the button; it goes with the mouse")
+    GameTooltip.IsOwned = IsOwned
+    mock.Click(card.whisper)
+    mock.Advance(0.1)
+    check(lastWhisper() == "Mira Sturmfeder" and card:IsShown() and card.name:GetText() == "Mira Sturmfeder",
+        "the card's button opens a whisper to them; the story stays")
+    local SendTell = ChatFrameUtil.SendTell
+    ChatFrameUtil.SendTell = nil
+    ns:Fire("FELLOWS_CHANGED")
+    mock.Advance(0.1)
+    local alone = card.alias.mockPoint
+    check(not card.whisper:IsShown() and card.alias:IsShown() and alone[1] == "LEFT" and alone[5] == 36
+        and card.forget.mockPoint[4] == alone[4] + 34 + 10, "a client that cannot open a whisper shows no button for it; the rest is centred")
+    ChatFrameUtil.SendTell = SendTell
+    ns:Fire("FELLOWS_CHANGED")
+    mock.Advance(0.1)
 end
 mock.Click(window.tabs.back)
 mock.Click(pageTab("Settings"))
@@ -3799,6 +3860,15 @@ check(overview.tiles[3]:IsShown() and overview.tiles[3].guid == "Player-1-P10" a
     and overview.others:GetText() == "Everyone else  ·  69", "the third tile is filled, everyone else is in the list")
 check(shownRows() == 60 and overview.more:IsShown() and overview.more:GetText():find("^9 more") ~= nil
     and overview.rows[1].guid == "Player-1-P1", "the list shows sixty, last seen first, and says how many more")
+do -- at a row's end, a speech bubble; the last column ends before it
+    local row, width = overview.rows[1], overview.list:GetWidth()
+    check(row.whisper:IsShown() and row.whisper.mockPoint[1] == "RIGHT" and row.last.mockPoint[4] + row.last:GetWidth() <= width - 10 - 28
+        and row.whisper.tip == "Whisper", "a row has a whisper button at its end, clear of the last column, named by its tooltip")
+    mock.Click(row.whisper)
+    mock.Advance(0.1)
+    check(lastWhisper() == "Person 1" and overview:IsShown() and not overview.card:IsShown(),
+        "it opens a whisper to them; the overview stays")
+end
 mock.Click(overview.sort)
 mock.Advance(0.05)
 for _, frame in ipairs(mock.frames) do
@@ -3930,6 +4000,25 @@ check(bossCards == 1 and togetherCards == 3 and found["Together on the road"] an
 check(overview.card.chronicle:IsShown() and overview.card.chronicleWho == "Lysa-Morgentau"
     and overview.card.chronicle.label:GetText() == "In the chronicle",
     "the card leads to her events in the chronicle, whatever the spelling of her name there")
+do -- left of the alias; the tooltips speak the window's language
+    local card = overview.card
+    local anchor = card.chronicle.mockPoint
+    check(anchor[1] == "RIGHT" and anchor[4] == -30 - 34 - 10 and anchor[5] == 36 and card.whisper.mockPoint[4] == 0
+        and card.chronicle.tip == "In the chronicle", "the way to the chronicle stands left of the alias; the whisper stays in the middle")
+    local wrong = {}
+    for _, code in ipairs(ns:GetLocaleCodes()) do
+        ns:SetOption("general", "language", code)
+        mock.Advance(0.1)
+        local L = ns.L
+        if card.whisper.tip ~= L.ui_fellow_whisper or card.chronicle.tip ~= L.ui_fellow_chronicle
+            or card.alias.tip ~= L.ui_fellow_alias or card.forget.tip ~= L.ui_fellow_forget then
+            wrong[#wrong + 1] = code
+        end
+    end
+    ns:SetOption("general", "language", "auto")
+    mock.Advance(0.1)
+    check(#wrong == 0, "the card's tooltips follow the language: " .. table.concat(wrong, ", "))
+end
 mock.Click(overview.card.chronicle)
 mock.Advance(0.1)
 check(window.area.name:GetText() == "Chronicle" and tabButton("Friends").selected and window.bookFilter:IsVisible()
@@ -4431,8 +4520,8 @@ do
     check(window.rail.cards[1].note:GetText() == "5 online" and places[1].name:GetText() == "Tanaris" and places[1].count:GetText() == "2"
         and places[1].line:GetText() == "Level 41–42" and places[2].count:GetText() == "1", "where your people are: the player's zone first")
     mock.Click(rows[2].whisper)
-    check(mock.count("ChatFrameUtil.SendTell") == 1 and mock.calls[#mock.calls][2] == "Kael Dornhain-Realm",
-        "the button opens a whisper, with the realm")
+    check(mock.count("ChatFrameUtil.SendTell") == 1 and mock.calls[#mock.calls][2] == "Kael Dornhain-Realm"
+        and rows[2].whisper.tip == "Whisper", "the button opens a whisper, with the realm; its tooltip names it")
     mock.Click(rows[1])
     mock.Advance(0.1)
     check(window.fellows.card:IsShown() and window.fellows.card.name:GetText() == "Mira Sturmfeder",

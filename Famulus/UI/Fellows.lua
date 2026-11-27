@@ -12,12 +12,14 @@
 --       more = <n>,                -- people beyond the list
 --       sort = "last" | "time", sortValues = { { value, text }, ... },
 --       onChoose(guid), onSort(value),
+--       onWhisper(guid),           -- the speech bubble on tiles, rows and the card
 --       onStory(guid), onAlias(guid), onForget(guid), -- the card's buttons
 --       onChronicle(who),          -- beside a story: their events in the chronicle
 --   }
 --   person = { guid, name, realName, classFile, levelClass, tier, progress,
 --              nextText, timeText, hours, minutes, statsText, times, bosses,
 --              together, lastText, lastShort, firstText, firstLevelText,
+--              whisper,             -- the client can open a whisper to them
 --              chronicle }          -- beside a story: their name in the chronicle, if it has entries
 --
 -- Frames are made as needed and used again; nothing runs per frame.
@@ -66,6 +68,11 @@ local function CreateTile(overview)
     tile.numeral = UI.Text(tile, 18, "textMuted")
     UI.SetDisplayFont(tile.numeral, 18)
     tile.numeral:SetPoint("TOPLEFT", 16, -14)
+    -- Opposite the rank: a whisper to them.
+    tile.whisper = UI.IconButton(tile, "chat", function(self)
+        overview.model.onWhisper(self:GetParent().guid)
+    end, 28)
+    tile.whisper:SetPoint("TOPRIGHT", -10, -9)
     tile.crest = UI.Crest(tile, 68)
     tile.crest:SetPoint("TOP", 0, -18)
     tile.name = Centered(tile, 17, "text")
@@ -117,6 +124,8 @@ local function FillTile(tile, person, rank, chosen)
     tile.stats:SetText(person.statsText)
     tile.footText:SetText(person.lastText)
     UI.Ink(tile.footText, person.together and "accent" or "textMuted")
+    tile.whisper:SetShown(person.whisper and true or false)
+    tile.whisper.tip = L.ui_fellow_whisper
     MarkChosen(tile, chosen)
     if not tile:IsMouseOver() then
         tile.hover:Hide()
@@ -130,6 +139,7 @@ end
 function UI.FellowTile(parent)
     local tile = CreateTile(parent)
     tile:EnableMouse(false)
+    tile.whisper:EnableMouse(false)
     return tile
 end
 
@@ -167,6 +177,11 @@ local function CreateRow(overview)
     row.time:SetJustifyV("MIDDLE")
     row.last = UI.Text(row, 12, "textMuted")
     row.last:SetJustifyV("MIDDLE")
+    row.last:SetWordWrap(false)
+    row.whisper = UI.IconButton(row, "chat", function(self)
+        overview.model.onWhisper(self:GetParent().guid)
+    end, 28)
+    row.whisper:SetPoint("RIGHT", -10, 0)
     row:SetScript("OnEnter", function(self)
         self.hover:Fade(true)
     end)
@@ -189,6 +204,8 @@ local function PlaceColumns(row, width)
     row.time:SetPoint("LEFT", row, "LEFT", width * COLUMNS.time, 0)
     row.last:ClearAllPoints()
     row.last:SetPoint("LEFT", row, "LEFT", width * COLUMNS.last, 0)
+    -- The last column ends before the whisper button.
+    row.last:SetWidth(width * (1 - COLUMNS.last) - 48)
 end
 
 local function FillRow(row, person, first, chosen)
@@ -201,6 +218,8 @@ local function FillRow(row, person, first, chosen)
     row.time:SetText(person.timeText)
     row.last:SetText(person.lastShort)
     UI.Ink(row.last, person.together and "accent" or "textMuted")
+    row.whisper:SetShown(person.whisper and true or false)
+    row.whisper.tip = L.ui_fellow_whisper
     row.line:SetShown(not first)
     row.chosen:SetShown(chosen)
 end
@@ -215,6 +234,8 @@ local STRIP_TOP = 11 -- from its top edge to the top of the numbers
 -- The card runs the full height; with this the parts fill it, and a two-line
 -- "met" sentence still ends well above the buttons.
 local SECTION_GAP = 32
+-- The card's buttons, squares with an icon; the whisper a little larger.
+local ICON_BUTTON, WHISPER_BUTTON = 34, 40
 
 -- The time together with the digits large and "h" and "min" small beside
 -- them, centred in the cell: "2 h 40 min". Under an hour only the minutes,
@@ -320,18 +341,61 @@ local function CreateProfile(overview, parent, width)
     card.storyButton = UI.Button(card, function()
         overview.actions.onStory(card.guid)
     end, "primary")
-    card.alias = UI.Button(card, function()
-        overview.actions.onAlias(card.guid)
-    end, "secondary")
+    -- The buttons beside a story are icons in one row; the tooltip names them.
+    card.whisper = UI.Button(card, function()
+        overview.actions.onWhisper(card.guid)
+    end, "primary", "chat")
     -- Their own events, if the chronicle has any: that book is the chronicle's.
     card.chronicle = UI.Button(card, function()
         overview.actions.onChronicle(card.chronicleWho)
-    end, "secondary")
+    end, "secondary", "flag")
+    card.alias = UI.Button(card, function()
+        overview.actions.onAlias(card.guid)
+    end, "secondary", "tag")
     card.forget = UI.Button(card, function()
         overview.actions.onForget(card.guid)
-    end, "ghost")
-    card.forget:SetPoint("BOTTOM", 0, 16)
+    end, "secondary", "trash")
+    card.whisper:SetIconOnly(WHISPER_BUTTON, 18)
+    for _, button in ipairs({ card.chronicle, card.alias, card.forget }) do
+        button:SetIconOnly(ICON_BUTTON)
+    end
     return card
+end
+
+local BUTTON_GAP = 10
+local BUTTON_MID = 36 -- the middle line of the card's buttons, above its foot
+
+-- The buttons that are shown, side by side on the middle line, from x on:
+-- rightwards (step 1) or leftwards (step -1).
+local function ButtonLine(card, buttons, x, step)
+    for _, button in ipairs(buttons) do
+        if button:IsShown() then
+            button:ClearAllPoints()
+            button:SetPoint(step > 0 and "LEFT" or "RIGHT", card, "BOTTOM", x, BUTTON_MID)
+            x = x + step * (button:GetWidth() + BUTTON_GAP)
+        end
+    end
+end
+
+-- One row at the foot. The whisper stands on the card's middle axis, like
+-- everything above it: the alias to its left (and the chronicle, if there is
+-- one, beyond it), forget to its right. Without it the rest is centred.
+local function PlaceButtons(card)
+    if card.whisper:IsShown() then
+        local half = card.whisper:GetWidth() / 2 + BUTTON_GAP
+        card.whisper:ClearAllPoints()
+        card.whisper:SetPoint("CENTER", card, "BOTTOM", 0, BUTTON_MID)
+        ButtonLine(card, { card.alias, card.chronicle }, -half, -1)
+        ButtonLine(card, { card.forget }, half, 1)
+        return
+    end
+    local buttons, width = { card.storyButton, card.chronicle, card.alias, card.forget }, -BUTTON_GAP
+    for _, button in ipairs(buttons) do
+        if button:IsShown() then
+            width = width + button:GetWidth() + BUTTON_GAP
+        end
+    end
+    ButtonLine(card, buttons, -width / 2, 1)
 end
 
 -- inStory: beside the person's own story, where "Your story" is not needed.
@@ -356,26 +420,15 @@ local function FillProfile(card, person, inStory)
     card.firstLevel:SetText(person.firstLevelText or "")
 
     card.storyButton:SetLabel(L.ui_fellow_story)
+    card.whisper:SetLabel(L.ui_fellow_whisper)
     card.alias:SetLabel(L.ui_fellow_alias)
     card.chronicle:SetLabel(L.ui_fellow_chronicle)
     card.forget:SetLabel(L.ui_fellow_forget)
     card.storyButton:SetShown(not inStory)
+    card.whisper:SetShown(inStory and person.whisper and true or false)
     card.chronicleWho = inStory and person.chronicle or nil
     card.chronicle:SetShown(card.chronicleWho ~= nil)
-    card.alias:ClearAllPoints()
-    card.chronicle:ClearAllPoints()
-    if card.chronicleWho then
-        local both = card.alias:GetWidth() + 10 + card.chronicle:GetWidth()
-        card.alias:SetPoint("BOTTOMLEFT", card, "BOTTOM", -both / 2, 56)
-        card.chronicle:SetPoint("LEFT", card.alias, "RIGHT", 10, 0)
-    elseif inStory then
-        card.alias:SetPoint("BOTTOM", card, "BOTTOM", 0, 56)
-    else
-        local both = card.storyButton:GetWidth() + 10 + card.alias:GetWidth()
-        card.storyButton:ClearAllPoints()
-        card.storyButton:SetPoint("BOTTOMLEFT", card, "BOTTOM", -both / 2, 56)
-        card.alias:SetPoint("LEFT", card.storyButton, "RIGHT", 10, 0)
-    end
+    PlaceButtons(card)
 end
 
 ---------------------------------------------------------------------------
@@ -596,6 +649,7 @@ local function FillNearRow(row, person, first, width)
         row.badge:ClearAllPoints()
         row.badge:SetPoint("LEFT", row, "LEFT", width * NEAR_COLUMNS.bond, 0)
     end
+    row.whisper.tip = L.ui_near_whisper
     row.line:SetShown(not first)
     if not row:IsMouseOver() then
         row.hover:Hide()

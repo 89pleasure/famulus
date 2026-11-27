@@ -190,7 +190,7 @@ These points are design decisions; `tests/run.lua` checks most of them.
   `ns.<Name>Service`, no feature in it (the test checks this). That way every call shows whether
   something is a service (`ns.AliasService.Get`), a feature (`ns.features.chatAliases`) or a plain
   helper (`ns.IsSecret` in `Core/Init.lua`). Services for all categories live under `Core/`
-  (`ChatService`: check plain text, check the chat lockdown; `GroupService`: who is in the group;
+  (`ChatService`: check plain text, check the chat lockdown, open a whisper; `GroupService`: who is in the group;
   `SocialService`: who is a friend, a Battle.net friend or in the guild, who of them is online,
   which class the lists name, and names from lists in one spelling. Whoever reads the friends
   list, guild roster or Battle.net friends does it via `SocialService.EachFriend`,
