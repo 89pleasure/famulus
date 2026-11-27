@@ -344,6 +344,27 @@ without "Where your people are".
   where the names are the same). The guild roster gives level and zone since this feature
   (`SocialService.EachGuildMember`, values 4 and 6). A whisper uses the name as the list wrote it,
   realm and all (`ChatFrameUtil.SendTell`, as Blizzard's friends frame does).
+- **Out of reach (the owner's request, 2026-11-27):** Forever has no servers as in retail, only
+  modes (Normal, PvP, RP, RP-PvP), and they are realms of their own: friends can only play
+  together on the same one. The tab showed Battle.net friends on another realm like anyone else,
+  "Here in Tanaris" and cards included, because a zone is compared by its name. The owner still
+  wants to see them and their progress. Friends list and guild hold only characters of the
+  player's realm, so only Battle.net friends can be out of reach: another realm (`realmID ~=
+  GetRealmID()`) or the other faction (`factionName ~= UnitFactionGroup("player")`), the rule of
+  Blizzard's friends frame (`CanCooperateWithGameAccount`, `Blizzard_FriendsFrame/Camelot`).
+  `NearbyService.People` then gives `out`, the reason as the window says it ("Realm PvP" from
+  `realmDisplayName`, "Other realm" without one, or the faction's name from `FACTION_<NAME>`),
+  and `bnet`, the account name. Someone out of reach gets no card and does not count in "Here
+  in …", "Similar level", "Also online" or "Where your people are"; the tab lists them last
+  in a section of their own, "Out of reach · N · other realm or faction" (German "Außer
+  Reichweite"), drawn faint (0.6), the reason instead of "Battle.net". Their whisper goes by
+  Battle.net (`ChatFrameUtil.SendBNetTell(accountName)`, as Blizzard's friends frame does).
+  The owner chose the proposal ("Ja, umsetzen") with the other faction counting as out of reach
+  as well, and the tab keeps its name. The assistant's decisions: the name of the section, the
+  words, the faint rows, no option to hide them. Checked against the mock only. Open in game:
+  whether Forever fills `realmID`, `realmDisplayName` and `factionName` for Battle.net friends,
+  what it calls the realms, and whether a Battle.net whisper opens; `/fam test` reports realm
+  numbers and names (group `names`, "Battle.net realms").
 - **Cards** (the assistant's rules): one when the player arrives in a zone (`ZONE_CHANGED_NEW_AREA`,
   `PLAYER_ENTERING_WORLD`, switching on) for everyone there (head "Mira and Kael", title "Also in
   Tanaris"; three names at most, then "and 2 more"), three seconds later so the lists can answer; one when
@@ -367,7 +388,8 @@ without "Where your people are".
   `NEARBY_CHANGED` redraws the tab while it is open.
 - **Tab "Nearby"** (`FellowNearbyTab` in `UI/Options.lua`, list `UI.NearbyList` in
   `UI/Fellows.lua`, rail card `places` in `UI/Rail.lua`): sections "Here in <zone>", "Similar
-  level" (up to 5 levels apart) and "Also online" (40 rows, the rest counted). A row: crest with the
+  level" (up to 5 levels apart), "Also online" (40 rows, the rest counted) and "Out of reach"
+  (see above). A row: crest with the
   bond's ring, the alias or name, below it the name under an alias, class and from where; level and
   the difference to the player's; zone (the player's own in the accent); the bond's badge; a button
   that opens a whisper. A click on a fellow traveller's row opens "Your story". Beside it "Where

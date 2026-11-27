@@ -2040,8 +2040,9 @@ end
 
 ---------------------------------------------------------------------------
 -- Nearby: friends and guild who are online right now, the ones in the
--- player's zone first, then those of a similar level, then everyone else;
--- beside it, the zones they are in. Only while "Who is nearby" runs: it
+-- player's zone first, then those of a similar level, then everyone else,
+-- and last who is out of reach (another realm, the other faction); beside
+-- it, the zones of those within reach. Only while "Who is nearby" runs: it
 -- keeps the lists fresh.
 ---------------------------------------------------------------------------
 
@@ -2112,7 +2113,7 @@ do
             parts[#parts + 1] = person.name
         end
         parts[#parts + 1] = ClassName(person.class)
-        parts[#parts + 1] = L["ui_near_from_" .. person.from]
+        parts[#parts + 1] = person.out or L["ui_near_from_" .. person.from]
         local diff
         if person.level and data.level and person.level ~= data.level then
             diff = (person.level > data.level and "+" or "−") .. math.abs(person.level - data.level)
@@ -2129,7 +2130,8 @@ do
             level = person.level and tostring(person.level) or "",
             diff = diff,
             place = person.zone or L.ui_near_nowhere,
-            here = data.here ~= nil and person.zone == data.here,
+            here = not person.out and data.here ~= nil and person.zone == data.here,
+            out = person.out ~= nil,
             apart = LevelApart(person, data),
             source = person,
         }
@@ -2150,10 +2152,12 @@ do
         if not data or #data.people == 0 then
             return nil
         end
-        local here, similar, others = {}, {}, {}
+        local here, similar, others, out = {}, {}, {}, {}
         for _, person in ipairs(data.people) do
             local row = NearPerson(person, data)
-            if row.here then
+            if row.out then
+                out[#out + 1] = row
+            elseif row.here then
                 here[#here + 1] = row
             elseif row.apart <= NEAR_SIMILAR then
                 similar[#similar + 1] = row
@@ -2163,12 +2167,14 @@ do
         end
         table.sort(here, NearOrder)
         table.sort(similar, NearOrder)
-        table.sort(others, function(a, b)
+        local function ByLevel(a, b)
             if a.apart ~= b.apart then
                 return a.apart < b.apart
             end
             return a.label < b.label
-        end)
+        end
+        table.sort(others, ByLevel)
+        table.sort(out, ByLevel)
         local sections = {}
         if #here > 0 then
             sections[#sections + 1] = { title = L.ui_near_section_here:format(data.here), note = tostring(#here), people = here }
@@ -2191,6 +2197,9 @@ do
             end
             sections[#sections + 1] = { title = L.ui_near_section_others, note = tostring(#others), people = shown, more = more }
         end
+        if #out > 0 then
+            sections[#sections + 1] = { title = L.ui_near_section_out, note = tostring(#out) .. "  ·  " .. L.ui_near_out_note, people = out }
+        end
         return {
             sections = sections,
             onChoose = function(person)
@@ -2210,8 +2219,19 @@ do
         if not data or #data.people == 0 then
             return nil
         end
-        local byZone, zones = {}, {}
+        -- A zone of another realm only shares the name: those out of reach
+        -- stand in the list alone.
+        local within = {}
         for _, person in ipairs(data.people) do
+            if not person.out then
+                within[#within + 1] = person
+            end
+        end
+        if #within == 0 then
+            return nil
+        end
+        local byZone, zones = {}, {}
+        for _, person in ipairs(within) do
             local name = person.zone or L.ui_near_nowhere
             local zone = byZone[name]
             if not zone then
@@ -2248,7 +2268,7 @@ do
             {
                 kind = "places",
                 title = L.ui_near_places,
-                note = ns.Plural("ui_near_places_note", #data.people):format(#data.people),
+                note = ns.Plural("ui_near_places_note", #within):format(#within),
                 places = places,
                 more = #zones > NEAR_PLACES and ns.Plural("ui_near_places_more", #zones - NEAR_PLACES):format(#zones - NEAR_PLACES) or nil,
             },

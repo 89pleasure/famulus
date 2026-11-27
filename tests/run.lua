@@ -4477,6 +4477,10 @@ do
             { battleTag = "Mi#2", games = { { characterName = "Mira Sturmfeder", playerGuid = "Player-1-MIRA", areaName = "Tanaris (DE)",
                 characterLevel = 41, className = "Mage" } } },
             { battleTag = "Re#3", games = { { characterName = "Other Game", playerGuid = "Player-1-OTHER", areaName = "Tanaris", wowProjectID = 1 } } },
+            { battleTag = "Pv#4", games = { { characterName = "Rhea Dunkelhain", playerGuid = "Player-2-RHEA", areaName = "Tanaris",
+                characterLevel = 40, className = "Hunter", realmID = 2, realmDisplayName = "PvP" } } },
+            { battleTag = "Ho#5", games = { { characterName = "Grosh Steinhauer", playerGuid = "Player-1-GROSH", areaName = "Tanaris",
+                characterLevel = 40, className = "Shaman", factionName = "Horde" } } },
         },
     })
 
@@ -4488,7 +4492,7 @@ do
         end
     end
     local people, here, level = Nearby.People(true)
-    check(#people == 6 and here == "Tanaris" and level == 40,
+    check(#people == 8 and here == "Tanaris" and level == 40,
         "online friends, guild and Battle.net friends in this game; the player's zone and level (got " .. #people .. ")")
     check(not find(people, "Old Friend") and not find(people, "Mel Mobil") and not find(people, "Me Myself") and not find(people, "Other Game"),
         "not: whoever is offline, on the mobile app, the player, someone in another game")
@@ -4499,7 +4503,13 @@ do
         "a guild member: the name without the realm, the full one kept for a whisper")
     check(borin.from == "battlenet" and borin.zone == "Desolace" and borin.class == "WARRIOR" and borin.level == 39,
         "a Battle.net friend in this game: zone, level and class from Battle.net")
-    check(#Nearby.People(false) == 3 and not find(Nearby.People(false), "Kael Dornhain"), "without the guild only friends count")
+    check(#Nearby.People(false) == 5 and not find(Nearby.People(false), "Kael Dornhain"), "without the guild only friends count")
+    check(find(people, "Rhea Dunkelhain").out == "Realm PvP" and find(people, "Rhea Dunkelhain").bnet == "|Kq4|k"
+        and find(people, "Grosh Steinhauer").out == "Horde" and not mira.out and not borin.out and not kael.out,
+        "a Battle.net friend on another realm or of the other faction is out of reach")
+    mock.state.bnFriends[4].games[1].realmDisplayName = nil
+    check(find(Nearby.People(true), "Rhea Dunkelhain").out == "Other realm", "a realm the client does not name")
+    mock.state.bnFriends[4].games[1].realmDisplayName = "PvP"
     mock.state.instanceType = "party"
     check(Nearby.Quiet(true) == "instance", "in a dungeon nobody is told about")
     mock.state.instanceType, mock.state.resting = nil, true
@@ -4518,7 +4528,7 @@ do
     local card = Feed.Shown()[1]
     check(#Feed.Shown() == 1 and card.head:GetText() == "Kael and Mira" and card.title:GetText() == "Also in Tanaris"
         and card.detail:GetText() == "Level 42 and 41" and card.headDot:IsShown() and card.headDot.glow:IsShown(),
-        "whoever is here already comes on one card: " .. tostring(card and card.title:GetText()))
+        "whoever is here already comes on one card, not who is out of reach: " .. tostring(card and card.title:GetText()))
     check(card.pair and card.pair[1]:IsShown() and card.pair[2]:IsShown() and not card.crest:IsShown() and not (card.solo and card.solo:IsShown()),
         "two people, two crests instead of a picture")
     check(mock.count("PlaySoundFile") == 1, "with the live feed's sound")
@@ -4619,6 +4629,8 @@ do
         bnFriends = {
             { battleTag = "Bo#1", games = { { characterName = "Borin Eisenbart", playerGuid = "Player-1-BORIN", areaName = "Desolace",
                 characterLevel = 39, className = "Warrior" } } },
+            { battleTag = "Pv#2", games = { { characterName = "Rhea Dunkelhain", playerGuid = "Player-2-RHEA", areaName = "Tanaris",
+                characterLevel = 40, className = "Rogue", realmID = 2, realmDisplayName = "PvP" } } },
         },
     })
     FamulusDB.fellows = { ["Player-1-MIRA"] = { name = "Mira Sturmfeder", level = 41, class = "MAGE", first = time() - 86400, last = time() - 3600,
@@ -4633,7 +4645,8 @@ do
         "the tab: the list, the zones beside it")
     local sections = list.sections
     check(sections[1].title:GetText() == "Here in Tanaris  ·  2" and sections[2].title:GetText() == "Similar level  ·  2  ·  up to 5 levels apart"
-        and sections[3].title:GetText() == "Also online  ·  1", "here, then a similar level, then everyone else: " .. sections[1].title:GetText())
+        and sections[3].title:GetText() == "Also online  ·  1" and sections[4].title:GetText() == "Out of reach  ·  1  ·  other realm or faction",
+        "here, then a similar level, then everyone else, and last who is out of reach: " .. sections[1].title:GetText())
     local rows = list.rows
     check(rows[1].name:GetText() == "Mira Sturmfeder" and rows[1].sub:GetText() == "Mage  ·  Friends list" and rows[1].level:GetText() == "41"
         and rows[1].diff:GetText() == "+1" and rows[1].place:GetText() == "Tanaris" and rows[1].badge:IsShown()
@@ -4642,12 +4655,17 @@ do
         "under an alias the name stands below it; no bond without a group together")
     check(rows[3].name:GetText() == "Borin Eisenbart" and rows[3].place:GetText() == "Desolace" and rows[4].name:GetText() == "Lysa Morgentau"
         and rows[4].diff:GetText() == "−2" and rows[5].name:GetText() == "Hagen Steinfaust", "the nearest level first")
+    check(rows[6].name:GetText() == "Rhea Dunkelhain" and rows[6].sub:GetText() == "Rogue  ·  Realm PvP" and rows[6].place:GetText() == "Tanaris"
+        and rows[6]:GetAlpha() < 1 and rows[1]:GetAlpha() == 1, "out of reach: the realm instead of the list, the zone not in the accent, faint: "
+        .. tostring(rows[6].sub:GetText()))
     local places = window.rail.cards[1].places
     check(window.rail.cards[1].note:GetText() == "5 online" and places[1].name:GetText() == "Tanaris" and places[1].count:GetText() == "2"
         and places[1].line:GetText() == "Level 41–42" and places[2].count:GetText() == "1", "where your people are: the player's zone first")
     mock.Click(rows[2].whisper)
     check(mock.count("ChatFrameUtil.SendTell") == 1 and mock.calls[#mock.calls][2] == "Kael Dornhain-Realm"
         and rows[2].whisper.tip == "Whisper", "the button opens a whisper, with the realm; its tooltip names it")
+    mock.Click(rows[6].whisper)
+    check(mock.count("ChatFrameUtil.SendBNetTell") == 1 and mock.calls[#mock.calls][2] == "|Kq2|k", "out of reach, the whisper goes by Battle.net")
     mock.Click(rows[1])
     mock.Advance(0.1)
     check(window.fellows.card:IsShown() and window.fellows.card.name:GetText() == "Mira Sturmfeder",

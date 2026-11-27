@@ -557,7 +557,7 @@ end
 
 ---------------------------------------------------------------------------
 -- Nearby: friends and guild who are online, in sections ("Here in Tanaris",
--- "Similar level", "Also online"), each a list. UI/Options.lua builds the
+-- "Similar level", "Also online", "Out of reach"), each a list. UI/Options.lua builds the
 -- model.
 --
 --   local list = UI.NearbyList(parent)
@@ -570,13 +570,14 @@ end
 --       onWhisper(person), -- the button at the row's end
 --   }
 --   person = { name, label (the alias, else the name), sub, class, progress,
---              tier or nil, level, diff, place, here,
+--              tier or nil, level, diff, place, here, out (drawn faint),
 --              guid (a fellow traveller's) or nil }
 ---------------------------------------------------------------------------
 
 local NEAR_ROW = 52
 local NEAR_COLUMNS = { level = 0.47, place = 0.58, bond = 0.8 } -- share of the width
 local SECTION_SPACE = 22 -- between two sections
+local NEAR_FAINT = 0.6 -- a row of someone out of reach
 
 local function CreateNearRow(list)
     local row = CreateFrame("Button", nil, list)
@@ -628,6 +629,7 @@ end
 local function FillNearRow(row, person, first, width)
     row.person = person
     row:SetWidth(width)
+    row:SetAlpha(person.out and NEAR_FAINT or 1)
     row.crest:SetPerson(person.name, person.class)
     row.crest:SetProgress(person.progress or 0)
     row.name:SetText(person.label or person.name)

@@ -44,9 +44,10 @@
 --       nobody while the player is in a guild, the last one that named
 --       anyone this session stands in for it, and keeping is true.
 --   SocialService.EachBattleNetFriend(visit, index)
---       visit(battleTag, games) for every Battle.net friend, or only the one
---       at index. games: the client's game accounts they are online with
---       right now (empty while offline). visit may return true to stop.
+--       visit(battleTag, games, accountName) for every Battle.net friend, or
+--       only the one at index. games: the client's game accounts they are
+--       online with right now (empty while offline). accountName: what a
+--       Battle.net whisper needs. visit may return true to stop.
 --   SocialService.Plain(name), SocialService.Key(name)
 --       A name as lists write it ("First Last-Realm") without the realm, and
 --       one spelling for it however the client writes it.
@@ -204,7 +205,7 @@ function SocialService.EachBattleNetFriend(visit, index)
                     Add(C_BattleNet.GetFriendGameAccountInfo(i, g))
                 end
             end
-            if visit(info.battleTag, games) == true then
+            if visit(info.battleTag, games, info.accountName) == true then
                 return
             end
         end
