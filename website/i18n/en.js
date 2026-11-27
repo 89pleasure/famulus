@@ -31,6 +31,8 @@ window.FAMULUS_I18N.en = {
   f_menu_d: 'Right-clicking a player or Battle.net friend offers to set, change or remove their alias.',
   f_account: 'Characters of Battle.net friends',
   f_account_d: 'Remembers which characters a Battle.net friend with an alias is online on. That way their alias covers all of their characters.',
+  f_guildy: 'Aliases in Guildy',
+  f_guildy_d: 'Shows the alias instead of the character name in the addon Guildy (version 1.18.0 or newer): its chat, member list and other tabs.',
   w_list_empty: 'No aliases yet',
   w_list_empty_d: 'Enter a character name and the name you want to see instead.',
   w_account: 'Battle.net  ·  %s',

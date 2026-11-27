@@ -95,8 +95,8 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
     Forever is all about: spending time in Azeroth together. It makes the MMORPG we all love even
     better and more open to everyone." (before: "Your companion for playing together: …"). It is
     also the page's meta description. The description is the assistant's text in
-    `docs/curseforge/description.html` (English, without Guildy, because its integration only
-    works with the fork). It links the website (famulus.camp, its FAQ and privacy policy) and
+    `docs/curseforge/description.html` (English; Guildy is named since 2026-11-27, when its
+    integration began to work with the regular Guildy 1.18.0). It links the website (famulus.camp, its FAQ and privacy policy) and
     GitHub; CurseForge forbids only external download links. Categories: the assistant advises against "Companions" (on CurseForge
     pets and mounts) and recommends "Chat & Communication" with "Guild".
   - **Description with pictures (since 2026-11-27, the owner's request: "smarter, with graphics,

@@ -522,7 +522,7 @@ owner.
   `tools/make_curseforge_art.js` (see "Description with pictures" in docs/release.md). The page
   itself does not use them; it only publishes them, so the description can load them from
   famulus.camp. Redraw them when a screenshot here or an area's title changes.
-- **Deliberately not included yet:** Guildy (only once the PR there is accepted), a preview image
+- **Deliberately not included yet:** a preview image
   for shared links (see "Head and link previews"), WOFF2 fonts (the TTFs from the addon are
   loaded, ~100 KB each).
 - **Checked** in the app's built-in browser (Chromium): at 1440 and 375 px width all
@@ -634,8 +634,8 @@ owner.
   2026-11-27. The master
   switch, the counters ("5/5", "6 of 10 active") and the tab's title and description are gone,
   as in the addon (`state.master` stays on). Settings is a list of the features (`ALIAS_FEATURES`
-  in `main.js`: chat, tooltip, menu, Battle.net characters; Guildy left out as everywhere on the
-  page), each with its icon (`i-chat`, `i-tooltip`, `i-menu`, `i-link`, from
+  in `main.js`: chat, tooltip, menu, Battle.net characters and, since 2026-11-27, Guildy, as if Guildy were
+  loaded; its switch changes nothing in the picture), each with its icon (`i-chat`, `i-tooltip`, `i-menu`, `i-link`, `i-shield`, from
   `tools/make_media.py`), name, "On · 1 option" and its switch, and beside it the chosen one in
   full: area, name, switch, "On" and "Default: on", description and, for chat, the option
   "Display". No live picture: the game view below the window shows the effect. "Characters of

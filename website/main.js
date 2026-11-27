@@ -268,15 +268,16 @@
   const aliasField = $('#alias-alias');
   // master stays on: since 2026-11-24 the addon has it under Settings › General,
   // which the demo does not show. entry: the feature chosen in Settings.
-  const state = { master: true, chat: true, tooltip: true, menu: true, account: true, style: 'alias', tab: 'names', entry: 'chat', editing: null, tip: MIRA };
+  const state = { master: true, chat: true, tooltip: true, menu: true, account: true, guildy: true, style: 'alias', tab: 'names', entry: 'chat', editing: null, tip: MIRA };
 
-  // The aliases' features in Settings, as their entries in the addon. Guildy
-  // is left out, as everywhere on the page.
+  // The aliases' features in Settings, as their entries in the addon (Guildy's
+  // as if Guildy were loaded).
   const ALIAS_FEATURES = [
     { key: 'chat', icon: 'chat', name: 'f_chat', desc: 'f_chat_d', options: 1 },
     { key: 'tooltip', icon: 'tooltip', name: 'f_tooltip', desc: 'f_tooltip_d' },
     { key: 'menu', icon: 'menu', name: 'f_menu', desc: 'f_menu_d' },
     { key: 'account', icon: 'link', name: 'f_account', desc: 'f_account_d' },
+    { key: 'guildy', icon: 'shield', name: 'f_guildy', desc: 'f_guildy_d' },
   ];
 
   const CHAT = [
@@ -386,7 +387,7 @@
   // Reset works on the settings section only, like in the addon: the
   // features there. The first click asks; a second one within four seconds
   // resets.
-  const DEFAULTS = { chat: true, tooltip: true, menu: true, account: true, style: 'alias' };
+  const DEFAULTS = { chat: true, tooltip: true, menu: true, account: true, guildy: true, style: 'alias' };
   const resetButton = $('#alias-reset');
   // Reset stands outside the tablist, left of the settings tab, whose width
   // follows its name in the chosen language.
