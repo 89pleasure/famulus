@@ -1984,7 +1984,7 @@
   if (document.fonts) document.fonts.ready.then(spaceDots);
 
   renderers.push(
-    play($('#hero-toasts'), $('.shot__feed'), ['level', 'boss', 'ability', 'item', 'death', 'skill'], 4400, 9.5),
+    play($('#hero-toasts'), $('.hero__feed'), ['level', 'boss', 'ability', 'item', 'death', 'skill'], 4400, 9.5),
     play(feedCards, feedView, ['boss', 'level', 'item', 'ability', 'skill', 'death'], 5200, 8),
   );
 })();

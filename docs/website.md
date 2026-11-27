@@ -37,8 +37,8 @@ owner.
   `data-depth` follow scrolling and the mouse pointer (drawing happens only on change and only
   while the header is visible), elements with `data-parallax` drift while scrolling. The embers
   are CSS animations. `prefers-reduced-motion` switches off all motion.
-- **Structure (since 2026-11-24, aliases last, see "Requirements"):** header (landscape) → the
-  addon's window as a screenshot, with live feed banners over it (see "Window in the header") →
+- **Structure (since 2026-11-24, aliases last, see "Requirements"):** header (landscape, live
+  feed cards beside the title) → the addon's window as a screenshot (see "Window in the header") →
   01 Chronicle (the picture book with the tabs Everyone, My journey, Companions) →
   02 Fellow travellers → 03 Live feed (can be triggered, position can be moved) → 04 Aliases (the
   window rebuilt and usable, below it chat and tooltip "in game") → 05 Screenshots ("What Famulus
@@ -143,8 +143,13 @@ owner.
     the text (its own space, `padding-bottom` on the header) and is shifted so that the camp is
     centred (`FamulusScene.pan`). Otherwise it lay off to the right and the moon behind the
     buttons.
-  - The live feed banners stood on the right above the moon; since the window in the header (see
-    below) they lie over its lower right corner.
+  - **Live feed cards above the moon (since 2026-11-27, the owner's request):** in the hero's
+    second column (`.hero__feed`), top-aligned with the title, each card centred in the column;
+    the stack grows down towards the moon. The column's middle lies about over the moon's
+    (measured at 1440 × 900: 1058 against 1063 px; three cards end at about 346, the moon
+    starts at 375; at 1280 × 720 the third card touches the moon's top). Hidden in one column
+    (up to 980 px). From 2026-11-24 to 2026-11-27 they lay over the window's screenshot, where
+    they looked out of place.
   - Checked in the built-in browser and with headless Chrome at 375, 768, 1280, 1440 and
     1920 px width, German and English; no messages in the console. Not checked: Safari,
     Firefox, real mobile devices.
@@ -201,14 +206,9 @@ owner.
     (`_forever_/Screenshots` does not exist); the owner uses macOS's own (Cmd+Shift+3), which
     lands on the desktop as `Bildschirmfoto <date> um <time>.png`. The window stood at the same
     place in every shot of 2026-11-27, so one frame fits them all.
-  - The header's live feed banners lie over the lower end of the window's right column,
-    below its friends list, where the window fades out (`.shot__feed`, `top: 74%` since the rows,
-    before 70 %), like
-    Polestar's second window. At 50 % they covered the friends list. There they are
-    right-aligned at the window edge and reach 44 px beyond it (below 1400 px inside, below
-    760 px hidden); left-aligned as in the game, they lay over the book at 1024 px.
-    The assistant's decision. The glow of the first section may reach up into the window's
-    fading foot (`.shot + .section`), otherwise there was a hard edge there.
+  - Nothing lies over the window (the live feed cards stand above the moon, see "Campfire in the
+    header"). The glow of the first section may reach up into the window's fading foot
+    (`.shot + .section`), otherwise there was a hard edge there.
   - Checked in the built-in browser at 1440, 1024 and 375 px, German and English; no
     horizontal scrolling. Structure in detail: the assistant's decisions, not yet seen by the
     owner.
@@ -397,8 +397,7 @@ owner.
     as in `UI/Feed.lua`) wait, and the top card counts them in an accent badge ("+2"). Not
     built: the edges of the waiting cards behind the top one, keeping the last three
     (`SetKeep`), and the faster pace with three waiting. The feed's room is 170 px (a tall card
-    and two rows); the header's cards stand at 74 % of the window (was 70 %), so the stack starts
-    below its friends list. Checked at 1056 px: four chips in a row count +3, +2, +1 and stack
+    and two rows). Checked at 1056 px: four chips in a row count +3, +2, +1 and stack
     the rows; the header's cards play on their own.
   - **Fellow travellers:** tabs "Overview" and "Nearby" above the demo (`#fellows-tabs`). Nearby
     as `UI.NearbyList`: "Here in Tanaris", "Similar level" (up to 5 apart) and "Also online",
