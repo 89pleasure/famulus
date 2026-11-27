@@ -220,9 +220,11 @@ owner.
   (`sh_<name>_alt`). Pictures (`assets/shots/<name>-<width>.webp`, cut with
   `tools/make_shot.js` from the same screenshots): `fellows` (Overview, 15.35.04), `story`
   (Mira, 15.35.17), `groups` (15.36.03), `feed` (`/fam feed test` over the game world, 15.44.25,
-  1110 × 687 at x 1980, y 230, the same shape as the window, so the grid stays even), `welcome`
-  (expanded, 15.37.59), `aliases` (Aliases › Settings with the chat picture, 15.38.29); the
-  windows at 1180 and 1770, the feed at 1110, about 40 to 100 KB each, loaded lazily. Not used:
+  2233 × 1380 at x 1418, y 60, the window's shape and about the same scale as the window shots;
+  the first crop, 1110 × 687 at x 1980, y 230, was blown up past its size in the slider and the
+  cards looked too large, the owner noticed), `welcome`
+  (expanded, 15.37.59), `aliases` (Aliases › Settings with the chat picture, 15.38.29); all at
+  1180 and 1770, about 40 to 100 KB each, loaded lazily. Not used:
   "Nearby" and Chronicle › Friends filtered to one person, because they show real Battle.net
   friends; the game world around the window, because it shows other players' names. No entry in
   the navigation. Checked at 1056 and 375 px, English and German: all six load, no horizontal
