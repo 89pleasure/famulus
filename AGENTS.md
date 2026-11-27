@@ -162,7 +162,7 @@ chose **"clear line"**. The rule since then:
   themselves (`k` in the daily log) and read the chronicle only for the reference.
 - Implementation and terms are the assistant's decisions within the variant ("Friends", "Bilanz",
   "Stats", "In the chronicle", bosses with names only in groups). Checked against the mock only,
-  not yet seen in game. The website still shows the old state (tab "Companions", "Profiles").
+  not yet seen in game. The website follows since 2026-11-27 (tab "Friends", see docs/website.md).
 - **Ideas only the fellow travellers can do:** Regular groups (who is in a group together again
   and again) are in the tab "Groups" since 2026-11-24 (see "Fellow travellers"); shared dungeons
   per person are proposed, not commissioned. The groups keep to the rule as well: they show who

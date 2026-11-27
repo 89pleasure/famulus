@@ -322,7 +322,8 @@ Picked by the owner on 2026-11-25 from a list of new ideas by the assistant ("We
 Nähe"), because it is of use without Famulus on the other side. Shows who of the player's friends
 and guild is in the same zone or at a similar level. It reads the friends list, the Battle.net
 friends who play this game and the guild roster; nothing is sent and nothing is stored. The
-website does not show it yet.
+website shows the tab since 2026-11-27 (see "Demos" in docs/website.md), without the card and
+without "Where your people are".
 
 - **The owner's decisions (2026-11-25, on the canvas "In der Nähe – Entwürfe", claude.ai artifact
   `Ste3CibFuPCTWcoBaWXxaY`):** the card in form B, people's crests (class icon, ring of the bond)
