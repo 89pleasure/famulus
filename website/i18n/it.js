@@ -23,7 +23,7 @@ window.FAMULUS_I18N.it = {
 
   hero_eyebrow: 'Un addon per World of Warcraft: Forever',
   hero_title: 'Per tutti quelli <br>con cui <em>giochi.</em>',
-  hero_lead: 'Famulus scrive in un libro illustrato le avventure che vivi con i tuoi amici, ricorda tutti quelli con cui hai fatto gruppo e mostra i tuoi amici in chat con i nomi con cui li chiami davvero.',
+  hero_lead: "Famulus coglie l'essenza di WoW Forever: passare del tempo insieme ad Azeroth. Rende il MMORPG che tutti amiamo ancora più bello e aperto a chiunque.",
   hero_cta: 'Scopri cosa fa',
   hero_cta2: 'Scarica',
   fact_version: 'Versione 0.1.0-alpha.6',
