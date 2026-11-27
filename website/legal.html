@@ -12,12 +12,23 @@
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    // Before the first paint: the colours of the world the reader chose on the
+    // main page (famulus-scene, styles.css :root[data-world]); without one,
+    // the moonlit night's. The keys are those of WORLDS in main.js.
+    (() => {
+      let saved = null;
+      try { saved = localStorage.getItem('famulus-scene'); } catch { /* private mode */ }
+      if (['night', 'arcane', 'dusk', 'forest', 'frost'].includes(saved)) document.documentElement.dataset.world = saved;
+    })();
+  </script>
 </head>
 <body>
   <a class="skip" href="#content" data-i18n="skip">Skip to content</a>
 
   <svg class="sprite" aria-hidden="true" focusable="false">
     <symbol id="i-out" viewBox="0 0 32 32"><path d="M10 22 22 10M12.5 10H22v9.5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 32 32"><path d="M9 12.5l7 7 7-7"/></symbol>
   </svg>
 
   <nav class="nav is-stuck" aria-label="Main" data-i18n-attr="aria-label:nav_main">
@@ -26,9 +37,16 @@
       <span>Famulus</span>
     </a>
     <div class="nav__end">
-      <div class="lang" role="group" aria-label="Language" data-i18n-attr="aria-label:nav_lang">
-        <button type="button" data-lang="de" lang="de" title="Deutsch">DE</button>
-        <button type="button" data-lang="en" lang="en" title="English">EN</button>
+      <!-- The language, picked as on the main page (pick.js). -->
+      <div class="pick" id="langs">
+        <button type="button" class="pick__toggle pick__toggle--text" id="langs-toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="langs-menu">
+          <span id="langs-current">EN</span>
+          <svg class="icon" width="14" height="14" aria-hidden="true"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="pick__menu" id="langs-menu" role="menu" aria-label="Language" data-i18n-attr="aria-label:nav_lang" hidden>
+          <button type="button" role="menuitemradio" data-lang="de" lang="de"><span class="pick__code" aria-hidden="true">DE</span><span>Deutsch</span></button>
+          <button type="button" role="menuitemradio" data-lang="en" lang="en"><span class="pick__code" aria-hidden="true">EN</span><span>English</span></button>
+        </div>
       </div>
       <a class="btn btn--small btn--ghost" href="index.html" data-i18n="lg_back">Back to Famulus</a>
     </div>
@@ -53,7 +71,7 @@
         <div data-only="en" lang="en">
           <h2>Privacy</h2>
           <p class="legal__asof">As of 27 November 2026</p>
-          <p class="legal__short">In short: there are no accounts, and I store nothing about you. This website sets no cookies, has no analytics or tracking and loads nothing from other servers. Its host, GitHub, logs your IP address; the language you choose is remembered on your device only.</p>
+          <p class="legal__short">In short: there are no accounts, and I store nothing about you. This website sets no cookies, has no analytics or tracking and loads nothing from other servers. Its host, GitHub, logs your IP address; the language and the scene you choose are remembered on your device only.</p>
 
           <h3>Who is responsible</h3>
           <p>89pleasure, the developer of Famulus. Email: <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>. You can also reach me on GitHub, at <a href="https://github.com/89pleasure" target="_blank" rel="noopener">github.com/89pleasure</a>; issues there are public.</p>
@@ -63,7 +81,7 @@
           <p>The legal basis is the legitimate interest in delivering this website reliably and securely (Art. 6(1)(f) GDPR). GitHub also processes data in the USA and is certified under the EU-U.S. Data Privacy Framework and its counterparts for Switzerland and the United Kingdom. Details are in the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub Privacy Statement</a>.</p>
 
           <h3>Stored in your browser</h3>
-          <p>When you switch the language, the page remembers your choice in your browser's local storage (<code>famulus-lang</code>), so that your next visit opens in that language. It stays on your device and is never sent. You can delete it in your browser's settings at any time. The page stores nothing else and sets no cookies; what you type into its demos, such as an alias, is neither sent nor kept.</p>
+          <p>When you switch the language or choose a scene for the picture at the top, the page remembers your choice in your browser's local storage (<code>famulus-lang</code>, <code>famulus-scene</code>), so that your next visit opens with it. It stays on your device and is never sent. You can delete it in your browser's settings at any time. The page stores nothing else and sets no cookies; what you type into its demos, such as an alias, is neither sent nor kept.</p>
 
           <h3>Nothing from other servers</h3>
           <p>Fonts, images and scripts are delivered with the website itself. There is no analytics, no advertising, no social media plugin and no embedded content from other services. Links to GitHub and CurseForge only take you there when you follow them; from then on, their privacy policies apply.</p>
@@ -77,7 +95,7 @@
         <div data-only="de" lang="de" hidden>
           <h2>Datenschutz</h2>
           <p class="legal__asof">Stand: 27. November 2026</p>
-          <p class="legal__short">Kurz gesagt: Es gibt keine Konten, und ich speichere nichts über dich. Diese Website setzt keine Cookies, hat keine Analyse und kein Tracking und lädt nichts von fremden Servern. Ihr Hoster GitHub protokolliert deine IP-Adresse; die Sprache, die du wählst, merkt sich nur dein Gerät.</p>
+          <p class="legal__short">Kurz gesagt: Es gibt keine Konten, und ich speichere nichts über dich. Diese Website setzt keine Cookies, hat keine Analyse und kein Tracking und lädt nichts von fremden Servern. Ihr Hoster GitHub protokolliert deine IP-Adresse; die Sprache und die Szene, die du wählst, merkt sich nur dein Gerät.</p>
 
           <h3>Wer verantwortlich ist</h3>
           <p>89pleasure, der Entwickler von Famulus. E-Mail: <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>. Du erreichst mich auch auf GitHub, unter <a href="https://github.com/89pleasure" target="_blank" rel="noopener">github.com/89pleasure</a>; Issues dort sind öffentlich.</p>
@@ -87,7 +105,7 @@
           <p>Rechtsgrundlage ist das berechtigte Interesse, diese Website zuverlässig und sicher auszuliefern (Art. 6 Abs. 1 lit. f DSGVO). GitHub verarbeitet Daten auch in den USA und ist nach dem EU-US Data Privacy Framework sowie seinen Gegenstücken für die Schweiz und das Vereinigte Königreich zertifiziert. Einzelheiten stehen in der <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
 
           <h3>In deinem Browser gespeichert</h3>
-          <p>Wenn du die Sprache wechselst, merkt sich die Seite deine Wahl im lokalen Speicher deines Browsers (<code>famulus-lang</code>), damit dein nächster Besuch in dieser Sprache öffnet. Sie bleibt auf deinem Gerät und wird nie übertragen. Du kannst sie jederzeit in den Einstellungen deines Browsers löschen. Sonst speichert die Seite nichts und setzt keine Cookies; was du in ihre Demos eintippst, etwa einen Alias, wird weder verschickt noch aufbewahrt.</p>
+          <p>Wenn du die Sprache wechselst oder eine Szene für das Bild oben wählst, merkt sich die Seite deine Wahl im lokalen Speicher deines Browsers (<code>famulus-lang</code>, <code>famulus-scene</code>), damit dein nächster Besuch damit öffnet. Sie bleibt auf deinem Gerät und wird nie übertragen. Du kannst sie jederzeit in den Einstellungen deines Browsers löschen. Sonst speichert die Seite nichts und setzt keine Cookies; was du in ihre Demos eintippst, etwa einen Alias, wird weder verschickt noch aufbewahrt.</p>
 
           <h3>Nichts von fremden Servern</h3>
           <p>Schriften, Bilder und Skripte kommen mit der Website selbst. Es gibt keine Analyse, keine Werbung, keine Social-Media-Plugins und keine eingebetteten Inhalte anderer Dienste. Links zu GitHub und CurseForge führen dich erst dorthin, wenn du ihnen folgst; ab dann gelten deren Datenschutzerklärungen.</p>
@@ -174,6 +192,7 @@
   </footer>
 
   <script src="i18n.js"></script>
+  <script src="pick.js"></script>
   <script src="legal.js"></script>
 </body>
 </html>

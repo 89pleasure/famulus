@@ -266,7 +266,7 @@ python3 tools/make_fonts.py <Inter-release>/extras/ttf   # needs fontTools
 ```
 
 ```bash
-node tools/make_shot.js <screenshot.jpg> <x> <y> <width> <height> website/assets/shots/window   # window for the website
+node tools/make_shot.js <screenshot.jpg> <x> <y> <width> <height> website/assets/shots/window-<scheme>   # window for the website
 ```
 
 ```bash

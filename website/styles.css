@@ -47,7 +47,7 @@
   --sky-mid: hsl(var(--h) calc(var(--s) * 2.1) 10%);
   --sky-low: hsl(var(--h) calc(var(--s) * 2) 27%);
   --r1a: hsl(var(--h) calc(var(--s) * 1.8) 18%);
-  --r1b: color-mix(in srgb, var(--accent) 7%, hsl(var(--h) calc(var(--s) * 1.8) 26%));
+  --r1b: color-mix(in srgb, var(--fire) 7%, hsl(var(--h) calc(var(--s) * 1.8) 26%));
   --r2a: hsl(var(--h) calc(var(--s) * 1.7) 12.5%);
   --r2b: hsl(var(--h) calc(var(--s) * 1.7) 19%);
   --r3a: hsl(var(--h) calc(var(--s) * 1.6) 9%);
@@ -56,13 +56,21 @@
   --r4b: hsl(var(--h) calc(var(--s) * 1.3) 10%);
   --r5a: var(--bg);
   --r5b: var(--bg);
-  /* The camp at the fire: friends and animals, the flame, the moons. */
+  /* The camp at the fire: friends and animals, the flame, the moons. The
+     fire has colours of its own, Lemon's pair, whatever the accent: in Mint
+     the campfire would burn green. */
+  --fire: #f2d640;
+  --fire2: #fff29a;
+  --fire-glow: color-mix(in srgb, var(--fire) 45%, transparent);
+  /* The screenshot of the window below the header in this scheme:
+     assets/shots/window-<shot>-<width>.webp (index.html, main.js). */
+  --shot: lemon;
   --figure: hsl(var(--h) calc(var(--s) * 1.5) 3%);
-  --flame-base: color-mix(in srgb, var(--accent) 72%, #8a3c00);
-  --flame-inner: color-mix(in srgb, var(--accent2) 70%, #fff);
-  --flame-core: color-mix(in srgb, var(--accent2) 15%, #fff);
-  --moon-mid: color-mix(in srgb, var(--accent2) 50%, #fff);
-  --moon-rim: color-mix(in srgb, var(--accent) 62%, #fff);
+  --flame-base: color-mix(in srgb, var(--fire) 72%, #8a3c00);
+  --flame-inner: color-mix(in srgb, var(--fire2) 70%, #fff);
+  --flame-core: color-mix(in srgb, var(--fire2) 15%, #fff);
+  --moon-mid: color-mix(in srgb, var(--fire2) 50%, #fff);
+  --moon-rim: color-mix(in srgb, var(--fire) 62%, #fff);
   --moon-blue: hsl(calc(var(--h) + 18) 46% 78%);
 
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -170,12 +178,44 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .nav__links a.is-here { color: var(--text); }
 .nav__links a::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 2px; height: 2px; border-radius: 1px; background: linear-gradient(90deg, var(--accent), var(--accent2)); box-shadow: 0 0 10px var(--accent-glow); opacity: 0; transform: scaleX(0.4); transition: opacity 0.3s, transform 0.3s var(--ease); }
 .nav__links a.is-here::after { opacity: 1; transform: none; }
-.nav__end { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.nav__end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
-.lang { display: flex; padding: 3px; border-radius: 9px; background: rgb(255 255 255 / 0.05); border: 1px solid var(--hairline); }
-.lang button { padding: 4px 9px; border: 0; border-radius: 6px; background: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-muted); transition: color 0.2s, background-color 0.2s; }
-.lang button:hover { color: var(--text); }
-.lang button[aria-pressed="true"] { background: rgb(255 255 255 / 0.1); color: var(--text); }
+/* Scene and language in the navigation: a button that opens a small menu
+   (pick.js). The scene's button shows the shown world's small picture, the
+   language's its code. */
+.pick { position: relative; }
+.pick__toggle {
+  display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 6px 0 5px;
+  border-radius: 9px; background: rgb(255 255 255 / 0.05); border: 1px solid var(--hairline);
+  color: var(--text-muted); transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+}
+.pick__toggle--text { padding-left: 10px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-dim); }
+.pick__toggle:hover, .pick__toggle[aria-expanded="true"] { color: var(--text); background: rgb(255 255 255 / 0.09); border-color: rgb(255 255 255 / 0.16); }
+.pick__toggle .icon { stroke-width: 3; transition: transform 0.25s var(--ease); }
+.pick__toggle[aria-expanded="true"] .icon { transform: rotate(180deg); }
+.pick__menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; min-width: 160px; padding: 6px;
+  border-radius: 12px; background: hsl(var(--h) var(--s) 8% / 0.94); border: 1px solid var(--hairline);
+  box-shadow: var(--sheen), 0 24px 60px -20px rgb(0 0 0 / 0.9);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  animation: menu-in 0.18s var(--ease);
+}
+.pick__menu[hidden] { display: none; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } }
+.pick__menu button {
+  display: flex; align-items: center; gap: 11px; width: 100%; padding: 7px 10px;
+  border: 0; border-radius: 8px; background: none; text-align: left; white-space: nowrap;
+  font-size: 13.5px; color: var(--text-dim); transition: background-color 0.15s, color 0.15s;
+}
+.pick__menu button:hover, .pick__menu button:focus-visible { background: rgb(255 255 255 / 0.07); color: var(--text); }
+.pick__menu button:focus-visible { outline-offset: -2px; }
+.pick__menu button[aria-checked="true"] { color: var(--text); }
+/* The chosen one: a glowing dot at the end of its line. */
+.pick__menu button[aria-checked="true"]::after { content: ""; flex: none; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+/* "Random" stands apart from the worlds, a line below it. */
+.pick__menu [data-world="random"] { position: relative; margin-bottom: 9px; }
+.pick__menu [data-world="random"]::before { content: ""; position: absolute; left: 10px; right: 10px; bottom: -5px; height: 1px; background: var(--divider); }
+.pick__code { flex: none; width: 26px; padding: 2px 0; border-radius: 5px; border: 1px solid var(--hairline); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-align: center; color: var(--text-muted); }
 
 /* ---------- The landscape ---------- */
 
@@ -183,15 +223,15 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .layer { position: absolute; will-change: transform; }
 .ridge { left: -4%; bottom: 0; width: 108%; height: 100%; }
 .scene__stars { inset: 0; width: 100%; height: 100%; fill: #fff; }
-.scene__glow { inset: 0; background: radial-gradient(58% 44% at 62% 72%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 72%); }
+.scene__glow { inset: 0; background: radial-gradient(58% 44% at 62% 72%, color-mix(in srgb, var(--fire) 30%, transparent), transparent 72%); }
 .moon {
   position: absolute; right: 15%; top: 15%;
   width: clamp(84px, 10.5vw, 164px); aspect-ratio: 1; border-radius: 50%;
-  background: radial-gradient(circle at 36% 34%, #fff, color-mix(in srgb, var(--accent2) 50%, #fff) 55%, color-mix(in srgb, var(--accent) 62%, #fff));
-  box-shadow: 0 0 50px 6px color-mix(in srgb, var(--accent2) 38%, transparent), 0 0 190px 70px color-mix(in srgb, var(--accent) 17%, transparent);
+  background: radial-gradient(circle at 36% 34%, #fff, var(--moon-mid) 55%, var(--moon-rim));
+  box-shadow: 0 0 50px 6px color-mix(in srgb, var(--fire2) 38%, transparent), 0 0 190px 70px color-mix(in srgb, var(--fire) 17%, transparent);
 }
 .scene__embers { left: -4%; bottom: 0; width: 108%; height: 100%; pointer-events: none; }
-.scene__embers i { position: absolute; width: var(--size); height: var(--size); border-radius: 50%; background: var(--accent2); box-shadow: 0 0 7px 1px var(--accent-glow); opacity: 0; animation: ember var(--time) linear infinite; }
+.scene__embers i { position: absolute; width: var(--size); height: var(--size); border-radius: 50%; background: var(--fire2); box-shadow: 0 0 7px 1px var(--fire-glow); opacity: 0; animation: ember var(--time) linear infinite; }
 .is-away .scene__embers i, .is-away .twinkle { animation-play-state: paused; }
 .twinkle { animation: twinkle 5s ease-in-out infinite; }
 
@@ -227,7 +267,7 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 @keyframes bat-flap { to { transform: scaleY(-0.45); } }
 
 /* Fireflies: wandering, glowing up and fading. */
-.fly { fill: var(--accent2); opacity: 0.7; filter: drop-shadow(0 0 3px var(--accent)); animation: fly-drift 9s ease-in-out infinite alternate, fly-glow 3s ease-in-out infinite; }
+.fly { fill: var(--fire2); opacity: 0.7; filter: drop-shadow(0 0 3px var(--fire)); animation: fly-drift 9s ease-in-out infinite alternate, fly-glow 3s ease-in-out infinite; }
 @keyframes fly-drift { to { transform: translate(var(--dx), var(--dy)); } }
 @keyframes fly-glow { 0%, 100% { opacity: 0.1; } 50% { opacity: 1; } }
 .is-away .bat, .is-away .bat__wings, .is-away .fly { animation-play-state: paused; }
@@ -240,6 +280,188 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
   45%, 45.5%, 91%, 91.3%, 93.3%, 93.6% { transform: scaleY(0.1); }
 }
 .is-away .blink { animation-play-state: paused; }
+
+/* ---------- The hero's worlds (WORLDS in main.js) ----------
+   The world's key stands on the root (data-world), so it tints the whole
+   page: each world brings one of the addon's colour schemes (UI/Theme.lua:
+   hue and saturation of the grounds, the accent), Lemon for the moonlit
+   night as before, and its own sky and ridges for every scene (the header,
+   the foot, the small ones in the demos). The camp and the fire stay.
+   --magic and --magic2 are a world's own light (tower windows, wisps,
+   northern lights), --magic3 its second colour of northern lights. */
+
+:root[data-world="arcane"] {
+  /* Lilac */
+  --h: 240; --s: 19%; --accent: #8f7cff; --accent2: #e08cff; --on-accent: #120b33;
+  --shot: lilac;
+  --sky-top: hsl(262 52% 5%);
+  --sky-mid: hsl(260 44% 12%);
+  --sky-low: hsl(282 40% 27%);
+  --r1a: hsl(262 30% 19%);
+  --r1b: hsl(280 32% 27%);
+  --r2a: hsl(252 30% 12.5%);
+  --r2b: hsl(262 30% 18%);
+  --r3a: hsl(230 30% 8.5%);
+  --r3b: hsl(245 28% 13%);
+  --r4a: hsl(205 28% 6.4%);
+  --r4b: hsl(215 26% 9.5%);
+  --magic: #a47bff;
+  --magic2: #f0e4ff;
+  --magic3: #4fd1ff;
+  --water: #d8c6ff;
+  --mist: hsl(270 50% 70%);
+}
+:root[data-world="dusk"] {
+  /* Rose, as the clouds lit from below; the fire burns in amber, as the sun */
+  --h: 330; --s: 13%; --accent: #f0567c; --accent2: #ff9d8c; --on-accent: #2b0711;
+  --shot: rose;
+  --fire: #f2a93b;
+  --fire2: #ffd670;
+  --sky-top: hsl(236 42% 9%);
+  --sky-mid: hsl(282 30% 21%);
+  --sky-low: hsl(18 78% 52%);
+  --r1a: hsl(310 20% 31%);
+  --r1b: hsl(12 48% 44%);
+  --r2a: hsl(290 22% 18%);
+  --r2b: hsl(335 26% 26%);
+  --r3a: hsl(255 24% 11%);
+  --r3b: hsl(285 22% 16%);
+  --r4a: hsl(220 24% 6.6%);
+  --r4b: hsl(240 20% 10%);
+  --moon-mid: #ffd98a;
+  --moon-rim: #ff8a45;
+  --halo-in: #ffe2a0;
+  --halo-out: #ff7a3a;
+  --cloud: hsl(285 26% 20%);
+  --cloud-lit: hsl(345 45% 40%);
+  --cloud-rim: #ffb36b;
+  --water: #ffe1c0;
+  --mist: hsl(20 60% 65%);
+}
+:root[data-world="dusk"] .scene__stars { opacity: 0.35; }
+:root[data-world="forest"] {
+  /* Mint */
+  --h: 226; --s: 30%; --accent: #35d3bf; --accent2: #92f0a8; --on-accent: #04211d;
+  --shot: mint;
+  --sky-top: hsl(218 50% 5%);
+  --sky-mid: hsl(204 46% 11%);
+  --sky-low: hsl(176 38% 24%);
+  --r1a: hsl(188 28% 16%);
+  --r1b: hsl(176 30% 23%);
+  --r2a: hsl(194 30% 11.5%);
+  --r2b: hsl(184 30% 17%);
+  --r3a: hsl(200 32% 8%);
+  --r3b: hsl(192 30% 12.5%);
+  --r4a: hsl(205 30% 6.4%);
+  --r4b: hsl(200 28% 9.5%);
+  --magic: #62e6ff;
+  --magic2: #e2fcff;
+  --mist: hsl(180 45% 72%);
+}
+/* In the old forest the fireflies are wisps. */
+:root[data-world="forest"] .fly { fill: var(--magic2); filter: drop-shadow(0 0 4px var(--magic)); }
+:root[data-world="frost"] {
+  /* Amber, warm against the cold; the fire and the braziers burn in it */
+  --h: 257; --s: 13%; --accent: #f2a93b; --accent2: #ffd670; --on-accent: #1a1206;
+  --shot: amber;
+  --fire: #f2a93b;
+  --fire2: #ffd670;
+  --sky-top: hsl(224 55% 5%);
+  --sky-mid: hsl(214 50% 11%);
+  --sky-low: hsl(198 42% 25%);
+  --r1a: hsl(212 28% 24%);
+  --r1b: hsl(204 30% 30%);
+  --r2a: hsl(214 30% 14%);
+  --r2b: hsl(208 28% 20%);
+  --r3a: hsl(210 30% 8.5%);
+  --r3b: hsl(205 28% 13%);
+  --r4a: hsl(215 28% 6.4%);
+  --r4b: hsl(212 26% 9.5%);
+  --snow: hsl(205 50% 90%);
+  --magic: #4ff0b0;
+  --magic2: #dcfff0;
+  --magic3: #8a9dff;
+  --mist: hsl(200 40% 80%);
+}
+
+.world { inset: 0; pointer-events: none; }
+/* The sky's sheets may draw above their box: northern lights reach past the
+   top of the drawing where a wide window cuts it, and while they sway (or
+   the parallax moves them down) the cut would show as a hard line. */
+.world .ridge { overflow: visible; }
+.aurora__part, .clouds__part { position: absolute; inset: 0; will-change: transform, opacity; }
+.aurora__part { transform-origin: 50% 40%; animation: aurora 17s ease-in-out infinite alternate; }
+@keyframes aurora {
+  0% { transform: translate3d(-14px, 0, 0) scaleY(0.94); opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { transform: translate3d(18px, -6px, 0) scaleY(1.06); opacity: 0.8; }
+}
+.clouds__part { animation: clouds 70s ease-in-out infinite alternate; }
+@keyframes clouds { to { transform: translate3d(-48px, 0, 0); } }
+
+/* Pennants on the towers, floating islands, a beam, water falling,
+   braziers. */
+.pennant { transform-box: fill-box; transform-origin: 0 50%; animation: pennant 1.8s ease-in-out infinite alternate; }
+@keyframes pennant { from { transform: skewY(-10deg); } to { transform: skewY(8deg) scaleX(0.82); } }
+.bob { animation: bob 8s ease-in-out infinite alternate; }
+@keyframes bob { from { transform: translateY(-6px); } to { transform: translateY(7px); } }
+.beam { animation: beam 7s ease-in-out infinite alternate; }
+@keyframes beam { from { opacity: 0.5; } to { opacity: 1; } }
+.fall__flow { stroke-dasharray: 16 26; stroke-linecap: round; opacity: 0.6; animation: fall 1.4s linear infinite; }
+@keyframes fall { to { stroke-dashoffset: -42; } }
+.flicker { transform-box: fill-box; transform-origin: 50% 70%; animation: torch 0.9s ease-in-out infinite alternate; }
+@keyframes torch { from { opacity: 0.75; transform: scale(0.9); } to { opacity: 1; transform: scale(1.08); } }
+
+/* The windows at the top of the wizard's tower flash at odd moments, as if
+   mages inside were casting spells: three windows in rhythms of their own
+   that seldom meet, now and then a burst of light in the chamber. */
+.spell { animation: spell 3.1s ease-out infinite; }
+.spell--2 { animation-duration: 4.7s; animation-delay: -1.3s; }
+.spell--3 { animation-duration: 3.9s; animation-delay: -2.6s; }
+@keyframes spell {
+  0%, 100% { opacity: 0.45; fill: var(--magic); }
+  5% { opacity: 1; fill: var(--magic2); }
+  11% { opacity: 0.5; fill: var(--magic); }
+  37% { opacity: 0.55; }
+  39% { opacity: 1; fill: var(--magic2); }
+  41% { opacity: 0.6; fill: var(--magic); }
+  43% { opacity: 0.95; fill: var(--magic2); }
+  49% { opacity: 0.45; fill: var(--magic); }
+  76% { opacity: 0.5; }
+  79% { opacity: 0.9; }
+  86% { opacity: 0.45; }
+}
+.spell--glow { transform-box: fill-box; transform-origin: center; animation: spell-glow 5.3s ease-out -0.8s infinite; }
+@keyframes spell-glow {
+  0%, 38%, 47%, 79%, 86%, 100% { opacity: 0; transform: scale(0.7); }
+  40% { opacity: 0.9; transform: scale(1.1); }
+  81% { opacity: 0.6; transform: scale(0.95); }
+}
+
+/* A dragon gliding across the sky with slow beats of its wings. */
+.dragon { animation: dragon-fly 56s linear infinite; }
+.dragon__wing { transform-box: fill-box; transform-origin: 60% 100%; animation: dragon-flap 1.5s ease-in-out infinite alternate; }
+@keyframes dragon-fly {
+  0% { transform: translate(260px, 40px); opacity: 0; }
+  6%, 90% { opacity: 1; }
+  50% { transform: translate(-560px, -36px); }
+  100% { transform: translate(-1400px, 10px); opacity: 0; }
+}
+@keyframes dragon-flap { from { transform: scaleY(1); } to { transform: scaleY(-0.4); } }
+
+/* Snow falling. */
+.scene__snow { inset: 0; overflow: hidden; }
+.scene__snow i { position: absolute; top: -3%; width: var(--size); height: var(--size); border-radius: 50%; background: #fff; opacity: 0; box-shadow: 0 0 4px rgb(255 255 255 / 0.5); animation: snowfall var(--time) linear infinite; }
+@keyframes snowfall {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  8%, 88% { opacity: var(--o); }
+  100% { transform: translate3d(var(--drift), var(--fall), 0); opacity: 0; }
+}
+.is-away :is(.aurora__part, .clouds__part, .pennant, .bob, .spell, .beam, .fall__flow, .flicker, .dragon, .dragon__wing, .scene__snow i) { animation-play-state: paused; }
+
+/* Switching worlds: the old one fades out, the new one in. */
+.hero > .scene { transition: opacity 0.3s var(--ease); }
+.hero > .scene.is-fading { opacity: 0; }
 
 /* ---------- Hero ---------- */
 
@@ -264,6 +486,21 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .hero__cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
 .hero__facts { display: flex; flex-wrap: wrap; gap: 6px 0; margin-top: 34px; font-size: 13px; color: var(--text-muted); }
 .hero__facts li + li::before { content: "·"; margin: 0 12px; opacity: 0.7; }
+
+/* A small picture of a world: sky, moon (or sun) and a dark hill in its
+   colours. */
+.worlds__dot {
+  flex: none; width: 20px; height: 20px; border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 2px 6px rgb(0 0 0 / 0.4);
+}
+/* By chance: the five skies as slices. */
+.worlds__dot--random { background: conic-gradient(from 20deg, hsl(190 38% 26%) 0 20%, hsl(282 42% 30%) 0 40%, hsl(18 70% 48%) 0 60%, hsl(176 38% 26%) 0 80%, hsl(150 50% 32%) 0); }
+.worlds__dot--night { background: linear-gradient(160deg, transparent 64%, hsl(190 30% 6%) 65%), radial-gradient(circle at 64% 44%, #fff6c4 0 19%, transparent 22%), linear-gradient(180deg, hsl(190 36% 8%), hsl(190 38% 30%)); }
+.worlds__dot--arcane { background: linear-gradient(160deg, transparent 64%, hsl(252 30% 9%) 65%), radial-gradient(circle at 64% 44%, #fff6c4 0 19%, transparent 22%), linear-gradient(180deg, hsl(262 52% 9%), hsl(282 42% 34%)); }
+.worlds__dot--dusk { background: linear-gradient(160deg, transparent 64%, hsl(290 22% 12%) 65%), radial-gradient(circle at 64% 50%, #ffd98a 0 22%, transparent 25%), linear-gradient(180deg, hsl(282 30% 22%), hsl(18 78% 52%)); }
+.worlds__dot--forest { background: linear-gradient(160deg, transparent 64%, hsl(194 30% 7%) 65%), radial-gradient(circle at 30% 70%, #62e6ff 0 7%, transparent 11%), radial-gradient(circle at 64% 44%, #fff6c4 0 19%, transparent 22%), linear-gradient(180deg, hsl(205 46% 10%), hsl(176 38% 28%)); }
+.worlds__dot--frost { background: linear-gradient(160deg, transparent 64%, hsl(214 30% 10%) 65%), linear-gradient(170deg, transparent 18%, rgb(79 240 176 / 0.75) 30%, transparent 42%), radial-gradient(circle at 70% 52%, #fff6c4 0 17%, transparent 20%), linear-gradient(180deg, hsl(214 50% 10%), hsl(198 42% 30%)); }
 /* Live feed cards in the column beside the copy: the newest level with the
    title, the rows before it below, towards the moon. Left-aligned as in the
    game, in a box as wide as the widest card in the middle of the column,
@@ -462,7 +699,7 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .view::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 35%, rgb(0 0 0 / 0.5)); border-radius: inherit; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1); pointer-events: none; }
 .view__scene { position: absolute; inset: -14% 0; z-index: -2; will-change: transform; }
 .scene--mini .moon { right: 16%; top: 20%; width: 64px; }
-.scene--dusk { --sky-low: color-mix(in srgb, var(--accent) 16%, hsl(var(--h) calc(var(--s) * 2) 24%)); }
+.scene--dusk { --sky-low: color-mix(in srgb, var(--fire) 16%, hsl(var(--h) calc(var(--s) * 2) 24%)); }
 /* Below the window: the chat on the left, the tooltip on the right. */
 .view--band { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 20px; min-height: 300px; }
 .view--band .chat { order: -1; flex: 0 1 620px; min-width: 0; }
@@ -883,7 +1120,7 @@ div.nrow:hover { background-color: transparent; }
   inset: auto 0 0 0; height: clamp(460px, 68vw, 860px); z-index: -1;
   background: linear-gradient(180deg, transparent, var(--sky-mid) 24%, hsl(var(--h) calc(var(--s) * 2) 22%) 52%);
 }
-.scene--foot .scene__glow { position: absolute; inset: 0; background: radial-gradient(50% 40% at 50% 62%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 72%); }
+.scene--foot .scene__glow { position: absolute; inset: 0; background: radial-gradient(50% 40% at 50% 62%, color-mix(in srgb, var(--fire) 20%, transparent), transparent 72%); }
 .scene--foot .scene__embers { position: absolute; }
 
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
@@ -1134,5 +1371,5 @@ code { padding: 1px 6px; border-radius: 5px; background: rgb(255 255 255 / 0.07)
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal, .js .story.reveal:nth-child(n) { opacity: 1; transform: none; }
-  .scene__embers { display: none; }
+  .scene__embers, .scene__snow { display: none; }
 }

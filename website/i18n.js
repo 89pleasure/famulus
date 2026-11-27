@@ -184,6 +184,13 @@ window.FAMULUS_I18N = {
     nav_download: 'Download',
     nav_main: 'Hauptnavigation',
     nav_lang: 'Sprache',
+    world_pick: 'Szene',
+    world_random: 'Zufällig',
+    world_night: 'Mondnacht',
+    world_arcane: 'Arkanturm',
+    world_dusk: 'Abendrot',
+    world_forest: 'Weltenbaum',
+    world_frost: 'Frostgipfel',
 
     hero_eyebrow: 'Addon für World of Warcraft: Forever',
     hero_title: 'Für alle, mit denen <br>du <em>spielst.</em>',

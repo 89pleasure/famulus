@@ -84,6 +84,9 @@
     set(key, value) {
       try { localStorage.setItem(key, value); } catch { /* private mode */ }
     },
+    remove(key) {
+      try { localStorage.removeItem(key); } catch { /* private mode */ }
+    },
   };
 
   // -------------------------------------------------------------------------
@@ -125,14 +128,17 @@
     }
     document.title = t('meta_title');
     $('meta[name="description"]').content = t('meta_desc');
-    for (const button of $$('.lang button')) button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
+    languages.mark(item => item.dataset.lang === lang);
+    $('#langs-current').textContent = lang.toUpperCase();
+    const toggle = $('#langs-toggle');
+    toggle.setAttribute('aria-label', `${t('nav_lang')}: ${$(`#langs-menu [data-lang="${lang}"]`).lastElementChild.textContent}`);
+    toggle.title = toggle.getAttribute('aria-label');
     if (remember) store.set('famulus-lang', lang);
     for (const render of renderers) render();
   }
 
-  for (const button of $$('.lang button')) {
-    button.addEventListener('click', () => setLanguage(button.dataset.lang, true));
-  }
+  // The language beside the scene: a button with its code opens the choice.
+  const languages = window.FamulusPick($('#langs'), item => setLanguage(item.dataset.lang, true));
 
   // -------------------------------------------------------------------------
   // Coming in on scroll, drifting with it, and the navigation's state.
@@ -2009,12 +2015,10 @@
   const CAMP = {
     fire: 1150,
     size: 1,
-    // A group of four with the hunter's wolf; the tent, the tree and the
-    // horse stand farther back.
+    // A group of four with the hunter's wolf; the old tree stands farther
+    // back.
     cast: [
       { figure: 'oak', at: 18.5, back: true, facing: 1, rim: false },
-      { figure: 'horse', at: 25, back: true, facing: 1, rim: false, scale: 1.15 },
-      { figure: 'tent', at: -22, back: true },
       { figure: 'mage', at: -15.5 },
       { figure: 'wolf', at: -11.2, scale: 0.9 },
       { figure: 'warrior', at: -6.4 },
@@ -2027,7 +2031,7 @@
     { seed: 11, base: 650, amp: 330, scale: 520, sharp: true, tone: 1, depth: 0.16, haze: 50, valley: { at: 0.72, width: 0.2, depth: 1 } },
     { seed: 23, base: 725, amp: 290, scale: 400, sharp: true, tone: 2, depth: 0.3, haze: 50, valley: { at: 0.72, width: 0.2, depth: 1 } },
     { seed: 37, base: 750, amp: 110, scale: 520, octaves: 3, tone: 3, depth: 0.48, valley: { at: 0.72, width: 0.12, depth: 0.9 }, trees: { gap: [9, 24], height: [12, 34], clump: 140, broad: 0.45, clear: [930, 1420] } },
-    { seed: 43, base: 770, amp: 70, scale: 420, octaves: 3, tone: 4, depth: 0.7, plateau: { from: 890, to: 1475, y: 640, edge: 170 }, grass: { gap: [5, 14], height: [4, 11] }, bushes: [[905, 20], [1530, 22]], cast: [{ figure: 'deer', x: 1482, scale: 0.55, facing: -1 }], camp: CAMP, flies: { from: 860, to: 1540, count: 14, seed: 3 } },
+    { seed: 43, base: 770, amp: 70, scale: 420, octaves: 3, tone: 4, depth: 0.7, plateau: { from: 890, to: 1475, y: 640, edge: 170 }, grass: { gap: [5, 14], height: [4, 11] }, bushes: [[905, 20], [1530, 22]], camp: CAMP, flies: { from: 860, to: 1540, count: 14, seed: 3 } },
     { seed: 59, base: 886, amp: 40, scale: 380, octaves: 2, tone: 5, depth: 1, grass: { gap: [6, 18], height: [6, 20] }, trees: { gap: [22, 60], height: [30, 330], frame: [0.35, 1], broad: 0.35, bushes: 0.15, clear: [900, 1400] }, flies: { from: 1250, to: 1600, count: 6, seed: 9, height: 120 } },
   ];
 
@@ -2045,11 +2049,119 @@
     { seed: 79, base: 862, amp: 70, scale: 380, octaves: 2, tone: 5, fire: 800, trees: { gap: [22, 60], height: [30, 300], frame: [0.3, 1] } },
   ];
 
+  // The worlds of the hero: the moonlit night and four more. Each keeps the
+  // camp against the large moon (or a setting sun) and changes the world
+  // around it; their colours are #scene[data-world] in styles.css.
+  //   moon      see FamulusScene.moon (also bats and a dragon)
+  //   aurora    northern lights, see FamulusScene.aurora
+  //   clouds    clouds lit from below, see FamulusScene.clouds
+  //   snowfall  how many snowflakes (half as many on phones)
+  //   layers    the ridges, far to near, as HERO
+  const [FAR, MID, WOODS, HILL, GROUND] = HERO;
+  const WORLDS = {
+    night: { moon: MOON, layers: HERO },
+
+    // A wizard's tower on a crag beside the moon, islands of rock floating in
+    // a violet sky, the sky shimmering with arcane light.
+    arcane: {
+      moon: MOON,
+      aurora: {
+        depth: 0.05,
+        bands: [
+          { y: 250, amp: 46, height: 180, seed: 4, color: 'var(--magic)', from: 760, to: 1760, blur: 2.6 },
+          { y: 150, amp: 30, height: 100, seed: 9, color: 'var(--magic3)', from: -100, to: 1000, blur: 2.2 },
+        ],
+      },
+      layers: [
+        { ...FAR, float: [{ figure: 'isle', x: 1395, y: 262, scale: 0.86, facing: -1, tone: 2 }, { figure: 'rock', x: 1560, y: 170, scale: 0.8, tone: 2 }] },
+        { ...MID, cast: [{ figure: 'tower', x: 912, scale: 0.68, facing: -1, sink: 24 }] },
+        { ...WOODS, mist: { y: 690, height: 90, opacity: 0.22 } },
+        HILL,
+        GROUND,
+      ],
+    },
+
+    // A castle on the heights at sunset, a waterfall far off, long clouds lit
+    // from beneath, a dragon gliding across the sky.
+    dusk: {
+      moon: { ...MOON, small: null, bats: [], dragons: [[1500, 300, 0.95]] },
+      clouds: {
+        depth: 0.06,
+        clouds: [[1240, 130, 480, 40, 8], [1250, 452, 560, 20, 3], [250, 480, 560, 26, 12], [560, 96, 380, 24, 21]],
+      },
+      layers: [
+        { ...FAR, cast: [{ figure: 'cascade', x: 150, scale: 0.9, sink: 6 }] },
+        { ...MID, cast: [{ figure: 'keep', x: 850, scale: 0.76, facing: -1, sink: 46 }] },
+        { ...WOODS, mist: { y: 700, height: 110, opacity: 0.3, puffs: [[150, 660, 140, 40], [560, 700, 200, 40], [760, 712, 260, 36]] } },
+        { ...HILL, flies: { ...HILL.flies, count: 8 } },
+        GROUND,
+      ],
+    },
+
+    // A world tree on the horizon, its crown over half the sky, an old forest
+    // below it, a moonwell at its edge, glowing mushrooms and wisps on the
+    // hill, mist in the valleys.
+    forest: {
+      moon: MOON,
+      layers: [
+        { seed: 11, base: 610, amp: 90, scale: 520, octaves: 3, tone: 1, depth: 0.16, haze: 60, valley: { at: 0.72, width: 0.2, depth: 1 }, trees: { gap: [7, 15], height: [14, 26], bushes: 0.5, giants: [[400, 480, 'world']] } },
+        { seed: 23, base: 690, amp: 100, scale: 400, octaves: 3, tone: 2, depth: 0.3, haze: 60, valley: { at: 0.72, width: 0.2, depth: 1 }, mist: { y: 600, height: 140, opacity: 0.3, puffs: [[400, 590, 260, 50]] }, trees: { gap: [8, 18], height: [18, 40], bushes: 0.3 } },
+        { ...WOODS, mist: { y: 720, height: 110, opacity: 0.3, puffs: [[800, 690, 200, 40]] }, trees: { ...WOODS.trees, broad: 0.2, clear: [770, 1420] }, cast: [{ figure: 'well', x: 810, scale: 0.95, sink: 4 }] },
+        { ...HILL, cast: [{ figure: 'shrooms', x: 882, scale: 1.7, sink: 2 }, { figure: 'shrooms', x: 1510, scale: 1.3, facing: -1, sink: 2 }], flies: { ...HILL.flies, count: 22 } },
+        { ...GROUND, trees: { ...GROUND.trees, broad: 0.2 } },
+      ],
+    },
+
+    // Snow on the peaks, northern lights over them, a hold of the mountain
+    // folk with braziers burning at the foot of the mountains, snow falling.
+    frost: {
+      moon: MOON,
+      aurora: {
+        depth: 0.05,
+        bands: [
+          { y: 210, amp: 60, height: 200, seed: 21, color: 'var(--magic)', from: 300, to: 1750, blur: 2.6 },
+          { y: 130, amp: 30, height: 110, seed: 33, color: 'var(--magic3)', from: -100, to: 900, blur: 2.2 },
+        ],
+      },
+      snowfall: 70,
+      layers: [
+        { ...FAR, amp: 380, snow: { line: 450, depth: 60 } },
+        { ...MID, amp: 320, snow: { line: 530, depth: 50 }, cast: [{ figure: 'hold', x: 868, scale: 0.7, sink: 40 }] },
+        { ...WOODS, mist: { y: 700, height: 80, opacity: 0.2 }, trees: { ...WOODS.trees, broad: 0 } },
+        { ...HILL, flies: null },
+        { ...GROUND, trees: { ...GROUND.trees, broad: 0, bushes: 0 }, flies: null },
+      ],
+    },
+  };
+
   const hero = $('#top');
   const heroScene = $('#scene');
-  Scene.moon(heroScene, MOON);
-  const heroLayers = Scene.build(heroScene, HERO);
-  const heroCamp = heroLayers.find(layer => layer.camp);
+  let heroCamp;
+  // Draws a world into the hero, in place of the one before. Its key on the
+  // root brings its colours to the whole page (styles.css).
+  function drawHero(name) {
+    const spec = WORLDS[name];
+    for (const old of $$(':scope > .ridge, :scope > .world', heroScene)) old.remove();
+    root.dataset.world = name;
+    Scene.moon(heroScene, spec.moon);
+    if (spec.aurora) Scene.aurora(heroScene, spec.aurora);
+    if (spec.clouds) Scene.clouds(heroScene, spec.clouds);
+    heroCamp = Scene.build(heroScene, spec.layers).find(layer => layer.camp);
+    if (spec.snowfall) Scene.snow(heroScene, innerWidth < 760 ? spec.snowfall / 2 : spec.snowfall);
+  }
+  // The world was settled before the first paint (the script in the head of
+  // index.html): the one asked for with ?world=, the one the reader chose
+  // before (remembered like the language), or one by chance. Only a choice in
+  // the menu is remembered, not ?world=.
+  const worldKeys = Object.keys(WORLDS);
+  const isWorld = key => Object.hasOwn(WORLDS, key || '');
+  const byChance = (not = null) => {
+    const keys = worldKeys.filter(key => key !== not);
+    return keys[Math.floor(Math.random() * keys.length)];
+  };
+  let chosenWorld = isWorld(store.get('famulus-scene')) ? store.get('famulus-scene') : null;
+  let world = isWorld(root.dataset.world) ? root.dataset.world : chosenWorld || byChance();
+  drawHero(world);
   Scene.stars($('.scene__stars', heroScene), 170, 5);
   Scene.build($('#scene-alias'), glimpse(100));
   Scene.build($('#scene-feed'), glimpse(200));
@@ -2057,9 +2169,9 @@
   const footLayers = Scene.build(footScene, FOOT);
 
   // In one column the camp stands below the text, and the drawing pans so
-  // that it is in view, from the tent to the horse (the CSS makes it smaller).
+  // that it is in view, from the mage to the old tree (the CSS makes it smaller).
   const heroInColumn = matchMedia('(max-width: 980px)');
-  const CAMP_MIDDLE = 1200;
+  const CAMP_MIDDLE = 1170;
 
   // Sparks rise from the fires; where they are depends on how the drawing
   // is cut to the window, so it is found again after a resize. (Whoever
@@ -2110,8 +2222,65 @@
   setLanguage(asked || known(store.get('famulus-lang')) || 'en', false);
 
   kindle();
-  Scene.parallax(hero);
+  const depth = Scene.parallax(hero);
   watch(document);
+
+  // The scene beside the languages: a button with the shown world's small
+  // picture opens a menu of all of them (pick.js). A world picked there is
+  // remembered (famulus-scene); "Random" forgets it and shows another one.
+  // The world fades out, is drawn anew and fades in.
+  let fading = 0;
+  function markWorld() {
+    scenes.mark(item => item.dataset.world === (chosenWorld || 'random'));
+    $('#scenes-current').className = `worlds__dot worlds__dot--${world}`;
+    const toggle = $('#scenes-toggle');
+    toggle.setAttribute('aria-label', `${t('world_pick')}: ${t(`world_${world}`)}`);
+    toggle.title = toggle.getAttribute('aria-label');
+  }
+  // The window below the header in the world's colour scheme (--shot, as the
+  // script behind the picture in index.html picks it at first): the new
+  // picture is loaded and decoded before it takes the old one's place.
+  function showShot() {
+    const img = $('#shot-window');
+    const shot = getComputedStyle(root).getPropertyValue('--shot').trim() || 'lemon';
+    const srcset = `assets/shots/window-${shot}-1180.webp 1180w, assets/shots/window-${shot}-1770.webp 1770w`;
+    if (img.getAttribute('srcset') === srcset) return;
+    const next = new Image();
+    next.sizes = img.sizes;
+    next.srcset = srcset;
+    next.src = `assets/shots/window-${shot}-1180.webp`;
+    next.decode().catch(() => {}).then(() => {
+      if (getComputedStyle(root).getPropertyValue('--shot').trim() !== shot) return; // switched on meanwhile
+      img.srcset = srcset;
+      img.src = next.src;
+    });
+  }
+  function switchWorld(next) {
+    if (next === world) return;
+    world = next;
+    markWorld();
+    const swap = () => {
+      drawHero(world);
+      kindle();
+      depth.refresh();
+      showShot();
+      heroScene.classList.remove('is-fading');
+    };
+    clearTimeout(fading);
+    if (motion.matches) return swap();
+    heroScene.classList.add('is-fading');
+    fading = setTimeout(swap, 300);
+  }
+  const scenes = window.FamulusPick($('#scenes'), item => {
+    const key = item.dataset.world;
+    chosenWorld = isWorld(key) ? key : null;
+    if (chosenWorld) store.set('famulus-scene', chosenWorld);
+    else store.remove('famulus-scene');
+    switchWorld(chosenWorld || byChance(world));
+    markWorld();
+  });
+  renderers.push(markWorld);
+  markWorld();
   onScroll();
   // The book's cards change height once Inter has loaded; the dots follow.
   if (document.fonts) document.fonts.ready.then(spaceDots);
