@@ -265,11 +265,11 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .hero__facts { display: flex; flex-wrap: wrap; gap: 6px 0; margin-top: 34px; font-size: 13px; color: var(--text-muted); }
 .hero__facts li + li::before { content: "·"; margin: 0 12px; opacity: 0.7; }
 /* Live feed cards in the column beside the copy: the newest level with the
-   title, the rows before it below, towards the moon, each card in the middle
-   of the column, which lies about over the moon. 42px: the eyebrow's line
-   (20) and the title's margin (22). */
+   title, the rows before it below, towards the moon. Left-aligned as in the
+   game, in a box as wide as the widest card in the middle of the column,
+   which lies about over the moon. 42px: the eyebrow's line (20) and the
+   title's margin (22). */
 .hero__feed { align-self: start; justify-self: center; width: min(340px, 100%); margin-top: 42px; }
-.hero__feed .toast { left: 50%; translate: -50% 0; }
 
 /* The addon's window below the camp: it rises into the foot of the hero and
    fades into the page further down, as if the screenshot went on. The window

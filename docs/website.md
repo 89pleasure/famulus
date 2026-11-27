@@ -144,8 +144,10 @@ owner.
     centred (`FamulusScene.pan`). Otherwise it lay off to the right and the moon behind the
     buttons.
   - **Live feed cards above the moon (since 2026-11-27, the owner's request):** in the hero's
-    second column (`.hero__feed`), top-aligned with the title, each card centred in the column;
-    the stack grows down towards the moon. The column's middle lies about over the moon's
+    second column (`.hero__feed`), top-aligned with the title, the cards left-aligned as in the
+    game (centred they looked wrong to the owner) in a box of 340 px (the widest card) in the
+    middle of the column; the stack grows down towards the moon. The column's middle lies about
+    over the moon's
     (measured at 1440 × 900: 1058 against 1063 px; three cards end at about 346, the moon
     starts at 375; at 1280 × 720 the third card touches the moon's top). Hidden in one column
     (up to 980 px). From 2026-11-24 to 2026-11-27 they lay over the window's screenshot, where
