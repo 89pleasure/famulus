@@ -442,7 +442,7 @@ picture-book look are built and checked against the mock only.
     gives the reaction as the button in the book does (`ChronicleService.React`, sent by
     `Sharing.lua` as before): the button lights up
     (accent icon on `accentDeep`), and the card closes a second later (`CLOSE`), whether the
-    mouse is still on it or not. The feed only gives: a reaction is taken back in the
+    mouse is still on it or not; while the last three stay, it stays with the button lit. The feed only gives: a reaction is taken back in the
     chronicle, so a lit button does nothing more. No tooltip: the click and the lit button say
     enough (an earlier version had one; it was too much text). Only while reactions are on
     (`ChronicleService.ReactionsOn`, shared with the book); no button on the player's own
@@ -484,7 +484,8 @@ picture-book look are built and checked against the mock only.
   - Switches per event kind (`level`, `death`, `boss`, `achievement`, `ability`, `item`,
     `profession`, `skill`, `zone`); only `zone` is off by default (the owner's requirement:
     zones rather not, level-ups yes). Plus `own` (own events too, default off),
-    `sound` (see below) and `duration` (4, 7 or 12 seconds). A kind without a switch (newer
+    `sound` (see below), `duration` (4, 7 or 12 seconds) and `keep` (the last three stay, see
+    "Sliding in, waiting its turn, keeping the last three"). A kind without a switch (newer
     version at the companion's end) stays invisible. A new kind needs an entry in `KINDS` and its
     two texts.
   - **Sound (the owner's request, 2026-11-25: "a simple 2-click sound"):** A card comes with a
@@ -517,8 +518,58 @@ picture-book look are built and checked against the mock only.
     or item icon. At most three cards one below the other, the newest on top. The cards do not
     catch the mouse, so clicks go through to the world; only the reaction button does (see
     "Reacting from the live feed"). While the mouse is on it the card stays past its time, a
-    card already fading comes back, and once the mouse has left it goes 1.5 seconds later
-    (`LINGER`). After a reaction the card goes anyway (see there).
+    card already fading (or resting, see below) comes back, and once the mouse has left it goes
+    1.5 seconds later (`LINGER`). After a reaction the card goes anyway (see there), unless the
+    last three stay.
+  - **Sliding in, waiting its turn, keeping the last three (since 2026-11-27, variant B
+    "Groß, dann Zeile" on the page "Live-Feed: die letzten drei", claude.ai artifact
+    `NG2VrKDsUdstcMhxs4orDQ`):** checked against the mock only, not yet seen in game.
+    - **Only the newest card is large.** A new card comes in at the top from a little above
+      (`ENTER_FROM`); the one before it shrinks to a slim row (`card.slim`, 34 px: a 24 px crest,
+      then whose it is, a dot, what happened, on one line; no line below, no glowing dot, no
+      bundle badge; the reaction button 24 px), the others glide down (`SLIDE`, `UI.Tween` with
+      keys of their own per card, `card.slide` and `card.resize` for the band's size), and a
+      fourth sinks a little and fades at the bottom (`Drop`). Before, the fourth vanished at
+      once and the rest jumped. `Arrange` lays a card out for its form; `Layout` decides the
+      form (`index > 1` or resting). In a row the name takes at most half of the room. People
+      ("Who is nearby") show the people icon in a row instead of their crests.
+    - **Every card is seen:** the newest stays on top for a moment before the next comes
+      (`STEP` 1.2 s; with three waiting 0.9), so each is on screen for at least
+      three of them. What comes sooner waits (`Feed.Waiting()`) as a stack behind the top
+      card: up to two edges looking out above it and an accent badge "+4" at its top right
+      (`Deck`, `PaintDeck`; they hang on the top card and move with it). Before, ten cards in
+      one second showed only the last three; the other seven flashed by. A timer runs only
+      while something waits (`Pump`; a sooner one takes over when more join, the older one
+      then does nothing). This applies with the option off as well. The sound still comes
+      when the news arrives, once for a burst, not when a waiting card comes in.
+    - **Option `keep`** ("Keep the last three", off from the start): past its time a card
+      rests instead of fading out, until newer cards push it out; the newest too becomes a row
+      then, so at rest three rows stand there (about 115 px). `duration` says how long a card
+      counts as new. **Resting fades only the content** (`card.body`, alpha `REST` 0.6; its
+      line gone), never the card: a translucent band takes on the colour of what lies behind
+      it. The first version faded the whole card to 0.72, and the owner found it took on too
+      much of the accent (most likely the Edit Mode mark's, which the kept cards lie on).
+      Pointing at
+      the button of a resting card brings it up while the mouse is there. After a reaction the
+      card stays with its button lit. Switched off, the resting cards fade at once
+      (`Feed.SetKeep`, set by `LiveFeed.lua` on enabling and in `OnOptionChanged`). The cards of
+      "Who is nearby" stay too while the option is on, as they are cards of the same feed;
+      with the live feed off, nothing stays. After `/reload` or login the feed starts empty;
+      showing the last three from the chronicle again was rejected (reactions and "Who is
+      nearby" are not in the chronicle and could not come back).
+    - **Bundles:** the same event of several friends within six seconds (`BUNDLE`) shares a
+      card: a boss by its ID (else its name), deaths in one zone (a wipe), a challenge by its
+      ID. `LiveFeed.lua` gives the story `bundle` (the key), `join` and `names`; the feed joins
+      a story that waits or one on screen (not one fading), fills that card again and starts
+      its time anew. The head names them ("Jaina, Thrall and 3 more": alias, else first name,
+      three at most, `c_feed_others`), the crest's corner counts them like a bundle in the book
+      (`card.badge`), the line below names only the place (who was with whom belongs to one of
+      them), and a bundle has no reaction button. The player's own events never join.
+    - **Edit Mode:** while the last three stay, the mark is as tall as one card and two rows
+      with its label at the top (`Mark`, `MARK_HEAD`), and the cards lie in it instead of below
+      it. The anchor itself (and so the clamping to the screen) keeps the size of one card.
+    - Rejected: A (three large cards, about 250 px for good; built first, then the owner
+      preferred B) and C (no waiting; the feed grows to seven for a burst and shrinks back).
   - **Three rows (the owner's choice, 2026-11-27, variant A on the canvas "Famulus
     Live-Feed-Karten", claude.ai artifact `Nc3TTNw84YyQTuXhekkBNQ`):** The text stood on one
     line as a whole sentence ("Papa (Borin Ironbeard) defeats Edwin VanCleef"), so the band grew
@@ -581,7 +632,8 @@ picture-book look are built and checked against the mock only.
     ("I think"). The entry was correctly in the saved data, the feed was on,
     duration 4 seconds, position right of centre. Whether the card did not come or was overlooked
     is unresolved. Since then the feature writes one line per card into the `devLog` in developer
-    mode (`FEED`, "shown: <kind>" or "failed: …"; `ns:DevLog`), without names or text.
+    mode (`FEED`, "shown: <kind>", since 2026-11-27 also "waiting: <kind>" and "joined: <kind>",
+    or "failed: …"; `ns:DevLog`), without names or text.
   - **Position:** default top centre; saved account-wide in `FamulusDB.feed` like the
     window position. Moving in the game's Edit Mode or with `/fam feed`
     (`/fam feed reset` resets it, `/fam feed test` shows a sample card): then a highlighted area

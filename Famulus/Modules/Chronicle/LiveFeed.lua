@@ -5,6 +5,10 @@
 -- a click on their card in the chronicle does, while reactions are on
 -- (option "reactions" of Sharing.lua); the card then closes.
 --
+-- With "keep" (off from the start) the last three cards stay on screen
+-- instead of fading out. The same event of several friends at about the same
+-- time (a boss defeated together, a wipe, the same challenge) shares a card.
+--
 -- It listens to the chronicle, not to the game: no event, no timer of its
 -- own. The cards can be moved in the game's Edit Mode or with /fam feed.
 
@@ -32,6 +36,7 @@ local ICONS = {
 
 local options = {
     { key = "duration", type = "select", default = "normal", values = { "short", "normal", "long" } },
+    { key = "keep", type = "toggle", default = false },
     { key = "sound", type = "toggle", default = true },
     { key = "own", type = "toggle", default = false },
 }
@@ -63,16 +68,19 @@ function feed:Chime()
 end
 
 -- Shows the card story() makes. In developer mode the log says whether it
--- came up, so that "it did not appear" can be told from "it was overlooked".
+-- came up, waits its turn or joined another card, so that "it did not
+-- appear" can be told from "it was overlooked".
 local function Show(kind, story)
     local UI = ns.UI
     if not (UI and UI.Feed) then
         return
     end
+    local state
     local ok, problem = pcall(function()
-        UI.Feed.Show(story(), feed.SECONDS[feed:Get("duration")] or feed.SECONDS.normal)
+        local _, how = UI.Feed.Show(story(), feed.SECONDS[feed:Get("duration")] or feed.SECONDS.normal)
+        state = how or "shown"
     end)
-    ns:DevLog("FEED", ok and ("shown: " .. tostring(kind)) or ("failed: " .. tostring(kind) .. ": " .. tostring(problem)))
+    ns:DevLog("FEED", ok and (state .. ": " .. tostring(kind)) or ("failed: " .. tostring(kind) .. ": " .. tostring(problem)))
     if not ok then
         error(problem, 0)
     end
@@ -102,6 +110,63 @@ local function Reaction(entry)
     }
 end
 
+-- The same event of several friends at about the same time shares a card
+-- (UI.Feed joins them): a boss they defeated together, deaths in one place
+-- (a wipe), the same challenge. The player's own events stay on their own.
+local function BundleKey(entry, kind)
+    if not entry.who then
+        return nil
+    end
+    local id = tonumber(entry.id) or (type(entry.name) == "string" and entry.name) or nil
+    if (kind == "boss" or kind == "achievement") and id then
+        return kind .. ":" .. tostring(id)
+    elseif kind == "death" and type(entry.zone) == "string" and entry.zone ~= "" then
+        return "death:" .. entry.zone
+    end
+    return nil
+end
+
+-- A friend as a bundle names them: the alias, else the first name.
+local function Short(entry)
+    local name, realName = ns.ChronicleService.Companion(entry)
+    if realName then
+        return name
+    end
+    return string.match(name, "^(%S+)") or name
+end
+
+local MAX_NAMES = 3 -- beyond that, "and 2 more"
+
+-- "Papa and Mira", "Papa, Mira and Tom", "Papa, Mira and 2 more"
+local function Names(list)
+    local L = ns.L
+    local names = {}
+    for index = 1, math.min(#list, MAX_NAMES) do
+        names[index] = list[index]
+    end
+    if #list > MAX_NAMES then
+        local more = #list - MAX_NAMES + 1
+        names[MAX_NAMES] = ns.Plural("c_feed_others", more):format(more)
+    end
+    if #names < 2 then
+        return names[1] or ""
+    end
+    return L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names])
+end
+
+-- One more friend with the same event joins a card: all of them in its head
+-- and their number in the crest's corner, the place alone below it (who was
+-- with whom belongs to one of them), and no button to react, as it would not
+-- say to whom.
+local function Join(story, other)
+    local names = story.names
+    names[#names + 1] = other.names[1]
+    story.count = #names
+    story.chip = { text = Names(names) }
+    story.detail = story.place
+    story.reaction = nil
+end
+
 local function OnChronicleChanged(entry)
     if not feed.enabled or type(entry) ~= "table" or entry.demo then
         return
@@ -129,6 +194,12 @@ local function OnChronicleChanged(entry)
     Show(kind, function()
         local story = UI.FeedStory(entry)
         story.reaction = Reaction(entry)
+        local bundle = BundleKey(entry, kind)
+        if bundle then
+            story.bundle, story.join = bundle, Join
+            story.names = { Short(entry) }
+            story.place = type(entry.zone) == "string" and entry.zone ~= "" and entry.zone or nil
+        end
         return story
     end)
 end
@@ -162,6 +233,10 @@ function feed:OnEnable()
         ns:On("CHRONICLE_CHANGED", OnChronicleChanged)
         ns:On("CHRONICLE_REACTION", OnReaction)
     end
+    local Feed = ns.UI and ns.UI.Feed
+    if Feed then
+        Feed.SetKeep(self:Get("keep") == true)
+    end
     -- In the game's Edit Mode the feed shows where it appears and can be
     -- dragged, like the game's own elements.
     self:HookScript(EditModeManagerFrame, "OnShow", function()
@@ -172,10 +247,18 @@ function feed:OnEnable()
     end)
 end
 
+function feed:OnOptionChanged(key, value)
+    local Feed = ns.UI and ns.UI.Feed
+    if key == "keep" and Feed then
+        Feed.SetKeep(value == true)
+    end
+end
+
 function feed:OnDisable()
     local Feed = ns.UI and ns.UI.Feed
     if Feed then
         Feed.SetMoving(false)
+        Feed.SetKeep(false)
         Feed.Clear()
     end
 end

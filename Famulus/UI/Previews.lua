@@ -552,19 +552,33 @@ local function FeedCards(scene, width, height)
     scene.caption = Caption(scene)
 end
 
+-- Whether the last three stay, and the caption that says so.
+local function Keeping()
+    local feature = ns.features.liveFeed
+    return feature.enabled and feature:Get("keep") == true
+end
+
+local function KeepText()
+    local seconds = FeedSeconds()
+    return ns.Plural("ui_preview_feed_keep", seconds):format(seconds)
+end
+
 -- Fills the cards with up to two stories, faint if they would not come,
--- the caption below them.
-local function LayFeed(scene, stories, faint, caption)
+-- the caption below them. The older card is a slim row, as on screen; rest:
+-- it rests, as one kept past its time does.
+local function LayFeed(scene, stories, faint, caption, rest)
     local seconds = FeedSeconds()
     local widest, y = 0, FEED_TOP
     for index, card in ipairs(scene.cards) do
         local story = stories[index]
         card:SetShown(story ~= nil)
         if story then
-            UI.Feed.Fill(card, story)
+            UI.Feed.Fill(card, story, index > 1)
             widest = math.max(widest, card:GetWidth())
+            local resting = rest and index > 1
             card:SetAlpha(faint and FAINT or 1)
-            card.bar:SetShown(not faint)
+            card.body:SetAlpha(resting and UI.Feed.REST or 1)
+            card.bar:SetShown(not faint and not resting)
             card.barRun:SetDuration(seconds)
         end
     end
@@ -594,8 +608,10 @@ SCENES.feed = {
             local on = feature.enabled and feature:Get("own") == true
             LayFeed(scene, { FeedStory("ability", true) }, not on, on and L.ui_preview_feed_own_on or L.ui_preview_feed_own_off)
         else
+            -- Kept, the older card rests below the new one.
+            local keep = Keeping()
             LayFeed(scene, { FeedStory("level"), FeedStory("boss") }, not feature.enabled,
-                feature.enabled and SecondsText() or L.ui_preview_feed_off)
+                not feature.enabled and L.ui_preview_feed_off or keep and KeepText() or SecondsText(), keep)
         end
     end,
 }
