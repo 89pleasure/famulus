@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Famulus – an addon for playing together in WoW Forever</title>
-  <meta name="description" content="Famulus, an addon for World of Warcraft: Forever, records your shared journey as a picture book, remembers who you played with and names your friends.">
+  <meta name="description" content="A WoW Forever addon for playing together: a picture-book chronicle shared with friends, a memory of who you grouped with, and your own names for them.">
   <meta name="theme-color" content="#0a0f10">
   <meta name="color-scheme" content="dark">
   <!-- Link previews (Discord, Reddit, messengers). Their crawlers run no scripts, so these stay
@@ -12,7 +12,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Famulus">
   <meta property="og:title" content="Famulus – an addon for playing together in WoW Forever">
-  <meta property="og:description" content="Famulus, an addon for World of Warcraft: Forever, records your shared journey as a picture book, remembers who you played with and names your friends.">
+  <meta property="og:description" content="A WoW Forever addon for playing together: a picture-book chronicle shared with friends, a memory of who you grouped with, and your own names for them.">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="de_DE">
   <meta name="twitter:card" content="summary">
@@ -86,16 +86,16 @@
       <div class="hero__copy">
         <p class="eyebrow reveal" style="--i:0"><span class="eyebrow__mark"></span><span data-i18n="hero_eyebrow">An addon for World of Warcraft: Forever</span></p>
         <h1 class="reveal" style="--i:1" data-i18n="hero_title">For everyone <br>you <em>play with.</em></h1>
-        <p class="lead reveal" style="--i:2" data-i18n="hero_lead">Famulus records your shared journey as a picture book, remembers who you travelled with and gives your friends the names you know them by.</p>
+        <p class="lead reveal" style="--i:2" data-i18n="hero_lead">Famulus writes the adventures you share with friends into a picture book, remembers everyone you grouped with and shows your friends in chat under the names you really call them.</p>
         <div class="hero__cta reveal" style="--i:3">
           <a class="btn btn--primary" href="#chronicle"><span data-i18n="hero_cta">See what it does</span><svg class="icon" width="18" height="18"><use href="#i-arrow"/></svg></a>
           <a class="btn btn--ghost" href="#install" data-i18n="hero_cta2">Download</a>
         </div>
         <ul class="hero__facts reveal" style="--i:4">
-          <li data-i18n="fact_version">Version 0.1.0-alpha.2</li>
+          <li data-i18n="fact_version">Version 0.1.0-alpha.6</li>
           <li data-i18n="fact_game">WoW Forever 1.60</li>
-          <li data-i18n="fact_lang">Five languages</li>
-          <li data-i18n="fact_libs">No libraries</li>
+          <li data-i18n="fact_lang">Addon in five languages</li>
+          <li data-i18n="fact_libs">Friends &amp; guild only</li>
         </ul>
       </div>
     </div>
@@ -125,7 +125,7 @@
         <header class="section__head">
           <p class="eyebrow reveal"><span class="eyebrow__num">01</span><span data-i18n="ch_eyebrow">Chronicle</span></p>
           <h2 class="reveal" style="--i:1" data-i18n="ch_title">Your journey, told like a picture book.</h2>
-          <p class="lead reveal" style="--i:2" data-i18n="ch_lead">Level-ups, deaths, defeated bosses, new zones, professions and special finds: the chronicle records what you and your companions go through, one chapter per day.</p>
+          <p class="lead reveal" style="--i:2" data-i18n="ch_lead">Level-ups, deaths, defeated bosses, new zones, professions and special finds: the chronicle records what you and your friends go through, one chapter per play session.</p>
         </header>
 
         <!-- As in the addon: the book, and beside it a rail with the week in
@@ -135,7 +135,7 @@
             <div class="booktabs reveal" role="tablist" id="book-tabs" aria-label="Whose events" data-i18n-attr="aria-label:ch_tabs">
               <button type="button" role="tab" id="book-tab-all" aria-controls="book" aria-selected="true" data-book="all" data-i18n="ch_tab_all">Everyone</button>
               <button type="button" role="tab" id="book-tab-mine" aria-controls="book" aria-selected="false" tabindex="-1" data-book="mine" data-i18n="ch_tab_mine">My journey</button>
-              <button type="button" role="tab" id="book-tab-theirs" aria-controls="book" aria-selected="false" tabindex="-1" data-book="theirs" data-i18n="ch_tab_theirs">Companions</button>
+              <button type="button" role="tab" id="book-tab-theirs" aria-controls="book" aria-selected="false" tabindex="-1" data-book="theirs" data-i18n="ch_tab_theirs">Friends</button>
             </div>
             <div class="bookfilter" id="book-filter" hidden>
               <span id="book-filter-text"></span>
@@ -143,13 +143,13 @@
             </div>
             <div class="book" id="book" role="tabpanel" aria-labelledby="book-tab-all"></div>
           </div>
-          <aside class="rail reveal" id="rail" aria-label="This week and your companions" data-i18n-attr="aria-label:ch_rail"></aside>
+          <aside class="rail reveal" id="rail" aria-label="This week and your friends" data-i18n-attr="aria-label:ch_rail"></aside>
         </div>
 
         <ul class="points">
-          <li class="reveal" style="--i:0"><h3 data-i18n="ch_p1_t">Famulus talks to Famulus</h3><p data-i18n="ch_p1_d">Friends who use the addon share their milestones with you, wherever in the world they are. Only with people on your friends list or in your guild.</p></li>
-          <li class="reveal" style="--i:1"><h3 data-i18n="ch_p2_t">Offline, but not left out</h3><p data-i18n="ch_p2_d">If you were not online, a mutual companion passes on what you missed.</p></li>
-          <li class="reveal" style="--i:2"><h3 data-i18n="ch_p3_t">You decide what is written</h3><p data-i18n="ch_p3_d">Recording and sharing are off until you switch them on. Companions appear under the alias you gave them.</p></li>
+          <li class="reveal" style="--i:0"><h3 data-i18n="ch_p1_t">Shared with your friends</h3><p data-i18n="ch_p1_d">Friends and guildmates with Famulus share their milestones with you, wherever they are in Azeroth, and you react with one click. Friends without it still show up when they level.</p></li>
+          <li class="reveal" style="--i:1"><h3 data-i18n="ch_p2_t">Offline, but not left out</h3><p data-i18n="ch_p2_d">If a friend is offline when you log in, a mutual friend's Famulus passes on what you missed.</p></li>
+          <li class="reveal" style="--i:2"><h3 data-i18n="ch_p3_t">You decide what is written</h3><p data-i18n="ch_p3_d">Recording and sharing stay off until you switch them on, the first time with one click. Nothing goes beyond your friends list and guild.</p></li>
         </ul>
       </div>
     </section>
@@ -161,7 +161,7 @@
         <header class="section__head">
           <p class="eyebrow reveal"><span class="eyebrow__num">02</span><span data-i18n="fw_eyebrow">Fellow travellers</span></p>
           <h2 class="reveal" style="--i:1" data-i18n="fw_title">Remember who was there.</h2>
-          <p class="lead reveal" style="--i:2" data-i18n="fw_lead">Famulus remembers who you were in a group with: when and where you met, how often and how long you travelled together, and which bosses fell along the way. The others don't need Famulus for it.</p>
+          <p class="lead reveal" style="--i:2" data-i18n="fw_lead">Famulus remembers everyone you grouped with: when and where you met, how often and how long you played together, and which bosses fell along the way.</p>
         </header>
 
         <!-- As in the addon: the three closest as tiles, everyone else in a
@@ -171,7 +171,7 @@
 
         <ul class="points">
           <li class="reveal" style="--i:0"><h3 data-i18n="fw_p1_t">A bond that grows</h3><p data-i18n="fw_p1_d">From Encounter to Inseparable: four tiers by the time you spent together. The ring around the crest shows how far it is to the next.</p></li>
-          <li class="reveal" style="--i:1"><h3 data-i18n="fw_p2_t">Your story, day by day</h3><p data-i18n="fw_p2_d">Every person has a book of your days together: where you were, for how long, which bosses fell and when you met.</p></li>
+          <li class="reveal" style="--i:1"><h3 data-i18n="fw_p2_t">Who is nearby</h3><p data-i18n="fw_p2_d">See which friends and guildmates are in your zone right now, and whisper them with one click. They don't need Famulus for it.</p></li>
           <li class="reveal" style="--i:2"><h3 data-i18n="fw_p3_t">It stays with you</h3><p data-i18n="fw_p3_d">Famulus only starts remembering once you switch it on, and sends none of it anywhere. Battlegrounds and arenas never count.</p></li>
         </ul>
       </div>
@@ -184,7 +184,7 @@
         <header class="section__head">
           <p class="eyebrow reveal"><span class="eyebrow__num">03</span><span data-i18n="fd_eyebrow">Live feed</span></p>
           <h2 class="reveal" style="--i:1" data-i18n="fd_title">Be there when it happens.</h2>
-          <p class="lead reveal" style="--i:2" data-i18n="fd_lead">When a companion defeats a boss or learns to ride, a card appears on your screen for a few seconds. Where it sits, how long it stays and which events it shows, your own too if you like, is up to you.</p>
+          <p class="lead reveal" style="--i:2" data-i18n="fd_lead">When a friend beats a boss or learns to ride, a card pops up on your screen for a few seconds, and you can react with one click. You choose where it sits, how long it stays and which events it shows, your own included.</p>
         </header>
 
         <div class="view view--wide reveal" id="feed-view">
@@ -222,7 +222,7 @@
         <header class="section__head">
           <p class="eyebrow reveal"><span class="eyebrow__num">04</span><span data-i18n="al_eyebrow">Aliases</span></p>
           <h2 class="reveal" style="--i:1" data-i18n="al_title">Call them by the names you know.</h2>
-          <p class="lead reveal" style="--i:2" data-i18n="al_lead">Behind every character name is someone you call something else. Give players an alias and Famulus shows it in chat and in tooltips. Only you see it; whispers, invites and links still reach the character.</p>
+          <p class="lead reveal" style="--i:2" data-i18n="al_lead">Your tank plays as “Grimtusk”, but to you he's Tom. Give players an alias and Famulus shows it in chat and in tooltips. Only you see it; whispers, invites and links still reach the character.</p>
         </header>
 
         <div class="duo reveal">
@@ -333,7 +333,7 @@
         <ul class="points">
           <li class="reveal" style="--i:0"><h3 data-i18n="al_p1_t">One alias for the whole account</h3><p data-i18n="al_p1_d">Enter a friend's BattleTag and the alias covers all of their characters. Famulus remembers each one they come online with.</p></li>
           <li class="reveal" style="--i:1"><h3 data-i18n="al_p2_t">A right-click is enough</h3><p data-i18n="al_p2_d">“Set alias” is in the context menu of players and Battle.net friends. No list to open, no name to type.</p></li>
-          <li class="reveal" style="--i:2"><h3 data-i18n="al_p3_t">Nothing gets overwritten</h3><p data-i18n="al_p3_d">The alias only changes what you read. Links keep the real name, and Blizzard's interface stays untouched.</p></li>
+          <li class="reveal" style="--i:2"><h3 data-i18n="al_p3_t">Nothing gets overwritten</h3><p data-i18n="al_p3_d">The alias only changes what you read. Links keep the real name, and Famulus adds to Blizzard's interface without replacing anything.</p></li>
         </ul>
       </div>
     </section>
@@ -351,16 +351,16 @@
         </header>
 
         <ol class="steps">
-          <li class="reveal" style="--i:0"><span class="steps__num">1</span><h3 data-i18n="in_s1_t">Copy the folder</h3><p data-i18n="in_s1_d">Put the folder <code>Famulus</code> into <code>World of Warcraft/_forever_/Interface/AddOns/</code>.</p></li>
+          <li class="reveal" style="--i:0"><span class="steps__num">1</span><h3 data-i18n="in_s1_t">Install it</h3><p data-i18n="in_s1_d">Get Famulus with the CurseForge app, or put the folder <code>Famulus</code> into <code>World of Warcraft/_forever_/Interface/AddOns/</code>.</p></li>
           <li class="reveal" style="--i:1"><span class="steps__num">2</span><h3 data-i18n="in_s2_t">Start the game</h3><p data-i18n="in_s2_d">If it was already running, restart it so that it finds the new folder.</p></li>
-          <li class="reveal" style="--i:2"><span class="steps__num">3</span><h3 data-i18n="in_s3_t">Open the window</h3><p data-i18n="in_s3_d"><code>/fam</code> opens Famulus. The flame at the minimap does the same.</p></li>
+          <li class="reveal" style="--i:2"><span class="steps__num">3</span><h3 data-i18n="in_s3_t">Open the window</h3><p data-i18n="in_s3_d"><code>/fam</code> opens Famulus. The flame button on the minimap does the same. The first time, a welcome page switches on the main features with one click.</p></li>
         </ol>
 
         <div class="release reveal">
           <img src="assets/logo.svg" width="56" height="56" alt="">
           <div>
-            <h3 data-i18n="in_rel_t">Famulus is still being built.</h3>
-            <p data-i18n="in_rel_d">Version 0.1.0-alpha.2 is an early alpha. You can get it on CurseForge.</p>
+            <h3 data-i18n="in_rel_t">Famulus is still young.</h3>
+            <p data-i18n="in_rel_d">Version 0.1.0-alpha.6 is on CurseForge. Something not working? Type <code>/fam report</code> in the game and paste the text into an <a href="https://github.com/89pleasure/famulus/issues" target="_blank" rel="noopener">issue on GitHub</a>.</p>
           </div>
           <a class="btn btn--primary" href="https://www.curseforge.com/wow/addons/famulus" target="_blank" rel="noopener" data-i18n="in_rel_btn">Download on CurseForge</a>
         </div>

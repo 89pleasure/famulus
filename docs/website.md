@@ -202,9 +202,9 @@ owner.
   - Checked in the built-in browser at 1440, 1024 and 375 px, German and English; no
     horizontal scrolling. Structure in detail: the assistant's decisions, not yet seen by the
     owner.
-  - Open: The website's demos say "Mira Sturmfeder" and "Borin Eisenbart" (German names) in
-    English too; the addon's English samples have had different names since 2026-11-24 (see
-    above).
+  - The demos' people have the English names of the addon's samples in both languages since
+    2026-11-27 (Mira Stormfeather, Borin Ironbeard, Lysa Morningdew, Ena Silverbrook), so they match
+    the English screenshot; Kaelric, Thessa and Yorick exist only on the page.
 - **Languages:** English is in the HTML (`data-i18n="key"`), German in `i18n.js`; what
   scripts put together is there in both languages. **English is the default** (the owner's
   request, 2026-11-25; before that the page followed the browser's language, so a German
@@ -238,7 +238,7 @@ owner.
   publishes `main`. Until 2026-11-25 it ran on the tag itself; that would have failed, because the
   environment `github-pages` lets only the branch `main` deploy (read from the repo settings).
   In the repo the texts carry the last release by hand
-  (`0.1.0-alpha.2`), only so that the local preview is right. A new text with the version must
+  (`0.1.0-alpha.6` since 2026-11-27), only so that the local preview is right. A new text with the version must
   keep the form "Version <x>". The assistant's decision; the replacement ran on GitHub on
   2026-11-25 ("Version 0.1.0-alpha.2"), a run after a release has not happened yet.
 - **Download (2026-11-25, the owner's request):** The buttons in the navigation and the header
@@ -278,6 +278,33 @@ owner.
   1440, 1024, 768 and 375 px in both languages: tiles, list, sort order, opening
   and closing the story (focus returns), "Set alias", "In the chronicle"; no messages in the
   console, no horizontal scrolling.
+- **Texts brought up to date (2026-11-27, issue #50, first step; the owner chose "texts first"):**
+  the chronicle's people are "Friends" (tab, rail, texts), a chapter is a play session, reactions
+  in the chronicle and the live feed, "Who is nearby" and whispering in the fellow travellers' lead,
+  the welcome page in step 3 of the installation. The release box no longer says "alpha" or "beta"
+  (the owner's choice: a wording true before and after `v0.1.0`, because the page goes live with
+  every merge) and points to `/fam report` and the GitHub issues. Still behind the addon: the
+  demos (book cards with strip and weights, chapter heads per session with route, live feed cards
+  in three rows, reaction buttons, whisper and "Nearby" in the fellow travellers, the window of the
+  aliases demo) and the screenshot in the header (the owner sends a new one). Installation names
+  the CurseForge app since the copy review the same day (see below).
+- **Copy review (2026-11-27, the owner's request: a review "as an experienced marketing guru"
+  by a subagent; the owner had everything applied):** the hero lead tells what Famulus does in
+  concrete terms; the fact chips say "Addon in five languages" (the page itself has only EN/DE)
+  and "Friends & guild only" instead of "No libraries" (shortened so the chips stay on one row
+  at 1440 px); chronicle point 1 "Shared with your friends" instead of "Famulus talks to
+  Famulus", with friends without Famulus showing up via "Follow my friends"; point 2 says that a
+  mutual friend's Famulus passes on news of a friend who is offline (as `docs/sharing.md`); point 3
+  ends on privacy instead of aliases; the fellow travellers' second point is "Who is nearby"
+  (the old "Your story together" repeated the lead); the aliases open with a scene ("Grimtusk"
+  is Tom); "Famulus adds to Blizzard's interface without replacing anything" instead of
+  "Blizzard's interface stays untouched"; installation names the CurseForge app first (the
+  owner: fine before `v0.1.0`, nobody knows the page yet); German nav "Live-Einblendung" like the
+  section; meta descriptions 150 (EN, also `og:description`) and 148 (DE) characters. The
+  CurseForge description got the same pass. Not taken: the search label in the window demo
+  stays "Search settings" / "Suchen", as in the addon. Checked at 1440 and 375 px in both
+  languages: no horizontal scrolling, no console messages; on a phone the chips wrap to two rows
+  as before.
 - **Keep in step with changes to the addon:** the screenshot in the header as soon as the window
   visibly changes; the counters
   in the rebuilt window (`renderWindow` in `main.js`: 5 alias features, 10 in total; in the HTML

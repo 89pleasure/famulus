@@ -189,13 +189,13 @@
   // The people of the demos. All of them are made up.
   // -------------------------------------------------------------------------
 
-  const MIRA = 'Mira Sturmfeder';
-  const BORIN = 'Borin Eisenbart';
+  const MIRA = 'Mira Stormfeather';
+  const BORIN = 'Borin Ironbeard';
   const KAELRIC = 'Kaelric Dornwald';
   const THESSA = 'Thessa Dornwald';
   const YORICK = 'Yorick Talwind';
-  const LYSA = 'Lysa Morgentau';
-  const ENA = 'Ena Silberquell';
+  const LYSA = 'Lysa Morningdew';
+  const ENA = 'Ena Silverbrook';
 
   const PEOPLE = {
     [LYSA]: { level: 39, cls: 'priest', colour: '#ffffff' },
