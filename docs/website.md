@@ -264,6 +264,10 @@ owner.
     three lines at 1440 px and stretched the header to 941 px. Checked from 320 to 1920 px width
     in both languages: two lines, nothing overflows. German is smaller as a result (76 instead of
     90 px at 1440 × 900, 40 instead of 43 px on a phone).
+  - **Hero lead (`hero_lead`, since 2026-11-27):** the core of Famulus, not its features: it
+    takes up what WoW Forever is about, spending time in Azeroth together, and makes the game
+    even better and more open to everyone. The sections below show the features; a copy pass should
+    not turn the lead back into a feature list.
   - **Screenshot instead of a rebuild** (the assistant's recommendation, chosen by the owner): It
     is the real addon, and an image is quickly swapped while the window is still changing;
     Polestar shows screenshots there too. Consequence: game icons and the game's book font
@@ -500,8 +504,8 @@ owner.
   the header (the owner sends a new one). Installation names
   the CurseForge app since the copy review the same day (see below).
 - **Copy review (2026-11-27, the owner's request: a review "as an experienced marketing guru"
-  by a subagent; the owner had everything applied):** the hero lead tells what Famulus does in
-  concrete terms; the fact chips say "Addon in five languages" (the page itself has only EN/DE)
+  by a subagent; the owner had everything applied):** the hero lead told what Famulus does in
+  concrete terms (since replaced, see "Hero lead"); the fact chips say "Addon in five languages" (the page itself has only EN/DE)
   and "Friends & guild only" instead of "No libraries" (shortened so the chips stay on one row
   at 1440 px); chronicle point 1 "Shared with your friends" instead of "Famulus talks to
   Famulus", with friends without Famulus showing up via "Follow my friends"; point 2 says that a
