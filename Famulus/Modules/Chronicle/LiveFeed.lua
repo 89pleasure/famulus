@@ -87,7 +87,8 @@ local function Show(kind, story)
     feed:Chime()
 end
 
--- The button to react to a friend's event: it gives the reaction of its kind
+-- The button to react to a friend's event: a click gives the default of its
+-- kind, the bar that holding it opens one of the kind's set
 -- (ChronicleService.React), and Sharing.lua tells the friend, as for a click
 -- in the chronicle. Taking it back is the chronicle's.
 local function Reaction(entry)
@@ -98,13 +99,14 @@ local function Reaction(entry)
     end
     return {
         icon = reaction,
+        choices = Chronicle.ReactionChoices(entry),
         given = function()
-            return entry.mine ~= nil
+            return entry.mine
         end,
-        give = function()
+        give = function(choice)
             -- Reactions may have been switched off since the card came.
             if Chronicle.ReactionsOn() then
-                Chronicle.React(entry, true)
+                Chronicle.React(entry, choice or true)
             end
         end,
     }
@@ -175,14 +177,15 @@ local function SampleReaction(entry)
     if not icon then
         return nil
     end
-    local given = false
+    local given = nil
     return {
         icon = icon,
+        choices = Chronicle.ReactionChoices(entry),
         given = function()
             return given
         end,
-        give = function()
-            given = true
+        give = function(choice)
+            given = choice or icon
         end,
     }
 end

@@ -695,8 +695,11 @@ end
 -- accent ground, like a lit chip. With a count it widens and says how many.
 -- What it does is its owner's: the scripts, `button.over` while the mouse is
 -- on it, and button:Paint() after that changes.
---   button:Set(icon, lit, count) -- "cheer", true or false, a number or nil
+--   button:Set(icon, lit, count, second) -- "cheer", true or false, a number
+--       or nil, and a second icon or nil: it stands half behind the first,
+--       which keeps a disc of the button's ground around it
 local REACTION_PAD, REACTION_COUNT_GAP = 7, 4
+local REACTION_BEHIND = 10 -- how far the second icon stands right of the first
 
 function UI.ReactionButton(parent, size, iconSize)
     local button = CreateFrame("Button", nil, parent)
@@ -705,23 +708,48 @@ function UI.ReactionButton(parent, size, iconSize)
     button.ground = UI.Card(button, "control", "controlBorder", 8)
     button.hover = UI.Round(button, "hover", 8, { layer = "ARTWORK" })
     button.hover:Hide()
-    button.icon = UI.Icon(button, "cheer", iconSize, "textMuted", "OVERLAY")
+    button.icon = button:CreateTexture(nil, "OVERLAY", nil, 2)
+    button.icon:SetSize(iconSize, iconSize)
     button.iconSize = iconSize
     button.count = UI.Text(button, 11, "textMuted", "semibold")
     button.count:SetWordWrap(false)
     button.count:Hide()
 
-    function button:Set(icon, lit, count)
+    -- The second icon and its disc only on a button that ever shows one
+    -- (the player's own card), not on every button of the book and the feed.
+    local function BuildSecond(self)
+        self.second = self:CreateTexture(nil, "OVERLAY", nil, 0)
+        self.second:SetSize(self.iconSize, self.iconSize)
+        self.second:SetPoint("LEFT", self.icon, "LEFT", REACTION_BEHIND, 0)
+        self.disc = self:CreateTexture(nil, "OVERLAY", nil, 1)
+        self.disc:SetTexture(UI.media.circle)
+        self.disc:SetSize(self.iconSize + 4, self.iconSize + 4)
+        self.disc:SetPoint("CENTER", self.icon)
+    end
+
+    function button:Set(icon, lit, count, second)
         self.reactionIcon, self.lit = icon, lit and true or false
+        self.secondIcon = second
         local counted = (tonumber(count) or 0) > 0
         self.count:SetShown(counted)
         self.count:SetText(counted and tostring(count) or "")
+        if second and not self.second then
+            BuildSecond(self)
+        end
+        if self.second then
+            self.second:SetShown(second ~= nil)
+            self.disc:SetShown(second ~= nil)
+        end
         self.icon:ClearAllPoints()
-        if counted then
+        if counted or second then
+            local behind = second and REACTION_BEHIND or 0
             self.icon:SetPoint("LEFT", self, "LEFT", REACTION_PAD, 0)
-            self.count:ClearAllPoints()
-            self.count:SetPoint("LEFT", self.icon, "RIGHT", REACTION_COUNT_GAP, 0)
-            local width = REACTION_PAD + self.iconSize + REACTION_COUNT_GAP + self.count:GetStringWidth() + REACTION_PAD + 1
+            local width = REACTION_PAD + self.iconSize + behind + REACTION_PAD + 1
+            if counted then
+                self.count:ClearAllPoints()
+                self.count:SetPoint("LEFT", self.icon, "RIGHT", behind + REACTION_COUNT_GAP, 0)
+                width = width + REACTION_COUNT_GAP + self.count:GetStringWidth()
+            end
             self:SetWidth(math.max(self.size, math.ceil(width)))
         else
             self.icon:SetPoint("CENTER")
@@ -731,14 +759,254 @@ function UI.ReactionButton(parent, size, iconSize)
     end
 
     function button:Paint()
-        self.ground.fill:SetColor(self.lit and "accentDeep" or "control")
+        local ground = self.lit and "accentDeep" or "control"
+        self.ground.fill:SetColor(ground)
         self.ground.border:SetColor(self.lit and "accentLine" or "controlBorder")
         self.icon:SetTexture(UI.media[self.reactionIcon] or UI.media.cheer)
         local ink = self.lit and "accent" or self.over and "text" or "textMuted"
         UI.Tint(self.icon, ink)
         UI.Ink(self.count, ink)
+        if self.second then
+            UI.Tint(self.disc, ground)
+            self.second:SetTexture(UI.media[self.secondIcon] or UI.media.cheer)
+            UI.Tint(self.second, ink)
+        end
     end
     return button
+end
+
+-- The bar to choose a reaction: holding a reaction's button (HOLD seconds)
+-- or a right-click on it fades in a bar at its left with the reactions of
+-- the event's kind, the one given lit. A click on one picks it, and so does
+-- letting go of the held button over one. The bar goes once picked, once the
+-- mouse has been away from it and the button for a moment (LEAVE), or with
+-- its button. Nothing runs while it is closed; one bar for every button,
+-- built on first use.
+--   UI.ReactionPicker.Attach(button, spec) -- spec(button) returns nil (no
+--       bar now) or { choices = { "sad", "strong", ... }, current = "sad" or
+--       nil, pick = function(reaction) end, onOpen = fn, onClose = fn }
+--   UI.ReactionPicker.Consumed(button, mouseButton) -- for the button's OnClick:
+--       true when that click opened the bar (or picked), so it does nothing else
+--   UI.ReactionPicker.Close()
+local Picker = {}
+UI.ReactionPicker = Picker
+local HOLD = 0.35 -- seconds held before the bar opens
+local LEAVE = 0.5 -- seconds away from bar and button before it goes
+local PICK_PAD, PICK_GAP = 4, 4
+local bar
+
+local function PickerTip(option)
+    GameTooltip:SetOwner(option, "ANCHOR_TOP")
+    GameTooltip:SetText(ns.L["c_reaction_" .. option.reaction] or option.reaction, 1, 1, 1)
+    GameTooltip:Show()
+end
+
+function Picker.Close()
+    if bar and bar:IsShown() then
+        bar:Hide()
+    end
+end
+
+-- The pick comes first, so that whoever is told the bar closed knows of it.
+local function Pick(reaction)
+    local spec = bar.spec
+    bar.picked = true
+    if spec and spec.pick then
+        spec.pick(reaction)
+    end
+    Picker.Close()
+end
+
+-- A moment after the mouse left the bar or its button: closes unless it is
+-- back on either.
+local function LeaveSoon()
+    bar.turn = bar.turn + 1
+    local turn, owner = bar.turn, bar.owner
+    C_Timer.After(LEAVE, function()
+        if bar.turn == turn and bar:IsShown() and bar.owner == owner
+            and not bar:IsMouseOver() and not (owner and owner:IsMouseOver()) then
+            Picker.Close()
+        end
+    end)
+end
+
+local function BuildPicker()
+    bar = CreateFrame("Frame", nil, UIParent)
+    bar:SetFrameStrata("FULLSCREEN_DIALOG")
+    bar:EnableMouse(true)
+    bar:Hide()
+    bar.turn = 0
+    bar.options = {}
+    UI.Shadow(bar, 12, 10, 3)
+    UI.Card(bar, "card", "cardBorder", 10)
+    bar.enter = bar:CreateAnimationGroup()
+    local fade = bar.enter:CreateAnimation("Alpha")
+    fade:SetFromAlpha(0)
+    fade:SetToAlpha(1)
+    fade:SetDuration(0.12)
+    bar:SetScript("OnLeave", LeaveSoon)
+    bar:SetScript("OnHide", function(self)
+        self.turn = self.turn + 1
+        self.enter:Stop()
+        local spec = self.spec
+        self.spec, self.owner = nil, nil
+        if spec and spec.onClose then
+            spec.onClose(self.picked)
+        end
+    end)
+end
+
+local function PickerOption(index, size, iconSize)
+    local option = bar.options[index]
+    if option and option.size == size then
+        return option
+    end
+    if option then
+        option:Hide()
+    end
+    option = UI.ReactionButton(bar, size, iconSize)
+    option:SetFrameLevel(bar:GetFrameLevel() + 2)
+    option:SetScript("OnEnter", function(self)
+        self.over = true
+        self.hover:Fade(true)
+        self:Paint()
+        PickerTip(self)
+    end)
+    option:SetScript("OnLeave", function(self)
+        self.over = false
+        self.hover:Fade(false)
+        self:Paint()
+        HideTip(self)
+        LeaveSoon()
+    end)
+    option:SetScript("OnClick", function(self)
+        HideTip(self)
+        Pick(self.reaction)
+    end)
+    bar.options[index] = option
+    return option
+end
+
+-- Opens the bar for `button` as its spec says; whether it did.
+local function Open(button)
+    local spec = button.pickerSpec and button.pickerSpec(button)
+    if not spec or type(spec.choices) ~= "table" or #spec.choices < 2 then
+        return false
+    end
+    if not bar then
+        BuildPicker()
+    end
+    Picker.Close()
+    bar.spec, bar.owner, bar.picked = spec, button, false
+    local size = math.floor(button:GetHeight() + 0.5)
+    local iconSize = button.iconSize or math.floor(size * 0.6)
+    for index, reaction in ipairs(spec.choices) do
+        local option = PickerOption(index, size, iconSize)
+        option.reaction = reaction
+        option.over = false
+        option.hover:Hide()
+        option:Set(reaction, reaction == spec.current)
+        option:ClearAllPoints()
+        option:SetPoint("LEFT", bar, "LEFT", PICK_PAD + (index - 1) * (size + PICK_GAP), 0)
+        option:Show()
+    end
+    for index = #spec.choices + 1, #bar.options do
+        bar.options[index]:Hide()
+    end
+    local count = #spec.choices
+    bar:SetScale(button:GetEffectiveScale() / UIParent:GetEffectiveScale())
+    bar:SetSize(PICK_PAD * 2 + count * size + (count - 1) * PICK_GAP, size + PICK_PAD * 2)
+    bar:ClearAllPoints()
+    bar:SetPoint("RIGHT", button, "LEFT", -PICK_GAP, 0)
+    bar:Show()
+    bar.enter:Play()
+    if GameTooltip.IsOwned and GameTooltip:IsOwned(button) then
+        GameTooltip:Hide()
+    end
+    if spec.onOpen then
+        spec.onOpen()
+    end
+    return true
+end
+
+function Picker.Attach(button, spec)
+    button.pickerSpec = spec
+    button.pressTurn = 0
+    button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    button:HookScript("OnMouseDown", function(self, mouseButton)
+        self.pickerOpened = false
+        if mouseButton ~= "LeftButton" then
+            return
+        end
+        self.pressTurn = self.pressTurn + 1
+        local turn = self.pressTurn
+        C_Timer.After(HOLD, function()
+            if self.pressTurn == turn and self:IsVisible() and Open(self) then
+                self.pickerOpened = true
+            end
+        end)
+    end)
+    button:HookScript("OnMouseUp", function(self)
+        self.pressTurn = self.pressTurn + 1
+        -- Let go over a choice of the bar the hold opened: that one.
+        if self.pickerOpened and bar and bar.owner == self then
+            for _, option in ipairs(bar.options) do
+                if option:IsShown() and option:IsMouseOver() then
+                    Pick(option.reaction)
+                    return
+                end
+            end
+        end
+    end)
+    button:HookScript("OnLeave", function(self)
+        if bar and bar:IsShown() and bar.owner == self then
+            LeaveSoon()
+        end
+    end)
+    button:HookScript("OnHide", function(self)
+        self.pressTurn = self.pressTurn + 1
+        if bar and bar.owner == self then
+            Picker.Close()
+        end
+    end)
+end
+
+function Picker.Consumed(button, mouseButton)
+    if mouseButton == "RightButton" then
+        if bar and bar:IsShown() and bar.owner == button then
+            Picker.Close()
+        else
+            Open(button)
+        end
+        return true
+    end
+    if button.pickerOpened then
+        button.pickerOpened = false
+        return true
+    end
+    -- A plain click reacts; a bar still open for it would show what was.
+    if bar and bar.owner == button then
+        Picker.Close()
+    end
+    return false
+end
+
+-- Whether the bar is open for `button` (tests and the live feed ask).
+function Picker.IsOpenFor(button)
+    return bar ~= nil and bar:IsShown() and bar.owner == button
+end
+
+-- The bar's choices while it is open, in their order (for the tests).
+function Picker.Shown()
+    local shown = {}
+    if bar and bar:IsShown() then
+        for _, option in ipairs(bar.options) do
+            if option:IsShown() then
+                shown[#shown + 1] = option
+            end
+        end
+    end
+    return shown, bar
 end
 
 ---------------------------------------------------------------------------

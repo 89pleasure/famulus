@@ -15,10 +15,14 @@
 --       place = "Duskwood" or nil, -- the foot; without a place and a reaction, none
 --       reaction = {               -- or nil: a button at the foot's right, as
 --           icon = "cheer",        -- on the live feed's cards (UI.ReactionButton);
+--           second = "clap",       -- optional: the second most given, half behind
 --           lit = true,            -- in the accent once given or received,
 --           count = 3,             -- and how many there are
 --           onClick = function() end,    -- optional: what a click on it does
 --           tooltip = function(tip) end, -- optional: what the mouse on it shows
+--           choices = { "cheer", "clap" }, -- optional, with pick: the bar
+--           current = "clap",              -- that holding the button opens
+--           pick = function(reaction) end, -- (UI.ReactionPicker)
 --       },
 --   }
 
@@ -103,7 +107,11 @@ local function Build(part)
         end
         HideTip(self)
     end)
-    react:SetScript("OnClick", function(self)
+    react:SetScript("OnClick", function(self, mouseButton)
+        if UI.ReactionPicker.Consumed(self, mouseButton) then
+            HideTip(self)
+            return
+        end
         local reaction = self.reaction
         if reaction and reaction.onClick then
             -- What the tooltip said no longer holds after the click.
@@ -115,6 +123,16 @@ local function Build(part)
         self.over = false
         self.hover:Hide()
         HideTip(self)
+    end)
+    -- Holding it or a right-click opens the bar with the kind's other
+    -- reactions (UI.ReactionPicker), on a friend's card only. After the
+    -- scripts above, as it hooks them.
+    UI.ReactionPicker.Attach(react, function(self)
+        local reaction = self.reaction
+        if not (reaction and reaction.choices and reaction.pick) then
+            return nil
+        end
+        return { choices = reaction.choices, current = reaction.current, pick = reaction.pick }
     end)
 end
 
@@ -158,7 +176,7 @@ function UI.ChronicleCard(part, story, width)
     if reaction then
         react.over = false
         react.hover:Hide()
-        react:Set(reaction.icon, reaction.lit, reaction.count)
+        react:Set(reaction.icon, reaction.lit, reaction.count, reaction.second)
         react:EnableMouse(reaction.onClick ~= nil or reaction.tooltip ~= nil)
         reactionWidth = FOOT_GAP + react:GetWidth()
     end

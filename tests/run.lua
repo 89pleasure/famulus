@@ -2148,6 +2148,36 @@ check(sharing:Get("reactions") == true, "reactions are on with sharing")
 check(Chronicle.Reaction(theirs) == "sad" and Chronicle.REACTIONS.level == "cheer" and Chronicle.REACTIONS.boss == "strong"
     and Chronicle.REACTIONS.skill == "clap" and Chronicle.REACTIONS.item == "cheer" and Chronicle.REACTIONS.zone == nil,
     "each kind has its reaction; arriving in a zone has none")
+do -- the sets to choose from: the default first, every picture there, no cheering at a death
+    local ok = true
+    for kind, set in pairs(Chronicle.REACTION_SETS) do
+        ok = ok and set[1] == Chronicle.REACTIONS[kind] and #set >= 2 and #set <= 4
+        for _, reaction in ipairs(set) do
+            ok = ok and ns.UI.media[reaction] ~= nil and Chronicle.IsReaction(reaction, kind)
+                and ns.L["c_reaction_" .. reaction] ~= nil and ns.L["c_reacted_" .. reaction] ~= nil
+        end
+    end
+    check(ok, "every kind's set starts with its default, has two to four, and each has a picture and its texts")
+    local death = Chronicle.REACTION_SETS.death
+    local cheering = false
+    for _, reaction in ipairs(death) do
+        cheering = cheering or reaction == "cheer" or reaction == "clap" or reaction == "fire"
+    end
+    check(not cheering and Chronicle.IsReaction("heart", "death") and not Chronicle.IsReaction("cheer", "death")
+        and Chronicle.ReactionChoices(theirs) == death, "a death gets comfort and courage, no cheering or applause")
+    -- Received to own entries: each person once (their newest), the most given
+    -- first, a tie in the order of the set, an unknown reaction as the default.
+    local groups = Chronicle.ReactionGroups({ { k = "level", r = { Ann = "clap", Bob = "cheer" } } })
+    check(#groups == 2 and groups[1].reaction == "cheer" and groups[2].reaction == "clap",
+        "a tie goes in the order of the kind's set")
+    groups = Chronicle.ReactionGroups({
+        { k = "level", r = { Ann = "clap", Bob = "clap" } },
+        { k = "level", r = { Ann = "cheer", Cid = "fireworks", Dan = "cheer" } },
+    })
+    check(#groups == 2 and groups[1].reaction == "cheer" and table.concat(groups[1].names, ",") == "Cid,Dan"
+        and groups[2].reaction == "clap" and table.concat(groups[2].names, ",") == "Ann,Bob",
+        "counted once per person, their newest; one this version does not know counts as the default")
+end
 check(Chronicle.Reaction({ k = "friendLevel", who = "Jaina Proudmoore", t = 1 }) == nil and Chronicle.Reaction({ k = "level", t = 1 }) == nil,
     "neither a level seen on the friends list nor one of the player's own can be reacted to")
 Chronicle.React(theirs, true)
@@ -2174,6 +2204,17 @@ mock.Advance(1)
 Chronicle.React(theirs, true)
 mock.Advance(3)
 check(#mock.sent == 0, "taken back and given again within two seconds, nothing goes out")
+Chronicle.React(theirs, "heart")
+mock.Advance(3)
+check(theirs.mine == "heart" and #mock.sent == 1 and mock.sent[1].text == "1~X~" .. sharedNow .. "~death~heart~",
+    "another of the set replaces the one given, and goes out: " .. tostring(mock.sent[1] and mock.sent[1].text))
+mock.sent = {}
+Chronicle.React(theirs, "cheer")
+check(theirs.mine == "heart", "one not of the kind's set is not given")
+Chronicle.React(theirs, true)
+mock.Advance(3)
+check(theirs.mine == "sad" and #mock.sent == 1, "the default again replaces it as well")
+mock.sent = {}
 Chronicle.React(theirs, false)
 mock.Advance(1)
 check(#mock.sent == 0, "a click goes out two seconds later")
@@ -2216,8 +2257,22 @@ do
     check(#Chronicle.Reactions(ownLevel) == 1, "not from strangers, not to an entry that is not there, not to a kind without reactions")
     react("1~X~" .. at .. "~level~fireworks~")
     check(ownLevel.r["Jaina Proudmoore"] == "cheer", "a reaction this version does not know counts as the kind's own")
+    react("1~X~" .. at .. "~level~clap~")
+    check(ownLevel.r["Jaina Proudmoore"] == "clap", "another of the kind's set is kept as it is")
+    react("1~X~" .. at .. "~level~sad~")
+    check(ownLevel.r["Jaina Proudmoore"] == "cheer", "one not of the kind's set counts as the kind's own")
+    check(#ns.UI.Feed.Shown() == 1 and ownLevel.heard and ownLevel.heard["Jaina Proudmoore"],
+        "a reaction changed to another is not news again: one card on screen for her")
     react("1~X~" .. at .. "~level~~")
     check(ownLevel.r == nil, "taken back, it is gone")
+    react("1~X~" .. at .. "~level~clap~")
+    check(ownLevel.r["Jaina Proudmoore"] == "clap" and #ns.UI.Feed.Shown() == 1,
+        "taken back and given again, it is kept but not shown again")
+    Chronicle.Receive(at, "level", {}, "Mira Stormfeather", "cheer") -- (not online here: straight in)
+    mock.Advance(1.5) -- (the new card waits its turn behind the one on top)
+    check(#ns.UI.Feed.Shown() == 2, "another friend's first reaction to it is news: " .. #ns.UI.Feed.Shown())
+    react("1~X~" .. at .. "~level~~")
+    Chronicle.Receive(at, "level", {}, "Mira Stormfeather", nil)
     sharing:Set("reactions", false)
     react("1~X~" .. at .. "~level~cheer~")
     check(ownLevel.r == nil, "with reactions switched off, none is taken")
@@ -2319,6 +2374,50 @@ do
     mock.Advance(2.1)
     check(#Feed.Shown() == 0, "and goes once the mouse has left")
     check(find("level", at).mine == nil and #mock.sent == 0, "pointing alone reacts to nothing: " .. sent())
+
+    -- A right-click (or holding it) opens the bar; the card stays while it is open.
+    do
+        local Picker = ns.UI.ReactionPicker
+        at = at - 1
+        mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~level~level=23;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
+        card = Feed.Shown()[1]
+        button = card.react
+        button.scripts.OnEnter(button)
+        button.scripts.OnClick(button, "RightButton")
+        local options, bar = Picker.Shown()
+        check(Picker.IsOpenFor(button) and #options == 3 and options[1].reaction == "cheer" and options[3].reaction == "strong"
+            and find("level", at).mine == nil, "a right-click opens the level-up's set and gives nothing")
+        button.scripts.OnLeave(button)
+        bar.mouseOver, options[3].mouseOver = true, true -- (the mouse goes over to the bar)
+        options[3].scripts.OnEnter(options[3])
+        mock.Advance(9)
+        check(card:IsShown() and card:GetAlpha() == 1 and Picker.IsOpenFor(button), "while the bar is open, the card stays")
+        mock.Click(options[3])
+        bar.mouseOver, options[3].mouseOver = nil, nil
+        check(find("level", at).mine == "strong" and button.ground.fill.token == "accentDeep" and button.reactionIcon == "strong"
+            and not Picker.IsOpenFor(button), "a choice gives it, the button shows it lit")
+        mock.Advance(1.8)
+        check(not card:IsShown(), "and the card goes as after a click")
+        mock.Advance(3)
+        check(#mock.sent == 1 and mock.sent[1].text == "1~X~" .. at .. "~level~strong~", "it goes to her: " .. sent())
+        mock.sent = {}
+        -- Closed without a choice, a card past its time goes a moment later.
+        at = at - 1
+        mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~level~level=24;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
+        card = Feed.Shown()[1]
+        button = card.react
+        button.scripts.OnEnter(button)
+        button.scripts.OnMouseDown(button, "LeftButton")
+        mock.Advance(0.5)
+        button.scripts.OnMouseUp(button, "LeftButton")
+        button.scripts.OnClick(button, "LeftButton")
+        check(Picker.IsOpenFor(button) and find("level", at).mine == nil, "held, the bar opens and the click gives nothing")
+        button.scripts.OnLeave(button)
+        mock.Advance(9)
+        check(not Picker.IsOpenFor(button) and not card:IsShown() and find("level", at).mine == nil,
+            "left alone, the bar closes and the card goes")
+        Feed.Clear()
+    end
 
     -- With reactions switched off there is no button. (A second before her
     -- death above, not one by the clock: one death of one person in one
@@ -3307,10 +3406,93 @@ do -- an item is shown with the game's icon of it, in its own colours
         and level.react.ground.fill.token == "accentDeep" and level.react.mouseEnabled and not level.card.mouseEnabled,
         "the player's own event shows on its button how many reacted; the card itself catches no mouse")
     level.react.scripts.OnEnter(level.react)
-    check(said == "Reactions from" and lines[1] == "Jaina Proudmoore" and lines[2] == "Mira Stormfeather",
-        "and who, on the mouse")
+    check(said == "Reactions from" and lines[1]:find("cheer.tga:14:14", 1, true) and lines[1]:find("Jaina Proudmoore, Mira Stormfeather", 1, true) and lines[2] == nil,
+        "and who, on the mouse, after the icon of their reaction")
     mock.Click(level.react)
     check(level.story.reaction.lit and level.react.count:GetText() == "2", "a click on it does nothing")
+    check(level.react.second == nil and not ns.UI.ReactionPicker.IsOpenFor(level.react), "one kind of reaction, one icon, and no textures for a second")
+    mock.Click(level.react, "RightButton")
+    check(not ns.UI.ReactionPicker.IsOpenFor(level.react), "the player's own card opens no bar")
+
+    -- Holding the button or a right-click opens the bar with the kind's set.
+    local Picker = ns.UI.ReactionPicker
+    theirs = theirSkill()
+    theirs.react.scripts.OnEnter(theirs.react)
+    check(lines[#lines] == "Hold or right-click to choose another reaction.", "the tooltip says how to choose another")
+    mock.Click(theirs.react, "RightButton")
+    local options, bar = Picker.Shown()
+    check(Picker.IsOpenFor(theirs.react) and #options == 2 and options[1].reaction == "clap" and options[2].reaction == "cheer"
+        and not options[1].lit and theirEntry.mine == nil and bar:GetWidth() == 4 * 2 + 26 * 2 + 4,
+        "a right-click opens the bar with the profession's set, the default first, and gives nothing")
+    options[2].scripts.OnEnter(options[2])
+    check(said == "Celebrate", "a choice names itself on the mouse")
+    mock.Click(options[2])
+    mock.Advance(0.1)
+    theirs = theirSkill()
+    check(theirEntry.mine == "cheer" and not Picker.IsOpenFor(theirs.react) and theirs.story.reaction.icon == "cheer"
+        and theirs.story.reaction.lit, "a click on a choice gives it and closes the bar; the button shows it")
+    mock.Click(theirs.react, "RightButton")
+    options = Picker.Shown()
+    check(options[2].lit and not options[1].lit, "the one given is lit in the bar")
+    mock.Click(options[1])
+    mock.Advance(0.1)
+    check(theirEntry.mine == "clap", "another replaces it")
+    theirs = theirSkill()
+    mock.Click(theirs.react, "RightButton")
+    mock.Click(Picker.Shown()[1])
+    mock.Advance(0.1)
+    check(theirEntry.mine == nil, "the one given, picked again, takes it back")
+    theirs = theirSkill()
+    mock.Click(theirs.react, "RightButton")
+    mock.Click(theirs.react)
+    mock.Advance(0.1)
+    check(theirEntry.mine == "clap" and not Picker.IsOpenFor(theirSkill().react),
+        "a plain click while the bar is open reacts and closes the bar, which would show what was")
+    Chronicle.React(theirEntry, false)
+    mock.Advance(0.1)
+    -- Held: the bar opens after a moment, and the click that ends the hold does nothing else.
+    theirs = theirSkill()
+    theirs.react.scripts.OnMouseDown(theirs.react, "LeftButton")
+    mock.Advance(0.1)
+    check(not Picker.IsOpenFor(theirs.react), "not at once")
+    mock.Advance(0.4)
+    check(Picker.IsOpenFor(theirs.react), "held for a moment, the bar opens")
+    theirs.react.scripts.OnMouseUp(theirs.react, "LeftButton")
+    mock.Click(theirs.react)
+    check(theirEntry.mine == nil and Picker.IsOpenFor(theirs.react), "letting go gives nothing, the bar stays")
+    options = Picker.Shown()
+    theirs.react.scripts.OnLeave(theirs.react)
+    mock.Advance(0.6)
+    check(not Picker.IsOpenFor(theirs.react), "away from bar and button for a moment, it closes")
+    theirs.react.scripts.OnMouseDown(theirs.react, "LeftButton")
+    mock.Advance(0.1)
+    theirs.react.scripts.OnMouseUp(theirs.react, "LeftButton")
+    mock.Click(theirs.react)
+    mock.Advance(0.5)
+    check(theirEntry.mine == "clap" and not Picker.IsOpenFor(theirSkill().react), "a short click gives the default, no bar follows")
+    theirs = theirSkill()
+    theirs.react.scripts.OnMouseDown(theirs.react, "LeftButton")
+    mock.Advance(0.5)
+    Picker.Shown()[2].mouseOver = true
+    theirs.react.scripts.OnMouseUp(theirs.react, "LeftButton")
+    Picker.Shown() -- (closed by then)
+    mock.Advance(0.1)
+    check(theirEntry.mine == "cheer" and not Picker.IsOpenFor(theirSkill().react), "let go over a choice, that one is given")
+    Chronicle.React(theirEntry, false)
+    mock.Advance(0.1)
+
+    -- The player's own card: the two most given, the first in front, and all in the count.
+    Chronicle.Receive(ownLevel.t, "level", {}, "Borin Ironhand", "clap")
+    mock.Advance(0.1)
+    level = myLevel()
+    check(level.react.count:GetText() == "3" and level.story.reaction.icon == "cheer" and level.story.reaction.second == "clap"
+        and level.react.second:IsShown() and level.react.disc:IsShown() and level.react:GetWidth() > 26 + 10,
+        "two kinds received: the most given in front, the next half behind it, and the count of all")
+    level.react.scripts.OnEnter(level.react)
+    check(#lines == 2 and lines[1]:find("cheer.tga", 1, true) and lines[2]:find("clap.tga", 1, true)
+        and lines[2]:find("Borin Ironhand", 1, true), "the tooltip names them by reaction, the most given first")
+    Chronicle.Receive(ownLevel.t, "level", {}, "Borin Ironhand", nil)
+    mock.Advance(0.1)
     sharing:Set("reactions", false)
     mock.Advance(0.1)
     check(not theirSkill().react:IsShown() and theirSkill().picture.mouseEnabled == false

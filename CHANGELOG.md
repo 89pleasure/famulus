@@ -35,6 +35,10 @@ GitHub.
   the live feed; a click on the card itself no longer reacts.
 - New reaction icons from Phosphor Icons that read better at their small size: a sad face, a party
   popper, a fist and clapping hands.
+- More reactions to choose from: hold the button or right-click it, and a bar offers the ones that
+  suit the event. A click still gives the usual one. A death gets comfort or courage (a heart, a
+  fist), never cheering or applause; bosses and special moments can also get a flame. Your
+  own cards show the two reactions given most, and the tooltip who gave which.
 - Live feed cards tell whose event it is, what happened and where in three rows, so long events
   are no longer cut off.
 - Only the newest live feed card is large; the two before it move down as slim rows.

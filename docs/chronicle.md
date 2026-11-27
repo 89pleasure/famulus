@@ -396,12 +396,47 @@ picture-book look are built and checked against the mock only.
   and when it goes are under "Reactions" in [sharing.md](sharing.md); an option of `sharing`
   (`reactions`, default on), no feature of its own, so no service for the exchange is needed
   yet (see "No service of its own" there).
-  - **One reaction per kind (the owner's decision):** death 😢 `sad`, boss 💪 `strong`, level-up
-    🎉 `cheer`, profession milestone 👏 `clap`, special events (abilities such as riding, special
-    items) 🎉 `cheer` (`ChronicleService.REACTIONS`). The assistant added: challenges 🎉, a
-    profession learned 👏, arriving in a zone none (it happens all the time). A level seen on the
-    friends list (`friendLevel`) has none: its time is the reader's, the friend's own entry has
-    another one, so the two could not be matched.
+  - **One default reaction per kind (the owner's decision):** death 😢 `sad`, boss 💪 `strong`,
+    level-up 🎉 `cheer`, profession milestone 👏 `clap`, special events (abilities such as riding,
+    special items) 🎉 `cheer` (`ChronicleService.REACTIONS`, the first of each set). The assistant
+    added: challenges 🎉, a profession learned 👏, arriving in a zone none (it happens all the
+    time). A level seen on the friends list (`friendLevel`) has none: its time is the reader's, the
+    friend's own entry has another one, so the two could not be matched.
+  - **A set per kind (the owner's request, 2026-11-27: the fixed icons stay the defaults, holding
+    the button brings a choice; a death gets no laughter or applause, rather something
+    encouraging or sad; tried in game with one account, 2026-11-27, the owner: "Funktioniert";
+    the exchange between two accounts not yet seen):**
+    `ChronicleService.REACTION_SETS`, the default first: level `cheer clap strong`; challenge,
+    ability, item `cheer clap fire`; boss `strong cheer clap fire`; death `sad strong heart`;
+    profession and its milestones `clap cheer`. Two new icons, `heart` and `fire`, Phosphor Icons in the
+    Bold weight like the other four (`heart-bold`, `fire-bold` in `tools/phosphor/`, from
+    `@phosphor-icons/core` 2.1.1; the TGAs written by a temporary port of `phosphor()` to Node that
+    redraws the other four byte for byte). Sets, the two icons, their names (`c_reaction_<id>`) and texts on the
+    live feed (`c_reacted_heart`, `c_reacted_fire`) are the assistant's decisions, at most four a
+    set so the bar stays short.
+    - **The bar (`UI.ReactionPicker` in `UI/Widgets.lua`):** holding a reaction's button for 0.35 s
+      (`HOLD`) or a right-click on it fades in a bar at its left with the kind's set (buttons as
+      large as the one held, the one given lit, each naming itself in the game's tooltip). A click
+      on one gives it; letting go of the held button over one does as well; the one given, picked
+      again, takes it back (in the book). The click that ends a hold or the right-click does
+      nothing else (`Picker.Consumed`); a plain click reacts and closes a bar still open. The bar goes once picked, once the mouse has been away from
+      bar and button for 0.5 s (`LEAVE`), or with its button. Always at the left: the button sits
+      at the right of the book's foot and of the feed's band, so the bar stays on its own card.
+      One bar for all, built on first use, strata `FULLSCREEN_DIALOG`, no catcher over the screen
+      (the feed lies over the game world); nothing runs while it is closed. Long-press is unusual
+      with a mouse, so the right-click does the same and the book's tooltip says so
+      (`c_react_more`).
+    - **Given:** `entry.mine` holds the chosen reaction; another one replaces it
+      (`ChronicleService.React(entry, reaction)`, `true` for the default). The friend's button
+      shows the one given.
+    - **Received:** `r = { [name] = reaction }` already held it; no migration. The player's own
+      card shows the two given most (`ChronicleService.ReactionGroups`, each person once in a
+      bundle): the first in front, the second 10 px further right half behind it, on a disc of the
+      button's ground so the line icons do not cross (`button:Set(icon, lit, count, second)`), and
+      the count of all. Its tooltip has a line per reaction, its icon then the names. Older
+      versions take a reaction they do not know, or one of another kind's set, as the kind's
+      default, so nothing breaks.
+    - The website's demos still give only the default (`website/main.js`).
   - **Look (the owner's requirement):** one colour, following the colour scheme. The emojis are
     white icons (`sad.tga`, `cheer.tga`, `strong.tga`, `clap.tga`) tinted via `UI.Tint`, so they
     change with the colour scheme like everything else. The client cannot draw Unicode emojis.
@@ -435,7 +470,10 @@ picture-book look are built and checked against the mock only.
     celebrates with you", below it the event), with the reaction as the picture (kind
     `reaction` in `UI.BookPictures`). Its own switch `reaction` (default on), signal
     `CHRONICLE_REACTION`. Not limited to fresh events: a reaction that waited for the next
-    greeting is still news.
+    greeting is still news. Once per person and entry (the owner's request, 2026-11-27): a
+    reaction changed to another, or taken back and given again, keeps the book up to date but
+    brings no second card; another friend's first reaction to the same entry does. Kept in
+    `heard` on the entry (saved, so a `/reload` does not show it again).
   - **Reacting from the live feed:** a friend's card in the feed carries a button at the band's
     right end (32 px, the kind's reaction icon; `story.reaction` in `UI/Feed.lua`, built by
     `Reaction` in `LiveFeed.lua`; the look is `UI.ReactionButton`, shared with the book). A click
@@ -450,7 +488,8 @@ picture-book look are built and checked against the mock only.
     sample cards too; there it only lights up and closes the card and sends nothing, so the look
     can be checked with one account.
   - **Data:** on a friend's entry `mine` (the player's reaction) and `told` (what the friend was
-    last told); on an own entry `r = { [<name>] = <reaction> }`. Never sent with the entry
+    last told); on an own entry `r = { [<name>] = <reaction> }` and `heard = { [<name>] = true }`
+    (whose reaction the live feed showed). Never sent with the entry
     (`FIELDS` in `Sharing.lua` leaves them out); they go with the entry when `Trim` drops it.
     Sample entries (`/fam chronicle demo`) bring a few: three friends cheered the level 40, Borin
     mourned a death, the player reacted to Borin's boss.

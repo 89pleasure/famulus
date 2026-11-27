@@ -293,7 +293,7 @@ picture("chest.tga", CHEST, [(16, 17, 2.2)])
 picture("horseshoe.tga", [arc(16, 14.5, 9.5, 115, 425)], [(8.6, 12, 1.1), (23.4, 12, 1.1)])
 
 
-# Reactions to a friend's event, one per kind (ChronicleService.REACTIONS).
+# Reactions to a friend's event (ChronicleService.REACTION_SETS).
 # They are shown small (16-18 px), where our own line pictures looked like
 # runes, so they come from Phosphor Icons in the Bold weight (MIT, see
 # tools/phosphor/LICENSE), a set drawn for small sizes. Each SVG is filled
@@ -491,6 +491,8 @@ phosphor("sad.tga", "smiley-sad-bold")  # a death
 phosphor("cheer.tga", "confetti-bold")  # a level, a special event: a party popper
 phosphor("strong.tga", "hand-fist-bold")  # a boss
 phosphor("clap.tga", "hands-clapping-bold")  # a profession
+phosphor("heart.tga", "heart-bold")  # comfort after a death
+phosphor("fire.tga", "fire-bold")  # that was hot: a boss, a special event
 
 
 # Soft drop shadow, used in nine pieces around a window or menu. The centre
