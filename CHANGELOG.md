@@ -3,6 +3,48 @@
 Every release has a section `## <version>` (the tag without the `v`, for example `## 0.2.0-beta.1`).
 That section becomes the changelog of the file on CurseForge.
 
+## 0.1.0
+
+The first beta, and the first version of Famulus you can find in the CurseForge app. If you are
+new: welcome! Below is what Famulus does today, then what changed since the last alpha. Things
+will still move, and sharing gets better with everyone who tells me what they see: type
+`/fam report` and paste the text into a comment on CurseForge or an issue on GitHub.
+
+### What Famulus does
+- **Chronicle:** your journey as a picture book, one chapter per play session: levels, deaths,
+  bosses, challenges, new zones, professions, abilities like riding and special items. Share it
+  with friends and guild members who use Famulus too, react to their moments, and see their news
+  as cards on screen.
+- **Fellow travellers:** everyone you grouped with, when and where you met, the bosses you beat
+  together and how close you are. "Nearby" shows who of your friends and guild is in your zone
+  right now.
+- **Aliases:** your own names for other players, in chat, tooltips and the online notices.
+- **Welcome page:** one click switches on the main features. Nothing that listens to the game or
+  sends anything to others runs before you choose it.
+- English, German, French, Spanish and Italian.
+
+### New since 0.1.0-alpha.6
+
+#### Chronicle
+- The abilities class quests teach now go into the chronicle and reach your friends, like riding:
+  stances, forms, pets, totems, Poisons and the class mounts.
+- A card names the person and the time in the strip at its top, and the place at its foot.
+- Reacting to a friend's event works through the button at the foot of their card, the same as on
+  the live feed; a click on the card itself no longer reacts.
+- Live feed cards tell whose event it is, what happened and where in three rows, so long events
+  are no longer cut off.
+- Guild members with Famulus are no longer taken for strangers when the game briefly reports an
+  empty guild roster.
+
+#### Fellow travellers
+- Whisper someone right from the overview, a list row or their card. The card's buttons are now
+  icons in one row.
+
+#### Window
+- `/fam report` or "About" > "Copy bug report" shows a text to copy with Ctrl+C and paste into a
+  report. It holds no names.
+- The window needs noticeably less memory once it has been opened.
+
 ## 0.1.0-alpha.6
 
 ### Welcome
