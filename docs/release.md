@@ -80,6 +80,14 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
   assistant's recommendation (`v0.1.0` as release, so that Famulus appears in the app). Consequence:
   as long as there is no release file, Famulus is only on CurseForge's website, not in
   the app. The section in `CHANGELOG.md` is therefore called `## 0.1.0-alpha.1`.
+- **0.1.0 as a release, described as a beta (the owner's decision, 2026-11-26, issue #49):**
+  after `v0.1.0-alpha.6` the next file is the tag `v0.1.0`, uploaded as type release, so that
+  Famulus appears in the CurseForge app and real players can test sharing. That it is a beta is
+  said in the text, not in the file type: the note at the top of `docs/curseforge/description.md`
+  and the introduction of the section `## 0.1.0` in `CHANGELOG.md`. Because most players see
+  Famulus for the first time with it, that section first says what Famulus does and then what
+  changed since the last alpha (the assistant's proposal). The rule of `tools/release_check.sh`
+  stays: a tag with "beta" in it still uploads as type beta.
 - **Token:** The owner stored the repository secret `CF_API_KEY` personally
   (2026-11-24); the token did not pass through the assistant.
 - **Open:**
