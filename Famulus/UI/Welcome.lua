@@ -634,10 +634,10 @@ function Welcome.Build(window, size, actions)
     end, "ghost")
 
     -- kind: "on", "off" (skipped) or "running" (on without a choice).
-    local function FillRow(row, text, kind, note, shares)
+    -- note: a short word at the right; a long one would crowd out the name.
+    local function FillRow(row, text, kind, note)
         row.name:SetText(text)
         row.note:SetText(note or "")
-        UI.Ink(row.note, shares and "shareInk" or "textMuted")
         UI.Tint(row.mark, kind == "on" and "accent" or (kind == "running" and "control" or "chip"))
         row.check:SetShown(kind ~= "off")
         UI.Tint(row.check, kind == "running" and "textDim" or "onAccent")
@@ -658,9 +658,7 @@ function Welcome.Build(window, size, actions)
         end
         for _, current in ipairs(Welcome.Steps()) do
             local on = ns.features[current.id].enabled
-            local shares = on and current.id == "sharing"
-            Add(L["f_" .. current.id], on and "on" or "off",
-                shares and L.ui_welcome_shares or (not on and L.ui_welcome_done_skipped or nil), shares)
+            Add(L["f_" .. current.id], on and "on" or "off", not on and L.ui_welcome_done_skipped or nil)
         end
         if ns:IsCategoryEnabled("aliases") then
             Add(L.area_aliases, "running", L.ui_welcome_done_running)
