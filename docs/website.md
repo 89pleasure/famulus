@@ -490,10 +490,11 @@ owner.
   publishes `main`. Until 2026-11-25 it ran on the tag itself; that would have failed, because the
   environment `github-pages` lets only the branch `main` deploy (read from the repo settings).
   In the repo the texts carry the last release by hand
-  (`0.1.0-alpha.6` since 2026-11-27), only so that the local preview is right. A new text with the version must
+  (`0.1.0` since 2026-11-27), only so that the local preview is right. A new text with the version must
   keep the form "Version <x>" (or the Spanish and Italian word above); a new language whose word
   differs needs it in the workflow's pattern. The assistant's decision; the replacement ran on GitHub on
-  2026-11-25 ("Version 0.1.0-alpha.2"), a run after a release has not happened yet.
+  2026-11-25 ("Version 0.1.0-alpha.2") and after the release of `v0.1.0` on 2026-11-27 (the page
+  showed "Version 0.1.0").
 - **Download (2026-11-25, the owner's request):** The buttons in the navigation and the header
   say "Download" instead of "Install"/"Installation" and scroll down to the section
   "Installation" (the owner's request, 2026-11-25; before that they led straight to CurseForge).

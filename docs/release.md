@@ -87,7 +87,9 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
   and the introduction of the section `## 0.1.0` in `CHANGELOG.md`. Because most players see
   Famulus for the first time with it, that section first says what Famulus does and then what
   changed since the last alpha (the assistant's proposal). The rule of `tools/release_check.sh`
-  stays: a tag with "beta" in it still uploads as type beta.
+  stays: a tag with "beta" in it still uploads as type beta. Uploaded on 2026-11-27 (workflow
+  green, "Uploading Famulus-v0.1.0-forever.zip (1.60.1 release) … Success!"), then in
+  CurseForge's moderation.
 - **Token:** The owner stored the repository secret `CF_API_KEY` personally
   (2026-11-24); the token did not pass through the assistant.
 - **Project page** (set by hand in the project's settings; the workflow uploads only files):
@@ -116,8 +118,8 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
   - **State of the live page (read 2026-11-27, evening):** the HTML description with all ten
     pictures and the accent colours, a gallery of seven pictures with the texts of
     `docs/curseforge/gallery.md`, an "Issues" tab leading to GitHub, categories "Chat &
-    Communication" and "Guild". Still "Unlisted": the newest file is `v0.1.0-alpha.6`; the
-    project appears in the app with its first release file (`v0.1.0`). CurseForge caches the
+    Communication" and "Guild". Still "Unlisted" then; `v0.1.0`, the first release file, was
+    uploaded the same night, and the project appears in the app once CurseForge has approved it. CurseForge caches the
     page: right after a change a plain reload may still show the old summary.
 - **Open:** Wago, GitHub releases, an approval environment for the secrets (none set up).
 - Run on GitHub (2026-11-24): the test workflow, a trial run without upload and the upload

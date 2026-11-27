@@ -29,7 +29,7 @@ other players. English, German, French, Spanish and Italian; no libraries, no de
 
 | Area | Feature | Default |
 |---|---|---|
-| Chronicle | Record my journey | off |
+| Chronicle | Record my journey | **on** |
 | Chronicle | Follow my friends (level-ups on your friends list) | off |
 | Chronicle | Share with friends (addon messages between Famulus users) | off |
 | Chronicle | Show events on screen | **on** |
@@ -39,7 +39,8 @@ other players. English, German, French, Spanish and Italian; no libraries, no de
 | Aliases | Characters of Battle.net friends | **on** |
 | Aliases | In Guildy (only when Guildy is loaded) | **on** |
 
-Anything that listens to game events or sends messages to other players starts switched off. Each
+Your own journey is recorded from the start and stays with you. Everything else that listens to game
+events or sends messages to other players starts switched off. Each
 area also has a main switch under Settings › General.
 
 More commands: `/fam feed` moves the live cards (or use the game's Edit Mode; `reset` and `test`
