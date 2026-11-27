@@ -43,6 +43,7 @@
     <symbol id="i-close" viewBox="0 0 32 32"><path d="M10 10l12 12M22 10 10 22"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 32 32"><path d="M9 12.5l7 7 7-7"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 32 32"><path d="M16 6v19M8.5 17.5 16 25l7.5-7.5"/></symbol>
+    <symbol id="i-out" viewBox="0 0 32 32"><path d="M10 22 22 10M12.5 10H22v9.5"/></symbol>
     <symbol id="i-sparkle" viewBox="0 0 32 32"><path fill="currentColor" stroke="none" d="M13 6.5Q13 18 24.5 18 13 18 13 29.5 13 18 1.5 18 13 18 13 6.5ZM24.5 1.5Q24.5 7.5 30.5 7.5 24.5 7.5 24.5 13.5 24.5 7.5 18.5 7.5 24.5 7.5 24.5 1.5Z"/></symbol>
     <symbol id="i-skull" viewBox="0 0 32 32"><path d="M8.2 18.5A9 9 0 1 1 23.8 18.5L21.5 21v4h-11v-4zM14 25v-2M18 25v-2"/><circle cx="12.5" cy="14.5" r="2"/><circle cx="19.5" cy="14.5" r="2"/></symbol>
     <symbol id="i-swords" viewBox="0 0 32 32"><path d="M7 7l14 14M25 7 11 21M5 21l6 6M27 21l-6 6M9 25l-3 3M23 25l3 3"/></symbol>
@@ -382,11 +383,7 @@
     </section>
 
     <!-- 06 Install ---------------------------------------------------------->
-    <section class="section section--last" id="install">
-      <div class="scene scene--foot" id="scene-foot" aria-hidden="true">
-        <div class="scene__glow"></div>
-        <div class="scene__embers"></div>
-      </div>
+    <section class="section section--tinted" id="install">
       <div class="wrap">
         <header class="section__head">
           <p class="eyebrow reveal"><span class="eyebrow__num">06</span><span data-i18n="in_eyebrow">Installation</span></p>
@@ -406,6 +403,99 @@
             <p data-i18n="in_rel_d">Version 0.1.0-alpha.6 is on CurseForge. Something not working? Type <code>/fam report</code> in the game and paste the text into an <a href="https://github.com/89pleasure/famulus/issues" target="_blank" rel="noopener">issue on GitHub</a>.</p>
           </div>
           <a class="btn btn--primary" href="https://www.curseforge.com/wow/addons/famulus" target="_blank" rel="noopener" data-i18n="in_rel_btn">Download on CurseForge</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 Help: the questions players ask most, and the way to GitHub for
+         everything else. The campfire of the foot stands behind it. -------->
+    <section class="section section--last" id="help">
+      <div class="scene scene--foot" id="scene-foot" aria-hidden="true">
+        <div class="scene__glow"></div>
+        <div class="scene__embers"></div>
+      </div>
+      <div class="glow glow--right" data-parallax="-0.14" aria-hidden="true"></div>
+      <div class="wrap">
+        <header class="section__head">
+          <p class="eyebrow reveal"><span class="eyebrow__num">07</span><span data-i18n="hp_eyebrow">Help</span></p>
+          <h2 class="reveal" style="--i:1" data-i18n="hp_title">Questions around the campfire.</h2>
+          <p class="lead reveal" style="--i:2" data-i18n="hp_lead">What players ask most. Anything else, from bugs to ideas, goes to GitHub.</p>
+        </header>
+
+        <!-- The FAQ by topic on the left; beside it a panel that stays in
+             view with the way to a bug report on GitHub. -->
+        <div class="help">
+          <div class="help__faq">
+            <div class="help__group reveal">
+              <h3 class="faq__topic" data-i18n="hp_t_start">Getting started</h3>
+              <div class="faq">
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_game">Does Famulus work in Retail or Classic?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_game">No. Famulus is made specifically for World of Warcraft: Forever (version 1.60), and that is the only place it is thoroughly tested.</p></div>
+                </details>
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_open">How do I open it?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_open">You can open Famulus any time with the flame logo on the minimap. If that ever doesn't work, you can always type <code>/fam</code> in chat.</p></div>
+                </details>
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_empty">Why is my chronicle empty?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_empty">Check whether you have switched recording off. Also, something has to happen first: Famulus doesn't fill in anything from the past.</p></div>
+                </details>
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_lang">Which languages does it speak?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_lang">English, German, French, Spanish and Italian. It follows your game's language; you can choose another one in its settings.</p></div>
+                </details>
+              </div>
+            </div>
+            <div class="help__group reveal">
+              <h3 class="faq__topic" data-i18n="hp_t_friends">Friends &amp; privacy</h3>
+              <div class="faq">
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_friends">Do my friends need Famulus too?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_friends">You can start on your own, but Famulus is at its best when your friends use it too. Then their milestones land in your chronicle, and the live feed always shows you what is happening with your friends right now. With just one click you can react to it. Without Famulus, there is less to see. Features like the fellow travellers, Nearby and the aliases work whether your friends use Famulus or not.</p></div>
+                </details>
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_send">What does Famulus send, and to whom?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_send">Only the chronicle shares, once you switch sharing on: your milestones and reactions go to friends and guildmates who use Famulus too. Nothing goes beyond your friends list and guild. The fellow travellers and the aliases send nothing.</p></div>
+                </details>
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_alias">Can others see the aliases I give?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_alias">No. Only you see the aliases you give. Unless, of course, you share a screenshot or happen to be streaming. So be careful what you call your “friends” ;)</p></div>
+                </details>
+              </div>
+            </div>
+            <div class="help__group reveal">
+              <h3 class="faq__topic" data-i18n="hp_t_game">In the game</h3>
+              <div class="faq">
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_feed">How do I move the live feed?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_feed">The classic way, with Blizzard's Edit Mode. Or type <code>/fam feed</code> and drag the marked box to where the cards should appear; <code>/fam feed</code> again fixes it, <code>/fam feed reset</code> puts it back. How long the cards stay and which events they show, your own included, you choose in the settings.</p></div>
+                </details>
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_perf">Will it slow down my game?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_perf">Famulus is developed with care and goes easy on your computer's resources. Should you ever feel that it slows your game down, please open a ticket on <a href="https://github.com/89pleasure/famulus/issues/new?template=bug_report.yml" target="_blank" rel="noopener">GitHub, the developer portal</a>.</p></div>
+                </details>
+                <details class="faq__item">
+                  <summary><span data-i18n="hp_q_addons">Does it get along with other addons?</span><i class="faq__icon" aria-hidden="true"><svg class="icon" width="16" height="16"><use href="#i-chevron"/></svg></i></summary>
+                  <div class="faq__a"><p data-i18n="hp_a_addons">Famulus adds to Blizzard's interface without replacing anything and leaves other addons alone. If something clashes anyway, open an issue on GitHub.</p></div>
+                </details>
+              </div>
+            </div>
+          </div>
+
+          <aside class="helppanel reveal" aria-labelledby="helppanel-title">
+            <h3 id="helppanel-title" data-i18n="hp_panel_t">Something not working?</h3>
+            <ol class="helppanel__steps">
+              <li><span class="helppanel__num" aria-hidden="true">1</span><span data-i18n="hp_panel_s1">Type <code>/fam report</code> in the game.</span></li>
+              <li><span class="helppanel__num" aria-hidden="true">2</span><span data-i18n="hp_panel_s2">Copy the text with Ctrl+C (Cmd+C on a Mac).</span></li>
+              <li><span class="helppanel__num" aria-hidden="true">3</span><span data-i18n="hp_panel_s3">Paste it into a new issue and say what happened.</span></li>
+            </ol>
+            <a class="btn btn--primary" href="https://github.com/89pleasure/famulus/issues/new?template=bug_report.yml" target="_blank" rel="noopener"><span data-i18n="hp_panel_btn">Report a bug on GitHub</span><svg class="icon" width="18" height="18"><use href="#i-out"/></svg></a>            <div class="helppanel__links">
+              <a class="helplink" href="https://github.com/89pleasure/famulus/issues/new?labels=enhancement" target="_blank" rel="noopener"><span data-i18n="hp_idea_t">Suggest an idea</span><svg class="icon" width="16" height="16"><use href="#i-out"/></svg></a>
+              <a class="helplink" href="https://github.com/89pleasure/famulus/issues/new?labels=question" target="_blank" rel="noopener"><span data-i18n="hp_ask_t">Ask a question</span><svg class="icon" width="16" height="16"><use href="#i-out"/></svg></a>
+              <a class="helplink" href="https://github.com/89pleasure/famulus/issues" target="_blank" rel="noopener"><span data-i18n="hp_list_t">Open issues</span><svg class="icon" width="16" height="16"><use href="#i-out"/></svg></a>
+            </div>
+          </aside>
         </div>
       </div>
     </section>
