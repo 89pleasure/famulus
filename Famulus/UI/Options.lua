@@ -23,8 +23,9 @@ local CONTENT_W = WIDTH - SIDEBAR - PAD * 2
 -- where the content begins.
 local HEAD, TABS = 76, 48
 local HEADER = TABS + 20
--- An area's settings in the bar: a gear alone at its right end.
-local TAB_ICON_W = 40
+-- An area's settings in the bar: a gear and its name at its right end;
+-- TAB_ICON: the gear's size; 6 px between it and the name.
+local TAB_ICON = 16
 -- The chronicle's story tabs: the book, and beside it a rail that stays put
 -- while the book scrolls.
 local BOOK_W, RAIL_GAP = 600, 28
@@ -402,7 +403,7 @@ local function CategoryTab(category)
         split = true,
         icon = "gear",
         label = function()
-            return L["cat_" .. category]
+            return L.ui_tab_display
         end,
         desc = function()
             return L["cat_" .. category .. "_desc"]
@@ -422,9 +423,6 @@ local layouts = {}
 function layouts.aliases()
     local display = CategoryTab("aliases")
     display.id = "display"
-    display.label = function()
-        return L.ui_tab_display
-    end
     display.desc = function()
         return L.ui_tab_display_desc
     end
@@ -3605,8 +3603,8 @@ local function RefreshNav()
 end
 
 -- The chosen page's tabs at the top of the content, left to right; a tab
--- with an icon (an area's settings) stands as that icon alone at the right
--- end, with Reset to its left. In a fellow traveller's story the way back
+-- with an icon (an area's settings) stands with that icon in front of its
+-- name at the right end, with Reset to its left. In a fellow traveller's story the way back
 -- stands there instead; while searching there are none. A page with a
 -- single tab shows none.
 local function RefreshTabs()
@@ -3626,12 +3624,18 @@ local function RefreshTabs()
         local label = tab.label and tab.label() or page.title()
         button.id = tab.id
         button.label:SetText(label)
-        button.label:SetShown(not tab.icon)
         button.icon:SetShown(tab.icon ~= nil)
+        local width = button.label:GetStringWidth() + 24
+        button.label:ClearAllPoints()
         if tab.icon then
             button.icon:SetTexture(UI.media[tab.icon])
+            width = width + TAB_ICON + 6
+            button.icon:ClearAllPoints()
+            button.icon:SetPoint("LEFT", 12, 0)
+            button.label:SetPoint("LEFT", button.icon, "RIGHT", 6, 0)
+        else
+            button.label:SetPoint("CENTER")
         end
-        button.tip = tab.icon and label or nil
         local alpha = tab.category ~= nil and not ns:IsCategoryEnabled(tab.category) and 0.5 or 1
         button.label:SetAlpha(alpha)
         button.icon:SetAlpha(alpha)
@@ -3640,12 +3644,11 @@ local function RefreshTabs()
         button:Paint(false)
         button:ClearAllPoints()
         if tab.icon then
-            button:SetWidth(TAB_ICON_W)
+            button:SetWidth(width)
             button:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -right, 0)
-            right = right + TAB_ICON_W + 4
+            right = right + width + 4
             aside = button
         else
-            local width = button.label:GetStringWidth() + 24
             button:SetWidth(width)
             button:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", left, 0)
             left = left + width + 4
@@ -4160,10 +4163,8 @@ local function CreateContentTabs()
         button.label = UI.Text(button, 13, "textDim", "medium")
         button.label:SetPoint("CENTER")
         button.label:SetJustifyV("MIDDLE")
-        -- A tab with an icon shows it instead of its name; the name is then
-        -- its tooltip (button.tip).
-        button.icon = UI.Icon(button, "gear", 16, "textDim")
-        button.icon:SetPoint("CENTER")
+        -- A tab with an icon shows it in front of its name.
+        button.icon = UI.Icon(button, "gear", TAB_ICON, "textDim")
         button.icon:Hide()
         button.bar = CreateFrame("Frame", nil, button)
         button.bar:SetHeight(2)
@@ -4180,13 +4181,10 @@ local function CreateContentTabs()
         end
         button:SetScript("OnEnter", function(self)
             self:Paint(true)
-            UI.ShowTip(self)
         end)
         button:SetScript("OnLeave", function(self)
             self:Paint(false)
-            UI.HideTip(self)
         end)
-        button:HookScript("OnHide", UI.HideTip)
         button:SetScript("OnClick", function(self)
             SelectTab(self.id)
         end)

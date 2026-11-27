@@ -627,9 +627,10 @@ owner.
   name, then the area "Aliases" with its line, close), a sidebar that is the same on every page
   (search, Chronicle, Fellow travellers, Aliases with the glowing bar, below a line Settings and
   About; only Aliases works), and in the content the tabs "Names" and "Settings" with a line
-  under the chosen one and "Reset" (on Settings only, asks first). Settings is a gear at the
-  right end with its name as `aria-label` and `title`, Reset to the left of it (placed absolutely,
-  as it stands outside the tablist), as in the addon since 2026-11-27. The master
+  under the chosen one and "Reset" (on Settings only, asks first). Settings is a gear followed by
+  its name at the right end, Reset to the left of it (placed absolutely, as it stands outside the
+  tablist, by the tab's width `--gear-w`, which `main.js` measures), as in the addon since
+  2026-11-27. The master
   switch, the counters ("5/5", "6 of 10 active") and the tab's title and description are gone,
   as in the addon (`state.master` stays on). Settings is a list of the features (`ALIAS_FEATURES`
   in `main.js`: chat, tooltip, menu, Battle.net characters; Guildy left out as everywhere on the

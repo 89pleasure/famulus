@@ -751,19 +751,19 @@ mock.Click(tabButton("Settings"))
 check(tabButton("Settings").selected and not tabButton("Names").selected, "a click on a tab chooses it")
 do
     local gear = tabButton("Settings")
-    check(gear.icon:IsShown() and not gear.label:IsShown() and gear.mockPoint[1] == "BOTTOMRIGHT"
+    check(gear.icon:IsShown() and gear.label:IsShown() and gear.label:GetText() == "Settings"
+        and gear.mockPoint[1] == "BOTTOMRIGHT"
+        and gear:GetWidth() > gear.label:GetStringWidth() + 16
         and not tabButton("Names").icon:IsShown() and tabButton("Names").label:IsShown()
         and tabButton("Names").mockPoint[1] == "BOTTOMLEFT",
-        "an area's settings stand as a gear at the right end of the tabs, its views by name at the left")
+        "an area's settings stand as a gear with their name at the right end of the tabs, its views by name at the left")
     check(window.resetButton.mockPoint[2] == gear and window.resetButton.mockPoint[1] == "RIGHT",
-        "reset stands to the left of the gear")
-    GameTooltip:Hide()
-    GameTooltip:SetText("")
-    gear.scripts.OnEnter(gear)
-    check(GameTooltip:IsShown() and GameTooltip:GetText() == "Settings",
-        "pointing at the gear names it in the game's tooltip")
-    gear.scripts.OnLeave(gear)
-    GameTooltip:Hide()
+        "reset stands to the left of the settings")
+    mock.Click(navButton("Chronicle"))
+    check(tabButton("Settings") and tabButton("Settings").icon:IsShown(),
+        "the chronicle's settings are named Settings as well, not after the area")
+    mock.Click(navButton("Aliases"))
+    mock.Click(tabButton("Settings"))
 end
 -- A settings tab: its features as entries on the left, the chosen one in
 -- full on the right.

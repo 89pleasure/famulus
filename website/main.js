@@ -388,6 +388,14 @@
   // resets.
   const DEFAULTS = { chat: true, tooltip: true, menu: true, account: true, style: 'alias' };
   const resetButton = $('#alias-reset');
+  // Reset stands outside the tablist, left of the settings tab, whose width
+  // follows its name in the chosen language.
+  const gearTab = $('#alias-tab-display');
+  if (gearTab && 'ResizeObserver' in window) {
+    new ResizeObserver(() => {
+      resetButton.parentElement.style.setProperty('--gear-w', `${gearTab.offsetWidth}px`);
+    }).observe(gearTab);
+  }
   let asking = 0;
   const atDefaults = () => Object.entries(DEFAULTS).every(([key, value]) => state[key] === value);
 
