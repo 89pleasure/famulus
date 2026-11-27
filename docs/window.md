@@ -28,8 +28,9 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     entries are removed too.
   - **Content:** at the very top the page's sub-areas as tabs (`window.tabs`, 48 high, stroke with
     gradient under the selected one), "Reset" to the right of them. The views of an area stand
-    by name at the left; its settings tab (`CategoryTab`, `tab.icon = "gear"`) stands as a gear
-    alone at the right end (`TAB_ICON_W`), named in the game's tooltip, with "Reset" to its left.
+    by name at the left; its settings tab (`CategoryTab`, `tab.icon = "gear"`) stands at the right
+    end as a gear followed by "Settings" (`ui_tab_display`, the same name in every area; since
+    2026-11-27, the owner's request: the gear alone got lost), with "Reset" to its left.
     The tabs of the Settings page keep their names. No other tab has an icon: the views have no
     pictures of their own, and theirs would repeat the sidebar's (2026-11-27; checked against
     the mock only, not yet seen in game). A page with only one

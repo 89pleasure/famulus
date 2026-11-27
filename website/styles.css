@@ -601,17 +601,18 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .fwin__entry.is-active::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: linear-gradient(var(--accent2), var(--accent)); box-shadow: 0 0 10px var(--accent-glow); }
 
 .fwin__main { position: relative; min-width: 0; padding: 0 24px 24px; border-top: 1px solid var(--divider); border-left: 1px solid var(--divider); background: linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 0.2)); }
-/* The area's tabs, a line under the chosen one; its settings a gear at the
-   right end, Reset to the left of the gear (outside the tablist, so placed). */
+/* The area's tabs, a line under the chosen one; its settings a gear and its
+   name at the right end, Reset to the left of them (outside the tablist, so
+   placed by --gear-w, set in main.js from the tab's width). */
 .fwin__tabbar { --tabpad: 24px; position: relative; display: flex; align-items: center; margin: 0 calc(-1 * var(--tabpad)) 18px; padding: 0 var(--tabpad); border-bottom: 1px solid var(--divider); }
 .fwin__tabs { flex: 1; display: flex; gap: 24px; }
-.fwin__tabs .fwin__gear { display: grid; place-items: center; width: 36px; margin-left: auto; padding: 0; }
-.fwin__tabs .fwin__gear[aria-selected="true"]::after { left: 8px; right: 8px; }
+.fwin__tabs .fwin__gear { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; }
+.fwin__tabs .fwin__gear .icon { flex: none; }
 .fwin__tabs button { position: relative; height: 46px; padding: 0 2px; border: 0; background: none; font-weight: 500; color: var(--text-muted); transition: color 0.2s; }
 .fwin__tabs button:hover { color: var(--text); }
 .fwin__tabs button[aria-selected="true"] { color: var(--text); }
 .fwin__tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 1px; background: linear-gradient(90deg, var(--accent), var(--accent2)); box-shadow: 0 0 10px 1px var(--accent-glow); }
-.fwin__reset { position: absolute; top: 50%; right: calc(var(--tabpad) + 36px + 8px); translate: 0 -50%; height: 30px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--control-border); background: none; font-size: 12.5px; font-weight: 500; color: var(--text-dim); transition: color 0.2s, border-color 0.2s, background-color 0.2s, opacity 0.2s; }
+.fwin__reset { position: absolute; top: 50%; right: calc(var(--tabpad) + var(--gear-w, 96px) + 10px); translate: 0 -50%; height: 30px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--control-border); background: none; font-size: 12.5px; font-weight: 500; color: var(--text-dim); transition: color 0.2s, border-color 0.2s, background-color 0.2s, opacity 0.2s; }
 .fwin__reset:hover:not(:disabled) { color: var(--text); background-color: rgb(255 255 255 / 0.05); }
 .fwin__reset:disabled { opacity: 0.4; }
 .fwin__reset.is-asking { color: #f06a6a; border-color: rgb(240 106 106 / 0.5); background-color: rgb(240 106 106 / 0.1); }
