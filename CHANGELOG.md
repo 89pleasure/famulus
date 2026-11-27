@@ -77,6 +77,10 @@ GitHub.
   report. It holds no names.
 - The window needs noticeably less memory once it has been opened.
 
+#### Aliases
+- Aliases in the Guildy addon now work with the regular Guildy, version 1.18.0 or newer. Before,
+  they needed a special build of Guildy.
+
 ## 0.1.0-alpha.6
 
 ### Welcome

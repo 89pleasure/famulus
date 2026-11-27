@@ -65,6 +65,8 @@ window.FAMULUS_I18N.fr = {
   o_style_d: "Afficher l'alias seul, ou suivi du nom du personnage.",
   f_account: 'Personnages des amis Battle.net',
   f_account_d: 'Retient sur quels personnages un ami Battle.net ayant un alias est en ligne. Ainsi, son alias couvre tous ses personnages.',
+  f_guildy: 'Alias dans Guildy',
+  f_guildy_d: 'Affiche l\'alias au lieu du nom du personnage dans l\'addon Guildy (version 1.18.0 ou plus récente) : sa discussion, sa liste des membres et ses autres onglets.',
   w_new: 'Nouvel alias',
   w_name_ph: 'Personnage ou BattleTag#1234',
   w_save: 'Enregistrer',

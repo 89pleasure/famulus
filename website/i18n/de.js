@@ -65,6 +65,8 @@ window.FAMULUS_I18N.de = {
   o_style_d: 'Den Alias allein zeigen oder mit dem Charakternamen dahinter.',
   f_account: 'Charaktere von Battle.net-Freunden',
   f_account_d: 'Merkt sich, mit welchen Charakteren ein Battle.net-Freund mit Alias online ist. So gilt sein Alias für alle seine Charaktere.',
+  f_guildy: 'Aliase in Guildy',
+  f_guildy_d: 'Zeigt im Addon Guildy (ab Version 1.18.0) den Alias statt des Charakternamens: im Chat, in der Mitgliederliste und auf den anderen Seiten.',
   w_new: 'Neuer Alias',
   w_name_ph: 'Charakter oder BattleTag#1234',
   w_save: 'Speichern',

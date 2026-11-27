@@ -65,6 +65,8 @@ window.FAMULUS_I18N.es = {
   o_style_d: 'Mostrar solo el alias o con el nombre del personaje detrás.',
   f_account: 'Personajes de amigos de Battle.net',
   f_account_d: 'Recuerda con qué personajes está en línea un amigo de Battle.net que tiene alias. Así su alias cubre todos sus personajes.',
+  f_guildy: 'Alias en Guildy',
+  f_guildy_d: 'Muestra el alias en lugar del nombre del personaje en el addon Guildy (versión 1.18.0 o posterior): en su chat, en la lista de miembros y en sus demás pestañas.',
   w_new: 'Nuevo alias',
   w_name_ph: 'Personaje o BattleTag#1234',
   w_save: 'Guardar',

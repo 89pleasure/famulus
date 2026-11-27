@@ -192,7 +192,7 @@ at `D:\Games\World of Warcraft\_forever_`, the repo at `E:\Develop\wow\famulus`;
   text. Open: the sentence on CurseForge and the website (issues #49 and #50). Players without a
   GitHub account can paste it into a comment on CurseForge. In game (2026-11-26, deDE): the
   window opens and Ctrl+C copies the whole text; the owner's first report showed 9263 KB of
-  memory and guildyAliases as a failed check, because the regular Guildy had replaced the fork
+  memory and guildyAliases as a failed check, because the regular Guildy (then without the API) had replaced the fork
   (see "guildyAliases" in docs/aliases.md; since then no failure). Not seen yet: how a long text
   (developer mode with a full trace) scrolls.
 - At startup the game sets all files in the addon folder to mode 777, and through the symlink

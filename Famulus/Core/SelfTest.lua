@@ -167,7 +167,7 @@ local function CheckFeatures()
             Add("feature", feature.id, "ok", "addon " .. feature.addon .. " not loaded")
         elseif #missing > 0 and feature.addon then
             -- The other addon is there, in a version without what the feature
-            -- needs (Guildy without the name API of the fork): the feature is
+            -- needs (Guildy before 1.18.0, without GuildyAPI): the feature is
             -- simply not offered, nothing in Famulus is broken.
             Add("feature", feature.id, "ok", "addon " .. feature.addon .. " lacks " .. table.concat(missing, ", ")
                 .. "; the feature is not offered")
