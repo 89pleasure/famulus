@@ -1443,17 +1443,68 @@
     clearTimeout(card.timer);
     card.classList.add('is-leaving');
     card.classList.remove('is-in');
+    const host = card.parentElement;
     setTimeout(() => card.remove(), 520);
+    if (host) arrange(host); // the others move up
   }
 
   // The last row of a card: the place first, then what else there is to say.
   const feedLine = event => [event.zone, tell(event).detail].filter(Boolean).join('  ·  ');
 
-  // A card in three rows, as Famulus/UI/Feed.lua: whose it is (none for your
-  // own), what happened, where. A friend's card has the reaction at its right
-  // end: a click gives it and the card goes a second later. A line along the
-  // foot runs out while the card stays; the mouse on the card holds it.
+  // As Famulus/UI/Feed.lua since #75: only the newest card is large, the
+  // ones before it are slim rows below it (a small crest, whose it is and
+  // what happened on one line), and a fourth is pushed out. A new card
+  // stays on top for a moment (STEP) before the next comes; those that wait
+  // are counted on the top card.
+  const STEP = 1200;
+  const TALL = 76;
+  const LARGE = 64;
+  const SLIM = 34;
+  const GAP = 10; // below the large card
+  const SLIM_GAP = 6; // below a row
+
+  // Stacks the cards: the newest on top, the rows below it.
+  function arrange(host) {
+    const cards = $$('.toast:not(.is-leaving)', host);
+    let y = 0;
+    cards.forEach((card, index) => {
+      card.classList.toggle('is-slim', index > 0);
+      card.style.setProperty('--y', `${y}px`);
+      y += index ? SLIM + SLIM_GAP : (card.classList.contains('is-tall') ? TALL : LARGE) + GAP;
+    });
+    cards.slice(MAX_CARDS).forEach(leave);
+    for (const count of $$('.toast__count', host)) count.remove();
+    const waiting = (host.waiting || []).length;
+    if (waiting && cards[0]) cards[0].append(make('span', 'toast__count', `+${waiting}`));
+  }
+
+  // Cards that come faster than STEP wait their turn.
   function showCard(host, event, seconds) {
+    host.waiting = host.waiting || [];
+    const due = (host.last || 0) + STEP - Date.now();
+    if (due <= 0 && !host.waiting.length) {
+      enter(host, event, seconds);
+      return;
+    }
+    host.waiting.push([event, seconds]);
+    arrange(host);
+    if (!host.pump) {
+      const pump = () => {
+        const [next, time] = host.waiting.shift();
+        enter(host, next, time);
+        host.pump = host.waiting.length ? setTimeout(pump, STEP) : 0;
+      };
+      host.pump = setTimeout(pump, Math.max(due, 0));
+    }
+  }
+
+  // A card in three rows: whose it is (none for your own), what happened,
+  // where; as a row, whose it is and what happened. A friend's card has the
+  // reaction at its right end: a click gives it and the card goes a second
+  // later. A line along the foot runs out while the card stays; the mouse on
+  // the card holds it.
+  function enter(host, event, seconds) {
+    host.last = Date.now();
     const card = make('div', `toast toast--${PICTURES[event.kind].tone}${event.big ? ' is-big' : ''}`);
     const text = make('div', 'toast__text');
     if (event.who) text.append(make('p', 'toast__who', labelOf(event.who)));
@@ -1461,7 +1512,9 @@
     const line = feedLine(event);
     if (line) text.append(make('span', '', line));
     card.classList.toggle('is-tall', text.childElementCount === 3);
-    card.append(picture(event), text);
+    const row = make('p', 'toast__line');
+    row.append(make('b', '', labelOf(event.who || ME)), `  ·  ${tell(event).title}`);
+    card.append(picture(event), text, row);
     const kind = REACTIONS[event.kind];
     if (event.who && kind) {
       const button = make('button', 'react react--feed');
@@ -1490,10 +1543,7 @@
       });
     }
     host.prepend(card);
-
-    const cards = $$('.toast:not(.is-leaving)', host);
-    cards.forEach((other, slot) => other.style.setProperty('--slot', slot));
-    cards.slice(MAX_CARDS).forEach(leave);
+    arrange(host);
     requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('is-in')));
     if (Number.isFinite(seconds)) card.timer = setTimeout(() => leave(card), seconds * 1000);
   }

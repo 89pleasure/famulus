@@ -214,7 +214,8 @@ owner.
   scrolling, no console messages (a `figure` keeps the browser's margin of 40 px unless set to
   0; it did at first).
   - The header's live feed banners lie over the lower end of the window's right column,
-    below its friends list, where the window fades out (`.shot__feed`, `top: 70%`), like
+    below its friends list, where the window fades out (`.shot__feed`, `top: 74%` since the rows,
+    before 70 %), like
     Polestar's second window. At 50 % they covered the friends list. There they are
     right-aligned at the window edge and reach 44 px beyond it (below 1400 px inside, below
     760 px hidden); left-aligned as in the game, they lay over the book at 1024 px.
@@ -348,6 +349,16 @@ owner.
     340 px wide, slots 84 px apart; a friend's card has the reaction button at its right end
     (a click lights it and the card goes a second later); a line along the foot runs out over
     the card's time; the mouse on the card holds it, leaving lets it go 1.5 s later.
+    **Rows as since #75 (2026-11-27, the next step after the gallery):** only the newest card is
+    large; the ones before it are slim rows below it (34 px, a 24 px crest, "whose · what" on one
+    line, your own under your character's name, the reaction at 24 px), the newest on top, a
+    fourth pushed out (`arrange` in `main.js`). Cards that come faster than 1.2 s apart (`STEP`,
+    as in `UI/Feed.lua`) wait, and the top card counts them in an accent badge ("+2"). Not
+    built: the edges of the waiting cards behind the top one, keeping the last three
+    (`SetKeep`), and the faster pace with three waiting. The feed's room is 170 px (a tall card
+    and two rows); the header's cards stand at 74 % of the window (was 70 %), so the stack starts
+    below its friends list. Checked at 1056 px: four chips in a row count +3, +2, +1 and stack
+    the rows; the header's cards play on their own.
   - **Fellow travellers:** tabs "Overview" and "Nearby" above the demo (`#fellows-tabs`). Nearby
     as `UI.NearbyList`: "Here in Tanaris", "Similar level" (up to 5 apart) and "Also online",
     rows with crest, name and below it name, class and where from, level with the difference to

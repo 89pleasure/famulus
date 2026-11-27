@@ -275,7 +275,7 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 /* Live feed cards over the lower end of the window's right column, below its
    friends list, where the window fades; flush with its right edge and a little
    past it, as Polestar lays its second window over the first. */
-.shot__feed { position: absolute; top: 70%; right: -44px; width: 400px; }
+.shot__feed { position: absolute; top: 74%; right: -44px; width: 400px; }
 .shot__feed .toast { left: auto; right: 0; }
 /* The first section's glow drifts up into the window's fading foot instead of
    being cut off at the section's top edge. */
@@ -726,19 +726,33 @@ div.nrow:hover { background-color: transparent; }
 
 /* ---------- The live feed ---------- */
 
-.toasts { position: relative; height: 240px; }
+.toasts { position: relative; height: 170px; }
 .toast {
-  position: absolute; left: 0; top: 0; overflow: hidden;
+  position: absolute; left: 0; top: 0;
   display: flex; align-items: center; gap: 14px;
   width: max-content; min-width: 230px; max-width: min(340px, 100%); height: 64px; padding: 0 14px;
   border-radius: 10px; background: var(--card); border: 1px solid var(--card-border);
   background-image: linear-gradient(180deg, transparent 30%, rgb(0 0 0 / 0.22));
   box-shadow: var(--sheen), 0 18px 44px -14px rgb(0 0 0 / 0.85);
-  opacity: 0; transform: translateY(calc(var(--slot, 0) * 84px - 12px));
-  transition: transform 0.5s var(--ease), opacity 0.3s;
+  opacity: 0; transform: translateY(calc(var(--y, 0px) - 12px));
+  transition: transform 0.5s var(--ease), opacity 0.3s, height 0.4s var(--ease);
 }
-.toast.is-in { opacity: 1; transform: translateY(calc(var(--slot, 0) * 84px)); }
+.toast.is-in { opacity: 1; transform: translateY(var(--y, 0px)); }
 .toast.is-tall { height: 76px; }
+/* The cards before the newest: a slim row with a small crest, whose it is and
+   what happened on one line (SLIM in Famulus/UI/Feed.lua). */
+.toast.is-slim { height: 34px; min-width: 200px; gap: 9px; padding: 0 6px; }
+.toast.is-slim .pic { width: 24px; height: 24px; border-width: 1px; border-radius: 6px; }
+.toast.is-slim .pic b { font-size: 12px; }
+.toast.is-slim .pic .icon { width: 14px; height: 14px; }
+.toast.is-slim .pic__count, .toast.is-slim .toast__text { display: none; }
+.toast__line { display: none; min-width: 0; padding-right: 8px; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toast__line b { font-weight: 500; color: var(--text-dim); }
+.toast.is-slim .toast__line { display: block; }
+.toast.is-slim .react--feed { min-width: 24px; height: 24px; margin-left: auto; border-radius: 6px; }
+.toast.is-slim .react--feed .icon { width: 14px; height: 14px; }
+/* How many cards wait behind the top one. */
+.toast__count { position: absolute; right: 12px; top: -9px; display: grid; place-items: center; min-width: 26px; height: 18px; padding: 0 6px; border-radius: 9px; background: var(--accent); color: #17150a; font-size: 11px; font-weight: 700; box-shadow: 0 0 10px var(--accent-glow); }
 .toast.is-leaving { opacity: 0; transition-duration: 0.5s; }
 .toast.is-big { border-color: var(--card-active); }
 .toast .pic { width: 48px; height: 48px; border-width: 2px; border-radius: 8px; }
