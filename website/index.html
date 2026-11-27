@@ -503,14 +503,60 @@
     </section>
   </main>
 
+  <!-- Footer: the same in legal.html, where the page's links lead to index.html.
+       "Version <x>" is replaced by the newest release tag on publishing. -->
   <footer class="footer">
-    <div class="wrap footer__inner">
-      <div class="footer__brand">
-        <img src="assets/logo.svg" width="26" height="26" alt="">
-        <strong>Famulus</strong>
-        <span data-i18n="tagline">Together through Azeroth</span>
+    <div class="wrap">
+      <div class="footer__top">
+        <div class="footer__about">
+          <a class="footer__brand" href="#top">
+            <img src="assets/logo.svg" width="32" height="32" alt="">
+            <span><strong>Famulus</strong><small data-i18n="tagline">Together through Azeroth</small></span>
+          </a>
+          <p class="footer__blurb" data-i18n="ft_blurb">An addon for playing together in World of Warcraft: Forever, with your friends, your guild and everyone you meet on the road.</p>
+          <a class="footer__version" href="https://github.com/89pleasure/famulus/blob/main/CHANGELOG.md" target="_blank" rel="noopener">
+            <span class="footer__dot" aria-hidden="true"></span>
+            <b>Version 0.1.0-alpha.6</b>
+            <span class="footer__sep" aria-hidden="true">·</span>
+            <span data-i18n="ft_changes">What's new</span>
+            <svg class="icon" width="14" height="14"><use href="#i-out"/></svg>
+          </a>
+        </div>
+        <nav class="footer__cols" aria-label="Footer" data-i18n-attr="aria-label:ft_nav">
+          <div class="footer__col">
+            <h2 class="footer__head" data-i18n="ft_h_explore">Explore</h2>
+            <ul>
+              <li><a href="#chronicle" data-i18n="nav_chronicle">Chronicle</a></li>
+              <li><a href="#fellows" data-i18n="nav_fellows">Fellow travellers</a></li>
+              <li><a href="#feed" data-i18n="nav_feed">Live feed</a></li>
+              <li><a href="#aliases" data-i18n="nav_aliases">Aliases</a></li>
+              <li><a href="#shots" data-i18n="ft_shots">Screenshots</a></li>
+              <li><a href="#help" data-i18n="ft_help">Help &amp; FAQ</a></li>
+            </ul>
+          </div>
+          <div class="footer__col">
+            <h2 class="footer__head" data-i18n="ft_h_community">Community</h2>
+            <ul>
+              <li><a href="https://github.com/89pleasure/famulus" target="_blank" rel="noopener">GitHub<svg class="icon" width="14" height="14"><use href="#i-out"/></svg></a></li>
+              <li><span class="footer__soon">Discord <em data-i18n="ft_soon">Soon</em></span></li>
+              <li><a href="https://www.curseforge.com/wow/addons/famulus" target="_blank" rel="noopener">CurseForge<svg class="icon" width="14" height="14"><use href="#i-out"/></svg></a></li>
+              <li><a href="https://github.com/89pleasure/famulus/issues/new?template=bug_report.yml" target="_blank" rel="noopener"><span data-i18n="ft_bug">Report a bug</span><svg class="icon" width="14" height="14"><use href="#i-out"/></svg></a></li>
+            </ul>
+          </div>
+          <div class="footer__col">
+            <h2 class="footer__head" data-i18n="ft_h_legal">Legal</h2>
+            <ul>
+              <li><a href="legal.html#privacy" data-i18n="ft_privacy">Privacy</a></li>
+              <li><a href="legal.html#rights" data-i18n="ft_rights">Copyright &amp; trademarks</a></li>
+              <li><a href="https://github.com/89pleasure/famulus/blob/main/LICENSE" target="_blank" rel="noopener"><span data-i18n="ft_licence">Licence</span><svg class="icon" width="14" height="14"><use href="#i-out"/></svg></a></li>
+            </ul>
+          </div>
+        </nav>
       </div>
-      <p class="footer__legal" data-i18n="ft_legal">Famulus is a fan project and is not affiliated with Blizzard Entertainment. World of Warcraft is a trademark of Blizzard Entertainment, Inc. Typeface: Inter, SIL Open Font License 1.1.</p>
+      <div class="footer__bottom">
+        <p class="footer__legal" data-i18n="ft_legal">Famulus is a fan project and is not affiliated with or endorsed by Blizzard Entertainment. World of Warcraft and Blizzard Entertainment are trademarks or registered trademarks of Blizzard Entertainment, Inc. The screenshots show game content © Blizzard Entertainment, Inc. Typeface: Inter, SIL Open Font License 1.1.</p>
+        <p class="footer__copy" data-i18n="ft_copy">© 2026 89pleasure. All rights reserved.</p>
+      </div>
     </div>
   </footer>
 

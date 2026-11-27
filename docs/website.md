@@ -12,7 +12,7 @@ owner.
 
 - **Technology:** a static page without a build step and without libraries: `index.html`,
   `styles.css`, `i18n.js` (texts), `scene.js` (landscape, parallax), `main.js` (language,
-  demos), `assets/` (logo as SVG from the outlines in `tools/make_media.py`; Inter copied from
+  demos), `legal.html` with `legal.js` (privacy, copyright), `assets/` (logo as SVG from the outlines in `tools/make_media.py`; Inter copied from
   `Famulus/Media/Fonts`, including its licence). The page makes no requests to third-party
   servers (no web fonts, no tracking). Preview: `python3 -m http.server 4173 --directory website`
   (as `website` in `.claude/launch.json`). The Windows machine has no `python3`; there
@@ -43,7 +43,7 @@ owner.
   02 Fellow travellers → 03 Live feed (can be triggered, position can be moved) → 04 Aliases (the
   window rebuilt and usable, below it chat and tooltip "in game") → 05 Screenshots ("What Famulus
   looks like in the game", since 2026-11-27, see "Gallery") → 06 Installation → 07 Help (see
-  "Help") → footer with a note on Blizzard's trademark. Tinted background (`section--tinted`) and
+  "Help") → footer (see "Footer and legal page"). Tinted background (`section--tinted`) and
   glow still alternate from section to section; the campfire of the foot (`section--last`,
   `#scene-foot`) stands behind the last section, since 2026-11-27 the help instead of the
   installation. The skip link and "What it does" lead to the chronicle (the arrow in the
@@ -270,6 +270,49 @@ owner.
   until then. Built from three variants (accordion with cards below; this one; topics as tabs
   with the links in a larger footer). Checked at 1440, 820 and 375 px in English and German: no
   horizontal scrolling, no console messages, every key in both languages.
+- **Footer and legal page (2026-11-27, the owner's request: GitHub, a future Discord server,
+  CurseForge, the current version, licence and "legal stuff", modelled on polestar.guide;
+  layout and texts the assistant's decisions, not yet seen by the owner):**
+  - **Footer:** on top the brand (logo, name, tagline, one sentence on what Famulus is) with the
+    current version as a pill ("Version <x> · What's new", to `CHANGELOG.md` on GitHub, because
+    there are no GitHub releases), beside it three columns: Explore (the four areas,
+    Screenshots, Help & FAQ), Community (GitHub, Discord, CurseForge, Report a bug) and Legal
+    (Privacy, Copyright & trademarks, Licence = `LICENSE` on GitHub). Below a line the notice on Blizzard's
+    trademarks (now also: the screenshots show game content © Blizzard) and "© 2026 89pleasure.
+    All rights reserved." **Discord is not a link yet** but muted with a pill "Soon"; once the
+    server exists, make it a link like GitHub. Below 980 px the columns go under the brand, below
+    560 px two columns. Polestar has the links in one row and a creator line; Famulus has
+    neither.
+  - **Legal page `legal.html`** with `legal.js` (language as on the main page, `?lang=`,
+    remembered or English; no demos): privacy policy (`#privacy`) and copyright and trademarks
+    (`#rights`, with "tell me in an issue and I take it down", like Polestar's takedown page)
+    on one page, the same navigation bar (stuck, with "Back to Famulus") and footer. The legal
+    texts stand in the HTML in both languages (`data-only="en|de"`), so the main page does not
+    load them with `i18n.js`; navigation and footer take their keys from `i18n.js` (`lg_*`,
+    `ft_*`).
+  - **No legal notice, no personal data (the owner's decision, 2026-11-27):** "I know a legal
+    notice with name and address is mandatory in Germany, but I don't want that"; like
+    polestar.guide. Responsible is "89pleasure, the developer of Famulus", with the email
+    `89pleasure@proton.me` (the owner's address for this, 2026-11-27) and GitHub as a second,
+    public way. The email also stands under "No accounts, nothing to delete" and for takedowns
+    in `#rights`. Polestar names a first name, the country and a project address
+    (`privacy@polestar.guide`); Famulus names only the address. Do not ask for more data or
+    build a legal notice back in.
+  - **No accounts, nothing to delete (the owner, 2026-11-27):** neither the website nor the
+    addon stores personal data, there are no accounts and no registration, so the policy has
+    no list of rights to access or erasure; instead it says there is nothing to look up or
+    delete, points requests about the server logs to GitHub and keeps the right to complain to
+    a supervisory authority. "The addon" adds that what Famulus remembers stays in the game
+    folder on the player's computer. If accounts, a newsletter or anything stored on a server
+    ever come, this section needs the rights again.
+    Facts in the privacy policy, read 2026-11-27: GitHub Pages logs the visitor's IP address for
+    security (GitHub's docs, "Data collection"); GitHub, Inc. is certified under the EU-U.S. DPF
+    and its Swiss and UK counterparts (GitHub Privacy Statement of 2026-04-27); the page stores
+    only `famulus-lang` in local storage, sets no cookies and loads nothing from other servers.
+    Draft by the assistant, not legal advice; the texts use "I" (one owner, as the changelog).
+  - Checked at 1440 and 375 px, English and German: footer and legal page without horizontal
+    scrolling, the language switch shows the right legal texts, `#privacy` and `#rights` land
+    below the bar, no console messages.
 - **Languages:** English is in the HTML (`data-i18n="key"`), German in `i18n.js`; what
   scripts put together is there in both languages. **English is the default** (the owner's
   request, 2026-11-25; before that the page followed the browser's language, so a German
@@ -284,15 +327,17 @@ owner.
   needed), and at the DNS provider A and AAAA records pointing to GitHub for the domain without
   `www`, a CNAME to `89pleasure.github.io` for `www`. Without a domain the page is at
   `89pleasure.github.io/famulus/`; that works because all paths are relative. GitHub sees the
-  visitors' IP addresses, that belongs in the privacy policy. Since 2026-11-25 two jobs, build
+  visitors' IP addresses; the privacy policy says so (see "Footer and legal page"). Since
+  2026-11-25 two jobs, build
   and deploy, as in GitHub's own Pages workflow: in one job `deploy-pages` twice looked for the
   artifact before GitHub listed it ("Found 0 artifact(s)"), and re-running the failed job uploaded
   a second one ("Multiple artifacts"). If a run fails, re-run the whole workflow or start it by
   hand, not only the failed job.
 - **Version on the page (2026-11-25, the owner's request: "should show the current release
-  version"):** `fact_version` and `in_rel_d` say "Version <x>" in both languages. When
-  publishing, `website.yml` replaces every "Version <x.y.z[-alpha|beta.n]>" in `index.html` and
-  `i18n.js` with the newest release tag by version, wherever it sits (`git tag --sort=-v:refname`
+  version"):** `fact_version` and `in_rel_d` say "Version <x>" in both languages, and so does the
+  footer (in `index.html` and `legal.html`, no text key: it is the same in every language). When
+  publishing, `website.yml` replaces every "Version <x.y.z[-alpha|beta.n]>" in `index.html`,
+  `i18n.js` and `legal.html` with the newest release tag by version, wherever it sits (`git tag --sort=-v:refname`
   with `versionsort.suffix=-`, so alpha and beta come before their release; without the "v"),
   and fails if a file then does not name it. Until 2026-11-25 it took the newest tag on `main`
   (`git describe --tags`); `v0.1.0-alpha.4` was set on the branch of its pull request instead of
@@ -325,8 +370,7 @@ owner.
   `<link rel="canonical">`, `og:url`, `og:image` (needs an absolute URL and a preview image,
   1200 × 630) and `hreflang` alternates for `?lang=de`; until then search engines see only the
   English page.
-- **Deliberately not included yet:** Guildy (only once the PR there is accepted), legal notice and privacy policy (needed before
-  publishing), the domain (the owner gets it), a preview image for shared
+- **Deliberately not included yet:** Guildy (only once the PR there is accepted), the domain (the owner gets it), a preview image for shared
   links (see "Head and link previews"), WOFF2 fonts (the TTFs from the addon are loaded, ~100 KB
   each).
 - **Checked** in the app's built-in browser (Chromium): at 1440 and 375 px width all
@@ -472,4 +516,7 @@ owner.
   visibly changes; the aliases' features in Settings (`ALIAS_FEATURES` in `main.js`), new main
   features as entries in the window's sidebar and as their own section with an entry in the
   navigation; the bond tiers (`TIERS` in `main.js`) like `FellowService.TIERS`; the answers of
-  the help (`hp_a_*`) when a command, a language or what Famulus sends changes.
+  the help (`hp_a_*`) when a command, a language or what Famulus sends changes; the privacy
+  policy in `legal.html` (and its date) when the page loads something from elsewhere, stores
+  something new or embeds a service, and when the addon starts sending something new; the
+  footer's links in both HTML files (a new section, the Discord server).
