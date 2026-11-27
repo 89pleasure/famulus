@@ -11,7 +11,7 @@ as background, artwork from WoW or generated artwork. The first version (2026-11
 owner.
 
 - **Technology:** a static page without a build step and without libraries: `index.html`,
-  `styles.css`, `i18n.js` (texts), `scene.js` (landscape, parallax), `main.js` (language,
+  `styles.css`, `i18n/` (texts, one file per language), `scene.js` (landscape, parallax), `main.js` (language,
   demos), `legal.html` with `legal.js` (privacy, copyright), `pick.js` (the dropdown for scene
   and language, on both pages), `assets/` (logo as SVG from the outlines in `tools/make_media.py`; Inter copied from
   `Famulus/Media/Fonts`, including its licence). The page makes no requests to third-party
@@ -226,7 +226,8 @@ owner.
     "DE" and "EN" side by side). A menu button with `menuitemradio`: it opens on the chosen
     entry, arrow keys, Home and End move, Escape closes and returns to the button, Tab or a click
     elsewhere closes it. The language's button shows the code ("DE"), the menu the codes and
-    the languages' own names (Deutsch, English); its name says "Language: <name>".
+    the languages' own names (Deutsch, English; since the same day also Español, Français,
+    Italiano, see "Languages"); its name says "Language: <name>".
   - The foot (`#scene-foot`) and the small scenes of the demos take the world's colours but
     keep their own drawing (no tower, castle or northern lights there). The foot's fire shows
     no flame, only its light behind the hill and its sparks, so there `--fire` and `--fire2`
@@ -259,7 +260,9 @@ owner.
     text column: `font-size: min(<as before>, var(--title-fit))`, with `--title-fit` per
     language in container units (`cqi`, the text column is the container): English 15.5cqi
     (never applies, the lines fit anyway), German 11.9cqi ("Für alle, mit denen" is 8.2 em
-    wide). A new title or a new language needs its own value, about 97 divided
+    wide), Spanish 13.8cqi ("juegan contigo." 7.0 em), French 10.6cqi ("avec qui vous jouez."
+    9.1 em, so French is the smallest: 68 px at 1440 × 900), Italian 14.8cqi ("con cui
+    giochi." 6.5 em). A new title or a new language needs its own value, about 97 divided
     by the width of the longer line in em. Before, the German title broke onto
     three lines at 1440 px and stretched the header to 941 px. Checked from 320 to 1920 px width
     in both languages: two lines, nothing overflows. German is smaller as a result (76 instead of
@@ -281,8 +284,8 @@ owner.
     loaded (a `src` in the HTML would be fetched by the browser's preload scanner first);
     `showShot()` in `main.js` loads and decodes the next one on a change of world before it
     swaps; without scripts a `<noscript>` shows Lemon. Only the alt text changes with the
-    language (`shot_alt` in `i18n.js`, the German one with the addition "englische Fassung"
-    ("English version")).
+    language (`shot_alt` in `i18n/`; every language but English adds that it shows the English
+    version, German "englische Fassung").
   - **Producing it:** `node tools/make_shot.js <screenshot> <x> <y> <width> <height>
     website/assets/shots/window-<scheme>` cuts out the window from its outer hairline
     and writes WebP at full width and at 1180; headless Chrome decodes, scales and
@@ -388,9 +391,10 @@ owner.
     remembered or English; no demos): privacy policy (`#privacy`) and copyright and trademarks
     (`#rights`, with "tell me in an issue and I take it down", like Polestar's takedown page)
     on one page, the same navigation bar (stuck, with "Back to Famulus") and footer. The legal
-    texts stand in the HTML in both languages (`data-only="en|de"`), so the main page does not
-    load them with `i18n.js`; navigation and footer take their keys from `i18n.js` (`lg_*`,
-    `ft_*`).
+    texts stand in the HTML in every language (`data-only="<code>"`), so the main page does not
+    load them with `i18n/`; navigation and footer take their keys from `i18n/` (`lg_*`,
+    `ft_*`). The GitHub links in them lead to GitHub's docs in the reader's language where
+    GitHub has one (not in Italian).
   - **No legal notice, no personal data (the owner's decision, 2026-11-27):** "I know a legal
     notice with name and address is mandatory in Germany, but I don't want that"; like
     polestar.guide. Responsible is "89pleasure, the developer of Famulus", with the email
@@ -416,11 +420,44 @@ owner.
   - Checked at 1440 and 375 px, English and German: footer and legal page without horizontal
     scrolling, the language switch shows the right legal texts, `#privacy` and `#rights` land
     below the bar, no console messages.
-- **Languages:** English is in the HTML (`data-i18n="key"`), German in `i18n.js`; what
-  scripts put together is there in both languages. **English is the default** (the owner's
-  request, 2026-11-25; before that the page followed the browser's language, so a German
-  browser got German). German only comes up when the reader switches to it (remembered in
-  `localStorage`) or with `?lang=de`. If a language lacks a key, the console warns.
+- **Languages:** the languages the addon offers (the owner's request, 2026-11-27; until then
+  English and German): English, German, Spanish, French and Italian. English is in the HTML
+  (`data-i18n="key"`), every other language in its file `i18n/<code>.js` (like `Locales/` in the
+  addon; until 2026-11-27 one file `i18n.js`); `i18n/en.js` holds only what scripts put together,
+  the others every key. Both pages load all five files (about 20 KB each, under 8 KB gzipped).
+  **English is the default** (the owner's request, 2026-11-25; before that the page followed the
+  browser's language, so a German browser got German). Another language only comes up when the
+  reader switches to it (remembered in `localStorage`) or with `?lang=<code>`. If a language lacks
+  a key, the console warns.
+  - **The switch** is the dropdown of `pick.js` (see "The dropdown"); its menu lists the five
+    codes and names (Deutsch, English, Español, Français, Italiano).
+  - **Spanish, French and Italian** (2026-11-27) were written by the assistant from the English
+    and, wherever the page names what the addon names (areas, tabs, features, bond tiers, times of
+    day, the chronicle's sentences), in the addon's words from `Locales/`. French addresses the
+    reader with "vous", Spanish and Italian informally, as in the addon. Not read by a native
+    speaker. Zones and bosses keep the page's English names in every language (the addon's
+    samples would name them as the client of the language does), and so do the people.
+    Details: the navigation names the live feed short ("En directo", "En direct", "Eventi live"),
+    its section in the addon's words; French writes a no-break space (` `, `&nbsp;` in
+    `legal.html`) before `? ! : ;` and inside « »; `chat_whispers` carries the message as `%s`, so
+    French can write "chuchote : …"; the legal page's heading avoids "Mentions légales" and
+    "Aviso legal", which name the legal notice the page does not have.
+  - Checked at 1440, 1024, 768 and 375 px in all five languages: the hero's title on two lines,
+    the aliases' title on one line from 768 px up, the fact chips in one row at 1440 px, no
+    horizontal scrolling; text cut with "…" only where English cuts it too (the slim live feed
+    rows, the fellow travellers' list), plus the Spanish and French boss row in the header's
+    feed ("Victoria sobre Archaedas"). After the scenes of #92 again at 1440, 1024 and 375 px:
+    the navigation with both dropdowns keeps room (at least 161 px between links and buttons at
+    1024 px, French); the language menu switches all five; the scene names translated; the legal
+    page in French, Italian and Spanish. No console messages.
+  - **Dates and numbers** follow the language (`toLocaleDateString`, `toLocaleString`; English as
+    `en-GB` and `en-US`).
+  - **A new language** is its file in `i18n/` (every key of `de.js`, in the same order), a
+    `<script>` in both pages, a button in both menus, its blocks in `legal.html`, `hreflang` and
+    `og:locale:alternate` in `index.html`, its `--title-fit` (see "Window in the header") and a
+    check of the places measured for English and German (fact chips, the window's header).
+    Polish and Ukrainian are translated in the addon but not offered (see docs/languages.md), so
+    the page leaves them out too.
 - **Hosting (2026-11-24):** The owner's request: straight from GitHub, without a server of our own
   and without manual work, with a custom domain. Because the repo is public, GitHub Pages (free):
   `.github/workflows/website.yml` publishes the folder `website/` unchanged as soon as a
@@ -438,12 +475,13 @@ owner.
   a second one ("Multiple artifacts"). If a run fails, re-run the whole workflow or start it by
   hand, not only the failed job.
 - **Version on the page (2026-11-25, the owner's request: "should show the current release
-  version"):** `fact_version` and `in_rel_d` say "Version <x>" in both languages, and so does the
-  footer (in `index.html` and `legal.html`, no text key: it is the same in every language). When
-  publishing, `website.yml` replaces every "Version <x.y.z[-alpha|beta.n]>" in `index.html`,
-  `i18n.js` and `legal.html` with the newest release tag by version, wherever it sits (`git tag --sort=-v:refname`
+  version"):** `fact_version` and `in_rel_d` say "Version <x>" in every language (Spanish
+  "Versión <x>", Italian "Versione <x>"), and so does the footer (in `index.html` and
+  `legal.html`, no text key: it is the same in every language). When
+  publishing, `website.yml` replaces every "Version|Versión|Versione <x.y.z[-alpha|beta.n]>" in
+  `index.html`, `i18n/*.js` and `legal.html` with the newest release tag by version, wherever it sits (`git tag --sort=-v:refname`
   with `versionsort.suffix=-`, so alpha and beta come before their release; without the "v"),
-  and fails if a file then does not name it. Until 2026-11-25 it took the newest tag on `main`
+  and fails if a file then does not name it (`i18n/en.js` names none). Until 2026-11-25 it took the newest tag on `main`
   (`git describe --tags`); `v0.1.0-alpha.4` was set on the branch of its pull request instead of
   the squash merge, so the page went on showing alpha.3 after the release (since then the Release
   workflow also refuses a tag that is not on `main`, see "Publishing on CurseForge"). The workflow
@@ -453,7 +491,8 @@ owner.
   environment `github-pages` lets only the branch `main` deploy (read from the repo settings).
   In the repo the texts carry the last release by hand
   (`0.1.0-alpha.6` since 2026-11-27), only so that the local preview is right. A new text with the version must
-  keep the form "Version <x>". The assistant's decision; the replacement ran on GitHub on
+  keep the form "Version <x>" (or the Spanish and Italian word above); a new language whose word
+  differs needs it in the workflow's pattern. The assistant's decision; the replacement ran on GitHub on
   2026-11-25 ("Version 0.1.0-alpha.2"), a run after a release has not happened yet.
 - **Download (2026-11-25, the owner's request):** The buttons in the navigation and the header
   say "Download" instead of "Install"/"Installation" and scroll down to the section
@@ -472,10 +511,10 @@ owner.
   from `docs/curseforge/logo.png`; the SVG logo stays the main icon. `<meta name="color-scheme">`
   keeps the page dark before the CSS loads. URLs in the head are absolute, on `famulus.camp`:
   `index.html` has `<link rel="canonical" href="https://famulus.camp/">`, the same `og:url`
-  and `hreflang` alternates `en` and `x-default` (`https://famulus.camp/`) and `de`
-  (`https://famulus.camp/?lang=de`); `legal.html` only its canonical
-  (`https://famulus.camp/legal.html`). The HTML is the same for both languages, so `?lang=de`
-  also names the English page as canonical; search engines may treat it as a duplicate and
+  and `hreflang` alternates `en` and `x-default` (`https://famulus.camp/`) and `de`, `es`, `fr`,
+  `it` (`https://famulus.camp/?lang=<code>`), as `og:locale:alternate` too; `legal.html` only its
+  canonical (`https://famulus.camp/legal.html`). The HTML is the same for every language, so
+  `?lang=de` also names the English page as canonical; search engines may treat it as a duplicate and
   index only the English page. Still missing: `og:image` (an absolute URL to a preview image of
   1200 × 630).
 - **Deliberately not included yet:** Guildy (only once the PR there is accepted), a preview image
@@ -505,7 +544,7 @@ owner.
   the CurseForge app since the copy review the same day (see below).
 - **Copy review (2026-11-27, the owner's request: a review "as an experienced marketing guru"
   by a subagent; the owner had everything applied):** the hero lead told what Famulus does in
-  concrete terms (since replaced, see "Hero lead"); the fact chips say "Addon in five languages" (the page itself has only EN/DE)
+  concrete terms (since replaced, see "Hero lead"); the fact chips say "Addon in five languages" (then the page itself had only EN/DE)
   and "Friends & guild only" instead of "No libraries" (shortened so the chips stay on one row
   at 1440 px); chronicle point 1 "Shared with your friends" instead of "Famulus talks to
   Famulus", with friends without Famulus showing up via "Follow my friends"; point 2 says that a
@@ -610,7 +649,8 @@ owner.
   the naming reads as a second step (`TITLE_EXAMPLES` in `main.js`: Grimtusk → Tom as in the
   lead, Kaelric → Papa as in the demo, Balduk → BigBossDaddy for fun (the owner's example),
   Dârkñêss → Ben for a name you can't type, Mira → Lena). A typed alias was too abrupt for the
-  owner. **One line on the desktop, wrapping on a phone** (the owner): the title may reach past
+  owner. In Spanish and French the first wording wrapped at 1440 px, so they are short too
+  ("Para ti, %s es solo %s.", "Pour vous, %s, c'est %s."). **One line on the desktop, wrapping on a phone** (the owner): the title may reach past
   the head's 780 px to the page's width; only where the longest example does not fit there does
   it wrap (`is-wrapping`, set by `fitTitle` for all examples at once). Measured: one line at
   1440, 1024 and 768 px at the normal size, two lines at 375 px. All examples stand invisible
@@ -627,4 +667,6 @@ owner.
   the help (`hp_a_*`) when a command, a language or what Famulus sends changes; the privacy
   policy in `legal.html` (and its date) when the page loads something from elsewhere, stores
   something new or embeds a service, and when the addon starts sending something new; the
-  footer's links in both HTML files (a new section, the Discord server).
+  footer's links in both HTML files (a new section, the Discord server); a language the addon
+  starts to offer (see "Languages"); a text the addon renames in its `Locales/`, in every
+  language of the page.

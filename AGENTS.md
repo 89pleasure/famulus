@@ -42,8 +42,8 @@ assumptions about your own addon collection, behaviour next to other addons in m
 Way of working: The owner writes German and wants replies in German. **Everything that lives in
 the repo is English** (the owner's requirement, 2026-11-25): code, comments, commit messages, pull
 requests, the README, this file and `docs/` (until 2026-11-25 this file and `docs/` were German).
-Other languages stay only where they are content: the strings in `Locales/`, the German website
-texts. The README has
+Other languages stay only where they are content: the strings in `Locales/`, the website's
+texts in other languages. The README has
 been English and kept short since 2026-11-24 at the owner's request (before that German and
 detailed); details belong here or in `docs/`, not there. What Famulus learned from OneForAll,
 FlareUI and Polestar is no longer in it ("since we are now in a quite different place

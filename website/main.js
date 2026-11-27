@@ -313,7 +313,7 @@
       name.addEventListener('pointerenter', point);
       name.addEventListener('focus', point);
       name.addEventListener('click', point); // a tap, where there is no hover
-      if (line.channel === 'whisper') row.append('[', name, `] ${t('chat_whispers')}: ${t(line.text)}`);
+      if (line.channel === 'whisper') row.append('[', name, `] ${t('chat_whispers', t(line.text))}`);
       else row.append(`[${t(`chat_${line.channel}`)}] [`, name, `]: ${t(line.text)}`);
       box.append(row);
     });
@@ -884,7 +884,7 @@
 
   // A day some days back, the way the reader's language writes a date.
   const dateOf = ago => new Date(Date.now() - ago * 86400000)
-    .toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'short' });
+    .toLocaleDateString(lang === 'en' ? 'en-GB' : lang, { day: 'numeric', month: 'short' });
 
   // As SessionTitle in Famulus/UI/Options.lua: a session of play is named
   // by the part of the day it began in ("This evening", "Yesterday
@@ -1008,7 +1008,7 @@
   // -------------------------------------------------------------------------
 
   const ownEvents = () => CHAPTERS.flatMap(chapter => chapter.events).filter(event => !event.who);
-  const number = value => value.toLocaleString(lang === 'de' ? 'de-DE' : 'en-US');
+  const number = value => value.toLocaleString(lang === 'en' ? 'en-US' : lang);
 
   // Everyone with an event in the book, the one heard from last first.
   function companions() {
@@ -2214,7 +2214,7 @@
 
   renderers.push(() => refresh(false));
 
-  // English unless the reader chose otherwise: ?lang=de forces a language,
+  // English unless the reader chose otherwise: ?lang=fr forces a language,
   // a language switched to before is remembered. The browser's language is
   // not consulted. Anything unknown is passed over.
   const known = code => (code && I18N[code.toLowerCase()] ? code.toLowerCase() : null);

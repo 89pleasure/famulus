@@ -28,7 +28,8 @@ the index there says which file it is in.
   names; the texts are written so that such a name fits (see "Writing the texts").
 - **A new language** is its file in `Locales/`, its line in the `.toc` (with `## Notes-<code>` if
   the game has such a client), its rows of samples (see "Samples") and the list of languages the
-  test expects. The dropdown and the picture `lang` take the name from the file (`lang_name`, the
+  test expects. Once it is offered, the website speaks it too (see "Languages" in
+  docs/website.md). The dropdown and the picture `lang` take the name from the file (`lang_name`, the
   language's own name: "Українська").
 - **Numbers:** `ns.Plural(key, n)` returns the text for n, still to be formatted:
   `<key>_one`, `<key>_few` or `<key>`, after the language's rule (CLDR). English, German,

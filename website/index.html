@@ -7,10 +7,13 @@
   <meta name="description" content="A WoW Forever addon for playing together: a picture-book chronicle shared with friends, a memory of who you grouped with, and your own names for them.">
   <meta name="theme-color" content="#0a0f10">
   <meta name="color-scheme" content="dark">
-  <!-- The page in English is the canonical one; ?lang=de shows it in German (main.js). -->
+  <!-- The page in English is the canonical one; ?lang=de, es, fr or it shows it in that language (main.js). -->
   <link rel="canonical" href="https://famulus.camp/">
   <link rel="alternate" hreflang="en" href="https://famulus.camp/">
   <link rel="alternate" hreflang="de" href="https://famulus.camp/?lang=de">
+  <link rel="alternate" hreflang="es" href="https://famulus.camp/?lang=es">
+  <link rel="alternate" hreflang="fr" href="https://famulus.camp/?lang=fr">
+  <link rel="alternate" hreflang="it" href="https://famulus.camp/?lang=it">
   <link rel="alternate" hreflang="x-default" href="https://famulus.camp/">
   <!-- Link previews (Discord, Reddit, messengers). Their crawlers run no scripts, so these stay
        English. og:image is still missing: it needs a 1200 x 630 preview image. -->
@@ -21,6 +24,9 @@
   <meta property="og:description" content="A WoW Forever addon for playing together: a picture-book chronicle shared with friends, a memory of who you grouped with, and your own names for them.">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="de_DE">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:locale:alternate" content="fr_FR">
+  <meta property="og:locale:alternate" content="it_IT">
   <meta name="twitter:card" content="summary">
   <!-- favicon.ico for browsers without SVG icons; sizes keeps the others on the SVG. -->
   <link rel="icon" href="favicon.ico" sizes="32x32">
@@ -118,6 +124,9 @@
         <div class="pick__menu" id="langs-menu" role="menu" aria-label="Language" data-i18n-attr="aria-label:nav_lang" hidden>
           <button type="button" role="menuitemradio" data-lang="de" lang="de"><span class="pick__code" aria-hidden="true">DE</span><span>Deutsch</span></button>
           <button type="button" role="menuitemradio" data-lang="en" lang="en"><span class="pick__code" aria-hidden="true">EN</span><span>English</span></button>
+          <button type="button" role="menuitemradio" data-lang="es" lang="es"><span class="pick__code" aria-hidden="true">ES</span><span>Español</span></button>
+          <button type="button" role="menuitemradio" data-lang="fr" lang="fr"><span class="pick__code" aria-hidden="true">FR</span><span>Français</span></button>
+          <button type="button" role="menuitemradio" data-lang="it" lang="it"><span class="pick__code" aria-hidden="true">IT</span><span>Italiano</span></button>
         </div>
       </div>
       <a class="btn btn--small btn--primary" href="#install" data-i18n="nav_download">Download</a>
@@ -614,7 +623,11 @@
     </div>
   </footer>
 
-  <script src="i18n.js"></script>
+  <script src="i18n/en.js"></script>
+  <script src="i18n/de.js"></script>
+  <script src="i18n/es.js"></script>
+  <script src="i18n/fr.js"></script>
+  <script src="i18n/it.js"></script>
   <script src="scene.js"></script>
   <script src="pick.js"></script>
   <script src="main.js"></script>

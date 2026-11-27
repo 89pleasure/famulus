@@ -1,6 +1,6 @@
 // The legal page (legal.html): the language as on the main page (main.js),
-// without the demos. Navigation and footer take their texts from i18n.js;
-// the legal texts stand in the page in both languages (data-only) and only
+// without the demos. Navigation and footer take their texts from i18n/;
+// the legal texts stand in the page in every language (data-only) and only
 // the chosen one is shown.
 (() => {
   'use strict';
@@ -54,7 +54,7 @@
   // A button with the language's code opens the choice (pick.js).
   const languages = window.FamulusPick(document.getElementById('langs'), item => setLanguage(item.dataset.lang, true));
 
-  // As on the main page: ?lang=de forces a language, one chosen before is
+  // As on the main page: ?lang=fr forces a language, one chosen before is
   // remembered, otherwise English.
   const known = code => (code && I18N[code.toLowerCase()] ? code.toLowerCase() : null);
   const asked = known(new URLSearchParams(location.search).get('lang'));

@@ -58,8 +58,9 @@ jobs:
       - name: Leave out CLAUDE.md
         run: rm -f website/CLAUDE.md
 
-      # The texts name the version as "Version <x>" (fact_version, in_rel_d in both languages,
-      # the footer in index.html and legal.html);
+      # The texts name the version as "Version <x>" (fact_version and in_rel_d in index.html and
+      # in every language file but en.js, the footer in index.html and legal.html; Spanish
+      # writes "Versión <x>", Italian "Versione <x>");
       # the newest release tag replaces it, so the page never lags behind a release. Newest by
       # version, wherever the tag sits: v0.1.0-alpha.4 was set on the branch of its pull request
       # instead of the squash merge on main, and git describe on main still found alpha.3.
@@ -70,9 +71,10 @@ jobs:
             | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?$' | head -n 1)
           [ -n "$version" ] || { echo "::error::There is no release tag."; exit 1; }
           version=${version#v}
-          sed -E -i "s/Version [0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?/Version $version/g" website/index.html website/i18n.js website/legal.html
-          for file in website/index.html website/i18n.js website/legal.html; do
-            grep -q "Version $version" "$file" || { echo "::error::$file does not name Version $version."; exit 1; }
+          sed -E -i "s/(Version|Versión|Versione) [0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?/\1 $version/g" website/index.html website/legal.html website/i18n/*.js
+          for file in website/index.html website/legal.html website/i18n/*.js; do
+            [ "$file" = website/i18n/en.js ] && continue # English stands in index.html
+            grep -Eq "(Version|Versión|Versione) $version" "$file" || { echo "::error::$file does not name Version $version."; exit 1; }
           done
           echo "Version $version"
 
