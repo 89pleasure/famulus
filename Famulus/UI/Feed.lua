@@ -274,24 +274,27 @@ end
 local function PaintReaction(button)
     local reaction = button.card.reaction
     if reaction then
-        button:Set(reaction.icon, reaction.given())
+        local given = reaction.given()
+        button:Set(type(given) == "string" and given or reaction.icon, given)
     end
 end
 
 -- The button to react, without a tooltip: the click and the lit button say
 -- enough. While the mouse is on it the card stays, and one that is fading
 -- or resting comes back; once the mouse has left, a card whose time is up
--- goes (or rests) LINGER later. A click reacts, and the card goes CLOSE later
--- whatever the mouse does, unless the last three stay; a reaction given is
--- taken back in the chronicle only.
+-- goes (or rests) LINGER later. A click reacts with the kind's default;
+-- holding the button or a right-click opens the bar with the kind's set
+-- (UI.ReactionPicker), and the card stays while it is open. Once reacted,
+-- the card goes CLOSE later whatever the mouse does, unless the last three
+-- stay; a reaction given is changed or taken back in the chronicle only.
 local function NewReactButton(card)
     local button = UI.ReactionButton(card.body, REACT, REACT_ICON)
     button.card = card
     button:SetPoint("RIGHT", card, "RIGHT", -REACT_RIGHT, 0)
     button:SetFrameLevel(card:GetFrameLevel() + 3)
     button:EnableMouse(true)
-    button:SetScript("OnEnter", function(self)
-        self.over = true
+
+    local function Hold()
         card.held = true
         if card.fading and not card.closing then
             UI.CancelTween(card)
@@ -302,19 +305,10 @@ local function NewReactButton(card)
             UI.CancelTween(card.body)
             card.body:SetAlpha(1)
         end
-        -- Once given there is nothing more to click.
-        local reaction = card.reaction
-        if reaction and not reaction.given() then
-            self.hover:Fade(true)
-        end
-        PaintReaction(self)
-    end)
-    button:SetScript("OnLeave", function(self)
-        self.over = false
+    end
+    local function Release()
         card.held = false
         card.leaves = card.leaves + 1
-        self.hover:Fade(false)
-        PaintReaction(self)
         if card.resting and not card.fading then
             Rest(card)
         elseif card.due and not card.closing then
@@ -325,18 +319,19 @@ local function NewReactButton(card)
                 end
             end)
         end
-    end)
-    button:SetScript("OnClick", function(self)
+    end
+    -- Gives the reaction (nil: the kind's default); the card goes a moment later.
+    local function Give(choice)
         local reaction = card.reaction
         if not reaction or card.closing or reaction.given() then
             return
         end
-        reaction.give()
+        reaction.give(choice)
         if not reaction.given() then
             return -- (reactions were switched off since the card came)
         end
-        self.hover:Fade(false)
-        PaintReaction(self)
+        button.hover:Fade(false)
+        PaintReaction(button)
         -- Kept, the card stays with its button lit.
         if keep then
             return
@@ -348,6 +343,48 @@ local function NewReactButton(card)
                 FadeOut(card)
             end
         end)
+    end
+
+    button:SetScript("OnEnter", function(self)
+        self.over = true
+        Hold()
+        -- Once given there is nothing more to click.
+        local reaction = card.reaction
+        if reaction and not reaction.given() then
+            self.hover:Fade(true)
+        end
+        PaintReaction(self)
+    end)
+    button:SetScript("OnLeave", function(self)
+        self.over = false
+        self.hover:Fade(false)
+        PaintReaction(self)
+        -- While its bar is open the card stays; the bar lets go of it.
+        if not UI.ReactionPicker.IsOpenFor(self) then
+            Release()
+        end
+    end)
+    UI.ReactionPicker.Attach(button, function()
+        local reaction = card.reaction
+        if not reaction or card.closing or reaction.given() or not reaction.choices then
+            return nil
+        end
+        return {
+            choices = reaction.choices,
+            pick = Give,
+            onOpen = Hold,
+            onClose = function()
+                if not button:IsMouseOver() then
+                    Release()
+                end
+            end,
+        }
+    end)
+    button:SetScript("OnClick", function(self, mouseButton)
+        if UI.ReactionPicker.Consumed(self, mouseButton) then
+            return
+        end
+        Give(nil)
     end)
     button:Hide()
     return button

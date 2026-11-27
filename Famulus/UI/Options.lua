@@ -771,25 +771,39 @@ local function CardReaction(event, run)
     local newest = run[1]
     local reaction = Chronicle.Reaction(newest)
     if reaction then
-        local given, untold = false, false
+        local given, untold = nil, false
         for _, entry in ipairs(run) do
-            given = given or entry.mine ~= nil
+            given = given or entry.mine
             untold = untold or Chronicle.ReactionUntold(entry)
         end
         local name = (Chronicle.Companion(newest))
+        local choices = Chronicle.ReactionChoices(newest)
+        -- One for the run: on its newest entry, none on the others.
+        local function Give(choice)
+            for _, entry in ipairs(run) do
+                Chronicle.React(entry, entry == newest and choice or false)
+            end
+        end
         event.reaction = {
-            icon = reaction,
-            lit = given,
+            icon = given or reaction,
+            lit = given ~= nil,
             onClick = function()
-                for _, entry in ipairs(run) do
-                    Chronicle.React(entry, not given and entry == newest)
-                end
+                Give(given == nil)
             end,
             tooltip = function(tip)
                 tip:SetText(given and L.c_react_given or L.c_react)
                 if given and untold then
                     tip:AddLine(L.c_react_waiting:format(name), 1, 1, 1, true)
                 end
+                if choices and #choices > 1 then
+                    tip:AddLine(L.c_react_more, 0.7, 0.7, 0.7, true)
+                end
+            end,
+            choices = choices,
+            current = given,
+            -- The one given again from the bar takes it back, as a click does.
+            pick = function(choice)
+                Give(choice ~= given and choice)
             end,
         }
         return
@@ -797,26 +811,28 @@ local function CardReaction(event, run)
     if not Chronicle.IsOwn(newest) then
         return
     end
-    local seen, names = {}, {}
-    for _, entry in ipairs(run) do
-        for _, who in ipairs(Chronicle.Reactions(entry)) do
-            if not seen[who] then
-                seen[who] = true
-                names[#names + 1] = who
-            end
-        end
-    end
-    if #names == 0 then
+    local groups = Chronicle.ReactionGroups(run)
+    if #groups == 0 then
         return
     end
+    local count = 0
+    for _, group in ipairs(groups) do
+        count = count + #group.names
+    end
     event.reaction = {
-        icon = Chronicle.REACTIONS[newest.k] or "cheer",
+        icon = groups[1].reaction,
+        second = groups[2] and groups[2].reaction or nil,
         lit = true,
-        count = #names,
+        count = count,
         tooltip = function(tip)
             tip:SetText(L.c_reactions_from)
-            for _, who in ipairs(names) do
-                tip:AddLine(Chronicle.Label({ who = who }), 1, 1, 1)
+            for _, group in ipairs(groups) do
+                local names = {}
+                for index, who in ipairs(group.names) do
+                    names[index] = Chronicle.Label({ who = who })
+                end
+                local icon = "|T" .. (UI.media[group.reaction] or UI.media.cheer) .. ":14:14|t "
+                tip:AddLine(icon .. table.concat(names, ", "), 1, 1, 1, true)
             end
         end,
     }
@@ -937,7 +953,7 @@ function UI.ChronicleChapter(entries)
         local story = ChronicleRun({ entry })
         story.onClick, story.tooltip, story.item, story.spell = nil, nil, nil, nil
         if story.reaction then
-            story.reaction.onClick, story.reaction.tooltip = nil, nil
+            story.reaction.onClick, story.reaction.tooltip, story.reaction.pick = nil, nil, nil
         end
         chapter.events[index] = story
     end

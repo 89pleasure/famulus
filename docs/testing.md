@@ -67,7 +67,7 @@ the index there says which file it is in.
 - **Reactions in the chronicle (2026-11-25, checked against the mock only, not yet in game):**
   see "Reactions" under "Chronicle" and under "Sharing". Seen in game (screenshot from the owner,
   2026-11-25): the reaction at the foot of a friend's card, in the accent; at 15 px the clapping
-  hands did not read, reworked since (see "Look" there). Open in game: whether the four icons
+  hands did not read, reworked since (see "Look" there). Open in game: whether the six icons (since 2026-11-27 also `heart`, `fire`)
   load (`/fam test`, group `media`) and read well at 18 px in the foot of a card, whether the
   game's tooltip on a card looks right, and, with two accounts, whether a reaction arrives at
   once and one to someone offline at their next login. With one account the sample entries
@@ -75,7 +75,10 @@ the index there says which file it is in.
   Borin's boss. The button on a friend's card in the live feed: with one account
   `/fam feed test` shows it (it lights up, the card closes, nothing is sent). Tried in game
   (2026-11-25): works. Not yet seen in game: the card closing after a reaction, and clicking it
-  in combat.
+  in combat. The bar to choose a reaction (2026-11-27, see "A set per kind" under "Chronicle"):
+  tried in game with one account (`/fam chronicle demo`, `/fam feed test`), the owner: works.
+  Open with two accounts: whether a changed reaction arrives, and that the live feed shows a
+  person's reaction to an entry only once.
 - **Sound of the live feed (2026-11-25, checked against the mock only, not yet in game):** see
   "Sound" under "Live feed". Open in game: whether `click.ogg` plays after a `/reload`
   (`/fam feed test`), whether it is too loud or too quiet next to the game's sounds.

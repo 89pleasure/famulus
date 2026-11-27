@@ -23,7 +23,9 @@
 -- of `c`, and `via` (who passed it on) when it did not come from them.
 -- Reactions (see REACTIONS): on a companion's entry the player's own is
 -- `mine`, and `told` what the companion was last told of it; on an own entry
--- `r` = { ["<character name>"] = "<reaction>" } holds those received.
+-- `r` = { ["<character name>"] = "<reaction>" } holds those received, and
+-- `heard` = { ["<character name>"] = true } whose were announced (the live
+-- feed shows a person's reaction to an entry once, not again when changed).
 -- Nothing is sent from here; Modules/Chronicle/Sharing.lua does that.
 
 local _, ns = ...
@@ -521,23 +523,31 @@ end
 
 ---------------------------------------------------------------------------
 -- Reactions: a friend celebrates an event of the player's, or mourns a
--- death with them. Each kind has one (a picture in UI.media); a kind
--- without one cannot be reacted to, such as arriving in a zone, which
--- happens all the time. The player gives one with a click on a companion's
--- card; Sharing.lua tells the companion while both are online, else at
--- their next hello.
+-- death with them. Each kind has a set to choose from (pictures in
+-- UI.media), the first its default; a kind without one cannot be reacted
+-- to, such as arriving in a zone, which happens all the time. The player
+-- gives the default with a click on a companion's card, another from the
+-- bar that holding the button or a right-click opens; Sharing.lua tells the
+-- companion while both are online, else at their next hello. A death gets
+-- no cheering or applause, only comfort and courage.
 ---------------------------------------------------------------------------
 
-ChronicleService.REACTIONS = {
-    level = "cheer",
-    achievement = "cheer",
-    ability = "cheer",
-    item = "cheer",
-    boss = "strong",
-    death = "sad",
-    skill = "clap",
-    profession = "clap",
+ChronicleService.REACTION_SETS = {
+    level = { "cheer", "clap", "strong" },
+    achievement = { "cheer", "clap", "fire" },
+    ability = { "cheer", "clap", "fire" },
+    item = { "cheer", "clap", "fire" },
+    boss = { "strong", "cheer", "clap", "fire" },
+    death = { "sad", "strong", "heart" },
+    skill = { "clap", "cheer" },
+    profession = { "clap", "cheer" },
 }
+
+-- Each kind's default: the first of its set.
+ChronicleService.REACTIONS = {}
+for kind, set in pairs(ChronicleService.REACTION_SETS) do
+    ChronicleService.REACTIONS[kind] = set[1]
+end
 
 -- What tells two entries of one kind in one second apart, as for the same
 -- event twice in Add: field -> "n" (number) or "s" (text).
@@ -550,14 +560,30 @@ function ChronicleService.ReactionsOn()
     return sharing ~= nil and sharing.enabled and sharing:Get("reactions") == true
 end
 
--- Whether a reaction is one this version knows.
-function ChronicleService.IsReaction(reaction)
-    for _, known in pairs(ChronicleService.REACTIONS) do
-        if known == reaction then
-            return true
+-- Whether a reaction is one this version knows; with `kind`, one of that
+-- kind's set.
+function ChronicleService.IsReaction(reaction, kind)
+    local sets = ChronicleService.REACTION_SETS
+    if kind ~= nil then
+        sets = { sets[kind] or {} }
+    end
+    for _, set in pairs(sets) do
+        for _, known in ipairs(set) do
+            if known == reaction then
+                return true
+            end
         end
     end
     return false
+end
+
+-- The reactions a companion's entry can get to choose from, the default
+-- first, or nil (see Reaction).
+function ChronicleService.ReactionChoices(entry)
+    if not ChronicleService.Reaction(entry) then
+        return nil
+    end
+    return ChronicleService.REACTION_SETS[entry.k]
 end
 
 -- The reaction a companion's entry can get, or nil. The player's own
@@ -570,13 +596,27 @@ function ChronicleService.Reaction(entry)
     return ChronicleService.REACTIONS[entry.k]
 end
 
--- Gives (on) or takes back the player's reaction to a companion's entry.
+-- Gives or takes back the player's reaction to a companion's entry: `on`
+-- is a reaction of the kind's set, true for its default, or false or nil
+-- to take it back. Another than the one given replaces it.
 function ChronicleService.React(entry, on)
-    local reaction = ChronicleService.Reaction(entry)
-    if not reaction or (entry.mine ~= nil) == (on and true or false) then
+    local default = ChronicleService.Reaction(entry)
+    if not default then
         return
     end
-    entry.mine = on and reaction or nil
+    local reaction = nil
+    if on == true then
+        reaction = default
+    elseif on then
+        if not ChronicleService.IsReaction(on, entry.k) then
+            return
+        end
+        reaction = on
+    end
+    if entry.mine == reaction then
+        return
+    end
+    entry.mine = reaction
     ns:Fire("CHRONICLE_CHANGED")
     ns:Fire("CHRONICLE_REACTED", entry)
 end
@@ -618,7 +658,12 @@ function ChronicleService.Receive(when, kind, marks, who, reaction)
             entry.r = next(received) and received or nil
             if before ~= reaction then
                 ns:Fire("CHRONICLE_CHANGED")
-                if reaction then
+                -- News once per person and entry: a reaction changed, or
+                -- taken back and given again, is not announced again.
+                local heard = type(entry.heard) == "table" and entry.heard or {}
+                if reaction and not heard[who] then
+                    heard[who] = true
+                    entry.heard = heard
                     ns:Fire("CHRONICLE_REACTION", entry, who, reaction)
                 end
             end
@@ -640,6 +685,51 @@ function ChronicleService.Reactions(entry)
         table.sort(names)
     end
     return names
+end
+
+-- The reactions received to own entries, each person once (their newest,
+-- the entries newest first): { { reaction = "cheer", names = { ... } }, ... },
+-- the most given first, a tie in the order of the first entry's kind's set.
+-- A reaction this version does not know counts as the entry's kind's default.
+function ChronicleService.ReactionGroups(entries)
+    local seen, groups, byReaction = {}, {}, {}
+    local set = entries[1] and ChronicleService.REACTION_SETS[entries[1].k] or {}
+    for _, entry in ipairs(entries) do
+        for _, who in ipairs(ChronicleService.Reactions(entry)) do
+            if not seen[who] then
+                seen[who] = true
+                local reaction = entry.r[who]
+                if not ChronicleService.IsReaction(reaction, entry.k) then
+                    reaction = ChronicleService.REACTIONS[entry.k] or reaction
+                end
+                local group = byReaction[reaction]
+                if not group then
+                    group = { reaction = reaction, names = {} }
+                    byReaction[reaction] = group
+                    groups[#groups + 1] = group
+                end
+                group.names[#group.names + 1] = who
+            end
+        end
+    end
+    local order = {}
+    for index, reaction in ipairs(set) do
+        order[reaction] = index
+    end
+    table.sort(groups, function(a, b)
+        if #a.names ~= #b.names then
+            return #a.names > #b.names
+        end
+        local oa, ob = order[a.reaction] or 99, order[b.reaction] or 99
+        if oa ~= ob then
+            return oa < ob
+        end
+        return a.reaction < b.reaction
+    end)
+    for _, group in ipairs(groups) do
+        table.sort(group.names)
+    end
+    return groups
 end
 
 -- The companions the chronicle knows: whoever has an entry or a profile, the
@@ -1149,7 +1239,7 @@ function ChronicleService.Demo()
         { 2 * day + 3.5 * hour, "death", { zone = zone[1], level = 37 } },
         -- Repeated right away, these share a card in the book.
         { 2 * day + 3.4 * hour, "death", { zone = zone[1], level = 37 } },
-        { 2 * day + 3.2 * hour, "death", { zone = zone[1], level = 37, r = { [borin] = "sad" } } },
+        { 2 * day + 3.2 * hour, "death", { zone = zone[1], level = 37, r = { [borin] = "heart" } } },
         { 2 * day + 3 * hour, "level", { level = 38, zone = zone[1], r = { [mira] = "cheer" } } },
         { 2 * day + 2.2 * hour, "level", { level = 39, zone = zone[3], who = mira } },
         { 2 * day + 2 * hour, "level", { level = 40, zone = zone[3], who = mira } },
@@ -1166,7 +1256,7 @@ function ChronicleService.Demo()
         { 3 * hour, "zone", { zone = zone[4], level = 39 } },
         -- Friends reacted to some of the player's events, and the player to
         -- one of Borin's.
-        { 2.5 * hour, "level", { level = 40, zone = zone[4], r = { [mira] = "cheer", [borin] = "cheer", [lysa] = "cheer" } } },
+        { 2.5 * hour, "level", { level = 40, zone = zone[4], r = { [mira] = "cheer", [borin] = "strong", [lysa] = "cheer" } } },
         { 2 * hour, "ability", { ability = "riding", level = 40, r = { [lysa] = "cheer" } } },
         { 1.5 * hour, "item", { item = 211527, name = name.bag, level = 40, zone = zone[4] } },
         { 1 * hour, "boss", { id = 2, name = name.boss, zone = zone[2], who = borin, mine = "strong" } },
@@ -1233,6 +1323,9 @@ ns:On("DATABASE_READY", function()
         if type(entry) == "table" and type(entry.t) == "number" and kinds[entry.k] then
             if type(entry.r) ~= "table" then
                 entry.r = nil
+            end
+            if type(entry.heard) ~= "table" then
+                entry.heard = nil
             end
             kept[#kept + 1] = entry
         end

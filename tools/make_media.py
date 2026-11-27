@@ -292,7 +292,7 @@ picture("chest.tga", CHEST, [(16, 17, 2.2)])
 picture("horseshoe.tga", [arc(16, 14.5, 9.5, 115, 425)], [(8.6, 12, 1.1), (23.4, 12, 1.1)])
 
 
-# Reactions to a friend's event, one per kind (ChronicleService.REACTIONS).
+# Reactions to a friend's event (ChronicleService.REACTION_SETS).
 # They are shown small (18 px at the foot of a card), so their lines are
 # stronger and their shapes plain. No two points of a path may be the same:
 # a segment needs a length.
@@ -341,6 +341,24 @@ CLAP = [
     [(22.5, 8), (25, 4.5)],
 ]
 picture("clap.tga", CLAP, (), REACTION_PEN)
+
+# A heart: comfort after a death. The classic heart curve, closed at its
+# notch on top.
+HEART = []
+for i in range(49):
+    t = 2 * math.pi * i / 48
+    hx = 16 * math.sin(t) ** 3
+    hy = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
+    HEART.append((16 + 0.7 * hx, 14.5 - 0.7 * hy))
+picture("heart.tga", [HEART], (), REACTION_PEN)
+
+# A flame with a second tongue and a small flame inside: that was hot.
+FIRE = [
+    [(14, 3.5), (17.5, 8.5), (19.5, 11.5), (22.5, 8), (24.4, 14)] + arc(16, 20, 8.5, -25, 205, 20)
+    + [(8, 13.5), (10.5, 9), (14, 3.5)],
+    [(16, 15)] + arc(16, 22.5, 3.6, -40, 220, 12) + [(16, 15)],
+]
+picture("fire.tga", FIRE, (), REACTION_PEN)
 
 
 # Soft drop shadow, used in nine pieces around a window or menu. The centre

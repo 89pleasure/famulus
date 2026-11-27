@@ -39,7 +39,7 @@ guild channel), only known fields; `|` and control characters are removed.
 - **Reactions (the owner's request, 2026-11-25; checked against the mock only, not yet in
   game):** A click on a friend's card in the chronicle, or on the button of their card in the
   live feed, reacts to it (see "Reactions" under "Chronicle"). The message `1~X~<time>~<kind>~<reaction>~k=v` goes by whisper to the person
-  whose entry it is; `<reaction>` is `cheer`, `strong`, `sad` or `clap`, empty when taken back.
+  whose entry it is; `<reaction>` is one of the kind's set (`cheer`, `strong`, `sad`, `clap`, since 2026-11-27 also `heart` and `fire`; see "A set per kind" under "Chronicle"), empty when taken back.
   The entry is found by time and kind; `k=v` carries `skill`, `rank`, `ability` and `item`
   where the entry has them (`ChronicleService.MARKS`), the same fields that tell two entries
   of one second apart in `Add`. No new version: older versions ignore the unknown letter.
@@ -52,9 +52,9 @@ guild channel), only known fields; `|` and control characters are removed.
     waits send the newest state afterwards.
   - **Received:** only from friends and guild members online (as every message), only to the
     playing character's own entries, only for kinds with a reaction. A reaction this version
-    does not know (a newer one's) counts as the kind's own. Option `reactions` of `sharing`
-    (default on, because nothing goes out without a click); off: nothing is sent or taken,
-    the cards show no reactions. Sample entries never send.
+    does not know (a newer one's), or one not of the kind's set, counts as the kind's own.
+    Option `reactions` of `sharing` (default on, because nothing goes out without a click);
+    off: nothing is sent or taken, the cards show no reactions. Sample entries never send.
   - **Who sees what (stage 1, the owner was unsure, 2026-11-25):** the person whose entry it is
     sees who reacted; the one who reacted sees their own reaction. Others see nothing.
     Proposed for later (stage 2, not commissioned): the person whose entry it is sends the

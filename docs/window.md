@@ -322,7 +322,7 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   size or visibility of both. Use it wherever such a dot is wanted. The same for the button of a
   reaction (live feed and the chronicle's book, since 2026-11-27): `UI.ReactionButton(parent,
   size, iconSize)` draws a rounded square with the icon, muted or lit (`accentDeep`, accent icon),
-  `button:Set(icon, lit, count)` (with a count it widens), `button.over` and `button:Paint()` for
+  `button:Set(icon, lit, count, second)` (with a count it widens; a second icon stands half behind the first), `button.over` and `button:Paint()` for
   the hover tint; the scripts stay with its owner. A button that shows only its icon names
   itself in the game's tooltip under the mouse (since 2026-11-27): `UI.Button(...,
   variant, icon)` plus `button:SetIconOnly(size, iconSize)` before `SetLabel` (a square; the label becomes

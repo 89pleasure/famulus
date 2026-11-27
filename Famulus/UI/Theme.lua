@@ -49,11 +49,13 @@ UI.media = {
     hammer = MEDIA .. "hammer.tga",
     horseshoe = MEDIA .. "horseshoe.tga",
     chest = MEDIA .. "chest.tga",
-    -- Reactions to a friend's event (ChronicleService.REACTIONS).
+    -- Reactions to a friend's event (ChronicleService.REACTION_SETS).
     sad = MEDIA .. "sad.tga",
     cheer = MEDIA .. "cheer.tga",
     strong = MEDIA .. "strong.tga",
     clap = MEDIA .. "clap.tga",
+    heart = MEDIA .. "heart.tga",
+    fire = MEDIA .. "fire.tga",
     -- Icons of the entries in the settings tabs (feature.icon and others).
     share = MEDIA .. "share.tga",
     bell = MEDIA .. "bell.tga",

@@ -18,7 +18,8 @@
 --   1~W~<who>~<time>      want: "send me what you have of <who> after <time>"
 --   1~R~<who>~<time>~<kind>~k=v;k=v   one entry of <who>, passed on
 --   1~X~<time>~<kind>~<reaction>~k=v  the sender's reaction to an entry of
---                         the receiver's ("cheer"; empty: taken back); k=v
+--                         the receiver's ("cheer", "heart", ...; empty:
+--                         taken back); k=v
 --                         tells two entries of one second apart
 -- A hello is answered with the entries the other side lacks, the statistics
 -- and the offers. Whoever answered is "linked" for the session and gets the
@@ -735,7 +736,8 @@ function handlers.H(key, since)
 end
 
 -- A reaction to one of the player's own entries ("1~X~<time>~<kind>~<reaction>~k=v").
--- One this version does not know (a newer one's) counts as the kind's own.
+-- One this version does not know (a newer one's), or one not of the kind's
+-- set (ChronicleService.REACTION_SETS), counts as the kind's own.
 function handlers.X(key, when, kind, reaction, marks)
     local own = Chronicle.REACTIONS[kind or ""]
     if not sharing:Get("reactions") or not own then
@@ -744,7 +746,7 @@ function handlers.X(key, when, kind, reaction, marks)
     end
     if reaction == "" or reaction == nil then
         reaction = nil
-    elseif not Chronicle.IsReaction(reaction) then
+    elseif not Chronicle.IsReaction(reaction, kind) then
         reaction = own
     end
     local entry = Chronicle.Receive(tonumber(when), kind, DecodeFields(marks, Chronicle.MARKS), online[key], reaction)
