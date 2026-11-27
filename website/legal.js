@@ -43,13 +43,16 @@
     for (const block of $$('[data-only]')) block.hidden = block.dataset.only !== lang;
     document.title = t('lg_meta_title');
     description.content = t('lg_meta_desc');
-    for (const button of $$('.lang button')) button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
+    languages.mark(item => item.dataset.lang === lang);
+    document.getElementById('langs-current').textContent = lang.toUpperCase();
+    const toggle = document.getElementById('langs-toggle');
+    toggle.setAttribute('aria-label', `${t('nav_lang')}: ${document.querySelector(`#langs-menu [data-lang="${lang}"]`).lastElementChild.textContent}`);
+    toggle.title = toggle.getAttribute('aria-label');
     if (remember) store.set('famulus-lang', lang);
   }
 
-  for (const button of $$('.lang button')) {
-    button.addEventListener('click', () => setLanguage(button.dataset.lang, true));
-  }
+  // A button with the language's code opens the choice (pick.js).
+  const languages = window.FamulusPick(document.getElementById('langs'), item => setLanguage(item.dataset.lang, true));
 
   // As on the main page: ?lang=de forces a language, one chosen before is
   // remembered, otherwise English.

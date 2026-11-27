@@ -12,23 +12,30 @@ owner.
 
 - **Technology:** a static page without a build step and without libraries: `index.html`,
   `styles.css`, `i18n.js` (texts), `scene.js` (landscape, parallax), `main.js` (language,
-  demos), `legal.html` with `legal.js` (privacy, copyright), `assets/` (logo as SVG from the outlines in `tools/make_media.py`; Inter copied from
+  demos), `legal.html` with `legal.js` (privacy, copyright), `pick.js` (the dropdown for scene
+  and language, on both pages), `assets/` (logo as SVG from the outlines in `tools/make_media.py`; Inter copied from
   `Famulus/Media/Fonts`, including its licence). The page makes no requests to third-party
   servers (no web fonts, no tracking). Preview: `python3 -m http.server 4173 --directory website`
   (as `website` in `.claude/launch.json`). The Windows machine has no `python3`; there
   `website-node` in the same file starts a small Node server without packages (since
   2026-11-24).
-- **The look follows the addon:** the brightness ladder and the colour scheme "Lemon" from
+- **The look follows the addon:** the brightness ladder and the colour schemes from
   `UI/Theme.lua` as CSS variables (`--h`, `--s`, `--accent`, `--accent2`), accent and glow only for
   "active / here", grain, embers. All colours, including those of the landscape, hang on these
-  variables. The page remembers the language in the browser (`localStorage`).
+  variables; the scheme comes with the world of the header (see "Worlds of the header"), Lemon
+  for the moonlit night. The page remembers the language and the scene of the header in the browser
+  (`localStorage`: `famulus-lang`, `famulus-scene`). Not in a cookie (the owner asked whether
+  a cookie would be best; the assistant's decision): the privacy policy promises no cookies, and
+  a cookie would go to GitHub with every request, while local storage stays on the device.
 - **"Under the hood" removed (2026-11-24, the owner's decision: "Not important for now"):** the
   section with the numbers (0 game events, 0 lines per frame, 0 libraries, 2 languages), the four
   principles and the choice of the five colour schemes, together with its entry in the
   navigation. With it, the other four colour schemes have disappeared from the page
   (`:root[data-scheme]` in `styles.css`, `setScheme` in `main.js`); the page does not need a
   colour scheme choice (owner, 2026-11-24). For reference: Git history up to commit `a750f8d`.
-  Do not build it back in without asking.
+  Do not build it back in without asking. The schemes themselves are back since 2026-11-27,
+  one per world of the header, still without a choice of their own (see "Worlds of the
+  header").
 - **The artwork is generated, not from Blizzard** (the assistant's decision): `scene.js`
   draws a night landscape of mountain ranges, forests, two moons and a camp by the fire
   (see "Campfire in the header") as SVG layers, from a fixed seed, so it is the same on every
@@ -118,13 +125,11 @@ owner.
     Alliance do not play together in Forever). Mage (pointed hat, beard, staff with a glowing
     crystal, standing), warrior (horned helmet, spiked pauldron, beard, tankard towards the fire,
     axe in the ground), huntress (long ears, hair, bow and quiver on her back) with a wolf,
-    rogue (hood, cloak). Plus a tent with light inside and a saddled horse (Forever only has
-    ground mounts).
-  - **Level campsite (the owner's criticism):** Tent and horse stood tilted on the slope, and
-    the horse looked like a donkey. The hilltop is now exactly level between `plateau.from` and
-    `plateau.to` and only rounds off after that (`edge`). Everything that stands there must stay
-    within this range. The horse now has a curved neck, a long head, small ears,
-    a mane, a long tail and a rein, but no saddle blanket any more.
+    rogue (hood, cloak). **Tent, horse and stag removed (2026-11-27, the owner: "then it looks a
+    little calmer")**; their drawings are in the Git history up to commit `1bd2635`.
+  - **Level campsite (the owner's criticism):** Tent and horse stood tilted on the slope. The
+    hilltop is exactly level between `plateau.from` and `plateau.to` and only rounds off after
+    that (`edge`). Everything that stands there must stay within this range.
   - **Flora and fauna:** an old broadleaf tree next to the moon, with an owl with glowing eyes
     sitting on its branch. **The owl blinks** (the owner's request, 2026-11-25: both eyes, not a
     wink with one; the rhythm is the assistant's decision): both eyes shut to a slit of light for
@@ -134,7 +139,7 @@ owner.
     the header is out of sight. Checked in headless Chrome at 1440 and 375 px (open, single blink,
     both blinks of the double; off with reduced motion).
     Broadleaf trees between the pines (`trees.broad`), bushes (`bushes`),
-    tufts of grass (`grass`), a stag, bats flying across the moon, fireflies.
+    tufts of grass (`grass`), bats flying across the moon, fireflies.
     Two moons, a large white one and a small blue one, as on Azeroth.
   - **Fire:** the logo's flame, flickering via CSS; highlight edge on the figures towards the fire.
     Motion only via CSS (flame, bats, fireflies, embers), `prefers-reduced-motion`
@@ -158,38 +163,78 @@ owner.
 - **Worlds of the header (2026-11-27, the owner's request: more fantasy, "keep them all", a
   small switcher, a world by chance on every visit; motifs and drawings the assistant's
   decisions):** five worlds around the same camp (`WORLDS` in `main.js`): `night` (the moonlit
-  night above), `arcane` (a wizard's tower beside the moon with lit windows, a ring of runes
-  and a beam, floating islands with a waterfall, violet northern lights), `dusk` (a setting
-  sun instead of the moon, a castle with pennants, clouds lit from below, a dragon gliding
-  across, a waterfall far off on the left), `forest` (a world tree on the horizon, a moonwell
-  with a beam, glowing mushrooms, wisps instead of fireflies, mist) and `frost` (snowy peaks,
-  green northern lights, a mountain hold with braziers, snow falling). The camp, the oak with
-  the owl and the moon's place stay, so the live feed cards above the moon fit every world.
+  night above), `arcane` (a wizard's tower beside the moon with lit windows and a beam,
+  floating islands with a waterfall, violet northern lights), `dusk` (a setting sun instead
+  of the moon, a castle with pennants, clouds lit from below, a dragon gliding across, a
+  waterfall far off on the left), `forest` (a world tree on the horizon, a moonwell with a
+  beam, glowing mushrooms, wisps instead of fireflies, mist) and `frost` (snowy peaks, green
+  northern lights, a mountain hold with braziers, snow falling). The camp, the oak with the
+  owl and the moon's place stay, so the live feed cards above the moon fit every world.
+  - **The owner's corrections after the first look (2026-11-27):** the castle and the hold
+    floated in the air; they now stand on a rock that reaches far down (any slope), filled with
+    the ridge's own haze (a gradient per figure in its own units, so the rock runs into the
+    slope without a seam), the castle lower and larger. The tower's ring of runes is gone; its
+    three top windows flash instead, each in a rhythm of its own, now and then with a burst of
+    light in the chamber ("as if a circle of mages cast spells there"; `.spell` in
+    `styles.css`, a `lit` can carry a class as its fifth field). The northern lights showed hard
+    horizontal lines on wide windows, mostly just after loading: the drawing's top is cut
+    there, and while a curtain swayed (`scaleY` below 1) or the parallax moved it down, the cut
+    edge of its `<svg>` came into view. The sky's sheets now draw past their box
+    (`.world .ridge { overflow: visible }`).
   - **Drawing:** the parts are in `scene.js`: `FIGURES` `tower`, `keep`, `hold`, `isle`,
     `rock`, `cascade`, `shrooms`, `well`; trees `ancient` and `worldtree` (`giants` in
     `trees`); on a ridge `cast` (now with its lights), `float` (bobbing), `mist`, `snow`
     (snowcaps); in the sky `aurora` and `clouds` (sheets between the moon and the ridges);
     `dragons` beside `bats` in `moon()`; `snow()` for snowfall. Lights of figures: `fire`
-    (the accent) or `magic` (`--magic`, `--magic2`, per world). Colours per world:
-    `#scene[data-world]` in `styles.css`; tone 5 stays `--bg`, so every world runs into the
-    page. Motion only via CSS, paused with the header out of sight, off with reduced motion
-    (snowfall hidden then, like the embers).
-  - **Choice:** by chance on every visit (`Math.random`), not remembered; `?world=<key>` asks
-    for one (for links and screenshots). The switcher is a row below the fact chips: a small
-    picture of each world (sky, moon or sun, hill in its colours; `.worlds__dot--<key>`), the
-    chosen one ringed in the accent, its name beside the row, the name of the dot under the
-    pointer while it rests there. A radio group (arrow keys like the tabs, `tablist(list,
-    'radio')`), names `world_<key>`, group `world_pick`. Switching fades the scene out, draws the
-    new world and fades it in (0.3 s; at once with reduced motion), then finds the sparks and
-    the parallax layers anew (`parallax()` returns `refresh`). Below 980 px the header keeps
-    340 px instead of 300 px below the text, so the moon stays below the switcher.
-  - Only the header changes: the foot (`#scene-foot`) and the small scenes of the demos stay
-    the moonlit night.
-  - Checked in the built-in browser at 1440, 1024 and 375 px and with headless Chrome at 1440
-    and 1920, English and German: every world, switching by click and arrow keys, the name
-    after a change of language, the switcher 44 px above the window's screenshot at 1440 × 900,
-    no horizontal scrolling, no console messages. Not checked: reduced motion, Safari,
-    Firefox, real phones.
+    (`--fire`, `--fire2`) or `magic` (`--magic`, `--magic2`, per world). Tone 5 stays `--bg`,
+    so every world runs into the page. Motion only via CSS, paused with the header out of
+    sight, off with reduced motion (snowfall hidden then, like the embers).
+  - **Colours per world (2026-11-27, the owner's request: "the accent changes with the
+    scene", no choice of its own; the pairs proposed by the assistant, Sunset and Frost peaks
+    swapped by the owner):** the world's key
+    stands on the root (`:root[data-world]` in `styles.css`) and brings one of the addon's five
+    schemes (`accents` in `UI/Theme.lua`: `--h`, `--s`, `--accent`, `--accent2`,
+    `--on-accent`) together with its sky and ridges, so the whole page follows: buttons,
+    title, demos, cards, the foot and the small scenes in the demos. Night: Lemon; Arcane
+    tower: Lilac; Sunset: Rose (as its clouds lit from below); World tree: Mint; Frost peaks:
+    Amber (warm against the cold, as the braziers). **The fire keeps its own colours**
+    (`--fire`, `--fire2`, Lemon's pair; Amber's in the sunset and the frost): the campfire, sparks, the
+    glow, lit windows, braziers, fireflies and the moon's warmth would otherwise burn green
+    in Mint or pink in Rose. The small blue moon follows the scheme's hue (`--moon-blue`, as
+    `moonBlue` in the addon). The script in the head of `index.html` settles the world before
+    the first paint (`?world=`, `famulus-scene` or chance; its list of keys must match
+    `WORLDS`), otherwise the page would show Lemon for a moment; `legal.html` takes the
+    remembered world's colours the same way, without one Lemon. Not matched: the screenshots
+    of the addon show Lemon whatever the world.
+  - **Choice:** a world picked by the reader is remembered like the language
+    (`famulus-scene`, the owner's request); without one, a world by chance on every visit
+    (`Math.random`). `?world=<key>` shows one without changing what is remembered (for links
+    and screenshots). The switcher is a button in the navigation, left of the language (the
+    owner's request; at first it was a row of dots below the fact chips): the shown world's
+    small picture (sky, moon or sun, hill in its colours; `.worlds__dot--<key>`) and a chevron.
+    It opens a menu: first "A new one each visit" (`world_random`, five skies as slices; it
+    forgets the remembered world and shows another one by chance; the assistant's addition, so
+    that the chance can come back), below a line the five worlds, picture and name. The chosen
+    entry carries a glowing dot at its end. The button's name and title say "Scene: <world>".
+    Names `world_<key>`, menu `world_pick`. Switching fades the scene out, draws the new world
+    and fades it in (0.3 s; at once with reduced motion), then finds the sparks and the
+    parallax layers anew (`parallax()` returns `refresh`).
+  - **The dropdown (`pick.js`, `.pick` in `styles.css`)** serves the scene and, since the same
+    day, the language on both pages (the owner's request; before, the language was two buttons
+    "DE" and "EN" side by side). A menu button with `menuitemradio`: it opens on the chosen
+    entry, arrow keys, Home and End move, Escape closes and returns to the button, Tab or a click
+    elsewhere closes it. The language's button shows the code ("DE"), the menu the codes and
+    the languages' own names (Deutsch, English); its name says "Language: <name>".
+  - The foot (`#scene-foot`) and the small scenes of the demos take the world's colours but
+    keep their own drawing (no tower, castle or northern lights there).
+  - Checked in the built-in browser at 1440, 1024 and 375 px and with headless Chrome at 1440,
+    1900 and 1920, English and German: every world with its scheme (header, demos, foot); the
+    menu by click, arrow keys, End, Escape and a click outside; the names after a change of
+    language; a picked world and language come back after reloading, "A new one each visit"
+    removes `famulus-scene`; the accent changes with a switch; the language menu and the
+    remembered world's colours on the legal page; at 375 px both menus stay on screen; no
+    horizontal scrolling, no console messages. Not checked: reduced motion, Safari, Firefox,
+    real phones.
 - **Window in the header (2026-11-24, the owner's request, modelled on polestar.guide):**
   Below the campfire there is a screenshot of the addon window (`figure.shot`, first element in
   `<main>`). It reaches up into the header from below (below 980 px only 40 px, because there the
@@ -343,7 +388,9 @@ owner.
     Facts in the privacy policy, read 2026-11-27: GitHub Pages logs the visitor's IP address for
     security (GitHub's docs, "Data collection"); GitHub, Inc. is certified under the EU-U.S. DPF
     and its Swiss and UK counterparts (GitHub Privacy Statement of 2026-04-27); the page stores
-    only `famulus-lang` in local storage, sets no cookies and loads nothing from other servers.
+    only `famulus-lang` and `famulus-scene` in local storage (the scene since 2026-11-27; both
+    the short version and "Stored in your browser" name it), sets no cookies and loads nothing
+    from other servers.
     Draft by the assistant, not legal advice; the texts use "I" (one owner, as the changelog).
   - Checked at 1440 and 375 px, English and German: footer and legal page without horizontal
     scrolling, the language switch shows the right legal texts, `#privacy` and `#rights` land

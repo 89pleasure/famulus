@@ -184,6 +184,13 @@ window.FAMULUS_I18N = {
     nav_download: 'Download',
     nav_main: 'Hauptnavigation',
     nav_lang: 'Sprache',
+    world_pick: 'Szene',
+    world_random: 'Bei jedem Besuch eine neue',
+    world_night: 'Mondnacht',
+    world_arcane: 'Arkanturm',
+    world_dusk: 'Abendrot',
+    world_forest: 'Weltenbaum',
+    world_frost: 'Frostgipfel',
 
     hero_eyebrow: 'Addon für World of Warcraft: Forever',
     hero_title: 'Für alle, mit denen <br>du <em>spielst.</em>',
@@ -194,12 +201,6 @@ window.FAMULUS_I18N = {
     fact_game: 'WoW Forever 1.60',
     fact_lang: 'Addon in fünf Sprachen',
     fact_libs: 'Nur Freunde &amp; Gilde',
-    world_pick: 'Szene hinter der Seite',
-    world_night: 'Mondnacht',
-    world_arcane: 'Arkanturm',
-    world_dusk: 'Abendrot',
-    world_forest: 'Weltenbaum',
-    world_frost: 'Frostgipfel',
     tagline: 'Gemeinsam durch Azeroth',
 
     // 01 Aliases

@@ -2,7 +2,9 @@
 // layer, and a camp of friends at a fire made of hand-drawn silhouettes.
 // The picture is generated here, so it is the same on every visit and
 // nobody else's artwork is needed. Colours come from CSS (--r1a ...), which
-// is how the scene follows the colour scheme.
+// is how the scene follows its world; fire, sparks and the moon's warmth
+// use --fire and --fire2, not the accent, so the fire stays a fire whatever
+// the page's accent.
 //
 //   FamulusScene.moon(host, moon)         the two moons, before build()
 //   FamulusScene.aurora(host, sky)        northern lights, after moon()
@@ -88,7 +90,7 @@ window.FamulusScene = (() => {
       }
       let y = layer.base - layer.amp * height;
       // A level place for a camp: { from, to, y, edge }, exactly level
-      // between from and to, so that a tent or a horse stands straight, and
+      // between from and to, so that the camp stands straight, and
       // rounding off into the ridge within `edge` on both sides.
       if (layer.plateau) {
         const { from, to, y: top, edge } = layer.plateau;
@@ -328,7 +330,7 @@ window.FamulusScene = (() => {
   //   grass   { gap, height }: tufts along the ridge
   //   bushes  [[x, size], ...]
   //   cast    [{ figure, x, scale, facing, sink }]: figures standing on the
-  //           ridge (a tower, a castle, a stag), sink: how far into the ground
+  //           ridge (a tower, a castle), sink: how far into the ground
   //   float   [{ figure, x, y, scale, facing }]: figures in the air that bob
   //           (islands)
   //   mist    { y, height, opacity, puffs: [[x, y, rx, ry]] }: a band of mist
@@ -360,18 +362,14 @@ window.FamulusScene = (() => {
 
       // Each ridge grows hazier towards its foot, where the next one rises.
       const id = `ridge-${++uid}`;
+      const foot = Math.min(H, layer.base + (layer.haze || 120));
+      const haze = [[0, `var(--r${layer.tone}a)`], [1, `var(--r${layer.tone}b)`]];
       const defs = node('defs');
-      defs.append(gradient('linear', id, {
-        gradientUnits: 'userSpaceOnUse',
-        x1: 0,
-        y1: top.toFixed(0),
-        x2: 0,
-        y2: Math.min(H, layer.base + (layer.haze || 120)),
-      }, [[0, `var(--r${layer.tone}a)`], [1, `var(--r${layer.tone}b)`]]));
+      defs.append(gradient('linear', id, { gradientUnits: 'userSpaceOnUse', x1: 0, y1: top.toFixed(0), x2: 0, y2: foot }, haze));
       svg.append(defs);
 
       if (layer.fire != null) {
-        defs.append(gradient('radial', `fire-${uid}`, {}, [[0, 'var(--accent)', 0.5], [0.35, 'var(--accent)', 0.16], [1, 'var(--accent)', 0]]));
+        defs.append(gradient('radial', `fire-${uid}`, {}, [[0, 'var(--fire)', 0.5], [0.35, 'var(--fire)', 0.16], [1, 'var(--fire)', 0]]));
         svg.append(node('ellipse', {
           cx: layer.fire,
           cy: heightAt(points, layer.fire) + 6,
@@ -387,9 +385,17 @@ window.FamulusScene = (() => {
       const built = { svg, points, layer };
       const lit = ++uid;
       if (layer.cast || layer.float) lightDefs(defs, lit);
+      // What stands on the ridge takes on its haze, so that a rock under a
+      // castle runs into the slope without a seam. (The gradient lies in the
+      // figure's own units, inside its transform.)
       for (const member of layer.cast || []) {
         const facing = member.facing || 1;
-        const { body, lights } = figure(FIGURES[member.figure], member.x, heightAt(points, member.x) + (member.sink ?? 1), member.scale || 1, facing, lit);
+        const k = member.scale || 1;
+        const y = heightAt(points, member.x) + (member.sink ?? 1);
+        const { body, lights } = figure(FIGURES[member.figure], member.x, y, k, facing, lit);
+        const fill = `${id}-${++uid}`;
+        defs.append(gradient('linear', fill, { gradientUnits: 'userSpaceOnUse', x1: 0, y1: f((top - y) / k), x2: 0, y2: f((foot - y) / k) }, haze));
+        body.setAttribute('fill', `url(#${fill})`);
         body.style.color = `var(--r${layer.tone}a)`;
         svg.append(body);
         if (lights) svg.append(lights);
@@ -422,11 +428,12 @@ window.FamulusScene = (() => {
     return element;
   }
 
-  // The lights figures carry (see figure()): 'fire' in the accent, 'magic'
-  // in the world's own colour (--magic, --magic2), beams and water.
+  // The lights figures carry (see figure()): 'fire' in the fire's colours
+  // (--fire, --fire2), 'magic' in the world's own (--magic, --magic2),
+  // beams and water.
   function lightDefs(defs, id) {
     defs.append(
-      gradient('radial', `spark-${id}`, {}, [[0, 'var(--accent2)', 0.75], [0.3, 'var(--accent)', 0.22], [1, 'var(--accent)', 0]]),
+      gradient('radial', `spark-${id}`, {}, [[0, 'var(--fire2)', 0.75], [0.3, 'var(--fire)', 0.22], [1, 'var(--fire)', 0]]),
       gradient('radial', `magic-${id}`, {}, [[0, 'var(--magic2)', 0.8], [0.3, 'var(--magic)', 0.26], [1, 'var(--magic)', 0]]),
       gradient('linear', `beam-${id}`, { x1: 0, y1: 1, x2: 0, y2: 0 }, [[0, 'var(--magic2)', 0.6], [0.2, 'var(--magic)', 0.22], [1, 'var(--magic)', 0]]),
       gradient('linear', `fall-${id}`, { x1: 0, y1: 0, x2: 0, y2: 1 }, [[0, 'var(--water)', 0.8], [0.6, 'var(--water)', 0.32], [1, 'var(--water)', 0]]),
@@ -484,7 +491,7 @@ window.FamulusScene = (() => {
     if (depth != null) svg.dataset.depth = depth;
     const defs = node('defs');
     defs.append(
-      gradient('radial', `halo-${id}`, {}, [[0, 'var(--halo-in, var(--accent2))', 0.34], [0.32, 'var(--halo-out, var(--accent))', 0.12], [1, 'var(--halo-out, var(--accent))', 0]]),
+      gradient('radial', `halo-${id}`, {}, [[0, 'var(--halo-in, var(--fire2))', 0.34], [0.32, 'var(--halo-out, var(--fire))', 0.12], [1, 'var(--halo-out, var(--fire))', 0]]),
       gradient('radial', `disc-${id}`, { cx: 0.36, cy: 0.34, r: 0.72 }, [[0, '#fff'], [0.55, 'var(--moon-mid)'], [1, 'var(--moon-rim)']]),
       gradient('radial', `blue-${id}`, { cx: 0.36, cy: 0.34, r: 0.72 }, [[0, '#fff'], [1, 'var(--moon-blue)']]),
       gradient('radial', `blue-halo-${id}`, {}, [[0, 'var(--moon-blue)', 0.4], [1, 'var(--moon-blue)', 0]]),
@@ -649,7 +656,8 @@ window.FamulusScene = (() => {
   }
 
   // ---------------------------------------------------------------------------
-  // Figures: friends at the fire, their animals, a tent, an old tree.
+  // Figures: friends at the fire, the wolf, an old tree, and what stands
+  // in the worlds around them (a tower, a castle, islands).
   //
   // Each is a dark silhouette made of a few parts. Units: a standing person is
   // 100 tall, the ground is y = 0, and the figure looks to the right (x > 0),
@@ -665,10 +673,10 @@ window.FamulusScene = (() => {
   //   ['glow', x, y, r, name, light]  a light of its own: a crystal, an owl's
   //                             eyes; name: a class for it, to animate it
   //                             (CSS); light: 'fire' (default) or 'magic'
-  //   ['lit', points, opacity, light]  light inside, as in a tent or a window
+  //   ['lit', points, opacity, light, name]  light inside, as in a window;
+  //                             name: a class for it, as for 'glow'
   //   ['flag', x, y, size]      a pennant on a pole at (x, y), waving (CSS)
   //   ['beam', x, y, width, height]  a shaft of magic light rising
-  //   ['ring', x, y, rx, ry, width]  a ring of runes circling (CSS)
   //   ['fall', x, y, width, height]  water falling from (x, y)
   // ---------------------------------------------------------------------------
 
@@ -795,10 +803,12 @@ window.FamulusScene = (() => {
 
   const FIGURES = {
     // A wizard's tower on a crag: a shaft that narrows upwards, ledges, a
-    // turret on its side, a balcony, the lit chamber at the top with a ring
-    // of runes circling it, and a crooked spire that sends a beam skywards.
+    // turret on its side, a balcony, the chamber at the top whose windows
+    // flash as mages inside cast their spells (CSS: .spell), and a crooked
+    // spire that sends a beam skywards. The crag reaches far down, so the
+    // tower stands on any slope.
     tower: [
-      ['blob', [[-96, 6, 1], [-72, -12], [-48, -30], [-20, -40], [12, -42], [40, -34], [62, -18], [98, 6, 1]]],
+      ['blob', [[-150, 190, 1], [-110, 40], [-72, -12], [-48, -30], [-20, -40], [12, -42], [40, -34], [62, -18], [112, 40], [150, 190, 1]]],
       ['poly', [[-46, -26], [-31, -98], [-22, -98], [-22, -26]]],
       ['poly', [[46, -26], [31, -98], [22, -98], [22, -26]]],
       ['poly', [[-30, -30], [-21, -300], [21, -300], [30, -30]]],
@@ -816,18 +826,18 @@ window.FamulusScene = (() => {
       ['lit', arch(0, -160, 8, 18), 0.85, 'magic'],
       ['lit', arch(-36, -184, 6, 14), 0.8, 'magic'],
       ['lit', arch(0, -246, 8, 18), 0.85, 'magic'],
-      ['lit', arch(-17, -314, 8, 28), 1, 'magic'],
-      ['lit', arch(0, -314, 8, 28), 1, 'magic'],
-      ['lit', arch(17, -314, 8, 28), 1, 'magic'],
-      ['ring', 0, -330, 70, 13, 1.8],
+      ['glow', 0, -328, 7, 'spell spell--glow', 'magic'],
+      ['lit', arch(-17, -314, 8, 28), 1, 'magic', 'spell spell--1'],
+      ['lit', arch(0, -314, 8, 28), 1, 'magic', 'spell spell--2'],
+      ['lit', arch(17, -314, 8, 28), 1, 'magic', 'spell spell--3'],
       ['beam', 32, -496, 4, 520],
       ['glow', 32, -496, 3.6, null, 'magic'],
     ],
     // A castle on its rock: a crenellated curtain wall between two towers, the
     // keep behind it, slender towers with steep roofs and pennants, lit
-    // windows, the gate open.
+    // windows. The rock reaches far down, so the castle stands on any slope.
     keep: [
-      ['blob', [[-210, 10, 1], [-172, -8], [-110, -16], [0, -20], [110, -14], [172, -6], [214, 10, 1]]],
+      ['blob', [[-280, 220, 1], [-226, 60], [-184, 4], [-120, -14], [0, -20], [110, -14], [180, 0], [232, 60], [286, 220, 1]]],
       ['poly', crenels(-150, 150, -62, 10)],
       ...spire(-150, 30, 112, 62),
       ...spire(150, 34, 124, 70, { flag: 7 }),
@@ -847,9 +857,9 @@ window.FamulusScene = (() => {
     ],
     // A hold of the mountain folk: two square towers with braziers burning
     // on their tops, between them a gabled front with a great round gate
-    // full of light, and a broad stair.
+    // full of light, and a broad stair, on a rock that reaches far down.
     hold: [
-      ['blob', [[-200, 10, 1], [-160, -6], [-80, -12], [0, -14], [80, -12], [160, -6], [204, 10, 1]]],
+      ['blob', [[-270, 220, 1], [-214, 60], [-170, 2], [-80, -12], [0, -14], [80, -12], [170, 2], [218, 60], [274, 220, 1]]],
       ['poly', [[-58, 2], [-58, -4], [-50, -4], [-50, -8], [-42, -8], [-42, -12], [42, -12], [42, -8], [50, -8], [50, -4], [58, -4], [58, 2]]],
       ['poly', [[-78, -10], [-74, -150], [74, -150], [78, -10]]],
       ['poly', [[-90, -144], [90, -144], [90, -154], [-90, -154]]],
@@ -995,38 +1005,6 @@ window.FamulusScene = (() => {
       ['poly', [[8, -48], [8, -56], [12, -50]]],
       ['poly', [[11, -49], [13, -56], [15, -49]]],
     ],
-    // A saddled horse, head up, waiting under the tree: arched neck, a long
-    // head with small ears, a mane and a tail that flow, slender legs.
-    horse: [
-      ['blob', [[-37, -57], [-44, -55], [-50, -45], [-52, -31], [-50, -17], [-54, -6, 1], [-46, -14], [-44, -28], [-42, -42], [-38, -49]]],
-      ['limb', [[-23, -45, 9], [-23, -28, 5.5], [-27, -19, 4.2], [-25, -8, 3.6], [-24, -3, 3.8]]],
-      ['limb', [[15, -45, 8], [16, -26, 4.5], [14, -10, 3.8], [14, -3, 4]]],
-      ['poly', [[-27.5, -4], [-21, -4], [-20, 0], [-28, 0]]],
-      ['poly', [[11, -4], [17, -4], [18, 0], [10.5, 0]]],
-      ['blob', [[-38, -56], [-30, -62], [-10, -63], [10, -63], [22, -61], [30, -54], [31, -46], [25, -40], [8, -38], [-12, -39], [-30, -41], [-38, -47]]],
-      ['limb', [[-30, -47, 13], [-31, -30, 7], [-35, -20, 4.6], [-33, -8, 3.8], [-32, -3, 4]]],
-      ['limb', [[22, -47, 10], [24, -27, 5], [23, -10, 4], [24, -3, 4.2]]],
-      ['poly', [[-35.5, -4], [-29, -4], [-28, 0], [-36, 0]]],
-      ['poly', [[21, -4], [27, -4], [28, 0], [20.5, 0]]],
-      ['blob', [[12, -60], [16, -68], [22, -80], [30, -90], [36, -94], [40, -90], [42, -82], [38, -72], [33, -60], [30, -48], [22, -52]]],
-      ['blob', [[34, -92], [39, -96.5], [44, -94], [50, -86], [56, -77], [57.5, -73, 1], [52, -70], [46, -72], [41, -78], [37, -84]]],
-      ['poly', [[36, -95], [36.5, -101], [39.5, -96]]],
-      ['poly', [[15, -63], [20, -74], [26, -85], [32, -93], [35.5, -95.5], [33, -88], [30.5, -86.5], [29.5, -80], [26.5, -78.5], [25, -72], [21.5, -70.5], [20, -64], [17, -60]]],
-      ['poly', [[37.5, -95], [43, -90], [38.5, -89.5]]],
-      ['blob', [[-12, -62], [-11.5, -68.5], [-4, -65], [3, -66], [5.5, -70.5, 1], [7.5, -62]]],
-      ['line', [[-3, -62], [-3, -49]], 1],
-      ['line', [[-5.5, -49], [-0.5, -49]], 1.8],
-      ['curve', 'M51 -76Q32 -64 6 -65', 0.9],
-    ],
-    // A tent with the fire's light inside.
-    tent: [
-      ['line', [[-3, -48], [-7, -55]], 2],
-      ['line', [[3, -48], [7, -55]], 2],
-      ['poly', [[-32, 0], [-2, -49], [2, -49], [32, 0]]],
-      ['line', [[-32, 0], [-42, 1.5]], 1],
-      ['line', [[32, 0], [42, 1.5]], 1],
-      ['lit', [[-9, 0], [0, -24], [9, 0]], 0.34],
-    ],
     // An old tree, a long branch reaching out over the moon, an owl on it.
     oak: [
       ['blob', [[-44, 1, 1], [-24, -8], [-16, -22], [16, -22], [24, -8], [46, 1, 1]]],
@@ -1066,23 +1044,6 @@ window.FamulusScene = (() => {
       ['circle', -90, -179, 6],
       ...owl(-100, -152),
     ],
-    // A stag, head up, listening.
-    deer: [
-      ['limb', [[-18, -42, 7], [-20, -24, 4], [-22, -14, 3], [-19, 0, 2.5]]],
-      ['limb', [[-12, -40, 6], [-12, -22, 3.5], [-13, 0, 2.5]]],
-      ['limb', [[15, -42, 6], [16, -20, 3.5], [16, 0, 2.5]]],
-      ['limb', [[10, -40, 5], [11, -20, 3], [12, 0, 2.5]]],
-      ['blob', [[-22, -50], [-10, -54], [10, -54], [19, -50], [20, -42], [10, -38], [-12, -38], [-23, -43]]],
-      ['poly', [[-21, -50], [-27, -49], [-22, -45]]],
-      ['blob', [[11, -51], [16, -56], [21, -68], [25, -77], [21, -79], [15, -69], [10, -54]]],
-      ['blob', [[20, -78], [25, -82], [29, -80], [35, -74], [36.5, -72, 1], [30, -71], [25, -72], [21, -74]]],
-      ['poly', [[21, -80], [15, -86], [23, -82]]],
-      ['line', [[24, -82], [22, -92], [17, -100], [14, -104]], 1.8],
-      ['line', [[22, -92], [27, -99]], 1.5],
-      ['line', [[23, -87], [30, -91]], 1.5],
-      ['line', [[26, -82], [29, -93], [26, -103]], 1.6],
-      ['line', [[29, -93], [35, -97]], 1.4],
-    ],
   };
 
   function part([kind, ...args]) {
@@ -1107,14 +1068,14 @@ window.FamulusScene = (() => {
     return node('path', { d: args[0] });
   }
 
-  const LIGHTS = new Set(['glow', 'lit', 'beam', 'ring', 'fall']);
+  const LIGHTS = new Set(['glow', 'lit', 'beam', 'fall']);
 
   // One of a figure's own lights (see the list above FIGURES).
   function shine([kind, ...args], id) {
-    const tone = light => (light === 'magic' ? ['magic', 'var(--magic)', 'var(--magic2)'] : ['spark', 'var(--accent)', 'var(--accent2)']);
+    const tone = light => (light === 'magic' ? ['magic', 'var(--magic)', 'var(--magic2)'] : ['spark', 'var(--fire)', 'var(--fire2)']);
     if (kind === 'lit') {
-      const [points, opacity, light] = args;
-      const element = node('path', { d: poly(points) });
+      const [points, opacity, light, name] = args;
+      const element = node('path', name ? { d: poly(points), class: name } : { d: poly(points) });
       element.style.fill = tone(light)[1];
       element.style.opacity = opacity;
       return element;
@@ -1138,12 +1099,6 @@ window.FamulusScene = (() => {
         beam.append(shaft);
       }
       return beam;
-    }
-    if (kind === 'ring') {
-      const [cx, cy, rx, ry, w] = args;
-      const ring = node('ellipse', { class: 'ring', cx, cy, rx, ry, fill: 'none', 'stroke-width': w });
-      ring.style.stroke = 'var(--magic2)';
-      return ring;
     }
     // A fall of water: a sheet that fades towards its foot, streaks running
     // down it (CSS: .fall__flow).
@@ -1212,7 +1167,7 @@ window.FamulusScene = (() => {
     stones.style.color = 'var(--figure)';
     const lit = node('g', { transform: `translate(0 ${f(-1.2 * Math.max(1, k))})` });
     lit.append(stones.cloneNode(true));
-    lit.firstChild.style.color = 'var(--accent)';
+    lit.firstChild.style.color = 'var(--fire)';
     lit.style.opacity = 0.7;
     front.append(logs, flame, lit, stones);
     return { back, front };
@@ -1232,9 +1187,9 @@ window.FamulusScene = (() => {
     const id = ++uid;
     const defs = svg.querySelector('defs');
     defs.append(
-      gradient('radial', `pool-${id}`, {}, [[0, 'var(--accent)', 0.42], [0.45, 'var(--accent)', 0.13], [1, 'var(--accent)', 0]]),
-      gradient('radial', `halo-${id}`, {}, [[0, 'var(--accent)', 0.42], [0.3, 'var(--accent)', 0.12], [1, 'var(--accent)', 0]]),
-      gradient('linear', `flame-${id}`, { x1: 0, y1: 0, x2: 0, y2: 1 }, [[0, 'var(--accent2)'], [0.45, 'var(--accent)'], [1, 'var(--flame-base)']]),
+      gradient('radial', `pool-${id}`, {}, [[0, 'var(--fire)', 0.42], [0.45, 'var(--fire)', 0.13], [1, 'var(--fire)', 0]]),
+      gradient('radial', `halo-${id}`, {}, [[0, 'var(--fire)', 0.42], [0.3, 'var(--fire)', 0.12], [1, 'var(--fire)', 0]]),
+      gradient('linear', `flame-${id}`, { x1: 0, y1: 0, x2: 0, y2: 1 }, [[0, 'var(--fire2)'], [0.45, 'var(--fire)'], [1, 'var(--flame-base)']]),
     );
 
     lightDefs(defs, id);
@@ -1253,7 +1208,7 @@ window.FamulusScene = (() => {
       if (member.rim !== false) {
         const nudge = Math.max(0.6, 0.8 * k);
         const rim = node('use', { href: `#${body.id}`, transform: `translate(${f(towards * nudge)} 0)` });
-        rim.style.color = 'var(--accent)';
+        rim.style.color = 'var(--fire)';
         rim.style.opacity = f(Math.max(0.2, 1 - Math.abs(member.at) / 13));
         row.append(rim);
       }

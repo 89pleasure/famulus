@@ -25,8 +25,19 @@
   <link rel="stylesheet" href="styles.css">
   <script>
     // Before the first paint: mark that scripts run, so content hidden for its
-    // entrance still shows without them.
-    document.documentElement.classList.add('js');
+    // entrance still shows without them; and settle the world of the header,
+    // whose colours tint the whole page (styles.css, :root[data-world]): the
+    // one asked for (?world=), the one chosen before (famulus-scene) or one by
+    // chance. The keys are those of WORLDS in main.js.
+    (() => {
+      const root = document.documentElement;
+      const worlds = ['night', 'arcane', 'dusk', 'forest', 'frost'];
+      let saved = null;
+      try { saved = localStorage.getItem('famulus-scene'); } catch { /* private mode */ }
+      const asked = new URLSearchParams(location.search).get('world');
+      root.classList.add('js');
+      root.dataset.world = worlds.includes(asked) ? asked : worlds.includes(saved) ? saved : worlds[Math.floor(Math.random() * worlds.length)];
+    })();
   </script>
 </head>
 <body>
@@ -76,9 +87,32 @@
       <a href="#aliases" data-i18n="nav_aliases">Aliases</a>
     </div>
     <div class="nav__end">
-      <div class="lang" role="group" aria-label="Language" data-i18n-attr="aria-label:nav_lang">
-        <button type="button" data-lang="de" lang="de" title="Deutsch">DE</button>
-        <button type="button" data-lang="en" lang="en" title="English">EN</button>
+      <!-- The scene of the header: the one chosen before, or one by chance
+           (main.js); the button shows its small picture and opens the choice. -->
+      <div class="pick" id="scenes">
+        <button type="button" class="pick__toggle" id="scenes-toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="scenes-menu">
+          <span id="scenes-current" aria-hidden="true"></span>
+          <svg class="icon" width="14" height="14" aria-hidden="true"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="pick__menu" id="scenes-menu" role="menu" aria-label="Scene" data-i18n-attr="aria-label:world_pick" hidden>
+          <button type="button" role="menuitemradio" data-world="random"><span class="worlds__dot worlds__dot--random" aria-hidden="true"></span><span data-i18n="world_random">A new one each visit</span></button>
+          <button type="button" role="menuitemradio" data-world="night"><span class="worlds__dot worlds__dot--night" aria-hidden="true"></span><span data-i18n="world_night">Moonlit night</span></button>
+          <button type="button" role="menuitemradio" data-world="arcane"><span class="worlds__dot worlds__dot--arcane" aria-hidden="true"></span><span data-i18n="world_arcane">Arcane tower</span></button>
+          <button type="button" role="menuitemradio" data-world="dusk"><span class="worlds__dot worlds__dot--dusk" aria-hidden="true"></span><span data-i18n="world_dusk">Sunset</span></button>
+          <button type="button" role="menuitemradio" data-world="forest"><span class="worlds__dot worlds__dot--forest" aria-hidden="true"></span><span data-i18n="world_forest">World tree</span></button>
+          <button type="button" role="menuitemradio" data-world="frost"><span class="worlds__dot worlds__dot--frost" aria-hidden="true"></span><span data-i18n="world_frost">Frost peaks</span></button>
+        </div>
+      </div>
+      <!-- The language, picked the same way (main.js, pick.js). -->
+      <div class="pick" id="langs">
+        <button type="button" class="pick__toggle pick__toggle--text" id="langs-toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="langs-menu">
+          <span id="langs-current">EN</span>
+          <svg class="icon" width="14" height="14" aria-hidden="true"><use href="#i-chevron"/></svg>
+        </button>
+        <div class="pick__menu" id="langs-menu" role="menu" aria-label="Language" data-i18n-attr="aria-label:nav_lang" hidden>
+          <button type="button" role="menuitemradio" data-lang="de" lang="de"><span class="pick__code" aria-hidden="true">DE</span><span>Deutsch</span></button>
+          <button type="button" role="menuitemradio" data-lang="en" lang="en"><span class="pick__code" aria-hidden="true">EN</span><span>English</span></button>
+        </div>
       </div>
       <a class="btn btn--small btn--primary" href="#install" data-i18n="nav_download">Download</a>
     </div>
@@ -108,16 +142,6 @@
           <li data-i18n="fact_lang">Addon in five languages</li>
           <li data-i18n="fact_libs">Friends &amp; guild only</li>
         </ul>
-        <!-- The worlds of the drawing behind: main.js picks one by chance on
-             every visit and switches on a click (or with the arrow keys). -->
-        <div class="worlds reveal" style="--i:5" id="worlds" role="radiogroup" aria-label="Scene behind the page" data-i18n-attr="aria-label:world_pick">
-          <button type="button" class="worlds__dot worlds__dot--night" role="radio" data-world="night" aria-label="Moonlit night" data-i18n-attr="aria-label:world_night"></button>
-          <button type="button" class="worlds__dot worlds__dot--arcane" role="radio" data-world="arcane" aria-label="Arcane tower" data-i18n-attr="aria-label:world_arcane"></button>
-          <button type="button" class="worlds__dot worlds__dot--dusk" role="radio" data-world="dusk" aria-label="Sunset" data-i18n-attr="aria-label:world_dusk"></button>
-          <button type="button" class="worlds__dot worlds__dot--forest" role="radio" data-world="forest" aria-label="World tree" data-i18n-attr="aria-label:world_forest"></button>
-          <button type="button" class="worlds__dot worlds__dot--frost" role="radio" data-world="frost" aria-label="Frost peaks" data-i18n-attr="aria-label:world_frost"></button>
-          <span class="worlds__name" id="world-name" aria-hidden="true"></span>
-        </div>
       </div>
       <!-- The live feed's cards beside the title, above the moon. -->
       <div class="hero__feed" aria-hidden="true">
@@ -572,6 +596,7 @@
 
   <script src="i18n.js"></script>
   <script src="scene.js"></script>
+  <script src="pick.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

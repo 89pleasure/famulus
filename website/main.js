@@ -55,10 +55,9 @@
   }
 
   // Tabs: arrow keys, Home and End move between the tabs of a list and choose
-  // the one they land on; only the chosen tab is in the Tab order. The same
-  // for a group of radio buttons (role 'radio').
-  function tablist(list, role = 'tab') {
-    const tabs = $$(`[role="${role}"]`, list);
+  // the one they land on; only the chosen tab is in the Tab order.
+  function tablist(list) {
+    const tabs = $$('[role="tab"]', list);
     const STEP = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
     list.addEventListener('keydown', event => {
       const index = tabs.indexOf(event.target);
@@ -84,6 +83,9 @@
     },
     set(key, value) {
       try { localStorage.setItem(key, value); } catch { /* private mode */ }
+    },
+    remove(key) {
+      try { localStorage.removeItem(key); } catch { /* private mode */ }
     },
   };
 
@@ -126,14 +128,17 @@
     }
     document.title = t('meta_title');
     $('meta[name="description"]').content = t('meta_desc');
-    for (const button of $$('.lang button')) button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
+    languages.mark(item => item.dataset.lang === lang);
+    $('#langs-current').textContent = lang.toUpperCase();
+    const toggle = $('#langs-toggle');
+    toggle.setAttribute('aria-label', `${t('nav_lang')}: ${$(`#langs-menu [data-lang="${lang}"]`).lastElementChild.textContent}`);
+    toggle.title = toggle.getAttribute('aria-label');
     if (remember) store.set('famulus-lang', lang);
     for (const render of renderers) render();
   }
 
-  for (const button of $$('.lang button')) {
-    button.addEventListener('click', () => setLanguage(button.dataset.lang, true));
-  }
+  // The language beside the scene: a button with its code opens the choice.
+  const languages = window.FamulusPick($('#langs'), item => setLanguage(item.dataset.lang, true));
 
   // -------------------------------------------------------------------------
   // Coming in on scroll, drifting with it, and the navigation's state.
@@ -2010,12 +2015,10 @@
   const CAMP = {
     fire: 1150,
     size: 1,
-    // A group of four with the hunter's wolf; the tent, the tree and the
-    // horse stand farther back.
+    // A group of four with the hunter's wolf; the old tree stands farther
+    // back.
     cast: [
       { figure: 'oak', at: 18.5, back: true, facing: 1, rim: false },
-      { figure: 'horse', at: 25, back: true, facing: 1, rim: false, scale: 1.15 },
-      { figure: 'tent', at: -22, back: true },
       { figure: 'mage', at: -15.5 },
       { figure: 'wolf', at: -11.2, scale: 0.9 },
       { figure: 'warrior', at: -6.4 },
@@ -2028,7 +2031,7 @@
     { seed: 11, base: 650, amp: 330, scale: 520, sharp: true, tone: 1, depth: 0.16, haze: 50, valley: { at: 0.72, width: 0.2, depth: 1 } },
     { seed: 23, base: 725, amp: 290, scale: 400, sharp: true, tone: 2, depth: 0.3, haze: 50, valley: { at: 0.72, width: 0.2, depth: 1 } },
     { seed: 37, base: 750, amp: 110, scale: 520, octaves: 3, tone: 3, depth: 0.48, valley: { at: 0.72, width: 0.12, depth: 0.9 }, trees: { gap: [9, 24], height: [12, 34], clump: 140, broad: 0.45, clear: [930, 1420] } },
-    { seed: 43, base: 770, amp: 70, scale: 420, octaves: 3, tone: 4, depth: 0.7, plateau: { from: 890, to: 1475, y: 640, edge: 170 }, grass: { gap: [5, 14], height: [4, 11] }, bushes: [[905, 20], [1530, 22]], cast: [{ figure: 'deer', x: 1482, scale: 0.55, facing: -1 }], camp: CAMP, flies: { from: 860, to: 1540, count: 14, seed: 3 } },
+    { seed: 43, base: 770, amp: 70, scale: 420, octaves: 3, tone: 4, depth: 0.7, plateau: { from: 890, to: 1475, y: 640, edge: 170 }, grass: { gap: [5, 14], height: [4, 11] }, bushes: [[905, 20], [1530, 22]], camp: CAMP, flies: { from: 860, to: 1540, count: 14, seed: 3 } },
     { seed: 59, base: 886, amp: 40, scale: 380, octaves: 2, tone: 5, depth: 1, grass: { gap: [6, 18], height: [6, 20] }, trees: { gap: [22, 60], height: [30, 330], frame: [0.35, 1], broad: 0.35, bushes: 0.15, clear: [900, 1400] }, flies: { from: 1250, to: 1600, count: 6, seed: 9, height: 120 } },
   ];
 
@@ -2088,7 +2091,7 @@
       },
       layers: [
         { ...FAR, cast: [{ figure: 'cascade', x: 150, scale: 0.9, sink: 6 }] },
-        { ...MID, cast: [{ figure: 'keep', x: 862, scale: 0.62, facing: -1, sink: 10 }] },
+        { ...MID, cast: [{ figure: 'keep', x: 850, scale: 0.76, facing: -1, sink: 46 }] },
         { ...WOODS, mist: { y: 700, height: 110, opacity: 0.3, puffs: [[150, 660, 140, 40], [560, 700, 200, 40], [760, 712, 260, 36]] } },
         { ...HILL, flies: { ...HILL.flies, count: 8 } },
         GROUND,
@@ -2104,7 +2107,7 @@
         { seed: 11, base: 610, amp: 90, scale: 520, octaves: 3, tone: 1, depth: 0.16, haze: 60, valley: { at: 0.72, width: 0.2, depth: 1 }, trees: { gap: [7, 15], height: [14, 26], bushes: 0.5, giants: [[400, 480, 'world']] } },
         { seed: 23, base: 690, amp: 100, scale: 400, octaves: 3, tone: 2, depth: 0.3, haze: 60, valley: { at: 0.72, width: 0.2, depth: 1 }, mist: { y: 600, height: 140, opacity: 0.3, puffs: [[400, 590, 260, 50]] }, trees: { gap: [8, 18], height: [18, 40], bushes: 0.3 } },
         { ...WOODS, mist: { y: 720, height: 110, opacity: 0.3, puffs: [[800, 690, 200, 40]] }, trees: { ...WOODS.trees, broad: 0.2, clear: [770, 1420] }, cast: [{ figure: 'well', x: 810, scale: 0.95, sink: 4 }] },
-        { ...HILL, cast: [...HILL.cast, { figure: 'shrooms', x: 882, scale: 1.7, sink: 2 }, { figure: 'shrooms', x: 1510, scale: 1.3, facing: -1, sink: 2 }], flies: { ...HILL.flies, count: 22 } },
+        { ...HILL, cast: [{ figure: 'shrooms', x: 882, scale: 1.7, sink: 2 }, { figure: 'shrooms', x: 1510, scale: 1.3, facing: -1, sink: 2 }], flies: { ...HILL.flies, count: 22 } },
         { ...GROUND, trees: { ...GROUND.trees, broad: 0.2 } },
       ],
     },
@@ -2123,7 +2126,7 @@
       snowfall: 70,
       layers: [
         { ...FAR, amp: 380, snow: { line: 450, depth: 60 } },
-        { ...MID, amp: 320, snow: { line: 530, depth: 50 }, cast: [{ figure: 'hold', x: 800, scale: 0.6, sink: 10 }] },
+        { ...MID, amp: 320, snow: { line: 530, depth: 50 }, cast: [{ figure: 'hold', x: 868, scale: 0.7, sink: 40 }] },
         { ...WOODS, mist: { y: 700, height: 80, opacity: 0.2 }, trees: { ...WOODS.trees, broad: 0 } },
         { ...HILL, flies: null },
         { ...GROUND, trees: { ...GROUND.trees, broad: 0, bushes: 0 }, flies: null },
@@ -2134,21 +2137,30 @@
   const hero = $('#top');
   const heroScene = $('#scene');
   let heroCamp;
-  // Draws a world into the hero, in place of the one before.
+  // Draws a world into the hero, in place of the one before. Its key on the
+  // root brings its colours to the whole page (styles.css).
   function drawHero(name) {
     const spec = WORLDS[name];
     for (const old of $$(':scope > .ridge, :scope > .world', heroScene)) old.remove();
-    heroScene.dataset.world = name;
+    root.dataset.world = name;
     Scene.moon(heroScene, spec.moon);
     if (spec.aurora) Scene.aurora(heroScene, spec.aurora);
     if (spec.clouds) Scene.clouds(heroScene, spec.clouds);
     heroCamp = Scene.build(heroScene, spec.layers).find(layer => layer.camp);
     if (spec.snowfall) Scene.snow(heroScene, innerWidth < 760 ? spec.snowfall / 2 : spec.snowfall);
   }
-  // A world by chance on every visit; ?world=<key> asks for one.
+  // The world was settled before the first paint (the script in the head of
+  // index.html): the one asked for with ?world=, the one the reader chose
+  // before (remembered like the language), or one by chance. Only a choice in
+  // the menu is remembered, not ?world=.
   const worldKeys = Object.keys(WORLDS);
-  const askedWorld = new URLSearchParams(location.search).get('world');
-  let world = Object.hasOwn(WORLDS, askedWorld || '') ? askedWorld : worldKeys[Math.floor(Math.random() * worldKeys.length)];
+  const isWorld = key => Object.hasOwn(WORLDS, key || '');
+  const byChance = (not = null) => {
+    const keys = worldKeys.filter(key => key !== not);
+    return keys[Math.floor(Math.random() * keys.length)];
+  };
+  let chosenWorld = isWorld(store.get('famulus-scene')) ? store.get('famulus-scene') : null;
+  let world = isWorld(root.dataset.world) ? root.dataset.world : chosenWorld || byChance();
   drawHero(world);
   Scene.stars($('.scene__stars', heroScene), 170, 5);
   Scene.build($('#scene-alias'), glimpse(100));
@@ -2157,9 +2169,9 @@
   const footLayers = Scene.build(footScene, FOOT);
 
   // In one column the camp stands below the text, and the drawing pans so
-  // that it is in view, from the tent to the horse (the CSS makes it smaller).
+  // that it is in view, from the mage to the old tree (the CSS makes it smaller).
   const heroInColumn = matchMedia('(max-width: 980px)');
-  const CAMP_MIDDLE = 1200;
+  const CAMP_MIDDLE = 1170;
 
   // Sparks rise from the fires; where they are depends on how the drawing
   // is cut to the window, so it is found again after a resize. (Whoever
@@ -2213,21 +2225,17 @@
   const depth = Scene.parallax(hero);
   watch(document);
 
-  // The switcher below the hero's text: a dot per world and the name of the
-  // one shown (of the one under the pointer while it rests on a dot). The
-  // world fades out, is drawn anew and fades in; it is not remembered, the
-  // next visit gets one by chance again.
-  const worldPicker = $('#worlds');
-  const worldDots = $$('[role="radio"]', worldPicker);
-  const worldName = $('#world-name');
+  // The scene beside the languages: a button with the shown world's small
+  // picture opens a menu of all of them (pick.js). A world picked there is
+  // remembered (famulus-scene); "A new one each visit" forgets it and shows
+  // another one. The world fades out, is drawn anew and fades in.
   let fading = 0;
-  function markWorld(shown = world) {
-    for (const dot of worldDots) {
-      const chosen = dot.dataset.world === world;
-      dot.setAttribute('aria-checked', String(chosen));
-      dot.tabIndex = chosen ? 0 : -1;
-    }
-    worldName.textContent = t(`world_${shown}`);
+  function markWorld() {
+    scenes.mark(item => item.dataset.world === (chosenWorld || 'random'));
+    $('#scenes-current').className = `worlds__dot worlds__dot--${world}`;
+    const toggle = $('#scenes-toggle');
+    toggle.setAttribute('aria-label', `${t('world_pick')}: ${t(`world_${world}`)}`);
+    toggle.title = toggle.getAttribute('aria-label');
   }
   function switchWorld(next) {
     if (next === world) return;
@@ -2244,13 +2252,15 @@
     heroScene.classList.add('is-fading');
     fading = setTimeout(swap, 300);
   }
-  for (const dot of worldDots) {
-    dot.addEventListener('click', () => switchWorld(dot.dataset.world));
-    dot.addEventListener('pointerenter', () => markWorld(dot.dataset.world));
-    dot.addEventListener('pointerleave', () => markWorld());
-  }
-  tablist(worldPicker, 'radio');
-  renderers.push(() => markWorld());
+  const scenes = window.FamulusPick($('#scenes'), item => {
+    const key = item.dataset.world;
+    chosenWorld = isWorld(key) ? key : null;
+    if (chosenWorld) store.set('famulus-scene', chosenWorld);
+    else store.remove('famulus-scene');
+    switchWorld(chosenWorld || byChance(world));
+    markWorld();
+  });
+  renderers.push(markWorld);
   markWorld();
   onScroll();
   // The book's cards change height once Inter has loaded; the dots follow.
