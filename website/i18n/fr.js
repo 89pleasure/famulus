@@ -26,7 +26,7 @@ window.FAMULUS_I18N.fr = {
   hero_lead: "Famulus saisit l'essence de WoW Forever\u00a0: passer du temps ensemble en Azeroth. Il rend le MMORPG que nous aimons tous encore plus beau et plus ouvert à chacun.",
   hero_cta: 'Voir les fonctions',
   hero_cta2: 'Télécharger',
-  fact_version: 'Version 0.1.0-alpha.6',
+  fact_version: 'Version 0.1.0',
   fact_game: 'WoW Forever 1.60',
   fact_lang: 'Addon en cinq langues',
   fact_libs: 'Amis &amp; guilde uniquement',
@@ -301,7 +301,7 @@ window.FAMULUS_I18N.fr = {
   in_s3_t: 'Ouvrir la fenêtre',
   in_s3_d: "<code>/fam</code> ouvre Famulus. Le bouton de la flamme sur la minicarte fait de même. À la première ouverture, une page d'accueil vous guide à travers les fonctionnalités principales, chacune avec un exemple, ou les active toutes d'un clic.",
   in_rel_t: 'Famulus est encore jeune.',
-  in_rel_d: 'Version 0.1.0-alpha.6 disponible sur CurseForge. Quelque chose ne fonctionne pas\u00a0? Tapez <code>/fam report</code> dans le jeu et collez le texte dans un <a href="https://github.com/89pleasure/famulus/issues" target="_blank" rel="noopener">ticket sur GitHub</a>.',
+  in_rel_d: 'Version 0.1.0 disponible sur CurseForge. Quelque chose ne fonctionne pas\u00a0? Tapez <code>/fam report</code> dans le jeu et collez le texte dans un <a href="https://github.com/89pleasure/famulus/issues" target="_blank" rel="noopener">ticket sur GitHub</a>.',
   in_rel_btn: 'Télécharger sur CurseForge',
 
   hp_eyebrow: 'Aide',
