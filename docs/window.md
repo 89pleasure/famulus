@@ -128,6 +128,18 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   an accent as a colour pair (`accent` → `accent2`) for gradients. Available: `lemon` (default),
   `mint`, `rose`, `lilac`, `amber`. Seen and confirmed in game by the owner is `lemon`;
   the other four come from the mockup.
+- **Classes and factions in colour (2026-11-27, the owner's request):** A class or faction named
+  in a line stands in its colour, muted so that none outshines the accent: the game's colours at
+  about half their saturation and of like lightness (tokens `class<FILE>` for all nine classes,
+  `factionHorde`, `factionAlliance` in `UI/Theme.lua`; the priest's white would be the text's,
+  so ivory). Of two palettes on a canvas in the chat the owner chose A, "gedeckt" (B kept more of
+  the saturation). Only the word is coloured, not the line or the name: `UI.Colored(token,
+  text)` wraps it in the game's colour code, so it suits words within a line but does not
+  follow a change of scheme (these tokens are the same in every scheme). Where: the fellow
+  travellers' tiles and list ("Level 41 Mage"), the rows of "Nearby" and its cards, the faction
+  of someone out of reach. Not in what the search reads (`FellowDesc`), which would find the
+  colour code. Names stay white. The pictures of the settings show the game and keep its own
+  colours (`gameClass<FILE>`). Checked against the mock only, not yet seen in game.
 - **Lines darker than the ground (2026-11-25, the owner's request: the lines were "too
   bright", try a colour darker than the background so they look softer):** Rule: a line is
   a little darker than the darker of the two grounds it parts, never lighter. Before, all

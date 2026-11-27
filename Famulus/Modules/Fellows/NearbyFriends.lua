@@ -52,10 +52,11 @@ local function Short(person)
     return ns.AliasService.Get(person.name) or string.match(person.name, "^[^%s%-]+") or person.name
 end
 
+-- The class in the client's language and its colour.
 local function ClassName(file)
     local names = LOCALIZED_CLASS_NAMES_MALE
     local name = type(file) == "string" and type(names) == "table" and names[file]
-    return type(name) == "string" and name or nil
+    return type(name) == "string" and ns.UI.Colored("class" .. file, name) or nil
 end
 
 -- "Mira", "Mira and Borin", "Mira, Borin and Lysa", "Mira, Borin and 2 more"
