@@ -408,10 +408,10 @@ picture-book look are built and checked against the mock only.
     the exchange between two accounts not yet seen):**
     `ChronicleService.REACTION_SETS`, the default first: level `cheer clap strong`; challenge,
     ability, item `cheer clap fire`; boss `strong cheer clap fire`; death `sad strong heart`;
-    profession and its milestones `clap cheer`. Two new icons, `heart` and `fire`, still our own line
-    drawings with a stronger pen (`REACTION_PEN` in `tools/make_media.py`; the TGAs written by a
-    temporary port to Node). The other four are Phosphor Icons since #101; heart and flame from
-    Phosphor (`heart-bold`, `fire-bold`) would match them and are open. Sets, the two icons, their names (`c_reaction_<id>`) and texts on the
+    profession and its milestones `clap cheer`. Two new icons, `heart` and `fire`, Phosphor Icons in the
+    Bold weight like the other four (`heart-bold`, `fire-bold` in `tools/phosphor/`, from
+    `@phosphor-icons/core` 2.1.1; the TGAs written by a temporary port of `phosphor()` to Node that
+    redraws the other four byte for byte). Sets, the two icons, their names (`c_reaction_<id>`) and texts on the
     live feed (`c_reacted_heart`, `c_reacted_fire`) are the assistant's decisions, at most four a
     set so the bar stays short.
     - **The bar (`UI.ReactionPicker` in `UI/Widgets.lua`):** holding a reaction's button for 0.35 s

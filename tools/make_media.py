@@ -491,28 +491,8 @@ phosphor("sad.tga", "smiley-sad-bold")  # a death
 phosphor("cheer.tga", "confetti-bold")  # a level, a special event: a party popper
 phosphor("strong.tga", "hand-fist-bold")  # a boss
 phosphor("clap.tga", "hands-clapping-bold")  # a profession
-
-# Heart and flame are still our own line drawings, with a stronger pen.
-REACTION_PEN = 5
-
-
-# A heart: comfort after a death. The classic heart curve, closed at its
-# notch on top.
-HEART = []
-for i in range(49):
-    t = 2 * math.pi * i / 48
-    hx = 16 * math.sin(t) ** 3
-    hy = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
-    HEART.append((16 + 0.7 * hx, 14.5 - 0.7 * hy))
-picture("heart.tga", [HEART], (), REACTION_PEN)
-
-# A flame with a second tongue and a small flame inside: that was hot.
-FIRE = [
-    [(14, 3.5), (17.5, 8.5), (19.5, 11.5), (22.5, 8), (24.4, 14)] + arc(16, 20, 8.5, -25, 205, 20)
-    + [(8, 13.5), (10.5, 9), (14, 3.5)],
-    [(16, 15)] + arc(16, 22.5, 3.6, -40, 220, 12) + [(16, 15)],
-]
-picture("fire.tga", FIRE, (), REACTION_PEN)
+phosphor("heart.tga", "heart-bold")  # comfort after a death
+phosphor("fire.tga", "fire-bold")  # that was hot: a boss, a special event
 
 
 # Soft drop shadow, used in nine pieces around a window or menu. The centre
