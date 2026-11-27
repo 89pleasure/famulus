@@ -121,6 +121,11 @@ function Widget:UnregisterEvent(event)
     self.events[event] = nil
 end
 function Widget:SetText(text)
+    -- Like the client: a font string takes text only once it has a font
+    -- (from SetFont or a template); the live feed's crest number lacked one (2026-11-27).
+    if self.widgetType == "FontString" and not self.font and not self.fontTemplate then
+        error("FontString:SetText(): Font not set", 2)
+    end
     self.text = tostring(text)
     if self.widgetType == "EditBox" and self.scripts.OnTextChanged then
         self.scripts.OnTextChanged(self, false)
@@ -319,8 +324,10 @@ function Widget:CreateTexture(_, layer, _, sublevel)
     self.regions[#self.regions + 1] = texture
     return texture
 end
-function Widget:CreateFontString()
-    return NewWidget("FontString", self)
+function Widget:CreateFontString(_, _, template)
+    local text = NewWidget("FontString", self)
+    text.fontTemplate = template
+    return text
 end
 
 function mock.Click(widget, button)

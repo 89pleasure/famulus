@@ -19,6 +19,11 @@ the index there says which file it is in.
   width as a field must set it themselves (`book.width`). Before, the mock hid such a bug
   (see "Bug 2026-11-24"). Tests read the size via `GetWidth()`. The width of a text is its
   letters times 6.5, not its bytes (since 2026-11-26: Cyrillic has two bytes a letter).
+- Fonts in the mock (since 2026-11-27): `SetText` on a font string without a font (no `SetFont`
+  that succeeded, no template in `CreateFontString`) fails as in the client with
+  "FontString:SetText(): Font not set". Found in game: since #75 the live feed's crest number
+  got its font only in the layout, after `Fill` had written the number, so the first card with
+  a number (`/fam feed test`, level 21) broke. The number now gets its font when it is made.
 
 ## State of checks in game
 
