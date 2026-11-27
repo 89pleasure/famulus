@@ -749,6 +749,22 @@ check(navButton("Aliases").selected and not navButton("Aliases").pill:IsShown(),
     "the main feature is selected and shows no counter")
 mock.Click(tabButton("Settings"))
 check(tabButton("Settings").selected and not tabButton("Names").selected, "a click on a tab chooses it")
+do
+    local gear = tabButton("Settings")
+    check(gear.icon:IsShown() and not gear.label:IsShown() and gear.mockPoint[1] == "BOTTOMRIGHT"
+        and not tabButton("Names").icon:IsShown() and tabButton("Names").label:IsShown()
+        and tabButton("Names").mockPoint[1] == "BOTTOMLEFT",
+        "an area's settings stand as a gear at the right end of the tabs, its views by name at the left")
+    check(window.resetButton.mockPoint[2] == gear and window.resetButton.mockPoint[1] == "RIGHT",
+        "reset stands to the left of the gear")
+    GameTooltip:Hide()
+    GameTooltip:SetText("")
+    gear.scripts.OnEnter(gear)
+    check(GameTooltip:IsShown() and GameTooltip:GetText() == "Settings",
+        "pointing at the gear names it in the game's tooltip")
+    gear.scripts.OnLeave(gear)
+    GameTooltip:Hide()
+end
 -- A settings tab: its features as entries on the left, the chosen one in
 -- full on the right.
 local function visibleEntries()
@@ -1158,6 +1174,9 @@ mock.Click(navButton("Settings"))
 mock.Click(tabButton("General"))
 check(tabButton("General").selected and tabButton("Appearance") and tabButton("Language & time"),
     "the settings page has a general, an appearance and a language & time tab")
+check(tabButton("General").label:IsShown() and not tabButton("General").icon:IsShown()
+    and window.resetButton.mockPoint[2] == window.tabs,
+    "the settings page's own tabs keep their names, and reset stands at the right end")
 local generalRows = visibleEntries()
 check(#generalRows == 6, "the three main features, chat feedback, minimap button and character profile (got " .. #generalRows .. ")")
 local generalIcons = {}

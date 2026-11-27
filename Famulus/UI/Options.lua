@@ -23,6 +23,8 @@ local CONTENT_W = WIDTH - SIDEBAR - PAD * 2
 -- where the content begins.
 local HEAD, TABS = 76, 48
 local HEADER = TABS + 20
+-- An area's settings in the bar: a gear alone at its right end.
+local TAB_ICON_W = 40
 -- The chronicle's story tabs: the book, and beside it a rail that stays put
 -- while the book scrolls.
 local BOOK_W, RAIL_GAP = 600, 28
@@ -383,7 +385,8 @@ local Initial = UI.Initial
 ---------------------------------------------------------------------------
 
 -- A settings tab of a main feature: its features, each followed by its
--- options. Shown as entries with the chosen one in full (split).
+-- options. Shown as entries with the chosen one in full (split). In the bar
+-- it is a gear at the right end, apart from the page's views.
 local function CategoryTab(category)
     local items = FeatureItems(category)
     -- A list of its own: a layout may add to the settings (for reset)
@@ -397,6 +400,7 @@ local function CategoryTab(category)
         id = category,
         category = category,
         split = true,
+        icon = "gear",
         label = function()
             return L["cat_" .. category]
         end,
@@ -3593,9 +3597,11 @@ local function RefreshNav()
     end
 end
 
--- The chosen page's tabs at the top of the content, left to right. In a
--- fellow traveller's story the way back stands there instead; while
--- searching there are none. A page with a single tab shows none.
+-- The chosen page's tabs at the top of the content, left to right; a tab
+-- with an icon (an area's settings) stands as that icon alone at the right
+-- end, with Reset to its left. In a fellow traveller's story the way back
+-- stands there instead; while searching there are none. A page with a
+-- single tab shows none.
 local function RefreshTabs()
     local bar = window.tabs
     local page = pages[currentPage]
@@ -3607,24 +3613,47 @@ local function RefreshTabs()
     end
     local shown = not searching and not story and #page.tabs > 1
     local current = CurrentTab(page).id
-    local left = 0
+    local left, right, aside = 0, 0, nil
     for index, tab in ipairs(shown and page.tabs or {}) do
         local button = bar.buttons[index] or bar.NewTab(index)
+        local label = tab.label and tab.label() or page.title()
         button.id = tab.id
-        button.label:SetText(tab.label and tab.label() or page.title())
-        button.label:SetAlpha(tab.category ~= nil and not ns:IsCategoryEnabled(tab.category) and 0.5 or 1)
+        button.label:SetText(label)
+        button.label:SetShown(not tab.icon)
+        button.icon:SetShown(tab.icon ~= nil)
+        if tab.icon then
+            button.icon:SetTexture(UI.media[tab.icon])
+        end
+        button.tip = tab.icon and label or nil
+        local alpha = tab.category ~= nil and not ns:IsCategoryEnabled(tab.category) and 0.5 or 1
+        button.label:SetAlpha(alpha)
+        button.icon:SetAlpha(alpha)
         button.selected = tab.id == current
         button.bar:SetShown(button.selected)
-        UI.Ink(button.label, button.selected and "text" or "textDim")
-        local width = button.label:GetStringWidth() + 24
-        button:SetWidth(width)
+        button:Paint(false)
         button:ClearAllPoints()
-        button:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", left, 0)
+        if tab.icon then
+            button:SetWidth(TAB_ICON_W)
+            button:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -right, 0)
+            right = right + TAB_ICON_W + 4
+            aside = button
+        else
+            local width = button.label:GetStringWidth() + 24
+            button:SetWidth(width)
+            button:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", left, 0)
+            left = left + width + 4
+        end
         button:Show()
-        left = left + width + 4
     end
     for index = (shown and #page.tabs or 0) + 1, #bar.buttons do
         bar.buttons[index]:Hide()
+    end
+    local reset = window.resetButton
+    reset:ClearAllPoints()
+    if aside then
+        reset:SetPoint("RIGHT", aside, "LEFT", -4, 0)
+    else
+        reset:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
     end
 end
 
@@ -4124,6 +4153,11 @@ local function CreateContentTabs()
         button.label = UI.Text(button, 13, "textDim", "medium")
         button.label:SetPoint("CENTER")
         button.label:SetJustifyV("MIDDLE")
+        -- A tab with an icon shows it instead of its name; the name is then
+        -- its tooltip (button.tip).
+        button.icon = UI.Icon(button, "gear", 16, "textDim")
+        button.icon:SetPoint("CENTER")
+        button.icon:Hide()
         button.bar = CreateFrame("Frame", nil, button)
         button.bar:SetHeight(2)
         button.bar:SetPoint("BOTTOMLEFT", 10, 0)
@@ -4132,12 +4166,20 @@ local function CreateContentTabs()
         stroke:SetAllPoints(button.bar)
         UI.Shade(stroke, "HORIZONTAL", "accent", "accent2")
         UI.Shadow(button.bar, 7, 1, 0, "accentGlow")
+        function button:Paint(over)
+            local token = (over or self.selected) and "text" or "textDim"
+            UI.Ink(self.label, token)
+            UI.Tint(self.icon, token)
+        end
         button:SetScript("OnEnter", function(self)
-            UI.Ink(self.label, "text")
+            self:Paint(true)
+            UI.ShowTip(self)
         end)
         button:SetScript("OnLeave", function(self)
-            UI.Ink(self.label, self.selected and "text" or "textDim")
+            self:Paint(false)
+            UI.HideTip(self)
         end)
+        button:HookScript("OnHide", UI.HideTip)
         button:SetScript("OnClick", function(self)
             SelectTab(self.id)
         end)

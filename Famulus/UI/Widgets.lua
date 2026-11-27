@@ -517,6 +517,9 @@ local function HideTip(button)
     end
 end
 
+-- For buttons built elsewhere (the window's tabs): the same tooltip.
+UI.ShowTip, UI.HideTip = ShowTip, HideTip
+
 ---------------------------------------------------------------------------
 -- Button. variant: "primary" (accent), "secondary" (outlined) or "ghost"
 -- (no ground until hovered). Optional icon in front of the label.
