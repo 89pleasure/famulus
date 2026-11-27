@@ -41,8 +41,8 @@ owner.
   addon's window as a screenshot, with live feed banners over it (see "Window in the header") →
   01 Chronicle (the picture book with the tabs Everyone, My journey, Companions) →
   02 Fellow travellers → 03 Live feed (can be triggered, position can be moved) → 04 Aliases (the
-  window rebuilt and usable, below it chat and tooltip "in game") → 05 In the game (screenshots,
-  since 2026-11-27, see "Gallery") → 06 Installation → footer with
+  window rebuilt and usable, below it chat and tooltip "in game") → 05 Screenshots ("What Famulus
+  looks like in the game", since 2026-11-27, see "Gallery") → 06 Installation → footer with
   a note on Blizzard's trademark. Tinted background (`section--tinted`) and glow still alternate
   from section to section. The skip link and "What it does" lead to the chronicle (the arrow in the
   header has been gone since the window in the header).
@@ -213,7 +213,7 @@ owner.
   - The demos' people have the English names of the addon's samples in both languages since
     2026-11-27 (Mira Stormfeather, Borin Ironbeard, Lysa Morningdew, Ena Silverbrook), so they match
     the English screenshot; Kaelric, Thessa and Yorick exist only on the page.
-- **Gallery "In the game" (2026-11-27, the owner's request: "header and gallery"; layout and
+- **Gallery "Screenshots" (2026-11-27, the owner's request: "header and gallery"; layout and
   captions the assistant's decisions, not yet seen by the owner):** section 05 between the
   aliases and the installation, two columns (one below 760 px), each picture a link to its
   large version in a new tab, a caption below (`sh_<name>`) and its own alt text

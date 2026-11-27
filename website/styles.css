@@ -812,7 +812,7 @@ div.nrow:hover { background-color: transparent; }
 /* ---------- Installation ---------- */
 
 /* The page ends as it began: the sky comes up out of the ground of the page. */
-/* ---------- In the game: a slider of screenshots ---------- */
+/* ---------- Screenshots: a slider ---------- */
 
 .slider { position: relative; container-type: inline-size; }
 .slider__view { overflow: hidden; border-radius: 14px; border: 1px solid var(--card-border); background: var(--window); box-shadow: var(--sheen), 0 40px 90px -40px rgb(0 0 0 / 0.9); }

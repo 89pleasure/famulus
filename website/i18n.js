@@ -431,15 +431,15 @@ window.FAMULUS_I18N = {
     fd_c_item: 'Fundstück',
     fd_move: 'Platz verschieben',
 
-    // 05 Install
-    sh_eyebrow: 'Im Spiel',
+    // 05 Screenshots
+    sh_eyebrow: 'Screenshots',
     sh_slider: 'Screenshots',
     sh_prev: 'Voriger Screenshot',
     sh_next: 'Nächster Screenshot',
     sh_pause: 'Anhalten',
     sh_goto: 'Screenshot %d von %d',
-    sh_title: 'So sieht es im Spiel aus.',
-    sh_lead: 'Screenshots aus World of Warcraft: Forever, mit den Beispieldaten des Addons.',
+    sh_title: 'So sieht Famulus im Spiel aus.',
+    sh_lead: 'Aufgenommen in World of Warcraft: Forever, mit den Beispieldaten des Addons.',
     sh_fellows: 'Weggefährten: deine engsten Gefährten und alle, mit denen du in einer Gruppe warst.',
     sh_fellows_alt: 'Die Weggefährten im Famulus-Fenster: drei Kacheln für die engsten Gefährten, eine Liste mit allen anderen.',
     sh_story: 'Eure Geschichte mit Mira: eure Verbundenheit, eure Zahlen und jede gemeinsame Spielsitzung.',
