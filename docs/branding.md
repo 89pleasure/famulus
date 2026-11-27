@@ -32,7 +32,9 @@ the index there says which file it is in.
   companions meet (the assistant's suggestion); the text carries that, not the image.
   **New tagline (2026-11-24, the owner's choice):** "Gemeinsam durch Azeroth" / "Together
   through Azeroth" instead of "Dein Gehilfe in Azeroth" (sounded like the removed QoL features), in
-  the window header (`ui_tagline`) and on the website (`tagline`). It must fit on one line: in the
+  the window header (`ui_tagline`) and on the website (`tagline`); since 2026-11-27 (the owner's
+  choice after a copy review) also at the top of the CurseForge description, which said
+  "Your companion for playing together.". It must fit on one line: in the
   header it has only about 180 px at 11 px up to the page name (`SIDEBAR + PAD`). Also proposed
   and not chosen (German only): "Eure Reise, gemeinsam erzählt" ("Your journey, told together")
   as well as "Das Lagerfeuer für deine Gefährten" ("The campfire for your companions") and

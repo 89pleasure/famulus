@@ -93,7 +93,9 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
 - **Open:**
   - Project page: summary chosen by the owner ("Your companion for playing together: Famulus
     helps you stay close to the friends and fellow adventurers who make your journey so
-    special."); the description is a draft by the assistant in
+    special."; set in the project's settings, not in the repo). Since 2026-11-27 the
+    description opens with the tagline "Together through Azeroth" instead (see docs/branding.md);
+    whether the summary follows is the owner's call; the description is a draft by the assistant in
     `docs/curseforge/description.md` (English, Markdown, without Guildy, because its integration only
     works with the fork). Categories: the assistant advises against "Companions" (on CurseForge
     pets and mounts) and recommends "Chat & Communication" with "Guild".

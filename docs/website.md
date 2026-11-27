@@ -286,8 +286,25 @@ owner.
   every merge) and points to `/fam report` and the GitHub issues. Still behind the addon: the
   demos (book cards with strip and weights, chapter heads per session with route, live feed cards
   in three rows, reaction buttons, whisper and "Nearby" in the fellow travellers, the window of the
-  aliases demo) and the screenshot in the header (the owner sends a new one). Installation still
-  only names copying the folder; the CurseForge app belongs there once `v0.1.0` is out.
+  aliases demo) and the screenshot in the header (the owner sends a new one). Installation names
+  the CurseForge app since the copy review the same day (see below).
+- **Copy review (2026-11-27, the owner's request: a review "as an experienced marketing guru"
+  by a subagent; the owner had everything applied):** the hero lead tells what Famulus does in
+  concrete terms; the fact chips say "Addon in five languages" (the page itself has only EN/DE)
+  and "Friends & guild only" instead of "No libraries" (shortened so the chips stay on one row
+  at 1440 px); chronicle point 1 "Shared with your friends" instead of "Famulus talks to
+  Famulus", with friends without Famulus showing up via "Follow my friends"; point 2 says that a
+  mutual friend's Famulus passes on news of a friend who is offline (as `docs/sharing.md`); point 3
+  ends on privacy instead of aliases; the fellow travellers' second point is "Who is nearby"
+  (the old "Your story together" repeated the lead); the aliases open with a scene ("Grimtusk"
+  is Tom); "Famulus adds to Blizzard's interface without replacing anything" instead of
+  "Blizzard's interface stays untouched"; installation names the CurseForge app first (the
+  owner: fine before `v0.1.0`, nobody knows the page yet); German nav "Live-Einblendung" like the
+  section; meta descriptions 150 (EN, also `og:description`) and 148 (DE) characters. The
+  CurseForge description got the same pass. Not taken: the search label in the window demo
+  stays "Search settings" / "Suchen", as in the addon. Checked at 1440 and 375 px in both
+  languages: no horizontal scrolling, no console messages; on a phone the chips wrap to two rows
+  as before.
 - **Keep in step with changes to the addon:** the screenshot in the header as soon as the window
   visibly changes; the counters
   in the rebuilt window (`renderWindow` in `main.js`: 5 alias features, 10 in total; in the HTML
