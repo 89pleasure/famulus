@@ -139,7 +139,8 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   travellers' tiles and list ("Level 41 Mage"), the rows of "Nearby" and its cards, the faction
   of someone out of reach. Not in what the search reads (`FellowDesc`), which would find the
   colour code. Names stay white. The pictures of the settings show the game and keep its own
-  colours (`gameClass<FILE>`). Checked against the mock only, not yet seen in game.
+  colours (`gameClass<FILE>`). Seen in game by the owner ("Passt", 2026-11-27). The website's
+  demos follow (see "Demos" in docs/website.md).
 - **Lines darker than the ground (2026-11-25, the owner's request: the lines were "too
   bright", try a colour darker than the background so they look softer):** Rule: a line is
   a little darker than the darker of the two grounds it parts, never lighter. Before, all

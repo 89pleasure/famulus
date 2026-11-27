@@ -634,6 +634,20 @@ button.react:hover { color: var(--text); border-color: var(--accent-line); }
 .ftile:hover { border-color: var(--card-active); transform: translateY(-2px); }
 .ftile__rank { position: absolute; left: 16px; top: 13px; font: 400 18px/1 var(--serif); color: var(--text-muted); }
 .ftile__name { max-width: 100%; margin-top: 12px; overflow: hidden; font: 400 21px/1.2 var(--serif); text-overflow: ellipsis; white-space: nowrap; }
+
+/* A class named in a line, in its muted colour: the addon's tokens
+   class<FILE> in UI/Theme.lua (the game's colours at about half their
+   saturation). */
+.cls--warrior { color: #b9a692; }
+.cls--paladin { color: #d396b1; }
+.cls--hunter { color: #adc093; }
+.cls--rogue { color: #d7d288; }
+.cls--priest { color: #dedacf; }
+.cls--shaman { color: #5f95ca; }
+.cls--mage { color: #7fb9c9; }
+.cls--warlock { color: #9696cf; }
+.cls--druid { color: #ce9a6c; }
+
 .ftile__sub { margin-top: 3px; font-size: 12.5px; color: var(--text-muted); }
 .ftile .badge { margin-top: 10px; }
 .ftile__stats { margin: 11px 0 18px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
@@ -668,7 +682,7 @@ button.react:hover { color: var(--text); border-color: var(--accent-line); }
 .frow:hover { background-color: rgb(255 255 255 / 0.045); }
 .frow__name { display: grid; min-width: 0; }
 .frow__name strong { font-size: 14px; font-weight: 500; }
-.frow__name span { overflow: hidden; font-size: 12px; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.frow__name > span { overflow: hidden; font-size: 12px; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
 .frow .badge { justify-self: start; }
 .frow__time { font-size: 13px; font-weight: 500; color: var(--text-dim); }
 .frow__last { font-size: 13px; color: var(--text-muted); }

@@ -393,6 +393,13 @@ owner.
     time together; the stretch card is "On the road in <zone>" with "18:50 to 21:15" (no
     duration, as in the addon). A day of the log is one session, as in the addon. Not built:
     "Forget", the card of Nearby, "Where your people are", the tab "Groups".
+  - **Class colours (2026-11-27, the owner's request after the addon's #83):** a class named in
+    the fellow travellers' tiles, list, the person's card and the rows of Nearby stands in the
+    addon's muted colour (`.cls--<class>` in `styles.css`, the values of `class<FILE>` in
+    `UI/Theme.lua`; `classWord`, `levelClass` and `joined` in `main.js` build the line as nodes).
+    The game's tooltip below the aliases window keeps the game's look. The page has nobody out of
+    reach, so no faction colours. Checked at 1440 and 375 px, English and German: colours, the
+    rows still cut with "…", no horizontal scrolling, no console messages.
   - **Still behind then:** the aliases window and the screenshot; both caught up the same day.
   - Checked in the built-in browser at 1440 and 375 px, English and German: book (positions of
     cards and dots measured), live feed (three cards), Nearby, the story's buttons, whisper;

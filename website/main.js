@@ -22,6 +22,26 @@
     return element;
   }
 
+  // Parts joined by "  ·  " into an element: strings, nodes or lists of them.
+  function joined(element, parts) {
+    parts.filter(Boolean).forEach((part, index) => {
+      if (index) element.append('  ·  ');
+      element.append(...[].concat(part));
+    });
+    return element;
+  }
+
+  // A class named in a line, in its muted colour (UI.Colored in the addon).
+  function classWord(cls) {
+    return make('span', `cls cls--${cls}`, t(`cls_${cls}`));
+  }
+
+  // "Level 40 Mage" with the class in its colour, as fresh nodes.
+  function levelClass(level, cls) {
+    const [before, after] = t('tip_level', level, '\u0001').split('\u0001');
+    return [before, classWord(cls), after];
+  }
+
   function icon(name, size = 16) {
     const svg = document.createElementNS(SVG, 'svg');
     svg.setAttribute('class', 'icon');
@@ -1120,7 +1140,7 @@
       name: alias || fellow.who,
       realName: alias ? fellow.who : null,
       colour: person.colour,
-      levelClass: t('tip_level', person.level, t(`cls_${person.cls}`)),
+      levelClass: () => levelClass(person.level, person.cls),
       lastAgo: last.ago,
       lastText: capital(fellow.now ? t('fw_now') : t('fw_last', when(last.ago), last.zone)),
       lastShort: fellow.now ? t('fw_now_short') : capital(last.ago < 2 ? when(last.ago) : dateOf(last.ago)),
@@ -1173,7 +1193,7 @@
       make('span', 'ftile__rank', ['I', 'II', 'III'][rank]),
       crest(shown, 'big'),
       make('strong', 'ftile__name', shown.name),
-      make('span', 'ftile__sub', shown.levelClass),
+      joined(make('span', 'ftile__sub'), [shown.levelClass()]),
       badge(shown.tier),
       make('span', 'ftile__stats', shown.statsText),
       make('span', 'ftile__foot', shown.lastText),
@@ -1187,7 +1207,7 @@
     button.type = 'button';
     button.dataset.who = shown.who;
     const name = make('span', 'frow__name');
-    name.append(make('strong', '', shown.name), make('span', '', [shown.realName, shown.levelClass].filter(Boolean).join('  ·  ')));
+    name.append(make('strong', '', shown.name), joined(make('span'), [shown.realName, shown.levelClass()]));
     button.append(crest(shown, 'small'), name, badge(shown.tier), make('span', 'frow__time', duration(shown.minutes)), make('span', 'frow__last', shown.lastShort));
     button.addEventListener('click', () => openStory(shown.who));
     return withWhisper(button, shown.who, 'frow-box');
@@ -1242,7 +1262,7 @@
     card.append(
       crest(shown, 'huge'),
       make('h3', 'fprofile__name', shown.name),
-      make('p', 'fprofile__sub', [shown.realName, shown.levelClass].filter(Boolean).join('  ·  ')),
+      joined(make('p', 'fprofile__sub'), [shown.realName, shown.levelClass()]),
       make('p', `fprofile__status${shown.now ? ' is-now' : ''}`, shown.lastText),
       ladder(shown.tier),
     );
@@ -1400,8 +1420,7 @@
     const { level, cls, colour } = PEOPLE[person.who];
     const row = make(shown ? 'button' : 'div', 'frow nrow');
     const name = make('span', 'frow__name');
-    const sub = [alias && person.who, t(`cls_${cls}`), t(`fw_from_${person.from}`)].filter(Boolean).join('  ·  ');
-    name.append(make('strong', '', alias || person.who), make('span', '', sub));
+    name.append(make('strong', '', alias || person.who), joined(make('span'), [alias && person.who, classWord(cls), t(`fw_from_${person.from}`)]));
     const gap = level - HERE.level;
     const levelCell = make('span', 'nrow__level', t('c_p_level', level));
     levelCell.append(make('em', '', gap === 0 ? '\u00b10' : gap > 0 ? `+${gap}` : `\u2212${-gap}`));
