@@ -199,21 +199,6 @@ owner.
     (`_forever_/Screenshots` does not exist); the owner uses macOS's own (Cmd+Shift+3), which
     lands on the desktop as `Bildschirmfoto <date> um <time>.png`. The window stood at the same
     place in every shot of 2026-11-27, so one frame fits them all.
-- **Gallery "In the game" (2026-11-27, the owner's request: "header and gallery"; layout and
-  captions the assistant's decisions, not yet seen by the owner):** section 05 between the
-  aliases and the installation, two columns (one below 760 px), each picture a link to its
-  large version in a new tab, a caption below (`sh_<name>`) and its own alt text
-  (`sh_<name>_alt`). Pictures (`assets/shots/<name>-<width>.webp`, cut with
-  `tools/make_shot.js` from the same screenshots): `fellows` (Overview, 15.35.04), `story`
-  (Mira, 15.35.17), `groups` (15.36.03), `feed` (`/fam feed test` over the game world, 15.44.25,
-  1110 × 687 at x 1980, y 230, the same shape as the window, so the grid stays even), `welcome`
-  (expanded, 15.37.59), `aliases` (Aliases › Settings with the chat picture, 15.38.29); the
-  windows at 1180 and 1770, the feed at 1110, about 40 to 100 KB each, loaded lazily. Not used:
-  "Nearby" and Chronicle › Friends filtered to one person, because they show real Battle.net
-  friends; the game world around the window, because it shows other players' names. No entry in
-  the navigation. Checked at 1056 and 375 px, English and German: all six load, no horizontal
-  scrolling, no console messages (a `figure` keeps the browser's margin of 40 px unless set to
-  0; it did at first).
   - The header's live feed banners lie over the lower end of the window's right column,
     below its friends list, where the window fades out (`.shot__feed`, `top: 74%` since the rows,
     before 70 %), like
@@ -228,6 +213,41 @@ owner.
   - The demos' people have the English names of the addon's samples in both languages since
     2026-11-27 (Mira Stormfeather, Borin Ironbeard, Lysa Morningdew, Ena Silverbrook), so they match
     the English screenshot; Kaelric, Thessa and Yorick exist only on the page.
+- **Gallery "In the game" (2026-11-27, the owner's request: "header and gallery"; layout and
+  captions the assistant's decisions, not yet seen by the owner):** section 05 between the
+  aliases and the installation, two columns (one below 760 px), each picture a link to its
+  large version in a new tab, a caption below (`sh_<name>`) and its own alt text
+  (`sh_<name>_alt`). Pictures (`assets/shots/<name>-<width>.webp`, cut with
+  `tools/make_shot.js` from the same screenshots): `fellows` (Overview, 15.35.04), `story`
+  (Mira, 15.35.17), `groups` (15.36.03), `feed` (`/fam feed test` over the game world, 15.44.25,
+  2233 × 1380 at x 1418, y 60, the window's shape and about the same scale as the window shots;
+  the first crop, 1110 × 687 at x 1980, y 230, was blown up past its size in the slider and the
+  cards looked too large, the owner noticed), `welcome`
+  (expanded, 15.37.59), `aliases` (Aliases › Settings with the chat picture, 15.38.29); all at
+  1180 and 1770, about 40 to 100 KB each, loaded lazily. Not used:
+  "Nearby" and Chronicle › Friends filtered to one person, because they show real Battle.net
+  friends; the game world around the window, because it shows other players' names. No entry in
+  the navigation. Checked at 1056 and 375 px, English and German: all six load, no horizontal
+  scrolling, no console messages (a `figure` keeps the browser's margin of 40 px unless set to
+  0; it did at first).
+  - **A slider instead of the grid (2026-11-27, the owner's request: "one screen and an
+    auto-scroll slider, then the picture can be larger"; details the assistant's decisions):**
+    one screenshot at a time at the full width of the page (up to 1180 px, the 1770 version on
+    sharp screens), its caption below it inside the frame. It moves on by itself every six
+    seconds (`EVERY` in `main.js`); the shown dot fills up over that time. It stands still with
+    reduced motion (and the pause button is hidden then), while paused by the button, while the
+    mouse or the focus is on the slider, while it is less than 40 % on screen and while the tab
+    is in the background. Two large arrows left and right of the picture, outside the content's
+    width in the page's margin (the owner's request after two versions: small ones below, then
+    on the picture's edges), level with the picture's middle through container units on
+    `.slider` (`30.9cqw`); below 1400 px, where the margin is too small, they sit on the
+    picture's edges. The dots and pause below, the arrow keys and a sideways swipe move it too;
+    a slide
+    chosen by the reader is read out (`aria-live` polite), one that moves on by itself is not.
+    The other slides are `inert`. No link to the large picture any more (the picture is large
+    now, and a link would fight the swipe). Checked at 1440 and 375 px, English and German:
+    moves on after six seconds, arrows, dots and pause, no horizontal scrolling, no console
+    messages.
 - **Languages:** English is in the HTML (`data-i18n="key"`), German in `i18n.js`; what
   scripts put together is there in both languages. **English is the default** (the owner's
   request, 2026-11-25; before that the page followed the browser's language, so a German

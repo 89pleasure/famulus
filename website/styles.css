@@ -798,16 +798,53 @@ div.nrow:hover { background-color: transparent; }
 /* ---------- Installation ---------- */
 
 /* The page ends as it began: the sky comes up out of the ground of the page. */
-/* ---------- In the game: screenshots ---------- */
+/* ---------- In the game: a slider of screenshots ---------- */
 
-.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(20px, 3vw, 36px); }
-.gallery__item { margin: 0; }
-.gallery__item a { display: block; overflow: hidden; border-radius: 12px; border: 1px solid var(--card-border); box-shadow: var(--sheen), 0 24px 60px -30px rgb(0 0 0 / 0.9); transition: border-color 0.3s, transform 0.3s var(--ease); }
-.gallery__item a:hover { border-color: var(--card-active); transform: translateY(-3px); }
-.gallery__item img { display: block; width: 100%; height: auto; }
-.gallery__item figcaption { margin-top: 12px; font-size: 14px; color: var(--text-dim); }
-@media (max-width: 760px) {
-  .gallery { grid-template-columns: minmax(0, 1fr); }
+.slider { position: relative; container-type: inline-size; }
+.slider__view { overflow: hidden; border-radius: 14px; border: 1px solid var(--card-border); background: var(--window); box-shadow: var(--sheen), 0 40px 90px -40px rgb(0 0 0 / 0.9); }
+.slider__track { display: flex; transition: transform 0.7s var(--ease); touch-action: pan-y; }
+.slide { flex: 0 0 100%; min-width: 0; margin: 0; }
+.slide img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+.slide figcaption { padding: 14px 20px 16px; border-top: 1px solid var(--divider); font-size: 14.5px; color: var(--text-dim); }
+.slider__bar { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 20px; }
+.slider__btn { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--control-border); background: var(--control); color: var(--text-dim); transition: color 0.2s, border-color 0.2s; }
+.slider__btn:hover { color: var(--accent); border-color: var(--accent-line); }
+.slider__btn[hidden] { display: none; }
+/* Two large arrows at the picture's edges, level with its middle: the
+   pictures are 1180 × 730, so their middle is 30.9 % of the width down. */
+.slider__arrow { position: absolute; top: calc(30.9cqw - 26px); display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgb(255 255 255 / 0.16); background: rgb(8 10 10 / 0.55); color: var(--text-dim); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.8); transition: color 0.2s, border-color 0.2s, background-color 0.2s, transform 0.2s var(--ease); }
+.slider__arrow:hover { color: var(--accent); border-color: var(--accent-line); background-color: rgb(8 10 10 / 0.75); }
+/* Outside the picture, in the page's margin beyond the content's width. */
+.slider__arrow--prev { left: -84px; }
+.slider__arrow--next { right: -84px; }
+/* Where the margin is too small for them (the content is 1180 wide, plus
+   two arrows of 52 and their gaps), on the picture's edges. */
+@media (max-width: 1400px) {
+  .slider__arrow--prev { left: 18px; }
+  .slider__arrow--next { right: 18px; }
+}
+.slider__arrow--prev .icon { transform: rotate(90deg); }
+.slider__arrow--next .icon { transform: rotate(-90deg); }
+.slider__arrow--prev:hover { transform: translateX(-2px); }
+.slider__arrow--next:hover { transform: translateX(2px); }
+/* Pause: two bars; pressed, a triangle to play on. */
+.slider__pause span { width: 10px; height: 12px; border-inline: 3px solid currentColor; }
+.slider__pause[aria-pressed="true"] span { width: 0; height: 0; margin-left: 3px; border-inline: 0; border-block: 6px solid transparent; border-left: 10px solid currentColor; }
+.slider__dots { display: flex; gap: 6px; }
+.slider__dot { display: grid; place-items: center; width: 30px; height: 24px; padding: 0; border: 0; background: none; }
+.slider__dot i { position: relative; display: block; width: 100%; height: 4px; overflow: hidden; border-radius: 2px; background: var(--track); }
+.slider__dot i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent2)); transform: scaleX(0); transform-origin: left; }
+.slider__dot.is-shown i::after { transform: scaleX(1); }
+/* While it moves on by itself, the dot fills up over the slide's time. */
+.slider.is-running .slider__dot.is-shown i::after { animation: slide-fill 6s linear; }
+@keyframes slide-fill { from { transform: scaleX(0); } }
+@media (max-width: 560px) {
+  .slide figcaption { padding: 12px 14px 14px; font-size: 13.5px; }
+  .slider__dot { width: 22px; }
+  .slider__arrow { top: calc(30.9cqw - 18px); width: 36px; height: 36px; }
+  .slider__arrow .icon { width: 22px; height: 22px; }
+  .slider__arrow--prev { left: 8px; }
+  .slider__arrow--next { right: 8px; }
 }
 
 .section--last { padding-bottom: clamp(300px, 42vw, 540px); }
