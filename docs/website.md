@@ -292,10 +292,19 @@ owner.
     `ft_*`).
   - **No legal notice, no personal data (the owner's decision, 2026-11-27):** "I know a legal
     notice with name and address is mandatory in Germany, but I don't want that"; like
-    polestar.guide. Responsible is "89pleasure, the developer of Famulus", reachable on GitHub
-    (profile and issues). Polestar names a first name, the country and a project address
-    (`privacy@polestar.guide`); Famulus names none of these. Do not ask for the data again or
+    polestar.guide. Responsible is "89pleasure, the developer of Famulus", with the email
+    `89pleasure@proton.me` (the owner's address for this, 2026-11-27) and GitHub as a second,
+    public way. The email also stands under "No accounts, nothing to delete" and for takedowns
+    in `#rights`. Polestar names a first name, the country and a project address
+    (`privacy@polestar.guide`); Famulus names only the address. Do not ask for more data or
     build a legal notice back in.
+  - **No accounts, nothing to delete (the owner, 2026-11-27):** neither the website nor the
+    addon stores personal data, there are no accounts and no registration, so the policy has
+    no list of rights to access or erasure; instead it says there is nothing to look up or
+    delete, points requests about the server logs to GitHub and keeps the right to complain to
+    a supervisory authority. "The addon" adds that what Famulus remembers stays in the game
+    folder on the player's computer. If accounts, a newsletter or anything stored on a server
+    ever come, this section needs the rights again.
     Facts in the privacy policy, read 2026-11-27: GitHub Pages logs the visitor's IP address for
     security (GitHub's docs, "Data collection"); GitHub, Inc. is certified under the EU-U.S. DPF
     and its Swiss and UK counterparts (GitHub Privacy Statement of 2026-04-27); the page stores
