@@ -180,7 +180,9 @@ owner.
     horizontal lines on wide windows, mostly just after loading: the drawing's top is cut
     there, and while a curtain swayed (`scaleY` below 1) or the parallax moved it down, the cut
     edge of its `<svg>` came into view. The sky's sheets now draw past their box
-    (`.world .ridge { overflow: visible }`).
+    (`.world .ridge { overflow: visible }`). Later the same day: the world tree showed the
+    lower edge of its foot where the ridge fell away beside the trunk; a giant now stands
+    where the ground under its foot is lowest, and foot and roots reach far below it.
   - **Drawing:** the parts are in `scene.js`: `FIGURES` `tower`, `keep`, `hold`, `isle`,
     `rock`, `cascade`, `shrooms`, `well`; trees `ancient` and `worldtree` (`giants` in
     `trees`); on a ridge `cast` (now with its lights), `float` (bobbing), `mist`, `snow`
@@ -204,15 +206,15 @@ owner.
     `moonBlue` in the addon). The script in the head of `index.html` settles the world before
     the first paint (`?world=`, `famulus-scene` or chance; its list of keys must match
     `WORLDS`), otherwise the page would show Lemon for a moment; `legal.html` takes the
-    remembered world's colours the same way, without one Lemon. Not matched: the screenshots
-    of the addon show Lemon whatever the world.
+    remembered world's colours the same way, without one Lemon. The window's screenshot below
+    the header follows the scheme too (see "Window in the header"); the gallery stays Lemon.
   - **Choice:** a world picked by the reader is remembered like the language
     (`famulus-scene`, the owner's request); without one, a world by chance on every visit
     (`Math.random`). `?world=<key>` shows one without changing what is remembered (for links
     and screenshots). The switcher is a button in the navigation, left of the language (the
     owner's request; at first it was a row of dots below the fact chips): the shown world's
     small picture (sky, moon or sun, hill in its colours; `.worlds__dot--<key>`) and a chevron.
-    It opens a menu: first "A new one each visit" (`world_random`, five skies as slices; it
+    It opens a menu: first "Random" (`world_random`, five skies as slices; it
     forgets the remembered world and shows another one by chance; the assistant's addition, so
     that the chance can come back), below a line the five worlds, picture and name. The chosen
     entry carries a glowing dot at its end. The button's name and title say "Scene: <world>".
@@ -230,7 +232,7 @@ owner.
   - Checked in the built-in browser at 1440, 1024 and 375 px and with headless Chrome at 1440,
     1900 and 1920, English and German: every world with its scheme (header, demos, foot); the
     menu by click, arrow keys, End, Escape and a click outside; the names after a change of
-    language; a picked world and language come back after reloading, "A new one each visit"
+    language; a picked world and language come back after reloading, "Random"
     removes `famulus-scene`; the accent changes with a switch; the language menu and the
     remembered world's colours on the legal page; at 375 px both menus stay on screen; no
     horizontal scrolling, no console messages. Not checked: reduced motion, Safari, Firefox,
@@ -264,11 +266,18 @@ owner.
     Polestar shows screenshots there too. Consequence: game icons and the game's book font
     are visible in the image; until then the page showed no graphics from Blizzard.
   - **One English image for both languages** (the owner's decision, 2026-11-24:
-    "English is enough"), in two widths: `assets/shots/window-<1180|1770>.webp`. Only the
-    alt text changes with the language (`shot_alt` in `i18n.js`, the German one with the addition
-    "englische Fassung" ("English version")).
+    "English is enough"), in two widths and, since 2026-11-27, one per colour scheme (the
+    owner's request, "only the header"; the gallery stays Lemon):
+    `assets/shots/window-<lemon|lilac|rose|mint|amber>-<1180|1770>.webp`. The scheme comes from
+    `--shot` of the world (`:root[data-world]` in `styles.css`). A small script right behind
+    the `<img>` in `index.html` sets its `srcset`, so that only the shown world's picture is
+    loaded (a `src` in the HTML would be fetched by the browser's preload scanner first);
+    `showShot()` in `main.js` loads and decodes the next one on a change of world before it
+    swaps; without scripts a `<noscript>` shows Lemon. Only the alt text changes with the
+    language (`shot_alt` in `i18n.js`, the German one with the addition "englische Fassung"
+    ("English version")).
   - **Producing it:** `node tools/make_shot.js <screenshot> <x> <y> <width> <height>
-    website/assets/shots/window` cuts out the window from its outer hairline
+    website/assets/shots/window-<scheme>` cuts out the window from its outer hairline
     and writes WebP at full width and at 1180; headless Chrome decodes, scales and
     encodes, otherwise only Node is needed. The edges can be found at the hairline (brightness
     about 48 against 10 to 20 next to it; on the Windows machine measured via PowerShell with
@@ -276,13 +285,18 @@ owner.
   - **For the capture:** client and Famulus in English (otherwise item and class names stay
     German, see "Sample entries"), then `/fam chronicle demo` and
     `/fam fellows demo`.
-  - **State (since 2026-11-27, the owner's choice of three):** Chronicle › Everyone, from a
-    screenshot on the Mac (`Bildschirmfoto 2026-11-27 um 15.35.00.png`, 5120 × 2880, client and
-    Famulus in English, sample data). The window is 2832 × 1752 at x 1170, y 410 (2.4 times its
-    1180 × 730; edges found on enlarged crops of the corners with `sips`), written at 1180 and
-    1770 as before. Visible in it: the owner's character "Kip Blütensturm" (strips, "This week";
-    the owner: fine) and the route "Gasthaus Seenhain › Lakeshire Inn", the same inn in German and
-    English, because entries from a German client mix with English ones. Before: the screenshot
+  - **State (since 2026-11-27, evening):** Chronicle › Everyone in the five schemes, from the
+    owner's screenshots on Windows (`_forever_/Screenshots/WoWScrnShot_112726_1845xx.jpg`,
+    3840 × 2160: `184543` Lemon, `184615` Mint, `184622` Rose, `184629` Lilac, `184641` Amber;
+    `184605` is a second Lemon). The window is 1770 × 1095 at x 1077, y 474 in all of them
+    (hairline measured with `System.Drawing`), written at 1770 and 1180. Visible in it: the
+    owner's character "Kip Blütensturm", "This evening" and "Yesterday evening", and **real
+    data, not samples**: friends with their character names in the rail and on the cards
+    (Ori Schattenflut, Rhodea …, Arisa Werkatz and others). The owner: the names may stand on
+    the public page (2026-11-27). New views for the page are still taken after
+    `/fam chronicle demo` unless the owner says otherwise. Before: one Lemon picture from the Mac
+    (`Bildschirmfoto 2026-11-27 um 15.35.00.png`, sample data, window 2832 × 1752 at x 1170,
+    y 410; in the Git history up to commit `1bd2635`), and before that
     `WoWScrnShot_112426_221759.jpg` of 2026-11-24.
   - **Taking screenshots on the Mac:** the game's own key writes nothing there
     (`_forever_/Screenshots` does not exist); the owner uses macOS's own (Cmd+Shift+3), which

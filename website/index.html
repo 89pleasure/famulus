@@ -95,7 +95,7 @@
           <svg class="icon" width="14" height="14" aria-hidden="true"><use href="#i-chevron"/></svg>
         </button>
         <div class="pick__menu" id="scenes-menu" role="menu" aria-label="Scene" data-i18n-attr="aria-label:world_pick" hidden>
-          <button type="button" role="menuitemradio" data-world="random"><span class="worlds__dot worlds__dot--random" aria-hidden="true"></span><span data-i18n="world_random">A new one each visit</span></button>
+          <button type="button" role="menuitemradio" data-world="random"><span class="worlds__dot worlds__dot--random" aria-hidden="true"></span><span data-i18n="world_random">Random</span></button>
           <button type="button" role="menuitemradio" data-world="night"><span class="worlds__dot worlds__dot--night" aria-hidden="true"></span><span data-i18n="world_night">Moonlit night</span></button>
           <button type="button" role="menuitemradio" data-world="arcane"><span class="worlds__dot worlds__dot--arcane" aria-hidden="true"></span><span data-i18n="world_arcane">Arcane tower</span></button>
           <button type="button" role="menuitemradio" data-world="dusk"><span class="worlds__dot worlds__dot--dusk" aria-hidden="true"></span><span data-i18n="world_dusk">Sunset</span></button>
@@ -152,14 +152,28 @@
 
   <main>
     <!-- The addon itself, below the camp: a screenshot of its window
-         (tools/make_shot.js), in English for both languages. -->
+         (tools/make_shot.js), in English for both languages, in the colour
+         scheme of the header's world (--shot in styles.css). The script right
+         behind it picks the picture, so that only that one is loaded; main.js
+         swaps it when the world changes. -->
     <figure class="shot reveal" style="--i:5">
       <div class="shot__frame">
-        <img class="shot__window" src="assets/shots/window-1180.webp"
-          srcset="assets/shots/window-1180.webp 1180w, assets/shots/window-1770.webp 1770w"
+        <img class="shot__window" id="shot-window"
           sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730" fetchpriority="high"
           alt="The Famulus window in World of Warcraft: Forever. The chronicle, the fellow travellers and the aliases stand in its sidebar; the chronicle tells the last evenings as a picture book."
           data-i18n-attr="alt:shot_alt">
+        <script>
+          (() => {
+            const shot = getComputedStyle(document.documentElement).getPropertyValue('--shot').trim() || 'lemon';
+            const img = document.getElementById('shot-window');
+            img.srcset = `assets/shots/window-${shot}-1180.webp 1180w, assets/shots/window-${shot}-1770.webp 1770w`;
+            img.src = `assets/shots/window-${shot}-1180.webp`;
+          })();
+        </script>
+        <noscript><img class="shot__window" src="assets/shots/window-lemon-1180.webp"
+          srcset="assets/shots/window-lemon-1180.webp 1180w, assets/shots/window-lemon-1770.webp 1770w"
+          sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730"
+          alt="The Famulus window in World of Warcraft: Forever. The chronicle, the fellow travellers and the aliases stand in its sidebar; the chronicle tells the last evenings as a picture book."></noscript>
       </div>
     </figure>
 

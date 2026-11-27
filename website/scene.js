@@ -248,18 +248,20 @@ window.FamulusScene = (() => {
 
   // A world tree far off on the horizon: a trunk as wide as a mountain on a
   // flared foot of roots, great boughs spreading from the fork, and a crown
-  // like a range of clouds.
+  // like a range of clouds. Foot and roots reach far below `ground`, so that
+  // no edge of them shows where the ridge falls away beside the trunk.
   function worldtree(x, ground, height, rand) {
     const foot = height * 0.12;
     const waist = height * 0.05;
     const fork = ground - height * 0.5;
     const crown = ground - height * 0.78;
     const span = height * 0.56;
-    let d = `M${f(x - foot * 1.7)} ${f(ground + 4)}C${f(x - foot * 0.5)} ${f(ground - foot * 0.25)} ${f(x - waist * 1.5)} ${f(ground - height * 0.12)} ${f(x - waist)} ${f(ground - height * 0.3)}`;
+    const deep = ground + height * 0.3;
+    let d = `M${f(x - foot * 1.7)} ${f(deep)}L${f(x - foot * 1.7)} ${f(ground + 4)}C${f(x - foot * 0.5)} ${f(ground - foot * 0.25)} ${f(x - waist * 1.5)} ${f(ground - height * 0.12)} ${f(x - waist)} ${f(ground - height * 0.3)}`;
     d += `L${f(x - waist * 0.85)} ${f(fork)}L${f(x + waist * 0.85)} ${f(fork)}L${f(x + waist)} ${f(ground - height * 0.3)}`;
-    d += `C${f(x + waist * 1.5)} ${f(ground - height * 0.12)} ${f(x + foot * 0.5)} ${f(ground - foot * 0.25)} ${f(x + foot * 1.7)} ${f(ground + 4)}Z`;
-    d += limb([[x - waist * 0.8, ground - height * 0.06, waist * 0.9], [x - foot * 1.1, ground - foot * 0.1, waist * 0.5], [x - foot * 2.3, ground + 3, waist * 0.2]]);
-    d += limb([[x + waist * 0.8, ground - height * 0.05, waist * 0.8], [x + foot * 1.2, ground - foot * 0.05, waist * 0.45], [x + foot * 2.1, ground + 3, waist * 0.2]]);
+    d += `C${f(x + waist * 1.5)} ${f(ground - height * 0.12)} ${f(x + foot * 0.5)} ${f(ground - foot * 0.25)} ${f(x + foot * 1.7)} ${f(ground + 4)}L${f(x + foot * 1.7)} ${f(deep)}Z`;
+    d += limb([[x - waist * 0.8, ground - height * 0.06, waist * 0.9], [x - foot * 1.1, ground - foot * 0.1, waist * 0.5], [x - foot * 2.3, ground + 3, waist * 0.2], [x - foot * 2.6, deep, waist * 0.2]]);
+    d += limb([[x + waist * 0.8, ground - height * 0.05, waist * 0.8], [x + foot * 1.2, ground - foot * 0.05, waist * 0.45], [x + foot * 2.1, ground + 3, waist * 0.2], [x + foot * 2.4, deep, waist * 0.2]]);
     // Boughs that curve up and out and end inside the crown.
     for (const [reach, rise, weight] of [[-0.95, 0.1, 0.55], [-0.5, -0.05, 0.7], [-0.05, -0.16, 0.7], [0.45, -0.06, 0.65], [0.9, 0.12, 0.5]]) {
       const end = crown + height * (0.05 + rise * 0.3);
@@ -317,7 +319,13 @@ window.FamulusScene = (() => {
       else d += pine(x, ground + tall * 0.08, tall, tall * (0.34 + rand() * 0.14), rand);
     }
     const old = random(layer.seed * 17 + 5);
-    for (const [gx, tall, kind] of giants) d += (kind === 'world' ? worldtree : ancient)(gx, heightAt(points, gx) + 4, tall, old);
+    for (const [gx, tall, kind] of giants) {
+      // Rooted where the ground is lowest under its foot, so it stands in
+      // the ridge rather than on its crest.
+      let ground = 0;
+      for (let dx = -0.2; dx <= 0.2; dx += 0.05) ground = Math.max(ground, heightAt(points, gx + dx * tall));
+      d += (kind === 'world' ? worldtree : ancient)(gx, ground + 6, tall, old);
+    }
     return d;
   }
 

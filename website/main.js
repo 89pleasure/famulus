@@ -2227,8 +2227,8 @@
 
   // The scene beside the languages: a button with the shown world's small
   // picture opens a menu of all of them (pick.js). A world picked there is
-  // remembered (famulus-scene); "A new one each visit" forgets it and shows
-  // another one. The world fades out, is drawn anew and fades in.
+  // remembered (famulus-scene); "Random" forgets it and shows another one.
+  // The world fades out, is drawn anew and fades in.
   let fading = 0;
   function markWorld() {
     scenes.mark(item => item.dataset.world === (chosenWorld || 'random'));
@@ -2236,6 +2236,24 @@
     const toggle = $('#scenes-toggle');
     toggle.setAttribute('aria-label', `${t('world_pick')}: ${t(`world_${world}`)}`);
     toggle.title = toggle.getAttribute('aria-label');
+  }
+  // The window below the header in the world's colour scheme (--shot, as the
+  // script behind the picture in index.html picks it at first): the new
+  // picture is loaded and decoded before it takes the old one's place.
+  function showShot() {
+    const img = $('#shot-window');
+    const shot = getComputedStyle(root).getPropertyValue('--shot').trim() || 'lemon';
+    const srcset = `assets/shots/window-${shot}-1180.webp 1180w, assets/shots/window-${shot}-1770.webp 1770w`;
+    if (img.getAttribute('srcset') === srcset) return;
+    const next = new Image();
+    next.sizes = img.sizes;
+    next.srcset = srcset;
+    next.src = `assets/shots/window-${shot}-1180.webp`;
+    next.decode().catch(() => {}).then(() => {
+      if (getComputedStyle(root).getPropertyValue('--shot').trim() !== shot) return; // switched on meanwhile
+      img.srcset = srcset;
+      img.src = next.src;
+    });
   }
   function switchWorld(next) {
     if (next === world) return;
@@ -2245,6 +2263,7 @@
       drawHero(world);
       kindle();
       depth.refresh();
+      showShot();
       heroScene.classList.remove('is-fading');
     };
     clearTimeout(fading);

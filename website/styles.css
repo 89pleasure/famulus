@@ -62,6 +62,9 @@
   --fire: #f2d640;
   --fire2: #fff29a;
   --fire-glow: color-mix(in srgb, var(--fire) 45%, transparent);
+  /* The screenshot of the window below the header in this scheme:
+     assets/shots/window-<shot>-<width>.webp (index.html, main.js). */
+  --shot: lemon;
   --figure: hsl(var(--h) calc(var(--s) * 1.5) 3%);
   --flame-base: color-mix(in srgb, var(--fire) 72%, #8a3c00);
   --flame-inner: color-mix(in srgb, var(--fire2) 70%, #fff);
@@ -209,7 +212,7 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .pick__menu button[aria-checked="true"] { color: var(--text); }
 /* The chosen one: a glowing dot at the end of its line. */
 .pick__menu button[aria-checked="true"]::after { content: ""; flex: none; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
-/* "A new one each visit" stands apart from the worlds, a line below it. */
+/* "Random" stands apart from the worlds, a line below it. */
 .pick__menu [data-world="random"] { position: relative; margin-bottom: 9px; }
 .pick__menu [data-world="random"]::before { content: ""; position: absolute; left: 10px; right: 10px; bottom: -5px; height: 1px; background: var(--divider); }
 .pick__code { flex: none; width: 26px; padding: 2px 0; border-radius: 5px; border: 1px solid var(--hairline); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-align: center; color: var(--text-muted); }
@@ -290,6 +293,7 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 :root[data-world="arcane"] {
   /* Lilac */
   --h: 240; --s: 19%; --accent: #8f7cff; --accent2: #e08cff; --on-accent: #120b33;
+  --shot: lilac;
   --sky-top: hsl(262 52% 5%);
   --sky-mid: hsl(260 44% 12%);
   --sky-low: hsl(282 40% 27%);
@@ -310,6 +314,7 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 :root[data-world="dusk"] {
   /* Rose, as the clouds lit from below; the fire burns in amber, as the sun */
   --h: 330; --s: 13%; --accent: #f0567c; --accent2: #ff9d8c; --on-accent: #2b0711;
+  --shot: rose;
   --fire: #f2a93b;
   --fire2: #ffd670;
   --sky-top: hsl(236 42% 9%);
@@ -337,6 +342,7 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 :root[data-world="forest"] {
   /* Mint */
   --h: 226; --s: 30%; --accent: #35d3bf; --accent2: #92f0a8; --on-accent: #04211d;
+  --shot: mint;
   --sky-top: hsl(218 50% 5%);
   --sky-mid: hsl(204 46% 11%);
   --sky-low: hsl(176 38% 24%);
@@ -357,6 +363,7 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 :root[data-world="frost"] {
   /* Amber, warm against the cold; the fire and the braziers burn in it */
   --h: 257; --s: 13%; --accent: #f2a93b; --accent2: #ffd670; --on-accent: #1a1206;
+  --shot: amber;
   --fire: #f2a93b;
   --fire2: #ffd670;
   --sky-top: hsl(224 55% 5%);

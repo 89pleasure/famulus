@@ -185,7 +185,7 @@ window.FAMULUS_I18N = {
     nav_main: 'Hauptnavigation',
     nav_lang: 'Sprache',
     world_pick: 'Szene',
-    world_random: 'Bei jedem Besuch eine neue',
+    world_random: 'Zufällig',
     world_night: 'Mondnacht',
     world_arcane: 'Arkanturm',
     world_dusk: 'Abendrot',
