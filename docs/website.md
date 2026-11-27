@@ -577,8 +577,9 @@ owner.
     heavy 100 % of the column, a narrower card hangs on the line; picture 40/48/56 px; glowing
     dots of 5/7/9 px instead of icons on the line (in the fellow travellers' book too). The
     sentences have no place (`c_death_nowhere`, `c_zone_nowhere`, `c_deaths_nowhere`).
-  - **Reactions:** the icons `i-sad`, `i-cheer`, `i-strong`, `i-clap` are the drawings of
-    `tools/make_media.py`, ported to SVG with the same points. A friend's card has the button
+  - **Reactions:** the icons `i-sad`, `i-cheer`, `i-strong`, `i-clap` are the same Phosphor
+    icons as the addon's (the paths of `tools/phosphor/*.svg`, filled, viewBox 256; licence in
+    `assets/icons/phosphor-LICENSE.txt`, named on the legal page). A friend's card has the button
     (muted, lit after a click, a second click takes it back; a bundle reacts to its newest);
     your own card shows the number and, on the mouse, who (`from` on an entry; the level 40 has
     three, a death yesterday one). Today's sample data gained your own death in Feralas at

@@ -403,17 +403,17 @@ picture-book look are built and checked against the mock only.
     friends list (`friendLevel`) has none: its time is the reader's, the friend's own entry has
     another one, so the two could not be matched.
   - **Look (the owner's requirement):** one colour, following the colour scheme. The emojis are
-    line icons of their own (`sad.tga`, `cheer.tga`, `strong.tga`, `clap.tga`, drawn like the
-    other pictures in `tools/make_media.py`) and tinted via `UI.Tint`, so they change with the
-    colour scheme like everything else. The client cannot draw Unicode emojis. The TGAs were
-    written by a port of the same drawing to Node on the Windows machine (no Python there); a
-    run of `python3 tools/make_media.py` should give the same files but has not been done yet.
-    **Reworked after the first look in game (the owner's go-ahead, 2026-11-25):** at 15 px the
-    clapping hands looked like a rune, because the lines were drawn for the book's large pictures
-    and came out thinner than a pixel. Since then the four are drawn with a stronger line
-    (`REACTION_PEN`, 5 instead of 3.6 at 64 px), the arm without the crease of the fist, the hands
-    as two plain palms without thumbs leaning together, and shown at 18 px (since 2026-11-27 in
-    the book's reaction button at 16 px).
+    white icons (`sad.tga`, `cheer.tga`, `strong.tga`, `clap.tga`) tinted via `UI.Tint`, so they
+    change with the colour scheme like everything else. The client cannot draw Unicode emojis.
+    Shown at 18 px (in the book's reaction button at 16 px).
+    **From Phosphor Icons since 2026-11-27 (the owner's choice):** our own line drawings read
+    badly at that size (the clapping hands like a rune, even with a stronger line), so the four
+    are Phosphor Icons in the Bold weight (MIT): `smiley-sad`, `confetti` (a party popper),
+    `hand-fist` (Phosphor has no flexed arm) and `hands-clapping`. The SVGs and the licence are in
+    `tools/phosphor/`; `tools/make_media.py` fills their paths (its own small SVG path reader, no
+    library) into 64 px TGAs. The licence goes into the zip as `Famulus/Media/Phosphor-LICENSE.txt`
+    (MIT wants it with every copy) and is named in `LICENSE` and on the website's legal page.
+    Lucide and Tabler were looked at: neither has clapping hands. Not yet seen in game.
   - **On the card (`CardReaction` in `UI/Options.lua`, `UI/ChronicleCard.lua`):** a button at
     the right of the foot, on the line of the place: the same button as on the live feed's
     cards (`UI.ReactionButton` in `UI/Widgets.lua`; here 26 px with a 16 px icon, as the foot is

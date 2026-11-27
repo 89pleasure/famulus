@@ -4,7 +4,9 @@ Copyright (c) 2026 89pleasure (github.com/89pleasure). All rights reserved.
 The contents of this addon, excluding third-party resources, are copyrighted to its author with all
 rights reserved. Third-party resources keep their own licenses: the Inter fonts in
 Famulus/Media/Fonts are licensed under the SIL Open Font License 1.1 (see the LICENSE.txt next to
-them).
+them); the reaction icons Famulus/Media/sad.tga, cheer.tga, strong.tga and clap.tga are rendered from
+Phosphor Icons (Copyright (c) 2023 Phosphor Icons), licensed under the MIT License (see
+Famulus/Media/Phosphor-LICENSE.txt).
 
 The author grants you the following rights:
 
