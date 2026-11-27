@@ -1116,7 +1116,14 @@ div.nrow:hover { background-color: transparent; }
 }
 
 .section--last { padding-bottom: clamp(300px, 42vw, 540px); }
+/* The foot shows no flame, only the fire's light behind the hill and its
+   sparks, so that light takes the scene's accent like the rest of the page
+   (in Mint a yellow glow stood alone). --fire-glow is set again here, as on
+   the root it was worked out from the root's --fire. */
 .scene--foot {
+  --fire: var(--accent);
+  --fire2: var(--accent2);
+  --fire-glow: color-mix(in srgb, var(--fire) 45%, transparent);
   inset: auto 0 0 0; height: clamp(460px, 68vw, 860px); z-index: -1;
   background: linear-gradient(180deg, transparent, var(--sky-mid) 24%, hsl(var(--h) calc(var(--s) * 2) 22%) 52%);
 }
