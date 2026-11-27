@@ -343,28 +343,46 @@ without "Where your people are".
   because Battle.net names it in the friend's language (a friend who plays in English only matches
   where the names are the same). The guild roster gives level and zone since this feature
   (`SocialService.EachGuildMember`, values 4 and 6). A whisper uses the name as the list wrote it,
-  realm and all (`ChatFrameUtil.SendTell`, as Blizzard's friends frame does).
+  realm and all (`ChatFrameUtil.SendTell`, as Blizzard's friends frame does); Battle.net friends
+  get a Battle.net whisper (see below).
 - **Out of reach (the owner's request, 2026-11-27):** Forever has no servers as in retail, only
-  modes (Normal, PvP, RP, RP-PvP), and they are realms of their own: friends can only play
-  together on the same one. The tab showed Battle.net friends on another realm like anyone else,
-  "Here in Tanaris" and cards included, because a zone is compared by its name. The owner still
-  wants to see them and their progress. Friends list and guild hold only characters of the
-  player's realm, so only Battle.net friends can be out of reach: another realm (`realmID ~=
-  GetRealmID()`) or the other faction (`factionName ~= UnitFactionGroup("player")`), the rule of
-  Blizzard's friends frame (`CanCooperateWithGameAccount`, `Blizzard_FriendsFrame/Camelot`).
-  `NearbyService.People` then gives `out`, the reason as the window says it ("Realm PvP" from
-  `realmDisplayName`, "Other realm" without one, or the faction's name from `FACTION_<NAME>`),
-  and `bnet`, the account name. Someone out of reach gets no card and does not count in "Here
-  in …", "Similar level", "Also online" or "Where your people are"; the tab lists them last
-  in a section of their own, "Out of reach · N · other realm or faction" (German "Außer
-  Reichweite"), drawn faint (0.6), the reason instead of "Battle.net". Their whisper goes by
-  Battle.net (`ChatFrameUtil.SendBNetTell(accountName)`, as Blizzard's friends frame does).
-  The owner chose the proposal ("Ja, umsetzen") with the other faction counting as out of reach
-  as well, and the tab keeps its name. The assistant's decisions: the name of the section, the
-  words, the faint rows, no option to hide them. Checked against the mock only. Open in game:
-  whether Forever fills `realmID`, `realmDisplayName` and `factionName` for Battle.net friends,
-  what it calls the realms, and whether a Battle.net whisper opens; `/fam test` reports realm
-  numbers and names (group `names`, "Battle.net realms").
+  modes (Normal, PvP, RP, RP-PvP), and friends can only play together in the same one. The tab
+  showed Battle.net friends in another mode like anyone else, "Here in Tanaris" and cards
+  included, because a zone is compared by its name. The owner still wants to see them and their
+  progress. Friends list and guild hold only characters of the player's mode, so only Battle.net
+  friends can be out of reach: another mode or the other faction (`factionName ~=
+  UnitFactionGroup("player")`). The mode is the middle of the game account's `richPresence`
+  ("Forever - PvP - Redridge Mountains", `NearbyService.Mode`), the player's own from
+  `C_BattleNet.GetGameAccountInfoByGUID(UnitGUID("player"))`; without it only the faction counts.
+  - **Why not the realm (in game, 2026-11-27):** `GetRealmID()` says 0, `GetRealmName()` is
+    empty, and `realmID`, `realmName` and `realmDisplayName` are empty for every Battle.net
+    friend. `C_BattleNet.IsGameAccountOnSameRealm` (which Blizzard's tooltip uses for "cannot
+    cooperate") and the server in the GUID (`Player-6855-…`) differ even for a guild member in
+    the same mode, and a whisper by character name to a friend in the same mode with another
+    server arrives. Modes seem to be made of several connected realms (until 71037 their names
+    read like "CAMWOW EU4 Realm 2 PvP"), and those answers name the home realm. A first version
+    used them and set friends in the same mode apart. Layers cannot be read for a friend at all:
+    Forever has no layer API, only group members (`UnitPhaseReason`), invites and visible players
+    tell (VoidLayer's notes).
+  - `NearbyService.People` gives `out` (the reasons as the window says them, "Realm PvP" with
+    `ui_near_realm`, the faction's name from `FACTION_<NAME>`, joined by "  ·  "), `mode`,
+    `faction` and `bnet`, the account name. Someone out of reach gets no card and does not count
+    in "Here in …", "Similar level", "Also online" or "Where your people are"; the tab lists them
+    last in a section of their own, "Out of reach · N · other realm or faction" (German "Außer
+    Reichweite"), drawn faint (0.6), "Realm PvP" and the faction in its colour instead of
+    "Battle.net".
+  - The owner chose the proposal ("Ja, umsetzen") with the other faction counting as out of reach
+    as well, and the tab keeps its name. The assistant's decisions: the name of the section, the
+    words, the faint rows, no option to hide them. Checked against the mock only; the data it
+    rests on was seen in game. Open in game: whether a friend in another language writes the mode
+    the same way (it is compared as written). `/fam test` reports the player's own mode, the
+    friends' modes and for how many the faction is named, without names (group `names`,
+    "Battle.net modes").
+- **Whisper to Battle.net friends (2026-11-27, the owner's request):** whoever was met on
+  Battle.net first (not on the friends list or in the guild) gets a Battle.net whisper
+  (`ChatFrameUtil.SendBNetTell(accountName)`, as Blizzard's friends frame does), out of reach or
+  not: Battle.net reaches them in any mode. Before, only those found out of reach got it, and the
+  character's name (Battle.net gives no realm) cannot reach another mode.
 - **Cards** (the assistant's rules): one when the player arrives in a zone (`ZONE_CHANGED_NEW_AREA`,
   `PLAYER_ENTERING_WORLD`, switching on) for everyone there (head "Mira and Kael", title "Also in
   Tanaris"; three names at most, then "and 2 more"), three seconds later so the lists can answer; one when
