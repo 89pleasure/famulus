@@ -98,7 +98,7 @@ picture-book look are built and checked against the mock only.
   - Since 2026-11-25 also in "Your story" with the fellow travellers (see there). The chapter
     head (`SessionHead`) and the division of the fellow travellers' books (`SessionChapters`, for
     "Groups" and "Your story") each exist once in `UI/Options.lua`; everything is drawn by
-    `UI.Book`. Open: the website still shows the old chapter head.
+    `UI.Book`. The website shows it too since 2026-11-27 (see "Demos" in docs/website.md).
 - **Picture book (2026-11-19):** The owner found the HTML draft "pretty cool already" and had it
   built that way. The three story tabs no longer show rows but a book
   (`UI.Book`, `UI/Book.lua`; a tab provides it via `tab.book`, `Render` places it below the
@@ -454,8 +454,8 @@ picture-book look are built and checked against the mock only.
     (`FIELDS` in `Sharing.lua` leaves them out); they go with the entry when `Trim` drops it.
     Sample entries (`/fam chronicle demo`) bring a few: three friends cheered the level 40, Borin
     mourned a death, the player reacted to Borin's boss.
-  - **Open:** who else sees reactions (see "Who sees what" in sharing.md); the website does not
-    show them yet. The clapping hands still look odd in game after the rework (the owner,
+  - **Open:** who else sees reactions (see "Who sees what" in sharing.md). The website shows
+    them since 2026-11-27. The clapping hands still look odd in game after the rework (the owner,
     2026-11-25: "later; the function matters first"); the other three icons are fine for now.
 - **Rejected:** reading other players' statistics via the game's achievement comparison, as
   Guildy does. That only works for the targeted unit within sight and has led to disconnects
@@ -701,7 +701,8 @@ picture-book look are built and checked against the mock only.
     (otherwise only once "Share with friends" requests it or the guild window was open).
   - **Gaps:** A friend with an older Famulus, not in the guild, who has neither levelled up
     since the update nor been online while the window was open, still shows the letter.
-  - The website still shows initials in the chronicle's book.
+  - The website's book names people by name alone, as the addon since #69; its rail keeps
+    initials in the class colour (no graphics from Blizzard on the page).
 - **The three recording features are off by default**, because the test fixes that with default
   values no game event is registered. Whether the chronicle should record by default is an
   open decision for the owner.

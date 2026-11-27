@@ -283,10 +283,9 @@ owner.
   in the chronicle and the live feed, "Who is nearby" and whispering in the fellow travellers' lead,
   the welcome page in step 3 of the installation. The release box no longer says "alpha" or "beta"
   (the owner's choice: a wording true before and after `v0.1.0`, because the page goes live with
-  every merge) and points to `/fam report` and the GitHub issues. Still behind the addon: the
-  demos (book cards with strip and weights, chapter heads per session with route, live feed cards
-  in three rows, reaction buttons, whisper and "Nearby" in the fellow travellers, the window of the
-  aliases demo) and the screenshot in the header (the owner sends a new one). Installation names
+  every merge) and points to `/fam report` and the GitHub issues. Still behind the addon then:
+  the demos (since caught up, see "Demos" below, except the aliases window) and the screenshot in
+  the header (the owner sends a new one). Installation names
   the CurseForge app since the copy review the same day (see below).
 - **Copy review (2026-11-27, the owner's request: a review "as an experienced marketing guru"
   by a subagent; the owner had everything applied):** the hero lead tells what Famulus does in
@@ -305,6 +304,47 @@ owner.
   stays "Search settings" / "Suchen", as in the addon. Checked at 1440 and 375 px in both
   languages: no horizontal scrolling, no console messages; on a phone the chips wrap to two rows
   as before.
+- **Demos (2026-11-27, issue #50, second step; the owner: "go on with the demos"; details the
+  assistant's decisions, not yet seen by the owner):**
+  - **Chronicle:** a chapter is a play session: on the left from when to when, the title by the
+    time of day (`sessionTitle`, as `SessionTitle`: all `c_when_*` and `c_weekday_*` keys of the
+    addon; an older session is named after its weekday, its date on the left), on
+    the right levels and events, below it the route of your own zones as badges with chevrons
+    (`chapterHead`). The cards as `UI/ChronicleCard.lua`: a sunken strip with whose event it
+    is ("Alias (Name)", `labelOf`; your own character is "Tamsin Ashgrove", `ME`) and the time
+    (a bundle its first and last), picture and text, the place in the foot with the reaction at
+    its right. Weights as `WEIGHT` in `UI/Options.lua` (`weightOf`): light 80 %, medium 90 %,
+    heavy 100 % of the column, a narrower card hangs on the line; picture 40/48/56 px; glowing
+    dots of 5/7/9 px instead of icons on the line (in the fellow travellers' book too). The
+    sentences have no place (`c_death_nowhere`, `c_zone_nowhere`, `c_deaths_nowhere`).
+  - **Reactions:** the icons `i-sad`, `i-cheer`, `i-strong`, `i-clap` are the drawings of
+    `tools/make_media.py`, ported to SVG with the same points. A friend's card has the button
+    (muted, lit after a click, a second click takes it back; a bundle reacts to its newest);
+    your own card shows the number and, on the mouse, who (`from` on an entry; the level 40 has
+    three, a death yesterday one). Today's sample data gained your own death in Feralas at
+    18:40, so the route has two stops.
+  - **Live feed:** cards in three rows as `UI/Feed.lua` since #64: whose (with a glowing dot,
+    none for your own), what (without place), where and the rest; 64 or 76 px tall, 230 to
+    340 px wide, slots 84 px apart; a friend's card has the reaction button at its right end
+    (a click lights it and the card goes a second later); a line along the foot runs out over
+    the card's time; the mouse on the card holds it, leaving lets it go 1.5 s later.
+  - **Fellow travellers:** tabs "Overview" and "Nearby" above the demo (`#fellows-tabs`). Nearby
+    as `UI.NearbyList`: "Here in Tanaris", "Similar level" (up to 5 apart) and "Also online",
+    rows with crest, name and below it name, class and where from, level with the difference to
+    yours (40), zone (yours in the accent), bond, whisper; a fellow traveller's row opens the
+    story. A new person only there: Garrick Stonehand, guild, level 22 in Westfall. Speech
+    bubbles (`i-chat`, from `tools/make_media.py`) on the tiles, the rows and the person's card;
+    on the page a click says in the hint below the demo what the game would do (`#fw-said`).
+    The card's buttons are square icons in a row: in the chronicle (flag), set alias (tag),
+    whisper (40 px, accent). "Your story" by sessions like the chronicle (the owner noticed it
+    in the preview): title by time of day, on the left from–to or the date, on the right the
+    time together; the stretch card is "On the road in <zone>" with "18:50 to 21:15" (no
+    duration, as in the addon). A day of the log is one session, as in the addon. Not built:
+    "Forget", the card of Nearby, "Where your people are", the tab "Groups".
+  - **Still behind:** the aliases window (intermediate state, see above) and the screenshot.
+  - Checked in the built-in browser at 1440 and 375 px, English and German: book (positions of
+    cards and dots measured), live feed (three cards), Nearby, the story's buttons, whisper;
+    no horizontal scrolling, no console messages.
 - **Keep in step with changes to the addon:** the screenshot in the header as soon as the window
   visibly changes; the counters
   in the rebuilt window (`renderWindow` in `main.js`: 5 alias features, 10 in total; in the HTML

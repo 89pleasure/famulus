@@ -196,6 +196,8 @@
   const YORICK = 'Yorick Talwind';
   const LYSA = 'Lysa Morningdew';
   const ENA = 'Ena Silverbrook';
+  const ME = 'Tamsin Ashgrove'; // the player's own character
+  const GARRICK = 'Garrick Stonehand'; // a guild member you never grouped with
 
   const PEOPLE = {
     [LYSA]: { level: 39, cls: 'priest', colour: '#ffffff' },
@@ -205,6 +207,7 @@
     [KAELRIC]: { level: 39, cls: 'paladin', colour: '#f48cba' },
     [THESSA]: { level: 12, cls: 'hunter', colour: '#aad372' },
     [YORICK]: { level: 40, cls: 'rogue', colour: '#fff468' },
+    [GARRICK]: { level: 22, cls: 'warrior', colour: '#c69b6d' },
   };
 
   // An alias belongs to a character (name) or to a Battle.net account (tag),
@@ -465,13 +468,13 @@
   // (/fam chronicle demo), told the way the book tells them.
   // -------------------------------------------------------------------------
 
-  // Per kind: the picture's icon (none: the number), its tone, and the icon
-  // on the line. As PICTURES in Famulus/UI/Book.lua.
+  // Per kind: the picture's icon (none: the number) and its tone. As
+  // PICTURES in Famulus/UI/Book.lua.
   const PICTURES = {
-    level: { tone: 'accent', mark: 'sparkle' },
+    level: { tone: 'accent' },
     achievement: { icon: 'star', tone: 'accent' },
     zone: { icon: 'peaks', tone: 'plain' },
-    skill: { tone: 'accent', mark: 'hammer' },
+    skill: { tone: 'accent' },
     item: { icon: 'chest', tone: 'accent' },
     ability: { icon: 'horseshoe', tone: 'accent' },
     death: { icon: 'skull', tone: 'death' },
@@ -481,40 +484,55 @@
     bond: { icon: 'people', tone: 'accent' },
   };
 
+  // How much an event weighs, as WEIGHT in Famulus/UI/Options.lua: light
+  // cards for deaths and new zones, heavy ones (milestones) for bosses and
+  // levels, medium for the rest. The weight sets the picture, the headline,
+  // the card's width and its dot on the line.
+  const WEIGHT = { death: 'low', zone: 'low', boss: 'high', level: 'high' };
+  const weightOf = event => (event.big ? 'high' : WEIGHT[event.kind] || 'medium');
+
+  // One reaction per kind, as ChronicleService.REACTIONS; a new zone has none.
+  const REACTIONS = { death: 'sad', boss: 'strong', level: 'cheer', skill: 'clap', ability: 'cheer', item: 'cheer', achievement: 'cheer' };
+
   // Newest first. Yesterday holds three deaths in a row and two levels of a
-  // companion, so the book shows how it bundles them. A chapter's head is
-  // worked out from the events it shows (chapterHead).
+  // friend, so the book shows how it bundles them. A chapter is a session of
+  // play; its head is worked out from the events it shows (chapterHead).
+  // `from`: friends who reacted to one of your events; `mine`: you reacted
+  // to a friend's.
   const CHAPTERS = [
     {
       day: 'c_today',
+      ago: 0,
       events: [
         { time: '21:42', kind: 'item', who: MIRA, zone: 'Feralas' },
-        { time: '21:10', kind: 'boss', who: BORIN, zone: 'Uldaman' },
+        { time: '21:10', kind: 'boss', who: BORIN, zone: 'Uldaman', mine: true },
         { time: '20:36', kind: 'item', zone: 'Tanaris' },
         { time: '20:05', kind: 'ability', level: 40, big: true },
-        { time: '19:48', kind: 'level', number: 40, zone: 'Tanaris', big: true },
+        { time: '19:48', kind: 'level', number: 40, zone: 'Tanaris', from: [MIRA, BORIN, KAELRIC] },
         { time: '19:02', kind: 'zone', zone: 'Tanaris', level: 39 },
+        { time: '18:40', kind: 'death', zone: 'Feralas', level: 39 },
       ],
     },
     {
       day: 'c_yesterday',
+      ago: 1,
       events: [
         { time: '23:15', kind: 'ability', who: MIRA, level: 40 },
         { time: '22:58', kind: 'level', who: BORIN, number: 31, zone: 'Feralas' },
         { time: '22:31', kind: 'level', who: BORIN, number: 30, zone: 'Feralas' },
         { time: '22:20', kind: 'skill', number: 75, zone: 'Uldaman' },
-        { time: '21:52', kind: 'death', zone: 'Uldaman', level: 39 },
+        { time: '21:52', kind: 'death', zone: 'Uldaman', level: 39, from: [BORIN] },
         { time: '21:47', kind: 'death', zone: 'Uldaman', level: 39 },
         { time: '21:44', kind: 'death', zone: 'Uldaman', level: 39 },
         { time: '21:40', kind: 'death', who: BORIN, zone: 'Feralas', level: 29 },
-        { time: '21:05', kind: 'level', number: 39, zone: 'Uldaman', big: true },
+        { time: '21:05', kind: 'level', number: 39, zone: 'Uldaman' },
         { time: '20:30', kind: 'boss', zone: 'Uldaman' },
         { time: '19:10', kind: 'achievement', zone: 'Desolace' },
       ],
     },
   ];
 
-  // What the companions shared: online or not, and their profile (deaths,
+  // What the friends shared: online or not, and their stats (deaths,
   // creatures defeated, quests, dungeons; the game's statistics).
   const COMPANIONS = {
     [MIRA]: { online: true, profile: [212, 4810, 388, 41] },
@@ -525,34 +543,25 @@
     { name: 'n_cooking', value: 38, max: 75 },
   ];
 
-  // The headline and the line below it. `named`: say whose event it is (the
-  // live feed does; the book has the name in the strip below the card).
-  function tell(event, named) {
-    const who = named && event.who ? nameOf(event.who) : null;
-    const place = event.zone ? t('c_in', event.zone) : null;
+  // The headline and the line below it, without the place: the book has it
+  // in the card's foot, the live feed on the card's last row (Placeless in
+  // Famulus/UI/Options.lua). Whose event it is stands above, in both.
+  function tell(event) {
     const level = event.level ? t('c_at_level', event.level) : null;
     switch (event.kind) {
-      case 'level':
-        return { title: who ? t('c_their_level', who, event.number) : t('c_level', event.number), detail: place };
-      case 'death':
-        return { title: who ? t('c_their_death', who, event.zone) : t('c_death', event.zone), detail: level };
-      case 'boss':
-        return { title: who ? t('c_their_boss', who, 'Archaedas') : t('c_boss', 'Archaedas'), detail: place };
-      case 'zone':
-        return { title: t('c_zone', event.zone), detail: level };
-      case 'ability':
-        return { title: who ? t('c_their_ability_riding', who) : t('c_ability_riding'), detail: level };
-      case 'item':
-        return { title: who ? t('c_their_item', who, t('n_bag')) : t('c_item', t('n_bag')), detail: place };
-      case 'skill':
-        return {
-          title: who ? t('c_their_skill', who, t('n_tailoring'), event.number) : t('c_skill', t('n_tailoring'), event.number),
-          detail: place,
-        };
-      default:
-        return { title: t('c_achievement', t('n_challenge')), detail: place };
+      case 'level': return { title: t('c_level', event.number) };
+      case 'death': return { title: t('c_death_nowhere'), detail: level };
+      case 'boss': return { title: t('c_boss', 'Archaedas') };
+      case 'zone': return { title: t('c_zone_nowhere'), detail: level };
+      case 'ability': return { title: t('c_ability_riding'), detail: level };
+      case 'item': return { title: t('c_item', t('n_bag')) };
+      case 'skill': return { title: t('c_skill', t('n_tailoring'), event.number) };
+      default: return { title: t('c_achievement', t('n_challenge')) };
     }
   }
+
+  // "Alias (Character Name)", as ChronicleService.Label; without an alias the name.
+  const labelOf = name => (aliasOf(name) ? `${aliasOf(name)} (${name})` : name);
 
   // `count`: how many events a bundled card stands for, in the corner of a
   // picture that has no number of its own.
@@ -565,7 +574,7 @@
   }
 
   // Events that follow each other share a card: deaths in the same zone, and
-  // levels of the same companion. Your own levels stay single; they are the
+  // levels of the same friend. Your own levels stay single; they are the
   // milestones. As SameRun in Famulus/UI/Options.lua.
   const sameRun = (a, b) => a.kind === b.kind && a.who === b.who
     && ((a.kind === 'death' && a.zone === b.zone) || (a.kind === 'level' && a.who != null));
@@ -582,37 +591,86 @@
 
   // Headline and line below for a bundle (newest first).
   function tellRun(run) {
-    const newest = run[0];
-    const levels = run.map(event => (event.kind === 'level' ? event.number : event.level)).filter(Boolean);
-    const low = Math.min(...levels);
-    const high = Math.max(...levels);
-    if (newest.kind === 'death') {
-      return { title: t('c_deaths', run.length, newest.zone), detail: low === high ? t('c_at_level', low) : t('c_at_levels', low, high) };
+    if (run[0].kind === 'death') {
+      const levels = run.map(event => event.level);
+      const low = Math.min(...levels);
+      const high = Math.max(...levels);
+      return { title: t('c_deaths_nowhere', run.length), detail: low === high ? t('c_at_level', low) : t('c_at_levels', low, high) };
     }
-    const oneZone = run.every(event => event.zone === newest.zone);
-    return { title: t('c_levels', low, high), detail: oneZone ? t('c_in', newest.zone) : null };
+    const numbers = run.map(event => event.number);
+    return { title: t('c_levels', Math.min(...numbers), Math.max(...numbers)) };
+  }
+
+  // The reaction at a card's foot, as UI.ReactionButton. On a friend's card a
+  // click reacts to their newest event, and takes it back; a bundle with a
+  // reaction anywhere in it takes them all back. Your own card shows how many
+  // reacted, and who on the mouse; there is no reaction to yourself.
+  function reaction(run, size = 16) {
+    const event = run[0];
+    const kind = REACTIONS[event.kind];
+    if (!kind) return null;
+    if (!event.who) {
+      const from = [...new Set(run.flatMap(each => each.from || []))];
+      if (!from.length) return null;
+      const badge = make('span', 'react is-lit');
+      badge.append(icon(kind, size), make('span', '', from.length));
+      badge.title = `${t('c_reactions_from')}: ${from.map(nameOf).join(', ')}`;
+      badge.setAttribute('role', 'img');
+      badge.setAttribute('aria-label', badge.title);
+      return badge;
+    }
+    const button = make('button', 'react');
+    button.type = 'button';
+    button.append(icon(kind, size));
+    const paint = () => {
+      const lit = run.some(each => each.mine);
+      button.classList.toggle('is-lit', lit);
+      button.setAttribute('aria-pressed', String(lit));
+      button.title = t(lit ? 'c_react_given' : 'c_react');
+      button.setAttribute('aria-label', button.title);
+    };
+    button.addEventListener('click', () => {
+      const lit = run.some(each => each.mine);
+      for (const each of run) each.mine = false;
+      if (!lit) event.mine = true;
+      paint();
+    });
+    paint();
+    return button;
   }
 
   let bookTab = 'all';
-  let bookWho = null; // a companion picked in the rail: the book shows only them
+  let bookWho = null; // a friend picked in the rail: the book shows only them
 
   const wanted = event => (bookTab === 'all' || (bookTab === 'mine') === !event.who)
     && (!bookWho || event.who === bookWho);
 
-  // As TitleChapter in Famulus/UI/Options.lua, from the events shown: the
-  // zone most of them happened in (the first to get ahead wins a tie, the
-  // newest first), else the day; the levels you reached, from your own
-  // events only; and how many events there are.
+  // A day some days back, the way the reader's language writes a date.
+  const dateOf = ago => new Date(Date.now() - ago * 86400000)
+    .toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'short' });
+
+  // As SessionTitle in Famulus/UI/Options.lua: a session of play is named
+  // by the part of the day it began in ("This evening", "Yesterday
+  // afternoon"); an older one after its weekday ("Sunday evening"), and then
+  // its date stands on the left instead of the times. `ago`: days back.
+  function sessionTitle(ago, from) {
+    const hour = Number(from.slice(0, 2));
+    const part = hour < 5 ? 'night' : hour < 11 ? 'morning' : hour < 14 ? 'midday' : hour < 18 ? 'afternoon' : hour < 23 ? 'evening' : 'night';
+    const day = hour < 5 ? ago + 1 : ago; // until five in the morning it is the night before
+    if (day === 0) return { title: t(`c_when_today_${part}`) };
+    if (day === 1) return { title: t(`c_when_yesterday_${part}`) };
+    const weekday = new Date(Date.now() - day * 86400000).getDay();
+    return { title: t(`c_when_day_${part}`, t(`c_weekday_${weekday}`)), date: dateOf(day) };
+  }
+
+  // As SessionHead in Famulus/UI/Options.lua, from the events shown: from
+  // when to when, the session's name by the time it began, the levels you
+  // reached (your own events only) and how many events there are; below it
+  // the route, the zones of your own events in the order you visited them.
   function chapterHead(chapter, events) {
-    const counts = {};
-    let zone = null;
     let low = Infinity;
     let high = -Infinity;
     for (const event of events) {
-      if (event.zone) {
-        counts[event.zone] = (counts[event.zone] || 0) + 1;
-        if (!zone || counts[event.zone] > counts[zone]) zone = event.zone;
-      }
       const level = event.who ? null : (event.kind === 'level' ? event.number : event.level);
       if (level) {
         low = Math.min(low, level);
@@ -622,7 +680,13 @@
     const parts = [];
     if (low < Infinity) parts.push(low === high ? t('c_ch_level', low) : t('c_ch_levels', low, high));
     parts.push(events.length === 1 ? t('c_ch_event') : t('c_ch_events', events.length));
-    return { title: zone || t(chapter.day), day: zone ? t(chapter.day) : '', sub: parts.join('  ·  ') };
+    const first = events[events.length - 1].time;
+    const last = events[0].time;
+    const route = [];
+    for (const event of [...events].reverse()) {
+      if (!event.who && event.zone && route[route.length - 1] !== event.zone) route.push(event.zone);
+    }
+    return { title: sessionTitle(chapter.ago, first).title, span: first === last ? first : `${first} – ${last}`, sub: parts.join('  ·  '), route };
   }
 
   function renderBook() {
@@ -632,54 +696,66 @@
       const events = chapter.events.filter(wanted);
       if (!events.length) continue;
 
-      // The head in one line: the day, the zone in the book's type, levels
-      // and the number of events; a line on each side running out.
+      // The head in one line: from when to when, the session in the book's
+      // type, levels and the number of events; a line on each side running
+      // out. Below it the route.
       const head = make('header', 'chapter__head reveal');
       const told = chapterHead(chapter, events);
       const before = make('div', 'chapter__side');
-      before.append(make('i'), make('p', 'chapter__day', told.day));
+      before.append(make('i'), make('p', 'chapter__day', told.span));
       const after = make('div', 'chapter__side');
       after.append(make('p', 'chapter__sub', told.sub), make('i'));
       head.append(before, make('h3', '', told.title), after);
+      const section = make('section', 'chapter');
+      section.append(head);
+      if (told.route.length) {
+        const route = make('ol', 'chapter__route reveal');
+        told.route.forEach((zone, index) => {
+          const stop = make('li');
+          if (index) stop.append(icon('chevron', 10));
+          stop.append(make('span', '', zone));
+          route.append(stop);
+        });
+        section.append(route);
+      }
 
       const trail = make('div', 'chapter__events');
       for (const run of runsOf(events)) {
         const event = run[0];
         const many = run.length > 1;
-        const look = PICTURES[event.kind];
-        const told = many ? tellRun(run) : tell(event, false);
-        const story = make('article', `story story--${look.tone} reveal${event.big ? ' is-big' : ''}`);
-        const dot = make('span', 'story__dot');
-        dot.append(icon(look.mark || look.icon, 12));
+        const weight = weightOf(event);
+        const told = many ? tellRun(run) : tell(event);
+        const story = make('article', `story story--${PICTURES[event.kind].tone} story--${weight} reveal${weight === 'high' ? ' is-big' : ''}`);
+
+        // The sunken strip: whose event it is (your own character's too), and
+        // when; a bundle names its first and its last time.
+        const strip = make('header', 'story__strip');
+        const oldest = run[run.length - 1].time;
+        strip.append(make('span', '', labelOf(event.who || ME)), make('time', '', many ? `${oldest} – ${event.time}` : event.time));
+
         const text = make('div', 'story__text');
         text.append(make('h4', '', told.title));
-        const line = many ? told.detail : [told.detail, event.time].filter(Boolean).join('  ·  ');
-        if (line) text.append(make('p', '', line));
-        if (many) {
-          // Every time of the bundle, the oldest first.
-          const times = make('div', 'story__times');
-          for (const each of [...run].reverse()) times.append(make('span', '', each.time));
-          text.append(times);
+        if (told.detail) text.append(make('p', '', told.detail));
+        // The foot: the place, and the reaction at its right.
+        const place = run.every(each => each.zone === event.zone) ? event.zone : null;
+        const react = reaction(run);
+        if (place || react) {
+          const foot = make('div', 'story__place');
+          foot.append(make('span', '', place || ''));
+          if (react) foot.append(react);
+          text.append(foot);
         }
-        // A companion's levels show the highest one in the picture.
+        // A friend's levels show the highest one in the picture.
         const shown = many && event.kind === 'level' ? { ...event, number: Math.max(...run.map(each => each.number)) } : event;
         const body = make('div', 'story__body');
         body.append(picture(shown, run.length), text);
         const card = make('div', 'story__card');
-        card.append(body);
-        if (event.who) {
-          // Whose event it is: in the sunken strip, under the alias if there is one.
-          const name = nameOf(event.who);
-          const foot = make('div', 'story__foot');
-          foot.append(make('span', 'avatar avatar--small', initial(name)), make('span', '', name));
-          card.append(foot);
-        }
-        story.append(dot, card);
+        card.append(strip, body);
+        story.append(make('span', 'story__dot'), card);
         trail.append(story);
       }
 
-      const section = make('section', 'chapter');
-      section.append(head, trail);
+      section.append(trail);
       book.append(section);
     }
     renderFilter();
@@ -775,7 +851,7 @@
     const card = railCard(t('c_companions'), String(list.length));
     for (const { who, event, day } of list) {
       const when = day === 'c_today' ? event.time : t(day);
-      card.append(personButton(who, `${tell(event, false).title}  ·  ${when}`));
+      card.append(personButton(who, `${tell(event).title}  ·  ${when}`));
     }
     card.append(make('p', 'rcard__hint', t('c_rail_filter')));
     return card;
@@ -948,11 +1024,7 @@
   const capital = text => text.charAt(0).toUpperCase() + text.slice(1);
   const clock = minutes => `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
   const minutesOf = time => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-  // A day some days back, the way the reader's language writes a date.
-  const dateOf = ago => new Date(Date.now() - ago * 86400000)
-    .toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'short' });
   const when = ago => (ago === 0 ? t('fw_today') : ago === 1 ? t('fw_yesterday') : t('fw_on', dateOf(ago)));
-  const dayTitle = ago => (ago === 0 ? t('c_today') : ago === 1 ? t('c_yesterday') : dateOf(ago));
   const tierName = tier => t(`fw_bond_${tier}`);
   const bossesText = count => (count === 1 ? t('fw_boss') : t('fw_bosses', count));
 
@@ -994,6 +1066,27 @@
   // The tier's badge: in the accent from Trusted on.
   const badge = tier => make('span', `badge${tier >= 3 ? ' is-high' : ''}`, tierName(tier));
 
+  // The speech bubble that opens a whisper (ChatService.Whisper). Nothing is
+  // sent until you write; here the hint below the demo says what would happen.
+  function whisperButton(who, big) {
+    const button = make('button', `whisper${big ? ' whisper--big' : ''}`);
+    button.type = 'button';
+    button.title = t('fw_whisper_to', nameOf(who));
+    button.setAttribute('aria-label', button.title);
+    button.append(icon('chat', big ? 20 : 16));
+    button.addEventListener('click', () => {
+      $('#fw-said').textContent = t('fw_whisper_said', who);
+    });
+    return button;
+  }
+
+  // A button with a whisper beside it, in one box: a button cannot hold another.
+  function withWhisper(button, who, className) {
+    const box = make('div', className);
+    box.append(button, whisperButton(who));
+    return box;
+  }
+
   function tile(shown, rank) {
     const button = make('button', `ftile${shown.now ? ' is-now' : ''}`);
     button.type = 'button';
@@ -1008,7 +1101,7 @@
       make('span', 'ftile__foot', shown.lastText),
     );
     button.addEventListener('click', () => openStory(shown.who));
-    return button;
+    return withWhisper(button, shown.who, 'ftile-box');
   }
 
   function row(shown) {
@@ -1019,7 +1112,7 @@
     name.append(make('strong', '', shown.name), make('span', '', [shown.realName, shown.levelClass].filter(Boolean).join('  ·  ')));
     button.append(crest(shown, 'small'), name, badge(shown.tier), make('span', 'frow__time', duration(shown.minutes)), make('span', 'frow__last', shown.lastShort));
     button.addEventListener('click', () => openStory(shown.who));
-    return button;
+    return withWhisper(button, shown.who, 'frow-box');
   }
 
   function overview(host) {
@@ -1085,25 +1178,31 @@
     // When you last met stands above already, under the name.
     card.append(cells, make('p', 'fprofile__first', shown.firstText));
 
-    // As in the addon: set an alias, and their own events in the chronicle.
+    // As in the addon: square icons in one row, named on the mouse. The
+    // whisper in the middle, set an alias to its left, and their own events
+    // in the chronicle left of that, if there are any.
     const buttons = make('div', 'fprofile__buttons');
-    const alias = make('button', 'btn btn--small btn--ghost', t('fw_alias'));
-    alias.type = 'button';
-    alias.addEventListener('click', () => editAlias(shown.who));
-    buttons.append(alias);
-    if (COMPANIONS[shown.who]) {
-      const chronicle = make('button', 'btn btn--small btn--ghost', t('fw_chronicle'));
-      chronicle.type = 'button';
-      chronicle.addEventListener('click', () => showChronicleOf(shown.who));
-      buttons.append(chronicle);
-    }
+    const square = (name, label, action) => {
+      const button = make('button', 'iconbtn');
+      button.type = 'button';
+      button.title = label;
+      button.setAttribute('aria-label', label);
+      button.append(icon(name, 16));
+      button.addEventListener('click', action);
+      return button;
+    };
+    if (COMPANIONS[shown.who]) buttons.append(square('flag', t('fw_chronicle'), () => showChronicleOf(shown.who)));
+    buttons.append(square('tag', t('fw_alias'), () => editAlias(shown.who)), whisperButton(shown.who, true));
     card.append(buttons);
     return card;
   }
 
-  // One chapter per day together, the newest first, as FellowStory in
-  // Famulus/UI/Options.lua: the time together, the bosses that fell, the day
-  // the bond reached a new tier, and the day you met.
+  // One chapter per session of play, the newest first, as FellowStory in
+  // Famulus/UI/Options.lua: named like the chronicle's, from when to when on
+  // the left (an older one its date), the time together on the right. Inside:
+  // where you were on the road, the bosses that fell, the day the bond
+  // reached a new tier, and the day you met. The day log knows one stretch a
+  // day, so a day is one session here, as in the addon.
   function storyChapters(fellow) {
     // The days a new tier was reached (FellowService.Milestones): the walk
     // starts from the time before the log.
@@ -1121,8 +1220,8 @@
     const chapters = fellow.days.map(day => {
       const start = minutesOf(day.from);
       const end = clock(start + day.minutes);
-      const span = t('fw_span', day.from, end, duration(day.minutes));
-      const events = [{ kind: 'fellow', title: t('fw_together'), detail: day.more ? `${span}  ·  ${bossesText(day.more)}` : span, sort: day.from }];
+      const span = t('fw_span', day.from, end);
+      const events = [{ kind: 'fellow', title: t('fw_run', day.zone), detail: day.more ? `${span}  ·  ${bossesText(day.more)}` : span, sort: day.from }];
       for (const [name, time] of day.kills || []) {
         events.push({ kind: 'boss', title: t('c_boss', name), detail: t('c_in', day.zone), time, sort: time });
       }
@@ -1135,10 +1234,15 @@
       }
       // Newest first; the meeting is the oldest of its day.
       events.sort((a, b) => (b.sort > a.sort ? 1 : b.sort < a.sort ? -1 : (b.order || 0) - (a.order || 0)));
-      return { day: dayTitle(day.ago), title: day.zone, sub: t('fw_day_time', duration(day.minutes)), events };
+      const from = day.ago === fellow.met.ago && fellow.met.at < day.from ? fellow.met.at : day.from;
+      const head = sessionTitle(day.ago, from);
+      return { day: head.date || `${from} – ${end}`, title: head.title, sub: t('fw_day_time', duration(day.minutes)), events };
     });
     // Met before the day log: a chapter of its own.
-    if (!metShown) chapters.push({ day: dayTitle(fellow.met.ago), title: fellow.met.zone, sub: '', events: [met] });
+    if (!metShown) {
+      const head = sessionTitle(fellow.met.ago, fellow.met.at);
+      chapters.push({ day: head.date || fellow.met.at, title: head.title, sub: '', events: [met] });
+    }
     return chapters;
   }
 
@@ -1146,7 +1250,6 @@
     const look = PICTURES[event.kind];
     const story = make('article', `story story--${look.tone}${event.big ? ' is-big' : ''}`);
     const dot = make('span', 'story__dot');
-    dot.append(icon(look.mark || look.icon, 12));
     const text = make('div', 'story__text');
     text.append(make('h4', '', event.title));
     const line = [event.detail, event.time].filter(Boolean).join('  ·  ');
@@ -1193,14 +1296,96 @@
     return back;
   }
 
+  // "Nearby": who of your friends and guild is online right now and where,
+  // as NearbyService reads the friends list, Battle.net and the guild
+  // roster. Nothing is sent, and they need no Famulus. You are level 40 in
+  // Tanaris, as the chronicle says.
+  const HERE = { zone: 'Tanaris', level: 40 };
+  const SIMILAR = 5; // levels apart, as in the addon
+  const ONLINE = [
+    { who: MIRA, zone: 'Tanaris', from: 'friend' },
+    { who: LYSA, zone: 'Tanaris', from: 'guild' },
+    { who: YORICK, zone: 'Feralas', from: 'friend' },
+    { who: ENA, zone: 'Desolace', from: 'bnet' },
+    { who: GARRICK, zone: 'Westfall', from: 'guild' },
+  ];
+  const apart = person => Math.abs(PEOPLE[person.who].level - HERE.level);
+
+  // A row as UI.NearbyList: crest with the bond's ring, alias or name, below
+  // it the name, class and where you know them from; level and how far from
+  // yours; the zone, yours in the accent; the bond; the whisper. A fellow
+  // traveller's row opens your story.
+  function nearRow(person) {
+    const fellow = FELLOWS.find(each => each.who === person.who);
+    const shown = fellow ? fellowOf(fellow) : null;
+    const alias = aliasOf(person.who);
+    const { level, cls, colour } = PEOPLE[person.who];
+    const row = make(shown ? 'button' : 'div', 'frow nrow');
+    const name = make('span', 'frow__name');
+    const sub = [alias && person.who, t(`cls_${cls}`), t(`fw_from_${person.from}`)].filter(Boolean).join('  ·  ');
+    name.append(make('strong', '', alias || person.who), make('span', '', sub));
+    const gap = level - HERE.level;
+    const levelCell = make('span', 'nrow__level', t('c_p_level', level));
+    levelCell.append(make('em', '', gap === 0 ? '\u00b10' : gap > 0 ? `+${gap}` : `\u2212${-gap}`));
+    row.append(
+      crest(shown || { progress: 0, name: alias || person.who, colour }, 'small'),
+      name,
+      levelCell,
+      make('span', `nrow__zone${person.zone === HERE.zone ? ' is-here' : ''}`, person.zone),
+      shown ? badge(shown.tier) : make('span'),
+    );
+    if (shown) {
+      row.type = 'button';
+      row.dataset.who = person.who;
+      row.title = t('fw_near_story');
+      row.addEventListener('click', () => openStory(person.who));
+    }
+    return withWhisper(row, person.who, 'frow-box');
+  }
+
+  function nearbyView(host) {
+    const here = ONLINE.filter(person => person.zone === HERE.zone);
+    const rest = ONLINE.filter(person => person.zone !== HERE.zone).sort((a, b) => apart(a) - apart(b));
+    const similar = rest.filter(person => apart(person) <= SIMILAR);
+    const others = rest.filter(person => apart(person) > SIMILAR);
+    for (const [title, note, people] of [
+      [t('fw_near_here', HERE.zone), null, here],
+      [t('fw_near_similar'), t('fw_near_similar_note', SIMILAR), similar],
+      [t('fw_near_others'), null, others],
+    ]) {
+      if (!people.length) continue;
+      const bar = make('div', 'fellows__bar');
+      const heading = make('h3', 'fellows__title', title);
+      if (note) heading.append(make('span', 'fellows__note', note));
+      bar.append(heading);
+      const list = make('div', 'flist');
+      list.append(...people.map(nearRow));
+      host.append(bar, list);
+    }
+  }
+
+  let fellowView = 'overview'; // the tab: 'overview' or 'nearby'
+
   function renderFellows() {
     const host = $('#fellows-demo');
     host.textContent = '';
     host.classList.toggle('is-story', fellowOpen != null);
     if (fellowOpen) story(host, fellowOpen);
+    else if (fellowView === 'nearby') nearbyView(host);
     else overview(host);
     spaceDots();
   }
+
+  for (const tab of $$('#fellows-tabs button')) {
+    tab.addEventListener('click', () => {
+      fellowView = tab.dataset.view;
+      fellowOpen = null; // another tab closes a story, as in the addon
+      for (const other of $$('#fellows-tabs button')) chooseTab(other, other === tab);
+      $('#fellows-demo').setAttribute('aria-labelledby', tab.id);
+      renderFellows();
+    });
+  }
+  tablist($('#fellows-tabs'));
 
   function openStory(who) {
     fellowOpen = who;
@@ -1261,13 +1446,49 @@
     setTimeout(() => card.remove(), 520);
   }
 
+  // The last row of a card: the place first, then what else there is to say.
+  const feedLine = event => [event.zone, tell(event).detail].filter(Boolean).join('  ·  ');
+
+  // A card in three rows, as Famulus/UI/Feed.lua: whose it is (none for your
+  // own), what happened, where. A friend's card has the reaction at its right
+  // end: a click gives it and the card goes a second later. A line along the
+  // foot runs out while the card stays; the mouse on the card holds it.
   function showCard(host, event, seconds) {
-    const told = tell(event, true);
     const card = make('div', `toast toast--${PICTURES[event.kind].tone}${event.big ? ' is-big' : ''}`);
     const text = make('div', 'toast__text');
-    text.append(make('strong', '', told.title));
-    if (told.detail) text.append(make('span', '', told.detail));
+    if (event.who) text.append(make('p', 'toast__who', labelOf(event.who)));
+    text.append(make('strong', '', tell(event).title));
+    const line = feedLine(event);
+    if (line) text.append(make('span', '', line));
+    card.classList.toggle('is-tall', text.childElementCount === 3);
     card.append(picture(event), text);
+    const kind = REACTIONS[event.kind];
+    if (event.who && kind) {
+      const button = make('button', 'react react--feed');
+      button.type = 'button';
+      button.title = t('c_react');
+      button.setAttribute('aria-label', button.title);
+      button.append(icon(kind, 18));
+      button.addEventListener('click', () => {
+        if (button.classList.contains('is-lit')) return; // the feed only gives
+        button.classList.add('is-lit');
+        clearTimeout(card.timer);
+        card.timer = setTimeout(() => leave(card), 1000);
+        card.given = true;
+      });
+      card.append(button);
+    }
+    if (Number.isFinite(seconds)) {
+      const bar = make('i', 'toast__bar');
+      bar.style.animationDuration = `${seconds}s`;
+      card.append(bar);
+      card.addEventListener('mouseenter', () => {
+        if (!card.given) clearTimeout(card.timer);
+      });
+      card.addEventListener('mouseleave', () => {
+        if (!card.given && !card.classList.contains('is-leaving')) card.timer = setTimeout(() => leave(card), 1500);
+      });
+    }
     host.prepend(card);
 
     const cards = $$('.toast:not(.is-leaving)', host);
@@ -1327,8 +1548,7 @@
     chip.addEventListener('click', () => {
       const event = FEED[chip.dataset.feed];
       showCard(feedCards, event, 7);
-      const told = tell(event, true);
-      feedSaid.textContent = [told.title, told.detail].filter(Boolean).join(', ');
+      feedSaid.textContent = [event.who && labelOf(event.who), tell(event).title, feedLine(event)].filter(Boolean).join(', ');
     });
   }
 
