@@ -2320,9 +2320,12 @@ do
     check(#Feed.Shown() == 0, "and goes once the mouse has left")
     check(find("level", at).mine == nil and #mock.sent == 0, "pointing alone reacts to nothing: " .. sent())
 
-    -- With reactions switched off there is no button.
+    -- With reactions switched off there is no button. (A second before her
+    -- death above, not one by the clock: one death of one person in one
+    -- second counts as one, and time() - 1 is that second once a real
+    -- second has passed since.)
     sharing:Set("reactions", false)
-    at = time() - 1
+    at = sharedNow - 1
     mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~death~level=21;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
     check(#Feed.Shown() == 1 and not Feed.Shown()[1].react:IsShown(), "with reactions switched off, a friend's card has no button")
     sharing:Set("reactions", true)
