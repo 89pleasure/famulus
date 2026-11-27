@@ -446,6 +446,27 @@ owner.
   1440, 1024 and 375 px, English and German: switches in the list and in the detail change the
   chat and the tooltip, "Display" too, Reset asks and resets, no horizontal scrolling, no
   console messages.
+- **Animated title of the aliases (2026-11-27, the owner's request: a title that shows by example
+  how you name your friends; wording, examples and timing the assistant's decisions, not yet seen
+  by the owner):** "To you, Grimtusk is just Tom." / "Nenn Grimtusk einfach Tom." (`al_title`
+  with the character name and the alias as `%s`; before: "Call them by the names you know.").
+  Name and alias need words between them: side by side ("Just call Kaelric Papa.") they read
+  as one name (the owner). The name
+  stands in its class colour, the alias in the accent. After about three seconds both fade out
+  with a blur (the alias first), the next name fades in and its alias follows a moment later, so
+  the naming reads as a second step (`TITLE_EXAMPLES` in `main.js`: Grimtusk → Tom as in the
+  lead, Kaelric → Papa as in the demo, Balduk → BigBossDaddy for fun (the owner's example),
+  Dârkñêss → Ben for a name you can't type, Mira → Lena). A typed alias was too abrupt for the
+  owner. **One line on the desktop, wrapping on a phone** (the owner): the title may reach past
+  the head's 780 px to the page's width; only where the longest example does not fit there does
+  it wrap (`is-wrapping`, set by `fitTitle` for all examples at once). Measured: one line at
+  1440, 1024 and 768 px at the normal size, two lines at 375 px. All examples stand invisible
+  in the same grid cell, so the title keeps the height of the longest one and the lead does not
+  jump. It moves only while half of it is on screen and the
+  tab is in front; with reduced motion the first example stands; screen readers read the first
+  example once. Without scripts the HTML shows the first example. Checked at 1440 and 375 px,
+  English and German: the four examples in turn, a steady height, no horizontal scrolling, no
+  console messages. Not checked: reduced motion (cannot be switched on in the app's browser).
 - **Keep in step with changes to the addon:** the screenshot in the header as soon as the window
   visibly changes; the aliases' features in Settings (`ALIAS_FEATURES` in `main.js`), new main
   features as entries in the window's sidebar and as their own section with an entry in the
