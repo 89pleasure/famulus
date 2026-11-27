@@ -55,9 +55,10 @@
   }
 
   // Tabs: arrow keys, Home and End move between the tabs of a list and choose
-  // the one they land on; only the chosen tab is in the Tab order.
-  function tablist(list) {
-    const tabs = $$('[role="tab"]', list);
+  // the one they land on; only the chosen tab is in the Tab order. The same
+  // for a group of radio buttons (role 'radio').
+  function tablist(list, role = 'tab') {
+    const tabs = $$(`[role="${role}"]`, list);
     const STEP = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
     list.addEventListener('keydown', event => {
       const index = tabs.indexOf(event.target);
@@ -2045,11 +2046,110 @@
     { seed: 79, base: 862, amp: 70, scale: 380, octaves: 2, tone: 5, fire: 800, trees: { gap: [22, 60], height: [30, 300], frame: [0.3, 1] } },
   ];
 
+  // The worlds of the hero: the moonlit night and four more. Each keeps the
+  // camp against the large moon (or a setting sun) and changes the world
+  // around it; their colours are #scene[data-world] in styles.css.
+  //   moon      see FamulusScene.moon (also bats and a dragon)
+  //   aurora    northern lights, see FamulusScene.aurora
+  //   clouds    clouds lit from below, see FamulusScene.clouds
+  //   snowfall  how many snowflakes (half as many on phones)
+  //   layers    the ridges, far to near, as HERO
+  const [FAR, MID, WOODS, HILL, GROUND] = HERO;
+  const WORLDS = {
+    night: { moon: MOON, layers: HERO },
+
+    // A wizard's tower on a crag beside the moon, islands of rock floating in
+    // a violet sky, the sky shimmering with arcane light.
+    arcane: {
+      moon: MOON,
+      aurora: {
+        depth: 0.05,
+        bands: [
+          { y: 250, amp: 46, height: 180, seed: 4, color: 'var(--magic)', from: 760, to: 1760, blur: 2.6 },
+          { y: 150, amp: 30, height: 100, seed: 9, color: 'var(--magic3)', from: -100, to: 1000, blur: 2.2 },
+        ],
+      },
+      layers: [
+        { ...FAR, float: [{ figure: 'isle', x: 1395, y: 262, scale: 0.86, facing: -1, tone: 2 }, { figure: 'rock', x: 1560, y: 170, scale: 0.8, tone: 2 }] },
+        { ...MID, cast: [{ figure: 'tower', x: 912, scale: 0.68, facing: -1, sink: 24 }] },
+        { ...WOODS, mist: { y: 690, height: 90, opacity: 0.22 } },
+        HILL,
+        GROUND,
+      ],
+    },
+
+    // A castle on the heights at sunset, a waterfall far off, long clouds lit
+    // from beneath, a dragon gliding across the sky.
+    dusk: {
+      moon: { ...MOON, small: null, bats: [], dragons: [[1500, 300, 0.95]] },
+      clouds: {
+        depth: 0.06,
+        clouds: [[1240, 130, 480, 40, 8], [1250, 452, 560, 20, 3], [250, 480, 560, 26, 12], [560, 96, 380, 24, 21]],
+      },
+      layers: [
+        { ...FAR, cast: [{ figure: 'cascade', x: 150, scale: 0.9, sink: 6 }] },
+        { ...MID, cast: [{ figure: 'keep', x: 862, scale: 0.62, facing: -1, sink: 10 }] },
+        { ...WOODS, mist: { y: 700, height: 110, opacity: 0.3, puffs: [[150, 660, 140, 40], [560, 700, 200, 40], [760, 712, 260, 36]] } },
+        { ...HILL, flies: { ...HILL.flies, count: 8 } },
+        GROUND,
+      ],
+    },
+
+    // A world tree on the horizon, its crown over half the sky, an old forest
+    // below it, a moonwell at its edge, glowing mushrooms and wisps on the
+    // hill, mist in the valleys.
+    forest: {
+      moon: MOON,
+      layers: [
+        { seed: 11, base: 610, amp: 90, scale: 520, octaves: 3, tone: 1, depth: 0.16, haze: 60, valley: { at: 0.72, width: 0.2, depth: 1 }, trees: { gap: [7, 15], height: [14, 26], bushes: 0.5, giants: [[400, 480, 'world']] } },
+        { seed: 23, base: 690, amp: 100, scale: 400, octaves: 3, tone: 2, depth: 0.3, haze: 60, valley: { at: 0.72, width: 0.2, depth: 1 }, mist: { y: 600, height: 140, opacity: 0.3, puffs: [[400, 590, 260, 50]] }, trees: { gap: [8, 18], height: [18, 40], bushes: 0.3 } },
+        { ...WOODS, mist: { y: 720, height: 110, opacity: 0.3, puffs: [[800, 690, 200, 40]] }, trees: { ...WOODS.trees, broad: 0.2, clear: [770, 1420] }, cast: [{ figure: 'well', x: 810, scale: 0.95, sink: 4 }] },
+        { ...HILL, cast: [...HILL.cast, { figure: 'shrooms', x: 882, scale: 1.7, sink: 2 }, { figure: 'shrooms', x: 1510, scale: 1.3, facing: -1, sink: 2 }], flies: { ...HILL.flies, count: 22 } },
+        { ...GROUND, trees: { ...GROUND.trees, broad: 0.2 } },
+      ],
+    },
+
+    // Snow on the peaks, northern lights over them, a hold of the mountain
+    // folk with braziers burning at the foot of the mountains, snow falling.
+    frost: {
+      moon: MOON,
+      aurora: {
+        depth: 0.05,
+        bands: [
+          { y: 210, amp: 60, height: 200, seed: 21, color: 'var(--magic)', from: 300, to: 1750, blur: 2.6 },
+          { y: 130, amp: 30, height: 110, seed: 33, color: 'var(--magic3)', from: -100, to: 900, blur: 2.2 },
+        ],
+      },
+      snowfall: 70,
+      layers: [
+        { ...FAR, amp: 380, snow: { line: 450, depth: 60 } },
+        { ...MID, amp: 320, snow: { line: 530, depth: 50 }, cast: [{ figure: 'hold', x: 800, scale: 0.6, sink: 10 }] },
+        { ...WOODS, mist: { y: 700, height: 80, opacity: 0.2 }, trees: { ...WOODS.trees, broad: 0 } },
+        { ...HILL, flies: null },
+        { ...GROUND, trees: { ...GROUND.trees, broad: 0, bushes: 0 }, flies: null },
+      ],
+    },
+  };
+
   const hero = $('#top');
   const heroScene = $('#scene');
-  Scene.moon(heroScene, MOON);
-  const heroLayers = Scene.build(heroScene, HERO);
-  const heroCamp = heroLayers.find(layer => layer.camp);
+  let heroCamp;
+  // Draws a world into the hero, in place of the one before.
+  function drawHero(name) {
+    const spec = WORLDS[name];
+    for (const old of $$(':scope > .ridge, :scope > .world', heroScene)) old.remove();
+    heroScene.dataset.world = name;
+    Scene.moon(heroScene, spec.moon);
+    if (spec.aurora) Scene.aurora(heroScene, spec.aurora);
+    if (spec.clouds) Scene.clouds(heroScene, spec.clouds);
+    heroCamp = Scene.build(heroScene, spec.layers).find(layer => layer.camp);
+    if (spec.snowfall) Scene.snow(heroScene, innerWidth < 760 ? spec.snowfall / 2 : spec.snowfall);
+  }
+  // A world by chance on every visit; ?world=<key> asks for one.
+  const worldKeys = Object.keys(WORLDS);
+  const askedWorld = new URLSearchParams(location.search).get('world');
+  let world = Object.hasOwn(WORLDS, askedWorld || '') ? askedWorld : worldKeys[Math.floor(Math.random() * worldKeys.length)];
+  drawHero(world);
   Scene.stars($('.scene__stars', heroScene), 170, 5);
   Scene.build($('#scene-alias'), glimpse(100));
   Scene.build($('#scene-feed'), glimpse(200));
@@ -2110,8 +2210,48 @@
   setLanguage(asked || known(store.get('famulus-lang')) || 'en', false);
 
   kindle();
-  Scene.parallax(hero);
+  const depth = Scene.parallax(hero);
   watch(document);
+
+  // The switcher below the hero's text: a dot per world and the name of the
+  // one shown (of the one under the pointer while it rests on a dot). The
+  // world fades out, is drawn anew and fades in; it is not remembered, the
+  // next visit gets one by chance again.
+  const worldPicker = $('#worlds');
+  const worldDots = $$('[role="radio"]', worldPicker);
+  const worldName = $('#world-name');
+  let fading = 0;
+  function markWorld(shown = world) {
+    for (const dot of worldDots) {
+      const chosen = dot.dataset.world === world;
+      dot.setAttribute('aria-checked', String(chosen));
+      dot.tabIndex = chosen ? 0 : -1;
+    }
+    worldName.textContent = t(`world_${shown}`);
+  }
+  function switchWorld(next) {
+    if (next === world) return;
+    world = next;
+    markWorld();
+    const swap = () => {
+      drawHero(world);
+      kindle();
+      depth.refresh();
+      heroScene.classList.remove('is-fading');
+    };
+    clearTimeout(fading);
+    if (motion.matches) return swap();
+    heroScene.classList.add('is-fading');
+    fading = setTimeout(swap, 300);
+  }
+  for (const dot of worldDots) {
+    dot.addEventListener('click', () => switchWorld(dot.dataset.world));
+    dot.addEventListener('pointerenter', () => markWorld(dot.dataset.world));
+    dot.addEventListener('pointerleave', () => markWorld());
+  }
+  tablist(worldPicker, 'radio');
+  renderers.push(() => markWorld());
+  markWorld();
   onScroll();
   // The book's cards change height once Inter has loaded; the dots follow.
   if (document.fonts) document.fonts.ready.then(spaceDots);

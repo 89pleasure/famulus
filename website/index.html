@@ -108,6 +108,16 @@
           <li data-i18n="fact_lang">Addon in five languages</li>
           <li data-i18n="fact_libs">Friends &amp; guild only</li>
         </ul>
+        <!-- The worlds of the drawing behind: main.js picks one by chance on
+             every visit and switches on a click (or with the arrow keys). -->
+        <div class="worlds reveal" style="--i:5" id="worlds" role="radiogroup" aria-label="Scene behind the page" data-i18n-attr="aria-label:world_pick">
+          <button type="button" class="worlds__dot worlds__dot--night" role="radio" data-world="night" aria-label="Moonlit night" data-i18n-attr="aria-label:world_night"></button>
+          <button type="button" class="worlds__dot worlds__dot--arcane" role="radio" data-world="arcane" aria-label="Arcane tower" data-i18n-attr="aria-label:world_arcane"></button>
+          <button type="button" class="worlds__dot worlds__dot--dusk" role="radio" data-world="dusk" aria-label="Sunset" data-i18n-attr="aria-label:world_dusk"></button>
+          <button type="button" class="worlds__dot worlds__dot--forest" role="radio" data-world="forest" aria-label="World tree" data-i18n-attr="aria-label:world_forest"></button>
+          <button type="button" class="worlds__dot worlds__dot--frost" role="radio" data-world="frost" aria-label="Frost peaks" data-i18n-attr="aria-label:world_frost"></button>
+          <span class="worlds__name" id="world-name" aria-hidden="true"></span>
+        </div>
       </div>
       <!-- The live feed's cards beside the title, above the moon. -->
       <div class="hero__feed" aria-hidden="true">

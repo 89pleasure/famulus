@@ -155,6 +155,41 @@ owner.
   - Checked in the built-in browser and with headless Chrome at 375, 768, 1280, 1440 and
     1920 px width, German and English; no messages in the console. Not checked: Safari,
     Firefox, real mobile devices.
+- **Worlds of the header (2026-11-27, the owner's request: more fantasy, "keep them all", a
+  small switcher, a world by chance on every visit; motifs and drawings the assistant's
+  decisions):** five worlds around the same camp (`WORLDS` in `main.js`): `night` (the moonlit
+  night above), `arcane` (a wizard's tower beside the moon with lit windows, a ring of runes
+  and a beam, floating islands with a waterfall, violet northern lights), `dusk` (a setting
+  sun instead of the moon, a castle with pennants, clouds lit from below, a dragon gliding
+  across, a waterfall far off on the left), `forest` (a world tree on the horizon, a moonwell
+  with a beam, glowing mushrooms, wisps instead of fireflies, mist) and `frost` (snowy peaks,
+  green northern lights, a mountain hold with braziers, snow falling). The camp, the oak with
+  the owl and the moon's place stay, so the live feed cards above the moon fit every world.
+  - **Drawing:** the parts are in `scene.js`: `FIGURES` `tower`, `keep`, `hold`, `isle`,
+    `rock`, `cascade`, `shrooms`, `well`; trees `ancient` and `worldtree` (`giants` in
+    `trees`); on a ridge `cast` (now with its lights), `float` (bobbing), `mist`, `snow`
+    (snowcaps); in the sky `aurora` and `clouds` (sheets between the moon and the ridges);
+    `dragons` beside `bats` in `moon()`; `snow()` for snowfall. Lights of figures: `fire`
+    (the accent) or `magic` (`--magic`, `--magic2`, per world). Colours per world:
+    `#scene[data-world]` in `styles.css`; tone 5 stays `--bg`, so every world runs into the
+    page. Motion only via CSS, paused with the header out of sight, off with reduced motion
+    (snowfall hidden then, like the embers).
+  - **Choice:** by chance on every visit (`Math.random`), not remembered; `?world=<key>` asks
+    for one (for links and screenshots). The switcher is a row below the fact chips: a small
+    picture of each world (sky, moon or sun, hill in its colours; `.worlds__dot--<key>`), the
+    chosen one ringed in the accent, its name beside the row, the name of the dot under the
+    pointer while it rests there. A radio group (arrow keys like the tabs, `tablist(list,
+    'radio')`), names `world_<key>`, group `world_pick`. Switching fades the scene out, draws the
+    new world and fades it in (0.3 s; at once with reduced motion), then finds the sparks and
+    the parallax layers anew (`parallax()` returns `refresh`). Below 980 px the header keeps
+    340 px instead of 300 px below the text, so the moon stays below the switcher.
+  - Only the header changes: the foot (`#scene-foot`) and the small scenes of the demos stay
+    the moonlit night.
+  - Checked in the built-in browser at 1440, 1024 and 375 px and with headless Chrome at 1440
+    and 1920, English and German: every world, switching by click and arrow keys, the name
+    after a change of language, the switcher 44 px above the window's screenshot at 1440 × 900,
+    no horizontal scrolling, no console messages. Not checked: reduced motion, Safari,
+    Firefox, real phones.
 - **Window in the header (2026-11-24, the owner's request, modelled on polestar.guide):**
   Below the campfire there is a screenshot of the addon window (`figure.shot`, first element in
   `<main>`). It reaches up into the header from below (below 980 px only 40 px, because there the

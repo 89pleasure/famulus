@@ -194,6 +194,12 @@ window.FAMULUS_I18N = {
     fact_game: 'WoW Forever 1.60',
     fact_lang: 'Addon in fünf Sprachen',
     fact_libs: 'Nur Freunde &amp; Gilde',
+    world_pick: 'Szene hinter der Seite',
+    world_night: 'Mondnacht',
+    world_arcane: 'Arkanturm',
+    world_dusk: 'Abendrot',
+    world_forest: 'Weltenbaum',
+    world_frost: 'Frostgipfel',
     tagline: 'Gemeinsam durch Azeroth',
 
     // 01 Aliases

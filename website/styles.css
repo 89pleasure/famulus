@@ -241,6 +241,136 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 }
 .is-away .blink { animation-play-state: paused; }
 
+/* ---------- The hero's worlds (WORLDS in main.js) ----------
+   Each world has its own sky and ridges; the camp, the fire and the accent
+   stay. --magic and --magic2 are a world's own light (tower windows, wisps,
+   northern lights), --magic3 its second colour of northern lights. */
+
+#scene[data-world="arcane"] {
+  --sky-top: hsl(262 52% 5%);
+  --sky-mid: hsl(260 44% 12%);
+  --sky-low: hsl(282 40% 27%);
+  --r1a: hsl(262 30% 19%);
+  --r1b: hsl(280 32% 27%);
+  --r2a: hsl(252 30% 12.5%);
+  --r2b: hsl(262 30% 18%);
+  --r3a: hsl(230 30% 8.5%);
+  --r3b: hsl(245 28% 13%);
+  --r4a: hsl(205 28% 6.4%);
+  --r4b: hsl(215 26% 9.5%);
+  --magic: #a47bff;
+  --magic2: #f0e4ff;
+  --magic3: #4fd1ff;
+  --water: #d8c6ff;
+  --mist: hsl(270 50% 70%);
+}
+#scene[data-world="dusk"] {
+  --sky-top: hsl(236 42% 9%);
+  --sky-mid: hsl(282 30% 21%);
+  --sky-low: hsl(18 78% 52%);
+  --r1a: hsl(310 20% 31%);
+  --r1b: hsl(12 48% 44%);
+  --r2a: hsl(290 22% 18%);
+  --r2b: hsl(335 26% 26%);
+  --r3a: hsl(255 24% 11%);
+  --r3b: hsl(285 22% 16%);
+  --r4a: hsl(220 24% 6.6%);
+  --r4b: hsl(240 20% 10%);
+  --moon-mid: #ffd98a;
+  --moon-rim: #ff8a45;
+  --halo-in: #ffe2a0;
+  --halo-out: #ff7a3a;
+  --cloud: hsl(285 26% 20%);
+  --cloud-lit: hsl(345 45% 40%);
+  --cloud-rim: #ffb36b;
+  --water: #ffe1c0;
+  --mist: hsl(20 60% 65%);
+}
+#scene[data-world="dusk"] .scene__stars { opacity: 0.35; }
+#scene[data-world="forest"] {
+  --sky-top: hsl(218 50% 5%);
+  --sky-mid: hsl(204 46% 11%);
+  --sky-low: hsl(176 38% 24%);
+  --r1a: hsl(188 28% 16%);
+  --r1b: hsl(176 30% 23%);
+  --r2a: hsl(194 30% 11.5%);
+  --r2b: hsl(184 30% 17%);
+  --r3a: hsl(200 32% 8%);
+  --r3b: hsl(192 30% 12.5%);
+  --magic: #62e6ff;
+  --magic2: #e2fcff;
+  --mist: hsl(180 45% 72%);
+}
+/* In the old forest the fireflies are wisps. */
+#scene[data-world="forest"] .fly { fill: var(--magic2); filter: drop-shadow(0 0 4px var(--magic)); }
+#scene[data-world="frost"] {
+  --sky-top: hsl(224 55% 5%);
+  --sky-mid: hsl(214 50% 11%);
+  --sky-low: hsl(198 42% 25%);
+  --r1a: hsl(212 28% 24%);
+  --r1b: hsl(204 30% 30%);
+  --r2a: hsl(214 30% 14%);
+  --r2b: hsl(208 28% 20%);
+  --r3a: hsl(210 30% 8.5%);
+  --r3b: hsl(205 28% 13%);
+  --snow: hsl(205 50% 90%);
+  --magic: #4ff0b0;
+  --magic2: #dcfff0;
+  --magic3: #8a9dff;
+  --mist: hsl(200 40% 80%);
+}
+
+.world { inset: 0; pointer-events: none; }
+.aurora__part, .clouds__part { position: absolute; inset: 0; will-change: transform, opacity; }
+.aurora__part { transform-origin: 50% 40%; animation: aurora 17s ease-in-out infinite alternate; }
+@keyframes aurora {
+  0% { transform: translate3d(-14px, 0, 0) scaleY(0.94); opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { transform: translate3d(18px, -6px, 0) scaleY(1.06); opacity: 0.8; }
+}
+.clouds__part { animation: clouds 70s ease-in-out infinite alternate; }
+@keyframes clouds { to { transform: translate3d(-48px, 0, 0); } }
+
+/* Pennants on the towers, floating islands, a ring of runes, a beam, water
+   falling, braziers. */
+.pennant { transform-box: fill-box; transform-origin: 0 50%; animation: pennant 1.8s ease-in-out infinite alternate; }
+@keyframes pennant { from { transform: skewY(-10deg); } to { transform: skewY(8deg) scaleX(0.82); } }
+.bob { animation: bob 8s ease-in-out infinite alternate; }
+@keyframes bob { from { transform: translateY(-6px); } to { transform: translateY(7px); } }
+.ring { stroke-dasharray: 2 7; opacity: 0.75; animation: runes 40s linear infinite; }
+@keyframes runes { to { stroke-dashoffset: -300; } }
+.beam { animation: beam 7s ease-in-out infinite alternate; }
+@keyframes beam { from { opacity: 0.5; } to { opacity: 1; } }
+.fall__flow { stroke-dasharray: 16 26; stroke-linecap: round; opacity: 0.6; animation: fall 1.4s linear infinite; }
+@keyframes fall { to { stroke-dashoffset: -42; } }
+.flicker { transform-box: fill-box; transform-origin: 50% 70%; animation: torch 0.9s ease-in-out infinite alternate; }
+@keyframes torch { from { opacity: 0.75; transform: scale(0.9); } to { opacity: 1; transform: scale(1.08); } }
+
+/* A dragon gliding across the sky with slow beats of its wings. */
+.dragon { animation: dragon-fly 56s linear infinite; }
+.dragon__wing { transform-box: fill-box; transform-origin: 60% 100%; animation: dragon-flap 1.5s ease-in-out infinite alternate; }
+@keyframes dragon-fly {
+  0% { transform: translate(260px, 40px); opacity: 0; }
+  6%, 90% { opacity: 1; }
+  50% { transform: translate(-560px, -36px); }
+  100% { transform: translate(-1400px, 10px); opacity: 0; }
+}
+@keyframes dragon-flap { from { transform: scaleY(1); } to { transform: scaleY(-0.4); } }
+
+/* Snow falling. */
+.scene__snow { inset: 0; overflow: hidden; }
+.scene__snow i { position: absolute; top: -3%; width: var(--size); height: var(--size); border-radius: 50%; background: #fff; opacity: 0; box-shadow: 0 0 4px rgb(255 255 255 / 0.5); animation: snowfall var(--time) linear infinite; }
+@keyframes snowfall {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  8%, 88% { opacity: var(--o); }
+  100% { transform: translate3d(var(--drift), var(--fall), 0); opacity: 0; }
+}
+.is-away :is(.aurora__part, .clouds__part, .pennant, .bob, .ring, .beam, .fall__flow, .flicker, .dragon, .dragon__wing, .scene__snow i) { animation-play-state: paused; }
+
+/* Switching worlds: the old one fades out, the new one in. */
+.hero > .scene { transition: opacity 0.3s var(--ease); }
+.hero > .scene.is-fading { opacity: 0; }
+
 /* ---------- Hero ---------- */
 
 /* How far the addon's window rises into the hero (.shot); the text keeps that
@@ -264,6 +394,30 @@ h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); line-height: 1.04; }
 .hero__cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
 .hero__facts { display: flex; flex-wrap: wrap; gap: 6px 0; margin-top: 34px; font-size: 13px; color: var(--text-muted); }
 .hero__facts li + li::before { content: "·"; margin: 0 12px; opacity: 0.7; }
+
+/* The worlds to choose from: a small picture of each, the name beside them. */
+.worlds { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
+.worlds__dot {
+  position: relative; flex: none; width: 20px; height: 20px; padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.16); border-radius: 50%;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 2px 6px rgb(0 0 0 / 0.4);
+  transition: transform 0.2s var(--ease), border-color 0.2s;
+}
+.worlds__dot::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%;
+  border: 1.5px solid var(--accent); box-shadow: 0 0 10px var(--accent-glow);
+  opacity: 0; transform: scale(0.8); transition: opacity 0.25s, transform 0.25s var(--ease);
+}
+.worlds__dot:hover { transform: scale(1.12); border-color: rgb(255 255 255 / 0.3); }
+.worlds__dot[aria-checked="true"]::after { opacity: 1; transform: none; }
+.worlds__dot:focus-visible { outline-offset: 6px; border-radius: 50%; }
+/* Sky, moon (or sun) and a dark hill, in each world's colours. */
+.worlds__dot--night { background: linear-gradient(160deg, transparent 64%, hsl(190 30% 6%) 65%), radial-gradient(circle at 64% 44%, #fff6c4 0 19%, transparent 22%), linear-gradient(180deg, hsl(190 36% 8%), hsl(190 38% 30%)); }
+.worlds__dot--arcane { background: linear-gradient(160deg, transparent 64%, hsl(252 30% 9%) 65%), radial-gradient(circle at 64% 44%, #fff6c4 0 19%, transparent 22%), linear-gradient(180deg, hsl(262 52% 9%), hsl(282 42% 34%)); }
+.worlds__dot--dusk { background: linear-gradient(160deg, transparent 64%, hsl(290 22% 12%) 65%), radial-gradient(circle at 64% 50%, #ffd98a 0 22%, transparent 25%), linear-gradient(180deg, hsl(282 30% 22%), hsl(18 78% 52%)); }
+.worlds__dot--forest { background: linear-gradient(160deg, transparent 64%, hsl(194 30% 7%) 65%), radial-gradient(circle at 30% 70%, #62e6ff 0 7%, transparent 11%), radial-gradient(circle at 64% 44%, #fff6c4 0 19%, transparent 22%), linear-gradient(180deg, hsl(205 46% 10%), hsl(176 38% 28%)); }
+.worlds__dot--frost { background: linear-gradient(160deg, transparent 64%, hsl(214 30% 10%) 65%), linear-gradient(170deg, transparent 18%, rgb(79 240 176 / 0.75) 30%, transparent 42%), radial-gradient(circle at 70% 52%, #fff6c4 0 17%, transparent 20%), linear-gradient(180deg, hsl(214 50% 10%), hsl(198 42% 30%)); }
+.worlds__name { margin-left: 4px; font-size: 13px; color: var(--text-muted); white-space: nowrap; text-shadow: 0 1px 8px rgb(0 0 0 / 0.7); }
 /* Live feed cards in the column beside the copy: the newest level with the
    title, the rows before it below, towards the moon. Left-aligned as in the
    game, in a box as wide as the widest card in the middle of the column,
@@ -1062,7 +1216,7 @@ code { padding: 1px 6px; border-radius: 5px; background: rgb(255 255 255 / 0.07)
   .hero__shade { background: linear-gradient(180deg, hsl(var(--h) calc(var(--s) * 1.6) 4% / 0.5), transparent 70%); }
   /* The camp gets room of its own below the text, so that the moon does
      not shine through the buttons; main.js pans it into view. */
-  .hero__inner { padding-bottom: 300px; }
+  .hero__inner { padding-bottom: 340px; }
   .hero .ridge { left: var(--pan-left, -4%); width: var(--pan-width, 108%); height: min(72%, 620px); }
   .view { min-height: 440px; }
   .view--band { min-height: 300px; }
@@ -1134,5 +1288,5 @@ code { padding: 1px 6px; border-radius: 5px; background: rgb(255 255 255 / 0.07)
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal, .js .story.reveal:nth-child(n) { opacity: 1; transform: none; }
-  .scene__embers { display: none; }
+  .scene__embers, .scene__snow { display: none; }
 }

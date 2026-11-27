@@ -5,11 +5,15 @@
 // is how the scene follows the colour scheme.
 //
 //   FamulusScene.moon(host, moon)         the two moons, before build()
+//   FamulusScene.aurora(host, sky)        northern lights, after moon()
+//   FamulusScene.clouds(host, sky)        clouds lit from below, after moon()
 //   FamulusScene.build(host, layers)      adds one <svg class="layer ridge"> per layer
 //   FamulusScene.stars(svg, count, seed)
 //   FamulusScene.embers(host, count, focus)
+//   FamulusScene.snow(host, count)        snowflakes drifting down
 //   FamulusScene.pan(scene, x)            keeps x of the drawing in view on narrow screens
-//   FamulusScene.parallax(hero)           layers with data-depth follow scroll and pointer
+//   FamulusScene.parallax(hero)           layers with data-depth follow scroll and pointer;
+//                                         returns { refresh } for a scene drawn anew
 window.FamulusScene = (() => {
   'use strict';
 
@@ -132,7 +136,11 @@ window.FamulusScene = (() => {
   // A circle as path data, drawn clockwise like the ridges and the trees, so
   // that shapes sharing one path add up instead of cutting holes.
   function circle(x, y, r) {
-    return `M${f(x - r)} ${f(y)}a${f(r)} ${f(r)} 0 1 1 ${f(2 * r)} 0a${f(r)} ${f(r)} 0 1 1 ${f(-2 * r)} 0Z`;
+    return ellipse(x, y, r, r);
+  }
+
+  function ellipse(x, y, rx, ry) {
+    return `M${f(x - rx)} ${f(y)}a${f(rx)} ${f(ry)} 0 1 1 ${f(2 * rx)} 0a${f(rx)} ${f(ry)} 0 1 1 ${f(-2 * rx)} 0Z`;
   }
 
   // A pine as one closed outline: tiers that widen towards the ground.
@@ -207,6 +215,69 @@ window.FamulusScene = (() => {
     return d;
   }
 
+  // An ancient tree, as in the old elven forests: a massive trunk on spread
+  // roots, rising far above the forest, its crown in flat tiers that widen
+  // downwards, each on branches of its own.
+  function ancient(x, ground, height, rand) {
+    const trunk = height * 0.055;
+    const top = ground - height;
+    const lean = (rand() - 0.5) * height * 0.1;
+    // Roots spread like the feet of a tent.
+    let d = `M${f(x - trunk * 3.4)} ${f(ground + 3)}C${f(x - trunk * 1.4)} ${f(ground - trunk * 0.3)} ${f(x - trunk * 0.9)} ${f(ground - trunk * 1.6)} ${f(x - trunk * 0.62)} ${f(ground - trunk * 3.4)}`;
+    d += `L${f(x + trunk * 0.62)} ${f(ground - trunk * 3.4)}C${f(x + trunk * 0.9)} ${f(ground - trunk * 1.6)} ${f(x + trunk * 1.4)} ${f(ground - trunk * 0.3)} ${f(x + trunk * 3.4)} ${f(ground + 3)}Z`;
+    d += limb([[x, ground - trunk * 2, trunk * 1.3], [x + lean * 0.3, ground - height * 0.42, trunk], [x + lean, top + height * 0.12, trunk * 0.45]]);
+    const tiers = 3;
+    for (let t = 0; t < tiers; t++) {
+      const ty = top + height * (0.09 + t * 0.15);
+      const span = height * (0.14 + t * 0.09) * (0.85 + rand() * 0.3);
+      const at = x + lean * (1 - (t + 1) * 0.22);
+      const fork = ty + height * 0.07;
+      d += limb([[at, fork, trunk * 0.5], [at - span * 0.62, ty + height * 0.012, trunk * 0.2]]);
+      d += limb([[at, fork + height * 0.02, trunk * 0.46], [at + span * 0.66, ty + height * 0.016, trunk * 0.2]]);
+      const clumps = 6 + Math.floor(rand() * 3);
+      for (let i = 0; i < clumps; i++) {
+        const share = (i / (clumps - 1)) * 2 - 1;
+        const r = height * 0.036 * (1.15 - Math.abs(share) * 0.45) * (0.8 + rand() * 0.4);
+        d += ellipse(at + share * span, ty - (1 - share * share) * height * 0.02 + (rand() - 0.5) * r * 0.5, r * 1.7, r * 0.78);
+      }
+    }
+    return d;
+  }
+
+  // A world tree far off on the horizon: a trunk as wide as a mountain on a
+  // flared foot of roots, great boughs spreading from the fork, and a crown
+  // like a range of clouds.
+  function worldtree(x, ground, height, rand) {
+    const foot = height * 0.12;
+    const waist = height * 0.05;
+    const fork = ground - height * 0.5;
+    const crown = ground - height * 0.78;
+    const span = height * 0.56;
+    let d = `M${f(x - foot * 1.7)} ${f(ground + 4)}C${f(x - foot * 0.5)} ${f(ground - foot * 0.25)} ${f(x - waist * 1.5)} ${f(ground - height * 0.12)} ${f(x - waist)} ${f(ground - height * 0.3)}`;
+    d += `L${f(x - waist * 0.85)} ${f(fork)}L${f(x + waist * 0.85)} ${f(fork)}L${f(x + waist)} ${f(ground - height * 0.3)}`;
+    d += `C${f(x + waist * 1.5)} ${f(ground - height * 0.12)} ${f(x + foot * 0.5)} ${f(ground - foot * 0.25)} ${f(x + foot * 1.7)} ${f(ground + 4)}Z`;
+    d += limb([[x - waist * 0.8, ground - height * 0.06, waist * 0.9], [x - foot * 1.1, ground - foot * 0.1, waist * 0.5], [x - foot * 2.3, ground + 3, waist * 0.2]]);
+    d += limb([[x + waist * 0.8, ground - height * 0.05, waist * 0.8], [x + foot * 1.2, ground - foot * 0.05, waist * 0.45], [x + foot * 2.1, ground + 3, waist * 0.2]]);
+    // Boughs that curve up and out and end inside the crown.
+    for (const [reach, rise, weight] of [[-0.95, 0.1, 0.55], [-0.5, -0.05, 0.7], [-0.05, -0.16, 0.7], [0.45, -0.06, 0.65], [0.9, 0.12, 0.5]]) {
+      const end = crown + height * (0.05 + rise * 0.3);
+      d += limb([[x, fork + height * 0.04, waist * 1.6 * weight], [x + reach * span * 0.3, fork - height * 0.08, waist * 1.1 * weight], [x + reach * span * 0.62, end + height * 0.03, waist * 0.7 * weight], [x + reach * span * 0.8, end, waist * 0.35 * weight]]);
+    }
+    // The crown: a tall dome of clumps, the largest in the middle.
+    for (let i = 0; i < 110; i++) {
+      const share = rand() * 2 - 1;
+      const dome = Math.sqrt(1 - share * share);
+      const r = height * (0.032 + rand() * 0.04) * (1 - Math.abs(share) * 0.4);
+      d += circle(x + share * span, crown - dome * height * (0.06 + rand() * 0.16) + height * 0.06, r);
+    }
+    // Clumps hanging lower at the rim, where the boughs end.
+    for (let i = 0; i < 22; i++) {
+      const share = (rand() < 0.5 ? -1 : 1) * (0.35 + rand() * 0.6);
+      d += circle(x + share * span * 0.92, crown + height * (0.06 + rand() * 0.07), height * (0.022 + rand() * 0.025));
+    }
+    return d;
+  }
+
   // Trees along a ridge.
   //   gap     [from, to] between two trees
   //   height  [from, to]
@@ -217,8 +288,10 @@ window.FamulusScene = (() => {
   //   clear   [from, to]: no trees between these x, room for a camp
   //   broad   share of broadleaf trees among the pines
   //   bushes  share of bushes
+  //   giants  [[x, height, kind], ...]: ancient trees standing above the
+  //           others; kind 'world' for a world tree
   function forest(points, layer) {
-    const { gap, height, clump, frame, clear, broad = 0, bushes = 0 } = layer.trees;
+    const { gap, height, clump, frame, clear, broad = 0, bushes = 0, giants = [] } = layer.trees;
     const rand = random(layer.seed * 7 + 3);
     const patch = clump ? noise(random(layer.seed * 13 + 1)) : null;
     let d = '';
@@ -241,6 +314,8 @@ window.FamulusScene = (() => {
       else if (pick < bushes + broad) d += broadleaf(x, ground + tall * 0.04, tall * 0.9, rand);
       else d += pine(x, ground + tall * 0.08, tall, tall * (0.34 + rand() * 0.14), rand);
     }
+    const old = random(layer.seed * 17 + 5);
+    for (const [gx, tall, kind] of giants) d += (kind === 'world' ? worldtree : ancient)(gx, heightAt(points, gx) + 4, tall, old);
     return d;
   }
 
@@ -252,7 +327,14 @@ window.FamulusScene = (() => {
   //   plateau { from, to, y, edge }: level ground for a camp
   //   grass   { gap, height }: tufts along the ridge
   //   bushes  [[x, size], ...]
-  //   cast    [{ figure, x, scale, facing }]: figures standing on the ridge
+  //   cast    [{ figure, x, scale, facing, sink }]: figures standing on the
+  //           ridge (a tower, a castle, a stag), sink: how far into the ground
+  //   float   [{ figure, x, y, scale, facing }]: figures in the air that bob
+  //           (islands)
+  //   mist    { y, height, opacity, puffs: [[x, y, rx, ry]] }: a band of mist
+  //           behind this ridge
+  //   snow    { line, depth, seed }: snow on everything above y = line, with
+  //           a ragged edge `depth` deep
   //   camp    a camp on this ridge (see camp())
   //   flies   fireflies over it (see fireflies())
   function build(host, layers) {
@@ -299,14 +381,28 @@ window.FamulusScene = (() => {
         }));
       }
 
+      if (layer.mist) mist(svg, defs, layer.mist);
       svg.append(node('path', { d, fill: `url(#${id})` }));
+      if (layer.snow) snowcap(svg, defs, points, top, layer);
       const built = { svg, points, layer };
+      const lit = ++uid;
+      if (layer.cast || layer.float) lightDefs(defs, lit);
       for (const member of layer.cast || []) {
         const facing = member.facing || 1;
-        const { body } = figure(FIGURES[member.figure], member.x, heightAt(points, member.x) + 1, member.scale || 1, facing);
+        const { body, lights } = figure(FIGURES[member.figure], member.x, heightAt(points, member.x) + (member.sink ?? 1), member.scale || 1, facing, lit);
         body.style.color = `var(--r${layer.tone}a)`;
         svg.append(body);
+        if (lights) svg.append(lights);
       }
+      (layer.float || []).forEach((member, index) => {
+        const bob = node('g', { class: 'bob' });
+        bob.style.animationDelay = `${-index * 3.7}s`;
+        const { body, lights } = figure(FIGURES[member.figure], member.x, member.y, member.scale || 1, member.facing || 1, lit);
+        body.style.color = `var(--r${member.tone || layer.tone}a)`;
+        bob.append(body);
+        if (lights) bob.append(lights);
+        svg.append(bob);
+      });
       if (layer.camp) built.camp = camp(built, layer.camp);
       if (layer.flies) fireflies(built, layer.flies);
       host.insertBefore(svg, before);
@@ -326,15 +422,61 @@ window.FamulusScene = (() => {
     return element;
   }
 
+  // The lights figures carry (see figure()): 'fire' in the accent, 'magic'
+  // in the world's own colour (--magic, --magic2), beams and water.
+  function lightDefs(defs, id) {
+    defs.append(
+      gradient('radial', `spark-${id}`, {}, [[0, 'var(--accent2)', 0.75], [0.3, 'var(--accent)', 0.22], [1, 'var(--accent)', 0]]),
+      gradient('radial', `magic-${id}`, {}, [[0, 'var(--magic2)', 0.8], [0.3, 'var(--magic)', 0.26], [1, 'var(--magic)', 0]]),
+      gradient('linear', `beam-${id}`, { x1: 0, y1: 1, x2: 0, y2: 0 }, [[0, 'var(--magic2)', 0.6], [0.2, 'var(--magic)', 0.22], [1, 'var(--magic)', 0]]),
+      gradient('linear', `fall-${id}`, { x1: 0, y1: 0, x2: 0, y2: 1 }, [[0, 'var(--water)', 0.8], [0.6, 'var(--water)', 0.32], [1, 'var(--water)', 0]]),
+    );
+  }
+
+  // A band of mist, and puffs of it, behind a ridge.
+  function mist(svg, defs, { y, height, opacity = 0.4, puffs = [] }) {
+    const id = ++uid;
+    defs.append(
+      gradient('linear', `mist-${id}`, { x1: 0, y1: 0, x2: 0, y2: 1 }, [[0, 'var(--mist)', 0], [0.55, 'var(--mist)', opacity], [1, 'var(--mist)', 0]]),
+      gradient('radial', `puff-${id}`, {}, [[0, 'var(--mist)', opacity * 1.1], [1, 'var(--mist)', 0]]),
+    );
+    svg.append(node('rect', { x: -MARGIN, y: y - height / 2, width: W + 2 * MARGIN, height, fill: `url(#mist-${id})` }));
+    for (const [px, py, rx, ry] of puffs) svg.append(node('ellipse', { cx: px, cy: py, rx, ry, fill: `url(#puff-${id})` }));
+  }
+
+  // Snow on the peaks: the ridge once more in white, cut off below a ragged
+  // line that runs down in streaks, as snow lies in the gullies.
+  function snowcap(svg, defs, points, top, { seed, snow: { line, depth = 40 } }) {
+    const id = ++uid;
+    const broad = noise(random(seed * 3 + 1));
+    const streak = noise(random(seed * 3 + 2));
+    let edge = `M${-MARGIN} -10`;
+    for (let x = -MARGIN; x <= W + MARGIN; x += 5) {
+      const y = line + (broad(x / 60) - 0.5) * depth * 1.6 + streak(x / 16) ** 5 * depth * 0.9 + (streak(x / 3 + 70) - 0.5) * depth * 0.12;
+      edge += `L${x} ${f(y)}`;
+    }
+    edge += `L${W + MARGIN} -10Z`;
+    const clip = node('clipPath', { id: `snowline-${id}` });
+    clip.append(node('path', { d: edge }));
+    defs.append(clip, gradient('linear', `snow-${id}`, {
+      gradientUnits: 'userSpaceOnUse', x1: 0, y1: f(top), x2: 0, y2: f(line + depth),
+    }, [[0, 'var(--snow)', 0.95], [1, 'var(--snow)', 0.35]]));
+    let d = `M${-MARGIN} ${H + 40}`;
+    for (const [x, y] of points) d += `L${x} ${f(y)}`;
+    d += `L${W + MARGIN} ${H + 40}Z`;
+    svg.append(node('path', { d, fill: `url(#snow-${id})`, 'clip-path': `url(#snowline-${id})` }));
+  }
+
   // The moons, drawn in the landscape's own units so they stay where the
   // drawing puts them at every window size. Azeroth has two: a large white
   // one and a small blue one. Bats cross the large one.
-  //   { x, y, r, depth, small: { x, y, r }, bats: [[x, y, size], ...] }
+  //   { x, y, r, depth, small: { x, y, r }, bats: [[x, y, size], ...],
+  //     dragons: [[x, y, size], ...] }
   // Call before build(), so the ridges come in front.
-  function moon(host, { x, y, r, depth, small, bats = [] }) {
+  function moon(host, { x, y, r, depth, small, bats = [], dragons = [] }) {
     const id = ++uid;
     const svg = node('svg', {
-      class: 'layer ridge',
+      class: 'layer ridge moon-sky',
       viewBox: `0 0 ${W} ${H}`,
       preserveAspectRatio: 'xMidYMax slice',
       focusable: 'false',
@@ -342,7 +484,7 @@ window.FamulusScene = (() => {
     if (depth != null) svg.dataset.depth = depth;
     const defs = node('defs');
     defs.append(
-      gradient('radial', `halo-${id}`, {}, [[0, 'var(--accent2)', 0.34], [0.32, 'var(--accent)', 0.12], [1, 'var(--accent)', 0]]),
+      gradient('radial', `halo-${id}`, {}, [[0, 'var(--halo-in, var(--accent2))', 0.34], [0.32, 'var(--halo-out, var(--accent))', 0.12], [1, 'var(--halo-out, var(--accent))', 0]]),
       gradient('radial', `disc-${id}`, { cx: 0.36, cy: 0.34, r: 0.72 }, [[0, '#fff'], [0.55, 'var(--moon-mid)'], [1, 'var(--moon-rim)']]),
       gradient('radial', `blue-${id}`, { cx: 0.36, cy: 0.34, r: 0.72 }, [[0, '#fff'], [1, 'var(--moon-blue)']]),
       gradient('radial', `blue-halo-${id}`, {}, [[0, 'var(--moon-blue)', 0.4], [1, 'var(--moon-blue)', 0]]),
@@ -371,9 +513,35 @@ window.FamulusScene = (() => {
       at.append(flight);
       svg.append(at);
     });
+    // A dragon far off, gliding across with slow beats of its wings: the far
+    // wing behind the body, the near one in front. Looks left.
+    dragons.forEach(([dx, dy, size], index) => {
+      const at = node('g', { transform: `translate(${dx} ${dy}) scale(${size})` });
+      const flight = node('g', { class: 'dragon' });
+      flight.style.animationDelay = `${(-14 - index * 23).toFixed(1)}s`;
+      const far = node('g', { transform: 'translate(7 -1) scale(0.86)' });
+      far.append(node('path', { class: 'dragon__wing', d: DRAGON.wing }));
+      flight.append(far, node('path', { d: DRAGON.body }), node('path', { class: 'dragon__wing', d: DRAGON.wing }));
+      flight.style.fill = 'var(--figure)';
+      at.append(flight);
+      svg.append(at);
+    });
     host.insertBefore(svg, host.querySelector('.ridge') || host.querySelector('.scene__embers'));
     return svg;
   }
+
+  // The dragon's silhouette, looking left: a long neck, horns, a tail with a
+  // spade at its end, legs drawn in; the wing is a membrane between fingers.
+  const DRAGON = {
+    body: [
+      'M-20 -2C-12 -8 8 -9 24 -4C30 -1 28 3 16 6C2 8 -12 7 -18 4Z',
+      'M-17 -3C-26 -6 -34 -10 -42 -13C-48 -16 -54 -16 -60 -13L-68 -10C-62 -8 -56 -7 -50 -7C-42 -6 -32 -2 -20 3Z',
+      'M-50 -14L-44 -24L-47 -14ZM-46 -14L-37 -21L-43 -13Z',
+      'M22 -3C36 -2 50 4 66 3C78 2 88 -3 96 -3L106 -8L103 -1L108 5L96 1C86 3 76 7 64 8C48 9 34 4 20 3Z',
+      'M14 4L20 12L28 13L20 10L18 4ZM-8 5L-6 12L0 14L-3 10L-4 5Z',
+    ].join(''),
+    wing: 'M-8 -5L-16 -34L-34 -66Q-22 -54 -12 -58L-4 -62Q0 -50 7 -48L18 -53Q16 -42 20 -36L33 -37Q24 -26 22 -18L14 -5Z',
+  };
 
   // Fireflies over a stretch of a ridge: dots that wander and glow, CSS only.
   //   { from, to, count, seed, height }
@@ -399,6 +567,87 @@ window.FamulusScene = (() => {
     svg.append(swarm);
   }
 
+  // A sheet of the sky in front of the moon and behind the ridges, in the
+  // drawing's units: a <div class="layer world"> (for the parallax) holding
+  // one <svg> per part, each in a <div> of its own that CSS can move cheaply.
+  function sheet(host, depth, name) {
+    const wrap = document.createElement('div');
+    wrap.className = `layer world ${name}`;
+    if (depth != null) wrap.dataset.depth = depth;
+    // Behind the ridges, in front of the moon.
+    const moonSvg = [...host.children].find(child => child.classList.contains('moon-sky'));
+    host.insertBefore(wrap, moonSvg ? moonSvg.nextSibling : host.querySelector('.ridge') || host.querySelector('.scene__embers'));
+    return part => {
+      const holder = document.createElement('div');
+      holder.className = `${name}__part`;
+      const svg = node('svg', { class: 'layer ridge', viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'xMidYMax slice', focusable: 'false' });
+      const defs = node('defs');
+      svg.append(defs);
+      holder.append(svg);
+      wrap.append(holder);
+      if (part) holder.style.animationDelay = `${part}s`;
+      return { svg, defs };
+    };
+  }
+
+  // Northern lights: curtains of light across the sky, each a row of thin
+  // strips that fade upwards, softened by a blur. Each curtain sways on its
+  // own (CSS: .aurora__part).
+  //   { depth, bands: [{ y, amp, height, seed, color, from, to, blur }] }
+  function aurora(host, { depth, bands }) {
+    const add = sheet(host, depth, 'aurora');
+    bands.forEach((band, index) => {
+      const { svg, defs } = add(-index * 6.5);
+      const id = ++uid;
+      defs.append(gradient('linear', `curtain-${id}`, { x1: 0, y1: 1, x2: 0, y2: 0 }, [[0, band.color, 0.9], [0.14, band.color, 0.55], [0.5, band.color, 0.16], [1, band.color, 0]]));
+      const blur = node('filter', { id: `soft-${id}`, x: '-5%', y: '-20%', width: '110%', height: '140%' });
+      blur.append(node('feGaussianBlur', { stdDeviation: band.blur || 2.4 }));
+      defs.append(blur);
+      const curtain = node('g', { filter: `url(#soft-${id})`, fill: `url(#curtain-${id})` });
+      const course = noise(random(band.seed));
+      const fold = noise(random(band.seed + 7));
+      const from = band.from ?? -MARGIN;
+      const to = band.to ?? W + MARGIN;
+      for (let x = from; x < to; x += 4) {
+        const y = band.y + (course(x / 300) - 0.5) * band.amp * 2 + (course(x / 60 + 40) - 0.5) * band.amp * 0.3;
+        const tall = band.height * (0.4 + fold(x / 34) * 0.8);
+        const fade = smooth(from, from + 260, x) * (1 - smooth(to - 260, to, x));
+        const strip = node('rect', { x: f(x), y: f(y - tall), width: 4.6, height: f(tall) });
+        strip.style.opacity = f(fade * (0.2 + fold(x / 13 + 9) ** 1.5 * 0.8));
+        curtain.append(strip);
+      }
+      svg.append(curtain);
+    });
+  }
+
+  // Long clouds, dark above and lit from below by a low sun; they drift a
+  // little (CSS: .clouds__part).
+  //   { depth, clouds: [[x, y, width, height, seed], ...] }
+  function clouds(host, { depth, clouds: list }) {
+    const add = sheet(host, depth, 'clouds');
+    list.forEach(([cx, cy, width, height, seed], index) => {
+      const { svg, defs } = add(-index * 11);
+      const id = ++uid;
+      defs.append(gradient('linear', `cloud-${id}`, { x1: 0, y1: 0, x2: 0, y2: 1 }, [[0, 'var(--cloud)', 0.15], [0.45, 'var(--cloud)', 0.7], [0.82, 'var(--cloud-lit)', 0.85], [1, 'var(--cloud-rim)', 0.95]]));
+      const rand = random(seed);
+      // Puffs along a long streak, thinning towards both ends, on a thin foot.
+      let d = '';
+      const puffs = 8 + Math.floor(rand() * 5);
+      for (let i = 0; i < puffs; i++) {
+        const share = (i / (puffs - 1)) * 2 - 1;
+        const taper = 1 - Math.abs(share) ** 1.5 * 0.75;
+        const rx = width * (0.06 + rand() * 0.07);
+        const ry = height * (0.4 + rand() * 0.5) * taper;
+        d += ellipse(cx + share * width * 0.44 + (rand() - 0.5) * width * 0.04, cy - ry * 0.4 + (rand() - 0.5) * height * 0.25, rx, ry);
+      }
+      d += ellipse(cx + (rand() - 0.5) * width * 0.1, cy + height * 0.12, width * 0.5, height * 0.16);
+      const blur = node('filter', { id: `haze-${id}`, x: '-5%', y: '-50%', width: '110%', height: '200%' });
+      blur.append(node('feGaussianBlur', { stdDeviation: 1.4 }));
+      defs.append(blur);
+      svg.append(node('path', { d, fill: `url(#cloud-${id})`, filter: `url(#haze-${id})` }));
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Figures: friends at the fire, their animals, a tent, an old tree.
   //
@@ -413,9 +662,14 @@ window.FamulusScene = (() => {
   //   ['line', points, width]   a staff, a haft, a string
   //   ['curve', d, width]       a bow
   //   ['path', d]
-  //   ['glow', x, y, r, name]   a light of its own: a crystal, an owl's eyes;
-  //                             name: a class for it, to animate it (CSS)
-  //   ['lit', points, opacity]  firelight inside, as in a tent
+  //   ['glow', x, y, r, name, light]  a light of its own: a crystal, an owl's
+  //                             eyes; name: a class for it, to animate it
+  //                             (CSS); light: 'fire' (default) or 'magic'
+  //   ['lit', points, opacity, light]  light inside, as in a tent or a window
+  //   ['flag', x, y, size]      a pennant on a pole at (x, y), waving (CSS)
+  //   ['beam', x, y, width, height]  a shaft of magic light rising
+  //   ['ring', x, y, rx, ry, width]  a ring of runes circling (CSS)
+  //   ['fall', x, y, width, height]  water falling from (x, y)
   // ---------------------------------------------------------------------------
 
   // A smooth closed outline through points (Catmull-Rom as cubic Béziers).
@@ -480,7 +734,187 @@ window.FamulusScene = (() => {
     ];
   }
 
+  // A pointed window or door, its sill at y: w wide, h tall.
+  function arch(x, y, w, h) {
+    return [[x - w / 2, y], [x - w / 2, y - h + w * 0.6], [x, y - h], [x + w / 2, y - h + w * 0.6], [x + w / 2, y]];
+  }
+
+  // A round arch, its sill at y: w wide, h tall.
+  function round(x, y, w, h) {
+    const points = [[x - w / 2, y]];
+    for (let i = 0; i <= 12; i++) {
+      const angle = Math.PI - (i / 12) * Math.PI;
+      points.push([x + (Math.cos(angle) * w) / 2, y - h + w / 2 - (Math.sin(angle) * w) / 2]);
+    }
+    points.push([x + w / 2, y]);
+    return points;
+  }
+
+  // A wall from x0 to x1 with merlons on top: its walk at y, a merlon about
+  // `size` wide, the wall's foot at `foot`.
+  function crenels(x0, x1, y, size, foot = 2) {
+    let n = Math.max(3, Math.round((x1 - x0) / size));
+    if (n % 2 === 0) n += 1;
+    const step = (x1 - x0) / n;
+    const points = [[x0, foot]];
+    for (let i = 0; i < n; i++) {
+      const top = i % 2 ? y : y - step * 0.9;
+      points.push([x0 + i * step, top], [x0 + (i + 1) * step, top]);
+    }
+    points.push([x1, foot]);
+    return points;
+  }
+
+  // A round tower seen from the side: w wide, its wall h tall, a steep
+  // roof that flares at the eaves, and a pennant if flag is its size.
+  function spire(x, w, h, roof, { flag, foot = 2, flare = 0.22 } = {}) {
+    const parts = [
+      ['poly', [[x - w / 2, foot], [x - w / 2, -h], [x + w / 2, -h], [x + w / 2, foot]]],
+      ['blob', [[x - w / 2 - w * flare, -h + 3, 1], [x - w * 0.15, -h - roof * 0.5], [x, -h - roof, 1], [x + w * 0.15, -h - roof * 0.5], [x + w / 2 + w * flare, -h + 3, 1]]],
+    ];
+    if (flag) parts.push(['line', [[x, -h - roof + 2], [x, -h - roof - flag * 3]], 1.4], ['flag', x, -h - roof - flag * 3, flag]);
+    return parts;
+  }
+
+  // A small glowing mushroom: stem and a cap that shines.
+  function mushroom(x, h, r) {
+    const cap = [[x - r, -h + 1]];
+    for (let i = 0; i <= 8; i++) {
+      const angle = Math.PI - (i / 8) * Math.PI;
+      cap.push([x + Math.cos(angle) * r, -h - Math.sin(angle) * r * 0.62]);
+    }
+    cap.push([x + r, -h + 1]);
+    return [
+      ['limb', [[x, 1, r * 0.42], [x + r * 0.15, -h, r * 0.32]]],
+      ['lit', cap, 0.95, 'magic'],
+      ['glow', x, -h - r * 0.3, r * 0.42, null, 'magic'],
+    ];
+  }
+
+  const leaf = random(404);
+
   const FIGURES = {
+    // A wizard's tower on a crag: a shaft that narrows upwards, ledges, a
+    // turret on its side, a balcony, the lit chamber at the top with a ring
+    // of runes circling it, and a crooked spire that sends a beam skywards.
+    tower: [
+      ['blob', [[-96, 6, 1], [-72, -12], [-48, -30], [-20, -40], [12, -42], [40, -34], [62, -18], [98, 6, 1]]],
+      ['poly', [[-46, -26], [-31, -98], [-22, -98], [-22, -26]]],
+      ['poly', [[46, -26], [31, -98], [22, -98], [22, -26]]],
+      ['poly', [[-30, -30], [-21, -300], [21, -300], [30, -30]]],
+      ['poly', [[-36, -116], [36, -116], [32, -128], [-32, -128]]],
+      ['poly', [[-30, -214], [30, -214], [27, -224], [-27, -224]]],
+      ['poly', [[-24, -146], [-48, -152], [-46, -226], [-24, -226]]],
+      ['blob', [[-57, -222, 1], [-42, -236], [-37, -276, 1], [-30, -236], [-15, -222, 1]]],
+      ['poly', [[-48, -298], [48, -298], [48, -307], [-48, -307]]],
+      ['poly', [[-21, -274], [-48, -298], [-21, -298]]],
+      ['poly', [[21, -274], [48, -298], [21, -298]]],
+      ['poly', [[-28, -306], [-31, -356], [31, -356], [28, -306]]],
+      ['poly', [[-46, -352], [46, -352], [37, -366], [-37, -366]]],
+      ['blob', [[-40, -364, 1], [-16, -392], [-6, -432], [8, -464], [32, -494, 1], [14, -454], [10, -414], [18, -386], [40, -364, 1]]],
+      ['lit', arch(0, -70, 10, 22), 0.85, 'magic'],
+      ['lit', arch(0, -160, 8, 18), 0.85, 'magic'],
+      ['lit', arch(-36, -184, 6, 14), 0.8, 'magic'],
+      ['lit', arch(0, -246, 8, 18), 0.85, 'magic'],
+      ['lit', arch(-17, -314, 8, 28), 1, 'magic'],
+      ['lit', arch(0, -314, 8, 28), 1, 'magic'],
+      ['lit', arch(17, -314, 8, 28), 1, 'magic'],
+      ['ring', 0, -330, 70, 13, 1.8],
+      ['beam', 32, -496, 4, 520],
+      ['glow', 32, -496, 3.6, null, 'magic'],
+    ],
+    // A castle on its rock: a crenellated curtain wall between two towers, the
+    // keep behind it, slender towers with steep roofs and pennants, lit
+    // windows, the gate open.
+    keep: [
+      ['blob', [[-210, 10, 1], [-172, -8], [-110, -16], [0, -20], [110, -14], [172, -6], [214, 10, 1]]],
+      ['poly', crenels(-150, 150, -62, 10)],
+      ...spire(-150, 30, 112, 62),
+      ...spire(150, 34, 124, 70, { flag: 7 }),
+      ['poly', crenels(-78, 38, -146, 8)],
+      ...spire(-104, 22, 160, 54),
+      ...spire(66, 30, 190, 84, { flag: 6 }),
+      ...spire(-22, 44, 238, 118, { flag: 9 }),
+      ['lit', arch(-22, -168, 7, 16), 0.9],
+      ['lit', arch(-22, -204, 7, 16), 0.9],
+      ['lit', arch(-62, -104, 6, 13), 0.85],
+      ['lit', arch(-44, -104, 6, 13), 0.6],
+      ['lit', arch(14, -104, 6, 13), 0.85],
+      ['lit', arch(66, -154, 6, 15), 0.9],
+      ['lit', arch(-150, -80, 5, 12), 0.75],
+      ['lit', arch(150, -94, 5, 13), 0.85],
+      ['lit', arch(-104, -130, 5, 11), 0.8],
+    ],
+    // A hold of the mountain folk: two square towers with braziers burning
+    // on their tops, between them a gabled front with a great round gate
+    // full of light, and a broad stair.
+    hold: [
+      ['blob', [[-200, 10, 1], [-160, -6], [-80, -12], [0, -14], [80, -12], [160, -6], [204, 10, 1]]],
+      ['poly', [[-58, 2], [-58, -4], [-50, -4], [-50, -8], [-42, -8], [-42, -12], [42, -12], [42, -8], [50, -8], [50, -4], [58, -4], [58, 2]]],
+      ['poly', [[-78, -10], [-74, -150], [74, -150], [78, -10]]],
+      ['poly', [[-90, -144], [90, -144], [90, -154], [-90, -154]]],
+      ['poly', [[-86, -152], [0, -200], [86, -152]]],
+      ['poly', [[-142, -6], [-138, -222], [-86, -222], [-82, -6]]],
+      ['poly', crenels(-148, -76, -228, 9, -216)],
+      ['poly', [[-126, -236], [-98, -236], [-103, -248], [-121, -248]]],
+      ['poly', [[82, -6], [86, -222], [138, -222], [142, -6]]],
+      ['poly', crenels(76, 148, -228, 9, -216)],
+      ['poly', [[98, -236], [126, -236], [121, -248], [103, -248]]],
+      ['lit', round(0, -12, 56, 108), 0.34],
+      ['lit', round(0, -12, 40, 92), 0.26],
+      ['lit', round(0, -12, 22, 70), 0.3],
+      ['lit', [[-114, -118], [-108, -118], [-108, -142], [-114, -142]], 0.8],
+      ['lit', [[-114, -170], [-108, -170], [-108, -192], [-114, -192]], 0.7],
+      ['lit', [[108, -118], [114, -118], [114, -142], [108, -142]], 0.8],
+      ['lit', [[108, -170], [114, -170], [114, -192], [108, -192]], 0.7],
+      ['lit', [[-30, -164], [30, -164], [30, -168], [-30, -168]], 0.5],
+      ['glow', -112, -254, 8, 'flicker'],
+      ['glow', 112, -254, 8, 'flicker'],
+    ],
+    // An island of rock floating in the air, trees on it, a stream falling
+    // off its edge.
+    isle: [
+      ['blob', [[-66, 0, 1], [-42, -7], [-14, -5], [14, -9], [42, -6], [68, 0, 1], [56, 10], [40, 16], [32, 30], [20, 48], [12, 70], [4, 104, 1], [-6, 74], [-14, 52], [-24, 38], [-40, 22], [-56, 10]]],
+      ['path', pine(-38, -1, 56, 22, leaf)],
+      ['path', pine(-22, -2, 36, 16, leaf)],
+      ['path', broadleaf(26, -4, 50, leaf)],
+      ['line', [[-30, 18], [-37, 38], [-34, 50]], 1.4],
+      ['line', [[-10, 40], [-14, 58]], 1.1],
+      ['line', [[28, 26], [33, 46]], 1.2],
+      ['lit', [[-64, -0.5], [-42, -7.5], [-14, -5.5], [14, -9.5], [42, -6.5], [66, -0.5], [42, -3.5], [14, -6], [-14, -2.5], [-42, -4.5]], 0.5, 'magic'],
+      ['fall', 60, -1, 6, 320],
+    ],
+    // A waterfall pouring over a ledge of rock and down the mountain.
+    cascade: [
+      ['blob', [[-26, 4, 1], [-20, -6], [-6, -10], [10, -8], [24, 4, 1]]],
+      ['fall', 4, -6, 7, 200],
+      ['glow', 4, -5, 2.2],
+    ],
+    // A smaller one, a pine and a bush on it.
+    rock: [
+      ['blob', [[-36, 0, 1], [-14, -5], [8, -3], [36, 0, 1], [26, 10], [16, 24], [8, 40], [0, 60, 1], [-8, 38], [-18, 22], [-28, 10]]],
+      ['path', pine(-12, -2, 32, 13, leaf)],
+      ['path', bush(14, -2, 14, leaf)],
+      ['lit', [[-34, -0.5], [-14, -5.5], [8, -3.5], [34, -0.5], [8, -1.5], [-14, -3]], 0.45, 'magic'],
+    ],
+    // A cluster of glowing mushrooms.
+    shrooms: [
+      ...mushroom(0, 17, 9),
+      ...mushroom(15, 10, 6),
+      ...mushroom(-12, 7, 5),
+    ],
+    // A moonwell: a stone basin of shining water between two slender
+    // pillars that curl inwards like crescents, a pale beam above it.
+    well: [
+      ['poly', [[-50, 2], [-44, -12], [44, -12], [50, 2]]],
+      ['poly', [[-46, -10], [-43, -84], [-35, -84], [-34, -10]]],
+      ['path', 'M-50 -82C-52 -104 -36 -116 -18 -112C-32 -108 -40 -98 -36 -82Z'],
+      ['poly', [[46, -10], [43, -84], [35, -84], [34, -10]]],
+      ['path', 'M50 -82C52 -104 36 -116 18 -112C32 -108 40 -98 36 -82Z'],
+      ['beam', 0, -16, 6, 520],
+      ['lit', [[-38, -12], [-30, -17], [30, -17], [38, -12]], 0.95, 'magic'],
+      ['glow', 0, -16, 7, null, 'magic'],
+    ],
     // A warrior on a boulder: horned helm, spiked pauldron, a beard, a mug
     // held out to the fire, the axe planted behind.
     warrior: [
@@ -666,37 +1100,80 @@ window.FamulusScene = (() => {
     if (kind === 'circle') return node('path', { d: circle(...args) });
     if (kind === 'line') return stroke(`M${args[0].map(([x, y]) => `${f(x)} ${f(y)}`).join('L')}`, args[1]);
     if (kind === 'curve') return stroke(args[0], args[1]);
+    if (kind === 'flag') {
+      const [x, y, s] = args;
+      return node('path', { class: 'pennant', d: `M${f(x)} ${f(y)}C${f(x + s * 0.6)} ${f(y - s * 0.15)} ${f(x + s)} ${f(y + s * 0.1)} ${f(x + s * 1.9)} ${f(y + s * 0.3)}C${f(x + s)} ${f(y + s * 0.5)} ${f(x + s * 0.6)} ${f(y + s * 0.8)} ${f(x)} ${f(y + s * 0.75)}Z` });
+    }
     return node('path', { d: args[0] });
+  }
+
+  const LIGHTS = new Set(['glow', 'lit', 'beam', 'ring', 'fall']);
+
+  // One of a figure's own lights (see the list above FIGURES).
+  function shine([kind, ...args], id) {
+    const tone = light => (light === 'magic' ? ['magic', 'var(--magic)', 'var(--magic2)'] : ['spark', 'var(--accent)', 'var(--accent2)']);
+    if (kind === 'lit') {
+      const [points, opacity, light] = args;
+      const element = node('path', { d: poly(points) });
+      element.style.fill = tone(light)[1];
+      element.style.opacity = opacity;
+      return element;
+    }
+    if (kind === 'glow') {
+      const [gx, gy, r, name, light] = args;
+      const [halo, , core] = tone(light);
+      const glow = node('g', name ? { class: name } : {});
+      glow.append(node('circle', { cx: gx, cy: gy, r: r * 4.5, fill: `url(#${halo}-${id})` }));
+      const dot = node('circle', { cx: gx, cy: gy, r });
+      dot.style.fill = core;
+      glow.append(dot);
+      return glow;
+    }
+    if (kind === 'beam') {
+      const [bx, by, w, h] = args;
+      const beam = node('g', { class: 'beam' });
+      for (const [spread, opacity] of [[5, 0.35], [2.4, 0.6], [1, 1]]) {
+        const shaft = node('path', { d: poly([[bx - (w * spread) / 2, by], [bx - w * spread * 1.4, by - h], [bx + w * spread * 1.4, by - h], [bx + (w * spread) / 2, by]]), fill: `url(#beam-${id})` });
+        shaft.style.opacity = opacity;
+        beam.append(shaft);
+      }
+      return beam;
+    }
+    if (kind === 'ring') {
+      const [cx, cy, rx, ry, w] = args;
+      const ring = node('ellipse', { class: 'ring', cx, cy, rx, ry, fill: 'none', 'stroke-width': w });
+      ring.style.stroke = 'var(--magic2)';
+      return ring;
+    }
+    // A fall of water: a sheet that fades towards its foot, streaks running
+    // down it (CSS: .fall__flow).
+    const [fx, fy, w, h] = args;
+    const fall = node('g', { class: 'fall' });
+    fall.append(node('path', { d: poly([[fx - w / 2, fy], [fx + w / 2, fy], [fx + w * 0.9, fy + h], [fx - w * 0.9, fy + h]]), fill: `url(#fall-${id})` }));
+    for (const [share, delay] of [[-0.25, 0], [0.2, -0.5]]) {
+      const flow = node('path', { class: 'fall__flow', d: `M${f(fx + share * w)} ${f(fy)}L${f(fx + share * w * 1.6)} ${f(fy + h * 0.8)}`, fill: 'none', 'stroke-width': f(w * 0.28) });
+      flow.style.stroke = 'var(--water)';
+      flow.style.animationDelay = `${delay}s`;
+      fall.append(flow);
+    }
+    return fall;
   }
 
   // One figure at (x, y), size k, looking right (facing 1) or left (-1).
   // Returns its silhouette (a <g> to show or to <use>) and, if it has any,
-  // its own lights (a <g> for in front of it).
+  // its own lights (a <g> for in front of it). The lights' gradients are
+  // made by lightDefs(defs, id).
   function figure(parts, x, y, k, facing, id) {
     const transform = `translate(${f(x)} ${f(y)}) scale(${f(k * facing)} ${f(k)})`;
     const body = node('g', { id: `figure-${++uid}`, transform, fill: 'currentColor' });
     let lights = null;
     for (const piece of parts) {
-      const [kind, ...args] = piece;
-      if (kind !== 'glow' && kind !== 'lit') {
+      if (!LIGHTS.has(piece[0])) {
         body.append(part(piece));
         continue;
       }
       lights = lights || node('g', { transform });
-      if (kind === 'lit') {
-        const light = node('path', { d: poly(args[0]) });
-        light.style.fill = 'var(--accent)';
-        light.style.opacity = args[1];
-        lights.append(light);
-      } else {
-        const [gx, gy, r, name] = args;
-        const glow = name ? node('g', { class: name }) : lights;
-        glow.append(node('circle', { cx: gx, cy: gy, r: r * 4.5, fill: `url(#spark-${id})` }));
-        const core = node('circle', { cx: gx, cy: gy, r });
-        core.style.fill = 'var(--accent2)';
-        glow.append(core);
-        if (glow !== lights) lights.append(glow);
-      }
+      lights.append(shine(piece, id));
     }
     return { body, lights };
   }
@@ -757,10 +1234,10 @@ window.FamulusScene = (() => {
     defs.append(
       gradient('radial', `pool-${id}`, {}, [[0, 'var(--accent)', 0.42], [0.45, 'var(--accent)', 0.13], [1, 'var(--accent)', 0]]),
       gradient('radial', `halo-${id}`, {}, [[0, 'var(--accent)', 0.42], [0.3, 'var(--accent)', 0.12], [1, 'var(--accent)', 0]]),
-      gradient('radial', `spark-${id}`, {}, [[0, 'var(--accent2)', 0.75], [0.3, 'var(--accent)', 0.22], [1, 'var(--accent)', 0]]),
       gradient('linear', `flame-${id}`, { x1: 0, y1: 0, x2: 0, y2: 1 }, [[0, 'var(--accent2)'], [0.45, 'var(--accent)'], [1, 'var(--flame-base)']]),
     );
 
+    lightDefs(defs, id);
     const group = node('g', { class: 'camp' });
     const { back, front } = fireplace(x, y, k, id);
     const rows = { back: node('g'), near: node('g') };
@@ -860,16 +1337,41 @@ window.FamulusScene = (() => {
     }
   }
 
+  // Snowflakes drifting down, CSS only, in a layer of their own in front of
+  // the ridges.
+  function snow(host, count) {
+    const rand = random(61);
+    const layer = document.createElement('div');
+    layer.className = 'layer world scene__snow';
+    layer.dataset.depth = 0.8;
+    for (let i = 0; i < count; i++) {
+      const flake = document.createElement('i');
+      const near = rand() < 0.25;
+      flake.style.cssText = [
+        `left:${(rand() * 104 - 2).toFixed(2)}%`,
+        `--size:${(near ? 2.6 + rand() * 1.6 : 1.1 + rand() * 1.4).toFixed(1)}px`,
+        `--o:${(near ? 0.8 : 0.35 + rand() * 0.4).toFixed(2)}`,
+        `--fall:${(100 + rand() * 20).toFixed(0)}vh`,
+        `--drift:${((rand() - 0.3) * 12).toFixed(1)}vw`,
+        `--time:${(near ? 9 + rand() * 5 : 16 + rand() * 12).toFixed(1)}s`,
+        `animation-delay:${(-rand() * 28).toFixed(1)}s`,
+      ].join(';');
+      layer.append(flake);
+    }
+    host.insertBefore(layer, host.querySelector('.scene__embers'));
+  }
+
   // Depth for everything in `hero` that carries data-depth: far layers stay
   // behind while the page scrolls, near ones follow the pointer more. Draws
   // only when something changed and only while the hero is on screen.
   function parallax(hero) {
     // Asked for whenever it matters: the setting can change while the page is open.
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
-    const layers = [...hero.querySelectorAll('[data-depth]')].map(element => ({
+    const collect = () => [...hero.querySelectorAll('[data-depth]')].map(element => ({
       element,
       depth: parseFloat(element.dataset.depth),
     }));
+    let layers = collect();
     const copy = hero.querySelector('.hero__copy');
     const target = { x: 0, y: 0 };
     const now = { x: 0, y: 0 };
@@ -925,7 +1427,15 @@ window.FamulusScene = (() => {
       if (visible) request();
     }).observe(hero);
     request();
+    return {
+      // The scene was drawn anew: find its layers again.
+      refresh() {
+        layers = collect();
+        now.x = now.y = 0;
+        request();
+      },
+    };
   }
 
-  return { build, heightAt, place, pan, stars, embers, parallax, moon };
+  return { build, heightAt, place, pan, stars, embers, snow, parallax, moon, aurora, clouds };
 })();
