@@ -147,8 +147,14 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
     bar, below it the number bar and "met …", with "at level N" in a line of its own
     below it so that the sentence does not wrap (the former second line
     "last together …" below it has been dropped since 2026-11-24, it repeated the online line; the
-    owner's request after a screenshot), buttons "Set alias" (`ns:EditAlias`) and "Forget"
-    (the cross on the rows has been dropped; a chat line says so). To the right of it scrolls a
+    owner's request after a screenshot), then at its foot one row of square icon buttons
+    (`button:SetIconOnly`, `PlaceButtons` in `UI/Fellows.lua`), each named by the game's tooltip
+    under the mouse. "Whisper" (speech bubble, 40 px, in the accent; see "Whisper" below) stands
+    on the card's middle axis like everything above it; "Set alias" (tag, `ns:EditAlias`) to its
+    left, "Forget" (bin; the cross on the rows has been dropped; a chat line says so) to its
+    right, both 34 px and outlined; "In the chronicle" (flag, only if there is one) left of the
+    alias, so the row is then one-sided. Without a whisper the rest is centred. With labels they
+    needed two rows. To the right of it scrolls a
     book (`UI.Book`, 560 wide; the owner's request after the first look in game: person
     on the left, book on the right instead of a wide header above a book that was too wide) with
     one chapter per play session as in the chronicle (since 2026-11-25, before that per day with
@@ -166,8 +172,8 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
     before the log, it stands in a last chapter of its own. Since 2026-11-24 it holds
     only shared things from its own daily log, nothing from the chronicle (see "Chronicle and
     fellow travellers"). If the chronicle has entries for the person (`ChronicleService.Who`, name
-    in any spelling) and it is switched on, the card carries, next to "Set alias", the button
-    "In the chronicle": it opens Chronicle › Friends, filtered to the person. Instead of the tabs,
+    in any spelling) and it is switched on, the card carries the button "In the chronicle"
+    (the flag): it opens Chronicle › Friends, filtered to the person. Instead of the tabs,
     "All fellow travellers" stands at the top; another tab, another page or closing closes
     the story.
   - **Layout of the profile card (the owner's decision, 2026-11-24, on the canvas
@@ -189,6 +195,15 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
     there are 32 px each between person, bond, numbers and meeting (`SECTION_GAP`,
     before 18 to 22), so that even a two-line "met …" ends well above the buttons.
     Neither has been seen in game yet.
+  - **Whisper (since 2026-11-27):** a speech bubble on every tile (top right, opposite the
+    rank), at the end of every row of the list, and on the card open the chat box with a
+    whisper to the person (`ChatService.Whisper`, `ChatFrameUtil.SendTell` as in "Nearby"); a
+    tooltip names it. Nothing is sent until the player writes. A click on the bubble does not open the
+    story. Fellow travellers may be strangers and offline; the game says so when the whisper is
+    sent. Without `ChatFrameUtil.SendTell` neither bubble nor button shows. The name is the stored
+    "First Last" without a realm, unlike "Nearby", which whispers the name as the friends list or
+    guild roster writes it, realm and all. **Open in game:** whether a whisper to "First Last"
+    reaches someone the lists write as "First Last-Realm".
   - The search still finds every person as a simple person row (`FellowItem`, `tab.search`).
     Under an alias the name stands in the second line. The class comes from
     `LOCALIZED_CLASS_NAMES_MALE`, so in the client's language.

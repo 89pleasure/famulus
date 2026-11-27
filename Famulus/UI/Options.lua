@@ -1395,6 +1395,7 @@ local function FellowPerson(guid, person, now)
         -- The card puts the player's level then on a line of its own: "at level 31".
         firstLevelText = first and tonumber(person.firstLevel) and L.ui_fellow_met_detail:format(tonumber(person.firstLevel)) or nil,
         sinceText =first and L.ui_fellow_since:format(DayTitle(DayKey(first))) or nil,
+        whisper = ns.ChatService.CanWhisper(),
     }
 end
 
@@ -1549,6 +1550,14 @@ FELLOW_ACTIONS = {
             if each.guid == guid then
                 ns:EditAlias(each.person.name)
             end
+        end
+    end,
+    -- The chat box opens with a whisper to them; they may be offline, then
+    -- the game says so when it is sent.
+    onWhisper = function(guid)
+        local person = ns.FellowService.Person(guid)
+        if person then
+            ns.ChatService.Whisper(person.name)
         end
     end,
     onForget = function(guid)

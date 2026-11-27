@@ -302,7 +302,11 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   reaction (live feed and the chronicle's book, since 2026-11-27): `UI.ReactionButton(parent,
   size, iconSize)` draws a rounded square with the icon, muted or lit (`accentDeep`, accent icon),
   `button:Set(icon, lit, count)` (with a count it widens), `button.over` and `button:Paint()` for
-  the hover tint; the scripts stay with its owner.
+  the hover tint; the scripts stay with its owner. A button that shows only its icon names
+  itself in the game's tooltip under the mouse (since 2026-11-27): `UI.Button(...,
+  variant, icon)` plus `button:SetIconOnly(size, iconSize)` before `SetLabel` (a square; the label becomes
+  the tooltip, `button.tip`), or `UI.IconButton` with `button.tip` set by its owner. The tooltip
+  goes when the mouse leaves or the button hides.
   All checked against the mock only; open in game are above all `SetGradient` on image textures
   (round corners of switch, button, logo), horizontal gradients and the strength of the glow effects.
 - **Shape:** round corners from quarter circles of `circle.tga` plus three rectangles (`UI.Round`,

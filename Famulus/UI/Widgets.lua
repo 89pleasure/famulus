@@ -501,9 +501,27 @@ function UI.Icon(parent, media, size, token, layer)
     return icon
 end
 
+-- The game's tooltip with one line, the name of a button that shows only its
+-- icon (button.tip); hidden again when the mouse leaves.
+local function ShowTip(button)
+    if button.tip then
+        GameTooltip:SetOwner(button, "ANCHOR_TOP")
+        GameTooltip:SetText(button.tip, 1, 1, 1)
+        GameTooltip:Show()
+    end
+end
+
+local function HideTip(button)
+    if GameTooltip.IsOwned and GameTooltip:IsOwned(button) then
+        GameTooltip:Hide()
+    end
+end
+
 ---------------------------------------------------------------------------
 -- Button. variant: "primary" (accent), "secondary" (outlined) or "ghost"
 -- (no ground until hovered). Optional icon in front of the label.
+-- button:SetIconOnly(size) makes it a square with the icon alone; the label
+-- then names it in a tooltip under the mouse.
 ---------------------------------------------------------------------------
 
 function UI.Button(parent, onClick, variant, icon)
@@ -543,7 +561,10 @@ function UI.Button(parent, onClick, variant, icon)
         local labelWidth = label:GetStringWidth()
         local iconWidth = button.icon and 20 or 0
         local width = labelWidth + iconWidth
-        if button.icon then
+        if button.iconOnly then
+            button.icon:ClearAllPoints()
+            button.icon:SetPoint("CENTER", 0, -pushed)
+        elseif button.icon then
             button.icon:ClearAllPoints()
             button.icon:SetPoint("LEFT", button, "CENTER", -width / 2, -pushed)
             label:ClearAllPoints()
@@ -561,6 +582,9 @@ function UI.Button(parent, onClick, variant, icon)
         local padding = self.padding or (variant == "ghost" and 20 or 28)
         local minimum = variant == "ghost" and 0 or 84
         local width = math.max(minimum, label:GetStringWidth() + (self.icon and 20 or 0) + padding)
+        if self.iconOnly then
+            width, self.tip = self.iconOnly, text
+        end
         self:SetWidth(width)
         if face then
             -- The gradient needs the final size; it changes with the label.
@@ -569,6 +593,16 @@ function UI.Button(parent, onClick, variant, icon)
             face:SetGradient("HORIZONTAL", "accent", "accent2", width, height)
         end
         Layout()
+    end
+
+    -- A square of `size` with the icon alone (the button needs one; iconSize
+    -- 16 unless given); call it before SetLabel, which then names the button
+    -- in its tooltip.
+    function button:SetIconOnly(size, iconSize)
+        self.iconOnly = size
+        self:SetSize(size, size)
+        self.icon:SetSize(iconSize or 16, iconSize or 16)
+        label:Hide()
     end
 
     -- Colour of label and icon, e.g. "danger" while asking for confirmation.
@@ -596,10 +630,14 @@ function UI.Button(parent, onClick, variant, icon)
         if not self.disabled then
             hover:Fade(true)
         end
+        ShowTip(self)
     end)
-    button:SetScript("OnLeave", function()
+    button:SetScript("OnLeave", function(self)
         hover:Fade(false)
+        HideTip(self)
     end)
+    -- A click that hides it (forget, a page change) takes its tooltip along.
+    button:HookScript("OnHide", HideTip)
     button:SetScript("OnMouseDown", function(self)
         if not self.disabled then
             pushed = 1
@@ -619,7 +657,8 @@ function UI.Button(parent, onClick, variant, icon)
     return button
 end
 
--- Small square button showing one of the media icons.
+-- Small square button showing one of the media icons; button.tip names it in
+-- a tooltip under the mouse.
 function UI.IconButton(parent, media, onClick, size)
     size = size or 26
     local button = CreateFrame("Button", nil, parent)
@@ -632,14 +671,17 @@ function UI.IconButton(parent, media, onClick, size)
     function button:SetIcon(name)
         icon:SetTexture(UI.media[name])
     end
-    button:SetScript("OnEnter", function()
+    button:SetScript("OnEnter", function(self)
         hover:Fade(true)
         UI.Tint(icon, "text")
+        ShowTip(self)
     end)
-    button:SetScript("OnLeave", function()
+    button:SetScript("OnLeave", function(self)
         hover:Fade(false)
         UI.Tint(icon, "textMuted")
+        HideTip(self)
     end)
+    button:HookScript("OnHide", HideTip)
     button:SetScript("OnClick", onClick)
     return button
 end
