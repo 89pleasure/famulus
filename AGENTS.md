@@ -293,7 +293,7 @@ rm -f dist/Famulus-*.zip && /c/Windows/System32/tar.exe -a -c -f dist/Famulus-0.
 - Add new Lua files to the `.toc`; the test fails if a file in the addon folder is missing there.
   It also counts the features (`total == 11`); adjust the number with a new feature.
 - Repository: `github.com/89pleasure/famulus` (public, as of 2026-11-24; until 2026-11-19
-  `schnitzel`), branch `main`. Commits as `89pleasure <89pleasure@proton.me>`; `user.name` is set
+  `schnitzel`), branch `main`. Commits as `89pleasure <89lenni+github@posteo.com>`; `user.name` is set
   only locally in this repo.
 - The owner appears alone: no `Co-Authored-By: Claude …` line in commits and no "Generated with
   Claude Code" or the like in PRs, issues or comments, not even in contributions to other repos
