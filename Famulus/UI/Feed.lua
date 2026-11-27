@@ -4,7 +4,7 @@
 -- fellow travellers show theirs here too (who is nearby).
 --
 --   UI.Feed.Show(story, seconds)   -- story: as for the book (UI/Book.lua); the card
---                                     reads chip (whose it is: { text, class }),
+--                                     reads chip (whose it is: { text }),
 --                                     title (what happened, without name and place)
 --                                     and detail (where, and what else to say)
 --   UI.Feed.Chime()                -- the cards' sound, once for cards that come together

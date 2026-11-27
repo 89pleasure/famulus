@@ -114,9 +114,8 @@ picture-book look are built and checked against the mock only.
     levels, the number; death and boss have fixed hues of their own, the rest follows the colour
     scheme. The player's own level-up is the milestone: larger card, accent border, accent mark
     on the left (the glow has been gone since the alignment with the options cards).
-  - Events of companions and of the player's own other characters carry a mark with the
-    initial; since 2026-11-24 the class icon as soon as the class is known (see
-    "Class and name" below).
+  - Every card names whose event it is in its strip, by name alone (see "Strip with name and
+    time" below; until 2026-11-27 with the class icon, see "Class and name").
   - Headings and the level number are in the game's book font, read from the font object
     `QuestTitleFont` (`UI.SetDisplayFont`), so that every language gets its file; if the object
     is missing, the window uses Inter. `QuestTitleFont` exists in the Forever client
@@ -130,7 +129,7 @@ picture-book look are built and checked against the mock only.
      "Weighting"). `ChronicleService.Text(entry, true)` returns
      the heading without the name; since 2026-11-27 the live feed too names the person in a
      head row of its own (see "Three rows" under "Live feed"); `story.fullTitle` is gone.
-     Since 2026-11-24 with class icon and "Alias (character name)", see "Class and name".
+     Since 2026-11-24 as "Alias (character name)", see "Class and name".
   2. **Icons fill the frame:** The frame now has only slightly rounded corners (5 px), the icon
      sits two pixels from the edge and is cropped more (10 % per side), so that the black
      built-in border of the game icons disappears.
@@ -165,15 +164,16 @@ picture-book look are built and checked against the mock only.
     (riding). Picture 56 px. The previous milestone look: accent border, accent mark on the left,
     heading 15 px semibold. Implemented literally by kind: level-ups and bosses of friends
     are heavy too (before, only the player's own level-up).
-  - **Structure next to the picture:** head, content, foot. The head names the person (class
-    icon, otherwise initial, and `ChronicleService.Label`); for the player's own events there is
-    none. Since 2026-11-25 (the owner's request) it is a row of its own above picture and text,
-    flush with the picture, no longer above the text to the right of the picture; the row is a
-    sunken strip across the full card width like the name at the bottom used to be (`sunken`,
-    rounded at the top, a fine line at the bottom, 28 px tall, class icon 18 px).
+  - **Structure next to the picture:** head, content, foot. The head names the person
+    (`ChronicleService.Label`). Since 2026-11-25 (the owner's request) it is a row of its own
+    above picture and text, flush with the picture, no longer above the text to the right of the
+    picture; the row is a sunken strip across the full card width like the name at the bottom
+    used to be (`sunken`, rounded at the top, a fine line at the bottom, 28 px tall).
   - **Strip with name and time, dots without icon:** The strip stands on every card of the
     chronicle, for the player's own events with the name of their own character
-    (`ChronicleService.Character`, class from `ChronicleService.Class`; set in `ChronicleRun`).
+    (`ChronicleService.Character`; set in `ChronicleRun`). The name starts at the card's inner
+    edge, above the picture's left edge, in `textDim`, a step brighter than the time in
+    `textMuted`; `story.chip` is `{ text }` alone.
     Right-aligned in it the time (`story.when`), for a bundle the first and the last
     ("20:02 – 21:14"). The name runs up to the time and is cut off there; it is anchored to the
     time instead of given a measured width, so it follows when the font loads late (see "Font"
@@ -183,10 +183,13 @@ picture-book look are built and checked against the mock only.
     room from the place: a light card is 222 px wide, which left about 106 px beside the
     reaction button for "21:18 · Rotkammgebirge" (seen cut off in game). With a bundle's span
     the name gets less room; the alias stays readable, the brackets go first.
-    The circle with the initial to the left of the name is gone:
-    on the left stands the class icon where the class is known, otherwise the name starts at the
-    edge (the assistant's decision: literally "the initial icon can go", the class icon
-    stays). The dots on the line are glowing dots in accent colour like the former
+    **No class icon (since 2026-11-27):** first the circle with the initial went (2026-11-25),
+    then the class icon (18 px) that stood left of the name: in game it was hardly more than a
+    dark speck and pushed the name off the picture's edge. Tried and dropped the same day: the
+    name in the accent. It became the loudest thing on every card, louder than the headline,
+    took the accent's meaning ("active / here": the milestones' border, a given reaction) and
+    did not tell people apart, every name being the same yellow. The rail keeps its class
+    icons. The dots on the line are glowing dots in accent colour like the former
     "x of y active" display (`UI.GlowDot`, glow three times the size of the dot), in
     all books, so also with the fellow travellers (book design). The book sets the size by
     weight (`DOTS`: light 5, medium 7, heavy 9 px; without weight medium, with `big`
@@ -591,9 +594,11 @@ picture-book look are built and checked against the mock only.
 - **Class and name (the owner's request, 2026-11-24; checked against the mock only):** Next to
   a friend's name stood a circle with the initial; now the game's class icon stands there
   (`UI-Classes-Circles`, `UI.ClassIcon`/`UI.SetClass` in `UI/Widgets.lua`, which the fellow
-  travellers' crest also uses): in the head of a card in the book and in the rail (list
-  "Friends", stats cards). If the class is unknown, the rail keeps the letter; in the book only
-  the name stands there since 2026-11-25. After an alias the character name stands in brackets,
+  travellers' crest also uses) in the rail (list "Friends", stats cards); if the class is
+  unknown, the rail keeps the letter. In the head of a card in the book it stood too until
+  2026-11-27; since then the name stands alone there (see "Strip with name and time"). The
+  player's own characters' classes are still read by the settings' picture of sharing (the
+  player's crest). After an alias the character name stands in brackets,
   "Papa (Borin Eisenbart)" (`ChronicleService.Label`), everywhere the chronicle names the
   person: strip, rail, filter line "Only events of …" and the sentences of the live feed. Without
   an alias only the name stands there.
@@ -626,7 +631,7 @@ picture-book look are built and checked against the mock only.
     friends who are online. Online/offline in the rail still comes from
     `ChronicleService.OnlineCheck`; that is two looks into the lists per build, deliberately not
     merged, so that `SocialService` stays at one question per function. This happens while
-    building the tab, before book and rail, so the
+    building the tab, before the rail, so the
     class is visible right away. No game event, no timer: without an open window nothing
     runs for it. Only remembered for people with an entry or stats; "My journey" does not
     look. Not checked in game: whether the client loads the guild roster by itself after login

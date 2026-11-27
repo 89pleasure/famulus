@@ -115,7 +115,8 @@ the index there says which file it is in.
   the cards show it.
 - **Class icon and character name in the chronicle (2026-11-24, checked against the mock only, not
   yet in game):** see "Class and name" under "Chronicle". Open in game: whether the class icons
-  in the strip (18 px) and in the rail (30 px) look clean, whether `className` from the
+  in the rail (30 px) look clean (in the book's strip they are gone since 2026-11-27: at 18 px
+  hardly more than a dark speck), whether `className` from the
   friends list in Forever matches `LOCALIZED_CLASS_NAMES_MALE`/`_FEMALE`.
 - **Fellow travellers' groups (2026-11-24, checked against the mock only, not yet in game):**
   see "Groups" under "Fellow travellers". Open in game: whether a group stays together across

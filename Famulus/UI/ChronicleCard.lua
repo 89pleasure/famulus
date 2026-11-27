@@ -9,7 +9,7 @@
 --       content = UI.ChronicleCard,
 --       weight = "low" or "medium" or "high", -- see WEIGHTS
 --       kind, texture, icon, number, count, item, spell, -- the picture (UI.SetBookPicture)
---       chip = { text = "Companion", class = "MAGE" or nil },
+--       chip = { text = "Companion" },        -- whose it is
 --       when = "21:14" or "20:02 – 21:14", -- at the strip's right
 --       title = "Fallen", detail = "at level 13" or nil,
 --       place = "Duskwood" or nil, -- the foot; without a place and a reaction, none
@@ -27,7 +27,6 @@ local UI = ns.UI
 
 local LINE, LINE_GAP = 14, 4 -- the foot, and its distance from the text
 local STRIP = 28 -- the sunken strip at the top that names whose event it is
-local CHIP = 18 -- the class icon in it
 local TIME_GAP = 8 -- between the name and the time at the strip's right
 local TEXT_GAP = 12 -- between the picture and the text, whatever its size
 local REACT, REACT_ICON = 26, 16 -- the reaction's button at the foot's right, and its icon
@@ -55,10 +54,8 @@ local function Build(part)
     local stripLine = UI.Line(strip)
     stripLine:SetPoint("BOTTOMLEFT", pixel, 0)
     stripLine:SetPoint("BOTTOMRIGHT", -pixel, 0)
-    -- Whose event it is: the class icon where it is known, and the name.
-    part.chipClass = UI.ClassIcon(strip, CHIP)
-    part.chipClass:SetPoint("LEFT", strip, "LEFT", UI.BookPad, 0)
-    part.chipText = UI.Text(strip, 11, "textMuted")
+    -- Whose event it is: the name, a step brighter than the time beside it.
+    part.chipText = UI.Text(strip, 11, "textDim")
     part.chipText:SetWordWrap(false)
     -- And on the right, when: as wide as its text, the name ends before it.
     part.time = UI.Text(strip, 11, "textMuted")
@@ -134,12 +131,10 @@ function UI.ChronicleCard(part, story, width)
     -- The strip: whose event it is, and when. The name runs up to the time
     -- and is cut off there; the time is never.
     local chip = story.chip or {}
-    local classShown = UI.SetClass(part.chipClass, chip.class)
-    local nameLeft = pad + (classShown and CHIP + 6 or 0)
     part.time:SetText(story.when or "")
     part.chipText:ClearAllPoints()
     part.chipText:SetPoint("RIGHT", part.time, "LEFT", -TIME_GAP, 0)
-    part.chipText:SetPoint("LEFT", part.strip, "LEFT", nameLeft, 0)
+    part.chipText:SetPoint("LEFT", part.strip, "LEFT", pad, 0)
     part.chipText:SetText(chip.text or "")
 
     -- The text, as high as it is.
