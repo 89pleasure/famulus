@@ -370,14 +370,23 @@ do
 end
 mock.Fire("PLAYER_LOGIN")
 
-local active, total = ns:CountActiveFeatures()
-check(total == 11, "11 features registered (got " .. total .. ")")
-check(active == 6, "6 features on by default (got " .. active .. ")")
-for _, feature in ipairs(ns.featureList) do
-    local harmless = feature.id == "liveFeed" or feature.category == "aliases"
-    check(feature.enabled == harmless, "only the harmless features are on by default: " .. feature.id)
+do
+    local active, total = ns:CountActiveFeatures()
+    check(total == 11, "11 features registered (got " .. total .. ")")
+    check(active == 7, "7 features on by default (got " .. active .. ")")
 end
-check(ns:CountRegisteredEvents() == 0, "no game event is registered after login (got " .. ns:CountRegisteredEvents() .. ")")
+for _, feature in ipairs(ns.featureList) do
+    -- The journey is the core and stays with the player; the rest that listens or sends waits for a choice.
+    local onByDefault = feature.id == "ownJourney" or feature.id == "liveFeed" or feature.category == "aliases"
+    check(feature.enabled == onByDefault, "only the journey and the harmless features are on by default: " .. feature.id)
+end
+-- With the defaults only the journey listens to the game.
+local journeyEvents = 0
+for _ in pairs(ns.features.ownJourney.events) do
+    journeyEvents = journeyEvents + 1
+end
+check(journeyEvents > 0 and ns:CountRegisteredEvents() == journeyEvents,
+    "after login only the journey listens to the game (got " .. ns:CountRegisteredEvents() .. ")")
 check(lastChat():find("/fam", 1, true) ~= nil, "first login prints the hint")
 check(next(FamulusDB.profile) == nil, "nothing is saved while everything is on default")
 check(mock.CountOnUpdateFrames() == 0, "no OnUpdate handler runs while idle (got " .. mock.CountOnUpdateFrames() .. ")")
@@ -553,7 +562,7 @@ check(guildy.enabled, "with Guildy back it runs again")
 
 -- Battle.net: an alias for a BattleTag covers every character of the account.
 local accountAliases = ns.features.accountAliases
-check(accountAliases.enabled and ns:CountRegisteredEvents() == 0, "without an alias for an account the friends list is not watched")
+check(accountAliases.enabled and ns:CountRegisteredEvents() == journeyEvents, "without an alias for an account the friends list is not watched")
 check(Aliases.BattleTag(" Anna#1234 ") == "Anna#1234" and Aliases.BattleTag("Jaina Proudmoore") == nil
     and Aliases.BattleTag("Anna#") == nil and Aliases.BattleTag(mock.SECRET) == nil, "a BattleTag is told apart from a character name")
 mock.state.bnFriends = {
@@ -567,7 +576,7 @@ check(FamulusDB.accountAliases["anna#1234"].alias == "Anna" and FamulusDB.aliase
 check(FamulusDB.accountAliases["anna#1234"].tag == "Anna#1234", "a BattleTag typed by hand takes the spelling of the friends list")
 check(Aliases.Get("Jaina", "Proudmoore") == "Anna", "the character the friend is online on has the alias at once")
 check(Aliases.Get("Varian Wrynn") == nil, "characters of other friends do not")
-check(ns:CountRegisteredEvents() == #accountAliases.EVENTS, "from now on the friends list is watched")
+check(ns:CountRegisteredEvents() == journeyEvents + #accountAliases.EVENTS, "from now on the friends list is watched")
 mock.state.bnFriends[1].games[1].characterName = "Sylvanas Windrunner"
 mock.Fire("BN_FRIEND_INFO_CHANGED", 1)
 check(Aliases.Get("Sylvanas-Windrunner") == "Anna" and Aliases.Get("Jaina Proudmoore") == "Anna", "a character the friend switches to is added, the first one is kept")
@@ -603,16 +612,16 @@ entries[3].click()
 check(Aliases.Get("Varian Wrynn") == nil and Aliases.AccountCount() == 1 and lastChat():find("Bert#77", 1, true) ~= nil,
     "removing an account's alias takes it from all its characters, reported in one line")
 enable("accountAliases", false)
-check(ns:CountRegisteredEvents() == 0 and Aliases.Get("Tyrande") == "Anna", "switched off, the friends list is left alone and known characters keep the alias")
+check(ns:CountRegisteredEvents() == journeyEvents and Aliases.Get("Tyrande") == "Anna", "switched off, the friends list is left alone and known characters keep the alias")
 enable("accountAliases")
-check(ns:CountRegisteredEvents() == #accountAliases.EVENTS, "switched on, it is watched again")
+check(ns:CountRegisteredEvents() == journeyEvents + #accountAliases.EVENTS, "switched on, it is watched again")
 FamulusDB.accountAliases.broken = "x"
 FamulusDB.accountAliases["x#1"] = { tag = "Y#2", alias = "a", chars = {} }
 ns:Fire("DATABASE_READY")
 check(Aliases.AccountCount() == 1 and Aliases.Count() == 2 and Aliases.Get("Tyrande") == "Anna" and FamulusDB.accountAliases.broken == nil
     and FamulusDB.accountAliases["x#1"] == nil, "saved accounts and their characters are read, broken entries are dropped")
 Aliases.Set("Anna#1234", nil)
-check(Aliases.Get("Tyrande") == nil and FamulusDB.accountAliases == nil and ns:CountRegisteredEvents() == 0,
+check(Aliases.Get("Tyrande") == nil and FamulusDB.accountAliases == nil and ns:CountRegisteredEvents() == journeyEvents,
     "without the last account alias its characters are forgotten and the friends list is no longer watched")
 mock.state.bnFriends = nil
 
@@ -630,7 +639,7 @@ ns:Fire("DATABASE_READY")
 check(Aliases.Count() == 1 and Aliases.Get("Thrall") == "Boss" and FamulusDB.aliases.broken == nil, "a saved list is read, broken entries are dropped")
 Aliases.Set("Thrall", nil)
 check(Aliases.Count() == 0 and FamulusDB.aliases == nil, "an empty list is not saved")
-check(ns:CountRegisteredEvents() == 0 and mock.ActiveTimers() == 0, "the alias features need no game event and no timer")
+check(ns:CountRegisteredEvents() == journeyEvents and mock.ActiveTimers() == 0, "the alias features need no game event and no timer")
 GameTooltip.AddDoubleLine = nil
 setState({})
 
@@ -684,43 +693,48 @@ end
 -- The welcome page (UI/Welcome.lua), once it has been built.
 local function welcomePage()
     for _, frame in ipairs(mock.frames) do
-        if frame.all and frame.later and frame.list then
+        if frame.setup and frame.step and frame.done then
             return frame
         end
     end
-end
-local function shownCells(page)
-    local list = {}
-    for _, cell in ipairs(page.cells) do
-        if cell:IsShown() then
-            list[#list + 1] = cell
-        end
-    end
-    return list
 end
 
 -- With the defaults the window opens on the welcome page, over sidebar and
 -- content, until the player chooses.
 do
     local page = welcomePage()
-    check(page ~= nil and page:IsShown() and not window.area:IsShown() and page.title:GetText() == "Welcome to Famulus",
-        "with the defaults the window opens on the welcome page; the head keeps only logo, name and close")
-    check(page.all.label:GetText() == "Record the journey and share it with friends"
-        and page.note:GetText():find("Switches on 5 features.", 1, true) == 1
-        and page.note:GetText():find("only to friends and guild", 1, true) ~= nil and not page.list:IsShown(),
-        "one button switches the main features on; below it how many, and that sharing reaches only friends and guild")
+    check(page ~= nil and page:IsShown() and not window.area:IsShown() and page.start:IsShown() and not page.step:IsShown()
+        and page.title:GetText() == "For everyone you play with." and page.eyebrow:GetText() == "WELCOME TO FAMULUS",
+        "with the defaults the window opens on the welcome page, in the website's words; the head keeps only logo, name and close")
+    local lit = {}
+    for index, tile in ipairs(page.tiles) do
+        lit[index] = tile.pill:IsShown()
+    end
+    check(#page.tiles == 4 and lit[1] and not lit[2] and lit[3] and lit[4],
+        "four tiles as on the website; the journey, the live feed and the aliases run already")
+    check(page.setup.label:GetText() == "Set up now" and page.all.label:GetText() == "Switch everything on"
+        and page.note:GetText():find("only to friends and guild", 1, true) ~= nil,
+        "set up step by step or all at once; sharing reaches only friends and guild")
     check(page.embers.playing, "the page's own sparks rise")
-    mock.Click(page.more)
-    local cells = shownCells(page)
-    check(page.list:IsShown() and page.more.label:GetText() == "Less" and #cells == 6
-        and cells[1].name:GetText() == ns.L.f_ownJourney and cells[1].tag:GetText() == "Only for you"
-        and cells[3].name:GetText() == ns.L.f_sharing and cells[3].tag:GetText() == "Goes to friends and guild"
-        and cells[6].name:GetText() == "Already on: Aliases, " .. ns.L.f_liveFeed,
-        "\"What exactly?\" lists the five, which of them sends something, and what runs already")
+    local dots = page.scheme.swatches.dots
+    check(page.scheme:IsShown() and page.scheme.label:GetText() == "Colour scheme" and #dots == #ns.UI.accents
+        and dots[1].selected, "the colour scheme can be chosen on the page, the default marked")
+    mock.Click(dots[2])
+    mock.Advance(0.1)
+    check(ns:GetOption("general", "accent") == ns.UI.accents[2] and page.scheme.swatches.dots[2].selected
+        and not page.scheme.swatches.dots[1].selected and page.start:IsShown(), "a click changes it at once; the page stays")
+    ns:SetOption("general", "accent", ns.UI.accents[1])
+    mock.Advance(0.1)
+    mock.Click(page.setup)
+    check(page.step:IsShown() and not page.start:IsShown() and page.count:GetText() == "Step 1 of 5"
+        and page.name:GetText() == ns.L.f_companions and page.tag.text:GetText() == "Only for you"
+        and not page.option:IsShown() and page.stage:IsShown() and page.stage.current == "friends"
+        and page.skip:IsShown() and page.on.label:GetText() == "Switch on and continue",
+        "\"Set up now\" starts with the first step: what it does, an example, switch on or skip")
     SlashCmdList.FAMULUS("")
     check(not window:IsShown() and FamulusDB.welcome == nil and not page.embers.playing, "closing the window is no choice")
     SlashCmdList.FAMULUS("")
-    check(page:IsShown() and not page.list:IsShown(), "so the next opening shows the page again, its list shut")
+    check(page:IsShown() and page.start:IsShown(), "so the next opening shows the page again, from the start")
     mock.Click(page.later)
     local off = true
     for _, id in ipairs(ns.UI.Welcome.FEATURES) do
@@ -1149,7 +1163,7 @@ mock.Click(visibleRows()[2])
 check(editor.name.edit:GetText() == "Anna#1234" and editor.alias.edit:GetText() == "Anna", "clicking the account loads its BattleTag into the input row")
 mock.Click(visibleRows()[2].remove)
 mock.Advance(0.1)
-check(ns.AliasService.Count() == 1 and FamulusDB.accountAliases == nil and ns:CountRegisteredEvents() == 0, "the remove button deletes the account's alias")
+check(ns.AliasService.Count() == 1 and FamulusDB.accountAliases == nil and ns:CountRegisteredEvents() == journeyEvents, "the remove button deletes the account's alias")
 mock.state.bnFriends = nil
 editor:Load("", "")
 -- From the context menu: the window opens on the list with the name filled in.
@@ -1385,7 +1399,7 @@ mock.Click(looks[2].switch)
 mock.Advance(0.1)
 check(sparkGroups() == sparksTotal, "switching them on starts them again")
 
--- The welcome page again: one click switches the five main features on
+-- The welcome page again: all at once, step by step and in every language
 -- (UI/Welcome.lua). The opening above chose "Later"; here nothing is chosen yet.
 do
     local Welcome = ns.UI.Welcome
@@ -1399,7 +1413,7 @@ do
     check(window:IsShown() and page:IsShown() and sparkGroups() == 0 and page.embers.playing,
         "without a choice the window opens on the welcome page; only its own sparks move")
     enable("rememberFellows")
-    check(not Welcome.Wanted(), "whoever has one of the five on does not get it")
+    check(not Welcome.Wanted(), "whoever has one of the four on does not get it")
     enable("rememberFellows", false)
 
     -- An alias asked for from a player's menu wins; the page comes again later.
@@ -1411,19 +1425,36 @@ do
     SlashCmdList.FAMULUS("")
     check(page:IsShown(), "the next opening shows the welcome page again")
 
-    -- The one click.
+    -- All at once: the four on, then what runs, then the chronicle.
     mock.reset()
     mock.Click(page.all)
     local running = true
     for _, id in ipairs(Welcome.FEATURES) do
         running = running and ns:GetOption(id, "enabled") == true and ns.features[id].enabled
     end
-    check(running and FamulusDB.welcome == true, "one click switches the five on, and they run")
+    check(running and FamulusDB.welcome == true, "one click switches the four on, and they run")
+    local function shownRows()
+        local list = {}
+        for _, row in ipairs(page.rows) do
+            if row:IsShown() then
+                list[#list + 1] = row
+            end
+        end
+        return list
+    end
+    local done = shownRows()
+    check(page.done:IsShown() and #done == 7 and done[1].name:GetText() == ns.L.f_ownJourney
+        and done[1].note:GetText() == "From the start" and done[3].name:GetText() == ns.L.f_sharing
+        and done[3].note:GetText() == "Goes to friends and guild members who use Famulus" and done[4].name:GetText() == ns.L.f_liveFeed
+        and done[7].name:GetText() == "Aliases" and done[7].note:GetText() == "Already running",
+        "the end lists what runs now: the journey from the start, the steps, and the aliases that ran already")
+    mock.Click(page.open)
     local lines = 0
     for _, line in ipairs(mock.chat) do
-        lines = lines + (line:find("5 features switched on. You can change them under Settings.", 1, true) and 1 or 0)
+        lines = lines + (line:find("features switched on", 1, true) and 1 or 0)
     end
-    check(lines == 1, "one line in the chat says so")
+    check(lines == 1 and mock.chat[#mock.chat]:find("4 features switched on. You can change them under Settings.", 1, true) ~= nil,
+        "one line in the chat says how many")
     local rows = visibleRows()
     check(not page:IsShown() and window.area:IsShown() and window.area.name:GetText() == "Chronicle"
         and tabButton("Everyone") and tabButton("Everyone").selected
@@ -1433,50 +1464,107 @@ do
     SlashCmdList.FAMULUS("")
     check(not page:IsShown() and window.area:IsShown(), "after the choice the window opens as usual")
 
-    -- "About" offers it again; it starts from what is on.
-    mock.Click(navButton("About"))
-    local again
-    for _, row in ipairs(visibleRows()) do
-        if row.item.id == "welcome" then
-            again = row
-        end
+    -- "About" offers it again.
+    for _, id in ipairs(Welcome.FEATURES) do
+        enable(id, false)
     end
-    check(again ~= nil and again.label:GetText() == "Welcome" and again.action.label:GetText() == "Show welcome page",
-        "\"About\" offers the welcome page again")
-    mock.Click(again.action)
-    check(page:IsShown() and page.note:GetText() == ns.L.ui_welcome_note_done, "it opens again, saying that everything is on")
-    mock.Click(page.choose)
-    check(not page:IsShown() and window.area.name:GetText() == "Chronicle" and tabButton("Settings") and tabButton("Settings").selected,
-        "\"Choose myself\" opens the chronicle's switches")
-
-    -- In every language the page has its words, and the one button fits.
-    for _, language in ipairs(ns:GetLocaleCodes()) do
-        ns:SetOption("general", "language", language)
-        mock.Advance(0.1)
+    FamulusDB.welcome = nil
+    local function openAgain()
         mock.Click(navButton(ns.L.cat_about))
         for _, row in ipairs(visibleRows()) do
             if row.item.id == "welcome" then
                 mock.Click(row.action)
+                return row
             end
         end
-        mock.Click(page.more)
-        local cells = shownCells(page)
-        -- The links are the last row; with the list open they still lie inside the page.
-        local linksBottom = -page.more.mockPoint[5] + page.more:GetHeight()
-        check(page:IsShown() and page.title:GetText() == ns.L.ui_welcome_title and page.all.label:GetText() == ns.L.ui_welcome_all
-            and page.all:GetWidth() <= 680 and page.later.label:GetText() == ns.L.ui_welcome_later and #cells == 6
-            and cells[3].tag:GetText() == ns.L.ui_welcome_shares and linksBottom <= page:GetHeight(),
-            "the welcome page in " .. language .. " (links end at " .. linksBottom .. " of " .. page:GetHeight() .. ")")
-        mock.Click(page.later)
+    end
+    local again = openAgain()
+    check(again ~= nil and again.label:GetText() == "Welcome" and again.action.label:GetText() == "Show welcome page"
+        and page:IsShown() and page.start:IsShown(), "\"About\" offers the welcome page again")
+
+    -- Step by step.
+    mock.reset()
+    mock.Click(page.setup)
+    mock.Click(page.on)
+    check(ns.features.companions.enabled and page.count:GetText() == "Step 2 of 5" and page.name:GetText() == ns.L.f_sharing
+        and page.tag.text:GetText() == "Goes to friends and guild members who use Famulus" and page.stage.current == "share"
+        and not page.option:IsShown() and page.skip:IsShown() and page.skip.label:GetText() == "Skip"
+        and page.stage.lit and page.stage.scenes.share.pills[1]:IsShown(),
+        "\"Switch on and continue\" switches the feature on and goes on to sharing, drawn as if it were on")
+    mock.Click(page.skip)
+    check(not ns.features.sharing.enabled and page.name:GetText() == ns.L.f_liveFeed and page.stage.current == "feed"
+        and page.option:IsShown() and page.option.name:GetText() == "Reactions" and page.option.toggle.on == true
+        and page.on.label:GetText() == "Continue" and page.skip.label:GetText() == "Switch off and continue",
+        "skipped stays off; the live feed is on already, with the reactions beside it")
+    mock.Click(page.option)
+    check(ns.features.sharing:Get("reactions") == false and page.option.toggle.on == false, "the option switches here")
+    mock.Click(page.option)
+    mock.Click(page.skip)
+    check(not ns.features.liveFeed.enabled and page.name:GetText() == ns.L.f_rememberFellows, "\"Switch off and continue\" switches it off")
+    mock.Click(page.back)
+    check(page.name:GetText() == ns.L.f_liveFeed and page.on.label:GetText() == "Switch on and continue"
+        and page.skip.label:GetText() == "Skip", "back goes one step back; off now, it can be switched on again")
+    mock.Click(page.on)
+    mock.Click(page.on)
+    check(ns.features.liveFeed.enabled and ns.features.rememberFellows.enabled and page.count:GetText() == "Step 5 of 5"
+        and page.on.label:GetText() == "Switch on and finish" and page.option.name:GetText() == "Include the guild",
+        "the last step finishes")
+    mock.Click(page.skip)
+    done = shownRows()
+    check(page.done:IsShown() and done[2].note:GetText() == "" and done[3].note:GetText() == "Skipped"
+        and done[4].note:GetText() == "" and done[6].note:GetText() == "Skipped" and not done[6].check:IsShown(),
+        "the end says what was skipped")
+    mock.Click(page.again)
+    check(page.count:GetText() == "Step 5 of 5", "back from the end is the last step")
+    mock.Click(page.skip)
+    mock.Click(page.open)
+    check(FamulusDB.welcome == true and ns.features.companions.enabled and ns.features.rememberFellows.enabled
+        and ns.features.liveFeed.enabled and not ns.features.sharing.enabled and not ns.features.nearbyFriends.enabled
+        and mock.chat[#mock.chat]:find("3 features switched on", 1, true) ~= nil and not page:IsShown(),
+        "finished: what was switched on runs, what was skipped does not, one line in the chat")
+
+    -- In every language the page has its words, and every view fits.
+    local PAGE_H = page:GetHeight()
+    for _, language in ipairs(ns:GetLocaleCodes()) do
+        ns:SetOption("general", "language", language)
+        mock.Advance(0.1)
+        openAgain()
+        local laterBottom = -page.later.mockPoint[5] + page.later:GetHeight()
+        local fits = page.start:IsShown() and page.title:GetText() == ns.L.ui_welcome_title and laterBottom <= PAGE_H
+            and page.setup:GetWidth() + page.all:GetWidth() + 12 <= 960
+        mock.Click(page.setup)
+        local tallest = 0
+        for number, current in ipairs(Welcome.Steps()) do
+            local bottom = 64 + 14 + 12 + page.name:GetStringHeight() + 12 + 24 + 16 + page.body:GetStringHeight()
+            for _, point in ipairs(page.points) do
+                bottom = bottom + 16 + point:GetHeight()
+            end
+            if page.option:IsShown() then
+                bottom = bottom + 20 + page.option:GetHeight()
+            end
+            tallest = math.max(tallest, bottom)
+            fits = fits and page.name:GetText() == ns.L["f_" .. current.id] and page.count:GetText():find(tostring(number), 1, true) ~= nil
+                and page.body:GetText() ~= nil
+                and page.back:GetWidth() + page.skip:GetWidth() + page.on:GetWidth() + 40 <= page:GetWidth() - 96
+            mock.Click(page.skip)
+        end
+        mock.Click(page.again)
+        mock.Click(page.skip)
+        local doneBottom = -page.again.mockPoint[5] + page.again:GetHeight()
+        check(fits and page.done:IsShown() and tallest <= PAGE_H - 76 - 8 and doneBottom <= PAGE_H,
+            "the welcome page in " .. language .. " (steps end at " .. tallest .. ", the end at " .. doneBottom .. " of " .. PAGE_H .. ")")
+        mock.Click(page.open)
     end
     ns:SetOption("general", "language", "auto")
+    -- Skipping switched the live feed off; it is on by default.
+    enable("liveFeed")
     mock.Advance(0.1)
 
     for _, id in ipairs(Welcome.FEATURES) do
         enable(id, false)
     end
     mock.Advance(0.1)
-    check(ns:CountRegisteredEvents() == 0, "switched off again, the five listen to nothing")
+    check(ns:CountRegisteredEvents() == journeyEvents, "switched off again, the four listen to nothing")
 end
 
 -- Minimap button.
@@ -1499,9 +1587,11 @@ section("Chronicle")
 
 local Chronicle = ns.ChronicleService
 local stateBeforeChronicle = mock.state
-check(not ns.features.ownJourney.enabled and not ns.features.companions.enabled and #Chronicle.Entries() == 0,
-    "the chronicle records nothing until it is switched on")
+check(ns.features.ownJourney.enabled and not ns.features.companions.enabled and #Chronicle.Entries() == 0,
+    "the journey runs from the start; nothing has happened yet")
+enable("ownJourney", false)
 local eventsBeforeChronicle = ns:CountRegisteredEvents()
+check(eventsBeforeChronicle == 0, "switched off, the journey listens to nothing")
 setState({ zone = "Elwynn Forest", level = 12, explored = { "Duskwood" } })
 enable("ownJourney")
 check(ns:CountRegisteredEvents() > eventsBeforeChronicle, "switched on, it listens for milestones")
@@ -4062,7 +4152,7 @@ mock.Click(pageTab("Settings"))
 mock.Advance(0.1)
 local fellowEntries = visibleEntries()
 check(#fellowEntries == 3 and fellowEntries[1].toggle:IsShown() and fellowEntries[1].sub:GetText():find("2 options", 1, true)
-    and #visibleRows() == 2 and fellowEntries[2].label:GetText() == "Who is nearby" and fellowEntries[2].sub:GetText() == "Off  ·  3 options"
+    and #visibleRows() == 2 and fellowEntries[2].label:GetText() == "Nearby" and fellowEntries[2].sub:GetText() == "Off  ·  3 options"
     and fellowEntries[3].entry.item.kind == "action" and fellowEntries[3].entry.title == "Tidy up"
     and pageTab("Settings").selected and window.resetButton:IsShown() and not overview:IsShown() and not overview.card:IsShown(),
     "settings: the two switches with their options, then tidying up, with reset beside the tabs; no overview")

@@ -108,7 +108,7 @@ the index there says which file it is in.
   one of them shows whether the entry and its name come.
 - **Welcome page (2026-11-26, checked against the mock only, not yet in game):** see "Welcome
   page" in `docs/window.md`. To see it again in game: "About" › "Show welcome page"; as a new
-  player would, with `/run FamulusDB.welcome = nil` and the five main features off.
+  player would, with `/run FamulusDB.welcome = nil` and the four main features off.
 - **New window (2026-11-18, checked against the mock only, not yet in game):** see "The
   window" below. The Inter fonts load (see "Font"). Open in game: whether rounded corners, shadows and hairlines look clean, switching
   the colour schemes, the sliding tab marker, gradients and glow effects.

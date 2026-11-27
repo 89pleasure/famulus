@@ -3775,18 +3775,11 @@ local function ShowWelcome()
             radius = RADIUS,
             grain = GRAIN_BAND,
         }, {
-            -- One click: the main features on, then the chronicle.
-            all = function()
-                UI.Welcome.SwitchOn()
+            -- Set up (step by step or all at once): then the chronicle.
+            finish = function()
                 EndWelcome("chronicle")
             end,
-            -- The chronicle's switches, to pick from there.
-            choose = function()
-                UI.Welcome.Decide()
-                EndWelcome("chronicle", "record")
-            end,
             later = function()
-                UI.Welcome.Decide()
                 EndWelcome("chronicle")
             end,
         })

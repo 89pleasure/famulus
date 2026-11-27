@@ -33,8 +33,8 @@ other players. English, German, French, Spanish and Italian; no libraries, no de
 | Chronicle | Follow my friends (level-ups on your friends list) | off |
 | Chronicle | Share with friends (addon messages between Famulus users) | off |
 | Chronicle | Show events on screen | **on** |
-| Fellowship | Remember my fellowship | off |
-| Fellowship | Who is nearby (friends and guild in your zone) | off |
+| Fellowship | Record my fellowship | off |
+| Fellowship | Nearby (friends and guild in your zone) | off |
 | Aliases | In chat, in the tooltip, in the context menu | **on** |
 | Aliases | Characters of Battle.net friends | **on** |
 | Aliases | In Guildy (only when Guildy is loaded) | **on** |

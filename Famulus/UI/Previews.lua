@@ -12,6 +12,7 @@
 --   UI.Previews.Focus(stage, key)             -- the option pointed at, or nil
 --   UI.Previews.Refresh(stage)                -- after a setting changed
 --   UI.Previews.Has(name)                     -- whether there is such a scene
+--   stage.lit = true                          -- draw every feature as if it were on
 --
 -- Scenes of the game (chat, tooltip, menu, minimap ...) stand on the
 -- website's night sky; scenes of the window on its ground. A scene is built
@@ -51,6 +52,12 @@ end
 
 local function Samples()
     return ns.ChronicleService
+end
+
+-- Whether the scene shows the feature as running: it does, or the stage is
+-- lit (the welcome page shows what a feature would do before it is on).
+local function On(scene, id)
+    return scene.lit or ns.features[id].enabled
 end
 
 -- An entry of the samples, `minutes` ago.
@@ -383,7 +390,7 @@ local function BookScene(feature, entries)
             -- The picture is low: the chapter without its route.
             chapter.route = nil
             Fit(scene, scene.holder, BOOK_W, scene.book:SetChapters({ chapter }))
-            local on = feature == nil or ns.features[feature].enabled
+            local on = feature == nil or On(scene, feature)
             scene.holder:SetAlpha(on and 1 or FAINT)
         end,
     }
@@ -411,15 +418,17 @@ SCENES.names = BookScene(nil, function()
 end)
 
 -- Share with friends: the player and a friend, and what goes between them.
-local SHARE_CREST, SHARE_Y, SHARE_X = 56, 74, 120
+local SHARE_CREST, SHARE_X = 56, 120
 
 SCENES.share = {
     Build = function(scene, width, height)
         Ground(scene, width, height)
         scene.crests, scene.names = {}, {}
+        -- Their middle a little above the picture's (74 at the settings' 196).
+        local middle = math.floor(height / 2) - 24
         for index, x in ipairs({ SHARE_X, width - SHARE_X }) do
             local crest = UI.Crest(scene, SHARE_CREST)
-            crest:SetPoint("CENTER", scene, "TOPLEFT", x, -SHARE_Y)
+            crest:SetPoint("CENTER", scene, "TOPLEFT", x, -middle)
             local name = Centered(scene, 12, "textDim", "medium")
             name:SetPoint("TOP", crest, "BOTTOM", 0, -8)
             scene.crests[index], scene.names[index] = crest, name
@@ -429,7 +438,7 @@ SCENES.share = {
         scene.from = SHARE_X + SHARE_CREST / 2 + 14
         scene.to = width - SHARE_X - SHARE_CREST / 2 - 14
         scene.pills = {}
-        for index, y in ipairs({ SHARE_Y - 14, SHARE_Y + 14 }) do
+        for index, y in ipairs({ middle - 14, middle + 14 }) do
             for x = scene.from, scene.to, 8 do
                 Spot(scene, "circle", "accentLine", 2, x, y, 3)
             end
@@ -461,7 +470,7 @@ SCENES.share = {
 
     Fill = function(scene)
         local Chronicle = Samples()
-        local on = ns.features.sharing.enabled
+        local on = On(scene, "sharing")
         local me, mira = Chronicle.Character(), Chronicle.SamplePeople()
         scene.crests[1]:SetPerson(me or L.ui_preview_you, me and Chronicle.Class(me))
         scene.crests[2]:SetPerson(mira, Chronicle.SampleClass(mira))
@@ -601,17 +610,18 @@ SCENES.feed = {
 
     Fill = function(scene, focus)
         local feature = ns.features.liveFeed
+        local enabled = On(scene, "liveFeed")
         if focus and IsKind(feature, focus) then
-            local on = feature.enabled and feature:Get(focus) == true
+            local on = enabled and feature:Get(focus) == true
             LayFeed(scene, { FeedStory(focus) }, not on, on and L.ui_preview_feed_shown or L.ui_preview_feed_hidden)
         elseif focus == "own" then
-            local on = feature.enabled and feature:Get("own") == true
+            local on = enabled and feature:Get("own") == true
             LayFeed(scene, { FeedStory("ability", true) }, not on, on and L.ui_preview_feed_own_on or L.ui_preview_feed_own_off)
         else
             -- Kept, the older card rests below the new one.
             local keep = Keeping()
-            LayFeed(scene, { FeedStory("level"), FeedStory("boss") }, not feature.enabled,
-                not feature.enabled and L.ui_preview_feed_off or keep and KeepText() or SecondsText(), keep)
+            LayFeed(scene, { FeedStory("level"), FeedStory("boss") }, not enabled,
+                not enabled and L.ui_preview_feed_off or keep and KeepText() or SecondsText(), keep)
         end
     end,
 }
@@ -670,7 +680,7 @@ SCENES.fellows = {
             end
             Fit(scene, scene.holder, 3 * TILE_W + 2 * TILE_GAP, UI.FELLOW_TILE_H)
         end
-        local alpha = feature.enabled and 1 or FAINT
+        local alpha = On(scene, "rememberFellows") and 1 or FAINT
         scene.holder:SetAlpha(alpha)
         scene.list:SetAlpha(alpha)
     end,
@@ -714,7 +724,7 @@ SCENES.nearby = {
         local feature = ns.features.nearbyFriends
         local Story = feature.Story
         local zone = Samples().Sample("zone").zone
-        local on, guild = feature.enabled, feature:Get("guild") == true
+        local on, guild = On(scene, "nearbyFriends"), feature:Get("guild") == true
         local here = { NearbyPerson(1, "friend") }
         if guild then
             here[2] = NearbyPerson(4, "guild")
@@ -1415,6 +1425,7 @@ local function Draw(stage)
     if not scene then
         return
     end
+    scene.lit = stage.lit
     SCENES[stage.current].Fill(scene, stage.focus)
     -- From the start again, with what may be a new duration.
     if scene:IsVisible() then
