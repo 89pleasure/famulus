@@ -6,8 +6,9 @@
 -- (NearbyService). Nothing is sent to anyone.
 --
 -- No card in cities and inns (unless asked for), in instances and in
--- flight; none for people in the player's group; the same person in the
--- same zone at most once in REPEAT. Cards come on the live feed's place
+-- flight; none for people in the player's group or out of reach (another
+-- realm, the other faction: the zone's name is the same, the world is not);
+-- the same person in the same zone at most once in REPEAT. Cards come on the live feed's place
 -- (UI/Feed.lua), for as long as the live feed's cards stay.
 
 local _, ns = ...
@@ -212,7 +213,7 @@ function nearby:Look()
     local seen = {}
     for _, person in ipairs(people) do
         seen[person.key] = person.zone
-        if here and person.zone == here and not person.grouped and not quiet then
+        if here and person.zone == here and not person.grouped and not person.out and not quiet then
             local last = told[person.key]
             local fresh = not (last and last.zone == here and now - last.at < REPEAT)
             if fresh and (arriving or where[person.key] ~= here) then

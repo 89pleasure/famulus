@@ -57,12 +57,16 @@ local EXPECT_PRESENT = {
     "C_FriendList.ShowFriends",
     "BNConnected",
     -- What Modules/Fellows/NearbyService.lua uses to tell who is nearby:
-    -- Battle.net friends in this game, quiet places, and the whisper.
+    -- Battle.net friends in this game, who of them is out of reach, quiet
+    -- places, and the whisper (by Battle.net across realms).
     "BNET_CLIENT_WOW",
     "WOW_PROJECT_ID",
+    "GetRealmID",
+    "UnitFactionGroup",
     "IsResting",
     "UnitOnTaxi",
     "ChatFrameUtil.SendTell",
+    "ChatFrameUtil.SendBNetTell",
     -- What Modules/Chronicle/Sharing.lua reads from SendAddonMessage: a
     -- refused message waits and goes again, none to someone offline.
     "Enum.SendAddonMessageResult.AddonMessageThrottle",
@@ -289,6 +293,10 @@ local function CheckNames()
     if BNGetNumFriends and C_BattleNet and C_BattleNet.GetFriendAccountInfo then
         local total = BNGetNumFriends()
         local inGame, shapes = 0, {}
+        -- "Who is nearby" tells who is on another realm by realmID; whether
+        -- the client fills it, and what it calls the realms (Forever's modes).
+        local ownRealm = GetRealmID and GetRealmID()
+        local sameRealm, otherRealm, realms = 0, 0, {}
         if not ns.IsSecret(total) and type(total) == "number" then
             for i = 1, total do
                 local info = C_BattleNet.GetFriendAccountInfo(i)
@@ -297,16 +305,32 @@ local function CheckNames()
                 if ns.ChatService.IsPlainText(name) and game.wowProjectID == WOW_PROJECT_ID then
                     inGame = inGame + 1
                     shapes[string.find(name, "%s") and "space" or string.find(name, "-", 1, true) and "hyphen" or "one word"] = true
+                    local realm = game.realmID
+                    if not ns.IsSecret(realm) and type(realm) == "number" and not ns.IsSecret(ownRealm) and type(ownRealm) == "number" then
+                        if realm == ownRealm then
+                            sameRealm = sameRealm + 1
+                        else
+                            otherRealm = otherRealm + 1
+                        end
+                    end
+                    if ns.ChatService.IsPlainText(game.realmDisplayName) then
+                        realms[game.realmDisplayName] = true
+                    end
                 end
             end
         end
-        local seen = {}
-        for shape in pairs(shapes) do
-            seen[#seen + 1] = shape
+        local function Sorted(set)
+            local list = {}
+            for each in pairs(set) do
+                list[#list + 1] = each
+            end
+            table.sort(list)
+            return #list > 0 and table.concat(list, ", ") or "none seen"
         end
-        table.sort(seen)
         Add("names", "Battle.net friends", "ok", string.format("%s friends, %d on a character of this game (project %s), names: %s",
-            Describe(total), inGame, Describe(WOW_PROJECT_ID), #seen > 0 and table.concat(seen, ", ") or "none seen"))
+            Describe(total), inGame, Describe(WOW_PROJECT_ID), Sorted(shapes)))
+        Add("names", "Battle.net realms", "ok", string.format("own realm %s, %d on it, %d on another, realm names: %s",
+            Describe(ownRealm), sameRealm, otherRealm, Sorted(realms)))
     else
         Add("names", "Battle.net friends", "warn", "BNGetNumFriends or C_BattleNet.GetFriendAccountInfo is missing")
     end

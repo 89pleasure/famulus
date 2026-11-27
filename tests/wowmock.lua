@@ -600,8 +600,10 @@ C_FriendList = {
 -- Battle.net friends:
 -- mock.state.bnFriends = { { battleTag = "Anna#1234", games = { { characterName = "Jaina Proudmoore",
 -- playerGuid = "Player-1-JAINA", areaName = "Tanaris", characterLevel = 40, className = "Mage" } } }, ... }
--- A game without wowProjectID counts as this game; the first one is what the
--- friends list shows. A friend without games is offline.
+-- A game without wowProjectID counts as this game, without realmID or
+-- factionName as the player's realm (mock.state.realmID, else 1) and faction
+-- (mock.state.faction, else "Alliance"); the first one is what the friends
+-- list shows. A friend without games is offline.
 WOW_PROJECT_ID = 99
 BNET_CLIENT_WOW = "WoW"
 local function bnGame(friend, index)
@@ -617,9 +619,22 @@ local function bnGame(friend, index)
         areaName = game.areaName,
         characterLevel = game.characterLevel,
         className = game.className,
+        realmID = game.realmID or mock.state.realmID or 1,
+        realmDisplayName = game.realmDisplayName,
+        factionName = game.factionName or mock.state.faction or "Alliance",
         isOnline = true,
     }
 end
+function GetRealmID()
+    return mock.state.realmID or 1
+end
+function UnitFactionGroup(unit)
+    if unit == "player" then
+        return mock.state.faction or "Alliance", mock.state.faction or "Alliance"
+    end
+end
+FACTION_HORDE = "Horde"
+FACTION_ALLIANCE = "Alliance"
 function BNGetNumFriends()
     record("BNGetNumFriends")
     return #(mock.state.bnFriends or {})
@@ -1020,6 +1035,10 @@ ChatFrameUtil = {
     -- Opens the chat input with a whisper to them.
     SendTell = function(name)
         record("ChatFrameUtil.SendTell", name)
+    end,
+    -- Opens the chat input with a Battle.net whisper to that account.
+    SendBNetTell = function(accountName)
+        record("ChatFrameUtil.SendBNetTell", accountName)
     end,
     AddSenderNameFilter = function(callback)
         senderFilters[#senderFilters + 1] = callback
