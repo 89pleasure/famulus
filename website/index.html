@@ -109,13 +109,16 @@
           <li data-i18n="fact_libs">Friends &amp; guild only</li>
         </ul>
       </div>
+      <!-- The live feed's cards beside the title, above the moon. -->
+      <div class="hero__feed" aria-hidden="true">
+        <div class="toasts" id="hero-toasts"></div>
+      </div>
     </div>
   </header>
 
   <main>
     <!-- The addon itself, below the camp: a screenshot of its window
-         (tools/make_shot.js), in English for both languages; the live feed's
-         cards over its corner. -->
+         (tools/make_shot.js), in English for both languages. -->
     <figure class="shot reveal" style="--i:5">
       <div class="shot__frame">
         <img class="shot__window" src="assets/shots/window-1180.webp"
@@ -123,9 +126,6 @@
           sizes="(max-width: 1228px) calc(100vw - 48px), 1180px" width="1180" height="730" fetchpriority="high"
           alt="The Famulus window in World of Warcraft: Forever. The chronicle, the fellow travellers and the aliases stand in its sidebar; the chronicle tells the last evenings as a picture book."
           data-i18n-attr="alt:shot_alt">
-      </div>
-      <div class="shot__feed" aria-hidden="true">
-        <div class="toasts" id="hero-toasts"></div>
       </div>
     </figure>
 
