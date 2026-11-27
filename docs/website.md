@@ -41,7 +41,8 @@ owner.
   addon's window as a screenshot, with live feed banners over it (see "Window in the header") →
   01 Chronicle (the picture book with the tabs Everyone, My journey, Companions) →
   02 Fellow travellers → 03 Live feed (can be triggered, position can be moved) → 04 Aliases (the
-  window rebuilt and usable, below it chat and tooltip "in game") → 05 Installation → footer with
+  window rebuilt and usable, below it chat and tooltip "in game") → 05 In the game (screenshots,
+  since 2026-11-27, see "Gallery") → 06 Installation → footer with
   a note on Blizzard's trademark. Tinted background (`section--tinted`) and glow still alternate
   from section to section. The skip link and "What it does" lead to the chronicle (the arrow in the
   header has been gone since the window in the header).
@@ -185,13 +186,33 @@ owner.
   - **For the capture:** client and Famulus in English (otherwise item and class names stay
     German, see "Sample entries"), then `/fam chronicle demo` and
     `/fam fellows demo`.
-  - **State:** The image is Chronicle › Everyone, from the screenshot
-    `WoWScrnShot_112426_221759.jpg` (client in English, sample data; window edges at x 1022,
-    y 476, 1770 × 1095). Visible in the image: the first name of your own character ("Kip", card
-    "This week") and "Level 19" in the chapter head next to the sample "Reached level 40", because
-    the samples mix with the real entries of a character at level 19. Sent along by the owner and
-    not yet used: Fellow travellers › Overview (`…_221819.jpg`) and Borin's story
-    (`…_221836.jpg`).
+  - **State (since 2026-11-27, the owner's choice of three):** Chronicle › Everyone, from a
+    screenshot on the Mac (`Bildschirmfoto 2026-11-27 um 15.35.00.png`, 5120 × 2880, client and
+    Famulus in English, sample data). The window is 2832 × 1752 at x 1170, y 410 (2.4 times its
+    1180 × 730; edges found on enlarged crops of the corners with `sips`), written at 1180 and
+    1770 as before. Visible in it: the owner's character "Kip Blütensturm" (strips, "This week";
+    the owner: fine) and the route "Gasthaus Seenhain › Lakeshire Inn", the same inn in German and
+    English, because entries from a German client mix with English ones. Before: the screenshot
+    `WoWScrnShot_112426_221759.jpg` of 2026-11-24.
+  - **Taking screenshots on the Mac:** the game's own key writes nothing there
+    (`_forever_/Screenshots` does not exist); the owner uses macOS's own (Cmd+Shift+3), which
+    lands on the desktop as `Bildschirmfoto <date> um <time>.png`. The window stood at the same
+    place in every shot of 2026-11-27, so one frame fits them all.
+- **Gallery "In the game" (2026-11-27, the owner's request: "header and gallery"; layout and
+  captions the assistant's decisions, not yet seen by the owner):** section 05 between the
+  aliases and the installation, two columns (one below 760 px), each picture a link to its
+  large version in a new tab, a caption below (`sh_<name>`) and its own alt text
+  (`sh_<name>_alt`). Pictures (`assets/shots/<name>-<width>.webp`, cut with
+  `tools/make_shot.js` from the same screenshots): `fellows` (Overview, 15.35.04), `story`
+  (Mira, 15.35.17), `groups` (15.36.03), `feed` (`/fam feed test` over the game world, 15.44.25,
+  1110 × 687 at x 1980, y 230, the same shape as the window, so the grid stays even), `welcome`
+  (expanded, 15.37.59), `aliases` (Aliases › Settings with the chat picture, 15.38.29); the
+  windows at 1180 and 1770, the feed at 1110, about 40 to 100 KB each, loaded lazily. Not used:
+  "Nearby" and Chronicle › Friends filtered to one person, because they show real Battle.net
+  friends; the game world around the window, because it shows other players' names. No entry in
+  the navigation. Checked at 1056 and 375 px, English and German: all six load, no horizontal
+  scrolling, no console messages (a `figure` keeps the browser's margin of 40 px unless set to
+  0; it did at first).
   - The header's live feed banners lie over the lower end of the window's right column,
     below its friends list, where the window fades out (`.shot__feed`, `top: 70%`), like
     Polestar's second window. At 50 % they covered the friends list. There they are
@@ -260,8 +281,7 @@ owner.
   `<link rel="canonical">`, `og:url`, `og:image` (needs an absolute URL and a preview image,
   1200 × 630) and `hreflang` alternates for `?lang=de`; until then search engines see only the
   English page.
-- **Deliberately not included yet:** Guildy (only once the PR there is accepted), more screenshots from the
-  game (so far only the window in the header), legal notice and privacy policy (needed before
+- **Deliberately not included yet:** Guildy (only once the PR there is accepted), legal notice and privacy policy (needed before
   publishing), the domain (the owner gets it), a preview image for shared
   links (see "Head and link previews"), WOFF2 fonts (the TTFs from the addon are loaded, ~100 KB
   each).
