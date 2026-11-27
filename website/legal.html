@@ -27,8 +27,8 @@
   <a class="skip" href="#content" data-i18n="skip">Skip to content</a>
 
   <svg class="sprite" aria-hidden="true" focusable="false">
-    <symbol id="i-out" viewBox="0 0 32 32"><path d="M10 22 22 10M12.5 10H22v9.5"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 32 32"><path d="M9 12.5l7 7 7-7"/></symbol>
+    <symbol id="i-out" viewBox="0 0 32 32"><path d="M10 22 22 10M12.5 10H22v9.5"/></symbol>
   </svg>
 
   <nav class="nav is-stuck" aria-label="Main" data-i18n-attr="aria-label:nav_main">
@@ -46,13 +46,16 @@
         <div class="pick__menu" id="langs-menu" role="menu" aria-label="Language" data-i18n-attr="aria-label:nav_lang" hidden>
           <button type="button" role="menuitemradio" data-lang="de" lang="de"><span class="pick__code" aria-hidden="true">DE</span><span>Deutsch</span></button>
           <button type="button" role="menuitemradio" data-lang="en" lang="en"><span class="pick__code" aria-hidden="true">EN</span><span>English</span></button>
+          <button type="button" role="menuitemradio" data-lang="es" lang="es"><span class="pick__code" aria-hidden="true">ES</span><span>Español</span></button>
+          <button type="button" role="menuitemradio" data-lang="fr" lang="fr"><span class="pick__code" aria-hidden="true">FR</span><span>Français</span></button>
+          <button type="button" role="menuitemradio" data-lang="it" lang="it"><span class="pick__code" aria-hidden="true">IT</span><span>Italiano</span></button>
         </div>
       </div>
       <a class="btn btn--small btn--ghost" href="index.html" data-i18n="lg_back">Back to Famulus</a>
     </div>
   </nav>
 
-  <!-- The legal texts stand here in both languages (data-only), so that the
+  <!-- The legal texts stand here in every language (data-only), so that the
        main page does not load them; legal.js shows the chosen one. Like
        polestar.guide, without a legal notice: the owner names no address
        (the owner's decision, 2026-11-27). -->
@@ -116,6 +119,78 @@
           <h3>Keine Konten, nichts zu löschen</h3>
           <p>Es gibt keine Konten und keine Registrierung, weder auf dieser Website noch im Addon, und ich speichere keine personenbezogenen Daten über dich. Deshalb gibt es bei mir nichts, worüber ich Auskunft geben, was ich berichtigen oder löschen könnte. Die einzigen Daten sind die Server-Protokolle von GitHub (siehe oben); Anfragen dazu richtest du an GitHub. Beschweren kannst du dich trotzdem bei einer Datenschutz-Aufsichtsbehörde, oder du schreibst mir an <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>.</p>
         </div>
+        <div data-only="es" lang="es" hidden>
+          <h2>Privacidad</h2>
+          <p class="legal__asof">Actualizado: 27 de noviembre de 2026</p>
+          <p class="legal__short">En resumen: no hay cuentas y no guardo nada sobre ti. Este sitio web no usa cookies, no tiene analítica ni seguimiento y no carga nada de otros servidores. Su alojamiento, GitHub, registra tu dirección IP; el idioma y la escena que eliges solo se recuerdan en tu dispositivo.</p>
+
+          <h3>Quién es el responsable</h3>
+          <p>89pleasure, el desarrollador de Famulus. Correo electrónico: <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>. También puedes contactarme en GitHub, en <a href="https://github.com/89pleasure" target="_blank" rel="noopener">github.com/89pleasure</a>; allí las incidencias son públicas.</p>
+
+          <h3>Alojamiento en GitHub Pages</h3>
+          <p>Este sitio web está alojado en GitHub Pages, un servicio de GitHub, Inc., 88 Colin P. Kelly Jr. St., San Francisco, CA 94107, EE. UU. Para entregar una página, GitHub recibe tu dirección IP y los datos habituales de una solicitud, como la página, la hora y la identificación de tu navegador. GitHub registra y guarda tu dirección IP por motivos de seguridad (<a href="https://docs.github.com/es/pages/getting-started-with-github-pages/what-is-github-pages#data-collection" target="_blank" rel="noopener">documentación de GitHub</a>). No tengo acceso a esos registros ni recibo estadísticas de visitas.</p>
+          <p>La base jurídica es el interés legítimo en ofrecer este sitio web de forma fiable y segura (art. 6.1.f) del RGPD). GitHub también trata datos en EE. UU. y está certificado conforme al Marco de Privacidad de Datos UE-EE. UU. y sus equivalentes para Suiza y el Reino Unido. Encontrarás los detalles en la <a href="https://docs.github.com/es/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Declaración de privacidad de GitHub</a>.</p>
+
+          <h3>Guardado en tu navegador</h3>
+          <p>Cuando cambias el idioma o eliges una escena para la imagen de arriba, la página recuerda tu elección en el almacenamiento local de tu navegador (<code>famulus-lang</code>, <code>famulus-scene</code>), para que tu próxima visita se abra con ella. Se queda en tu dispositivo y nunca se envía. Puedes borrarla en cualquier momento desde los ajustes de tu navegador. La página no guarda nada más ni usa cookies; lo que escribes en sus demostraciones, como un alias, ni se envía ni se conserva.</p>
+
+          <h3>Nada de otros servidores</h3>
+          <p>Las fuentes, las imágenes y los scripts se entregan con el propio sitio web. No hay analítica, ni publicidad, ni complementos de redes sociales, ni contenido incrustado de otros servicios. Los enlaces a GitHub y CurseForge solo te llevan allí si los sigues; a partir de entonces, se aplican sus políticas de privacidad.</p>
+
+          <h3>El addon</h3>
+          <p>Famulus, el addon, no me envía nada y no contiene seguimiento. Lo que recuerda (crónica, compañeros de viaje, alias) se queda en la carpeta del juego en tu ordenador. Lo que comparte en el juego solo pasa a través del propio juego a amigos y miembros de tu hermandad que también usan Famulus, y solo cuando activas la opción de compartir.</p>
+
+          <h3>Sin cuentas, nada que borrar</h3>
+          <p>No hay cuentas ni registro, ni en este sitio web ni en el addon, y no guardo datos personales sobre ti. Por eso no hay nada que yo pueda consultar, corregir o borrar por ti. Los únicos datos son los registros de servidor de GitHub (ver arriba); las solicitudes sobre ellos deben dirigirse a GitHub. Aun así, puedes presentar una reclamación ante una autoridad de control de protección de datos, o escribirme a <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>.</p>
+        </div>
+        <div data-only="fr" lang="fr" hidden>
+          <h2>Confidentialité</h2>
+          <p class="legal__asof">Mise à jour&nbsp;: 27 novembre 2026</p>
+          <p class="legal__short">En bref&nbsp;: il n'y a pas de comptes, et je ne conserve rien sur vous. Ce site ne dépose aucun cookie, n'a ni statistiques ni pistage et ne charge rien depuis d'autres serveurs. Son hébergeur, GitHub, enregistre votre adresse IP&nbsp;; la langue et la scène que vous choisissez ne sont retenues que sur votre appareil.</p>
+
+          <h3>Responsable</h3>
+          <p>89pleasure, le développeur de Famulus. E-mail&nbsp;: <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>. Vous pouvez aussi me joindre sur GitHub, à l'adresse <a href="https://github.com/89pleasure" target="_blank" rel="noopener">github.com/89pleasure</a>&nbsp;; les tickets y sont publics.</p>
+
+          <h3>Hébergement sur GitHub Pages</h3>
+          <p>Ce site est hébergé sur GitHub Pages, un service de GitHub, Inc., 88 Colin P. Kelly Jr. St., San Francisco, CA 94107, États-Unis. Pour afficher une page, GitHub reçoit votre adresse IP et les informations habituelles d'une requête, comme la page demandée, l'heure et l'identification de votre navigateur. GitHub enregistre et conserve votre adresse IP à des fins de sécurité (<a href="https://docs.github.com/fr/pages/getting-started-with-github-pages/what-is-github-pages#data-collection" target="_blank" rel="noopener">documentation de GitHub</a>). Je n'ai pas accès à ces journaux et ne reçois aucune statistique de visite.</p>
+          <p>La base juridique est l'intérêt légitime à fournir ce site de manière fiable et sûre (art. 6, par. 1, point f) du RGPD). GitHub traite aussi des données aux États-Unis et est certifié dans le cadre du Data Privacy Framework UE–États-Unis et de ses équivalents pour la Suisse et le Royaume-Uni. Les détails figurent dans la <a href="https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">déclaration de confidentialité de GitHub</a>.</p>
+
+          <h3>Enregistré dans votre navigateur</h3>
+          <p>Quand vous changez de langue ou choisissez une scène pour l'image du haut, la page retient votre choix dans le stockage local de votre navigateur (<code>famulus-lang</code>, <code>famulus-scene</code>), pour que votre prochaine visite s'ouvre avec ce choix. Il reste sur votre appareil et n'est jamais transmis. Vous pouvez le supprimer à tout moment dans les paramètres de votre navigateur. La page n'enregistre rien d'autre et ne dépose aucun cookie&nbsp;; ce que vous saisissez dans ses démonstrations, par exemple un alias, n'est ni envoyé ni conservé.</p>
+
+          <h3>Rien depuis d'autres serveurs</h3>
+          <p>Les polices, les images et les scripts sont fournis avec le site lui-même. Il n'y a ni statistiques, ni publicité, ni module de réseau social, ni contenu intégré d'autres services. Les liens vers GitHub et CurseForge ne vous y mènent que si vous les suivez&nbsp;; à partir de là, leurs politiques de confidentialité s'appliquent.</p>
+
+          <h3>L'addon</h3>
+          <p>Famulus, l'addon, ne m'envoie rien et ne contient aucun pistage. Ce qu'il retient (chronique, compagnons de route, alias) reste dans le dossier du jeu sur votre ordinateur. Ce qu'il partage en jeu passe uniquement par le jeu lui-même, vers les amis et les membres de la guilde qui utilisent aussi Famulus, et seulement une fois que vous avez activé le partage.</p>
+
+          <h3>Pas de comptes, rien à supprimer</h3>
+          <p>Il n'y a ni comptes ni inscription, ni sur ce site ni dans l'addon, et je ne conserve aucune donnée personnelle vous concernant. Je n'ai donc rien à consulter, à rectifier ou à supprimer pour vous. Les seules données sont les journaux de serveur de GitHub (voir plus haut)&nbsp;; les demandes à leur sujet s'adressent à GitHub. Vous pouvez néanmoins introduire une réclamation auprès d'une autorité de contrôle de la protection des données, ou m'écrire à <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>.</p>
+        </div>
+        <div data-only="it" lang="it" hidden>
+          <h2>Privacy</h2>
+          <p class="legal__asof">Aggiornato al 27 novembre 2026</p>
+          <p class="legal__short">In breve: non ci sono account e non conservo nulla su di te. Questo sito non usa cookie, non ha strumenti di analisi né tracciamento e non carica nulla da altri server. Chi lo ospita, GitHub, registra il tuo indirizzo IP; la lingua e la scena che scegli vengono ricordate solo sul tuo dispositivo.</p>
+
+          <h3>Chi è il titolare</h3>
+          <p>89pleasure, lo sviluppatore di Famulus. Email: <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>. Puoi contattarmi anche su GitHub, all'indirizzo <a href="https://github.com/89pleasure" target="_blank" rel="noopener">github.com/89pleasure</a>; le segnalazioni lì sono pubbliche.</p>
+
+          <h3>Hosting su GitHub Pages</h3>
+          <p>Questo sito è ospitato su GitHub Pages, un servizio di GitHub, Inc., 88 Colin P. Kelly Jr. St., San Francisco, CA 94107, USA. Per consegnare una pagina, GitHub riceve il tuo indirizzo IP e i consueti dati di una richiesta, come la pagina, l'ora e l'identificativo del tuo browser. GitHub registra e conserva il tuo indirizzo IP per motivi di sicurezza (<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection" target="_blank" rel="noopener">documentazione di GitHub</a>, in inglese). Non ho accesso a questi registri e non ricevo statistiche sui visitatori.</p>
+          <p>La base giuridica è il legittimo interesse a fornire questo sito in modo affidabile e sicuro (art. 6, par. 1, lett. f) del GDPR). GitHub tratta dati anche negli Stati Uniti ed è certificata secondo l'EU-U.S. Data Privacy Framework e le sue controparti per la Svizzera e il Regno Unito. I dettagli sono nell'<a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">informativa sulla privacy di GitHub</a> (in inglese).</p>
+
+          <h3>Salvato nel tuo browser</h3>
+          <p>Quando cambi lingua o scegli una scena per l'immagine in alto, la pagina ricorda la tua scelta nella memoria locale del browser (<code>famulus-lang</code>, <code>famulus-scene</code>), così la tua prossima visita si apre con quella scelta. Resta sul tuo dispositivo e non viene mai inviata. Puoi cancellarla in qualsiasi momento dalle impostazioni del browser. La pagina non salva nient'altro e non usa cookie; ciò che scrivi nelle sue demo, come un alias, non viene né inviato né conservato.</p>
+
+          <h3>Niente da altri server</h3>
+          <p>Caratteri, immagini e script arrivano insieme al sito stesso. Non ci sono strumenti di analisi, pubblicità, plugin di social media né contenuti incorporati da altri servizi. I link a GitHub e CurseForge ti portano lì solo quando li segui; da quel momento valgono le loro informative sulla privacy.</p>
+
+          <h3>L'addon</h3>
+          <p>Famulus, l'addon, non mi invia nulla e non contiene alcun tracciamento. Ciò che ricorda (cronaca, compagni di viaggio, alias) resta nella cartella del gioco sul tuo computer. Ciò che condivide nel gioco passa solo attraverso il gioco stesso, ad amici e membri della gilda che usano anche Famulus, e solo dopo che hai attivato la condivisione.</p>
+
+          <h3>Nessun account, niente da cancellare</h3>
+          <p>Non ci sono account né registrazioni, né su questo sito né nell'addon, e non conservo dati personali su di te. Quindi non c'è nulla che io possa consultare, correggere o cancellare per te. Gli unici dati sono i registri del server di GitHub (vedi sopra); le richieste che li riguardano vanno rivolte a GitHub. Puoi comunque presentare reclamo a un'autorità di controllo per la protezione dei dati, oppure scrivermi a <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>.</p>
+        </div>
       </section>
 
       <section class="legal__section" id="rights">
@@ -130,6 +205,24 @@
           <p>Code, Texte und Grafiken von Famulus: © 2026 89pleasure, alle Rechte vorbehalten. Was du mit dem Addon tun darfst, regelt seine <a href="https://github.com/89pleasure/famulus/blob/main/LICENSE" target="_blank" rel="noopener">Lizenz</a>.</p>
           <p>Famulus ist ein Fanprojekt, steht in keiner Verbindung zu Blizzard Entertainment und wird nicht von Blizzard unterstützt. World of Warcraft und Blizzard Entertainment sind Marken oder eingetragene Marken von Blizzard Entertainment, Inc. Die Screenshots auf dieser Website zeigen Spielinhalte © Blizzard Entertainment, Inc.; die Landschaft und die Symbole sind für Famulus gezeichnet. Die Schrift Inter steht unter der <a href="assets/fonts/LICENSE.txt">SIL Open Font License 1.1</a>.</p>
           <p>Verletzt etwas auf dieser Website deine Rechte? Schreib mir an <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a>, dann nehme ich es herunter.</p>
+        </div>
+        <div data-only="es" lang="es" hidden>
+          <h2>Derechos de autor y marcas</h2>
+          <p>Código, textos y gráficos de Famulus: © 2026 89pleasure, todos los derechos reservados. Lo que puedes hacer con el addon lo establece su <a href="https://github.com/89pleasure/famulus/blob/main/LICENSE" target="_blank" rel="noopener">licencia</a>.</p>
+          <p>Famulus es un proyecto de fans y no está afiliado a Blizzard Entertainment ni cuenta con su respaldo. World of Warcraft y Blizzard Entertainment son marcas comerciales o marcas registradas de Blizzard Entertainment, Inc. Las capturas de pantalla de este sitio web muestran contenido del juego © Blizzard Entertainment, Inc.; el paisaje y los iconos están dibujados para Famulus. La tipografía Inter está bajo la <a href="assets/fonts/LICENSE.txt">SIL Open Font License 1.1</a>.</p>
+          <p>¿Algo de este sitio web infringe tus derechos? Escríbeme a <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a> y lo retiraré.</p>
+        </div>
+        <div data-only="fr" lang="fr" hidden>
+          <h2>Droits d'auteur et marques</h2>
+          <p>Code, textes et graphismes de Famulus&nbsp;: © 2026 89pleasure, tous droits réservés. Ce que vous pouvez faire de l'addon est défini par sa <a href="https://github.com/89pleasure/famulus/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>.</p>
+          <p>Famulus est un projet de fan, sans lien avec Blizzard Entertainment et non approuvé par Blizzard. World of Warcraft et Blizzard Entertainment sont des marques commerciales ou des marques déposées de Blizzard Entertainment, Inc. Les captures d'écran de ce site montrent du contenu du jeu © Blizzard Entertainment, Inc.&nbsp;; le paysage et les icônes sont dessinés pour Famulus. La police Inter est distribuée sous la <a href="assets/fonts/LICENSE.txt">SIL Open Font License 1.1</a>.</p>
+          <p>Quelque chose sur ce site porte atteinte à vos droits&nbsp;? Écrivez à <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a> et je le retirerai.</p>
+        </div>
+        <div data-only="it" lang="it" hidden>
+          <h2>Copyright e marchi</h2>
+          <p>Codice, testi e grafica di Famulus: © 2026 89pleasure, tutti i diritti riservati. Cosa puoi fare con l'addon è stabilito dalla sua <a href="https://github.com/89pleasure/famulus/blob/main/LICENSE" target="_blank" rel="noopener">licenza</a>.</p>
+          <p>Famulus è un progetto di fan, non è affiliato a Blizzard Entertainment né da essa approvato. World of Warcraft e Blizzard Entertainment sono marchi o marchi registrati di Blizzard Entertainment, Inc. Gli screenshot su questo sito mostrano contenuti di gioco © Blizzard Entertainment, Inc.; il paesaggio e le icone sono disegnati per Famulus. Il carattere Inter è distribuito con licenza <a href="assets/fonts/LICENSE.txt">SIL Open Font License 1.1</a>.</p>
+          <p>Qualcosa su questo sito viola i tuoi diritti? Scrivi a <a href="mailto:89pleasure@proton.me">89pleasure@proton.me</a> e lo rimuoverò.</p>
         </div>
       </section>
     </div>
@@ -191,7 +284,11 @@
     </div>
   </footer>
 
-  <script src="i18n.js"></script>
+  <script src="i18n/en.js"></script>
+  <script src="i18n/de.js"></script>
+  <script src="i18n/es.js"></script>
+  <script src="i18n/fr.js"></script>
+  <script src="i18n/it.js"></script>
   <script src="pick.js"></script>
   <script src="legal.js"></script>
 </body>
