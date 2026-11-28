@@ -298,7 +298,8 @@ picture-book look are built and checked against the mock only.
     posted link was wrong.
     Not checked in game.
   - **Abilities (the owner's request, 2026-11-19):** What the character learns and can be
-    recognised by its spell is in a table: `ChronicleService.abilities` with `id`, `spell`
+    recognised by its spell is in a table: `ChronicleService.abilities`
+    (`Modules/Chronicle/Data/Abilities.lua`) with `id`, `spell`
     (main detection via `IsPlayerSpell`, the owner's decision), optionally `skill`
     (`{ line, rank }`, fallback via `C_SkillInfo.GetSkillLineInfoByID`), `also` (other spells
     that count as the same ability, another race's version), `class` (only this class asks for
@@ -340,7 +341,7 @@ picture-book look are built and checked against the mock only.
       `ProfessionService` pays off as soon as a feature outside the chronicle needs the same data
       (for example durability or profession helpers); then move the queries there.
   - **Special items (the owner's request, 2026-11-19):** the same principle via the
-    item ID. Table `ChronicleService.items` with `item` (ID), optionally `class`, `picture`
+    item ID. Table `ChronicleService.items` (`Modules/Chronicle/Data/Items.lua`) with `item` (ID), optionally `class`, `picture`
     (default: chest, `chest.tga`) and `big`. `ownJourney` checks on `BAG_UPDATE_DELAYED` with
     `C_Item.GetItemCount(id, true)` (bags and bank) and only queries items the
     character has never had (`FamulusCharDB.items`); once they have all of them, the event costs
@@ -364,7 +365,8 @@ picture-book look are built and checked against the mock only.
     character defeats for the first time carries `first = 1` ("Archaedas defeated for the first
     time"); known bosses are in `FamulusCharDB.bosses` by encounter ID. The first call takes the
     character's boss entries already in the chronicle as known, so a kill from before the
-    chronicle counts as a first. The last boss of an instance (`ChronicleService.finalBosses`,
+    chronicle counts as a first. The last boss of an instance (`ChronicleService.finalBosses` in
+    `Modules/Chronicle/Data/FinalBosses.lua`,
     one row per wing) makes the entry "Uldaman cleared" instead: `instance` carries the
     instance's name (`GetRealZoneText` inside it), on every clear, not only the first. Both
     fields are shared; older versions drop them and show the plain boss. Still `BOSS_KILL`, not

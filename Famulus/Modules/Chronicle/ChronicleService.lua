@@ -96,141 +96,11 @@ local function Label(entry)
     return name
 end
 
--- Abilities whose learning is an event, recognised by their spell. To add
--- one: a line here; the sentence names the spell as the game does ("Learned
--- Bear Form"). Modules/Chronicle/OwnJourney.lua does the looking.
---   id         name of the ability in entries and FamulusCharDB.abilities
---   spell      the spell the character knows once it is learned; the book
---              shows its icon and its tooltip
---   also       optional: other spells that count as the same ability (the
---              version another race learns)
---   class      optional: only this class learns it ("DRUID"); others never
---              ask for it
---   skill      optional { line = <skill line>, rank = <points> }: counts as
---              learned too, where the client does not list the spell
---   sentences  optional: has its own two sentences per language
---              (c_ability_<id>, c_their_ability_<id>) instead
---   picture    optional name in UI.media for the book
---   big        optional: a milestone of the book
--- The class abilities are those a class quest teaches, the levels in the
--- comments. IDs from Wowhead for Classic and Forever; "/fam test" says
--- whether the client knows each spell.
-ChronicleService.abilities = {
-    { id = "riding", spell = 33388, skill = { line = 762, rank = 75 }, picture = "horseshoe", big = true, sentences = true },
-    { id = "ridingFast", spell = 33391, skill = { line = 762, rank = 150 }, picture = "horseshoe", big = true, sentences = true },
-    -- Warrior
-    { id = "defensiveStance", class = "WARRIOR", spell = 71 }, -- 10
-    { id = "berserkerStance", class = "WARRIOR", spell = 2458 }, -- 30
-    -- Paladin; the Forsaken learn their own steeds
-    { id = "redemption", class = "PALADIN", spell = 7328 }, -- 12
-    { id = "senseUndead", class = "PALADIN", spell = 5502 }, -- 20
-    { id = "warhorse", class = "PALADIN", spell = 13819, also = { 1279399 }, picture = "horseshoe", big = true }, -- 40
-    { id = "charger", class = "PALADIN", spell = 23214, also = { 1296534 }, picture = "horseshoe", big = true }, -- 60
-    -- Hunter
-    { id = "tameBeast", class = "HUNTER", spell = 1515 }, -- 10
-    -- Rogue
-    { id = "poisons", class = "ROGUE", spell = 2842, skill = { line = 40, rank = 1 } }, -- 20
-    -- Priest: what each race learns by its own quest
-    { id = "desperatePrayer", class = "PRIEST", spell = 13908 }, -- 10, dwarf
-    { id = "starshards", class = "PRIEST", spell = 10797 }, -- 10, night elf
-    { id = "hexOfWeakness", class = "PRIEST", spell = 9035 }, -- 10, troll
-    { id = "touchOfWeakness", class = "PRIEST", spell = 2652 }, -- 10, undead
-    { id = "feedback", class = "PRIEST", spell = 13896 }, -- 20, human
-    { id = "elunesGrace", class = "PRIEST", spell = 2651 }, -- 20, night elf
-    { id = "shadowguard", class = "PRIEST", spell = 18137 }, -- 20, troll
-    { id = "chastise", class = "PRIEST", spell = 1277331 }, -- 20, dwarf
-    { id = "darkSacrifice", class = "PRIEST", spell = 1277324 }, -- 20, undead
-    -- Mage
-    { id = "polymorphPig", class = "MAGE", spell = 28272 }, -- 60
-    -- Warlock
-    { id = "summonImp", class = "WARLOCK", spell = 688 }, -- 1
-    { id = "summonVoidwalker", class = "WARLOCK", spell = 697 }, -- 10
-    { id = "summonSuccubus", class = "WARLOCK", spell = 712 }, -- 20
-    { id = "summonIncubus", class = "WARLOCK", spell = 713 }, -- 20
-    { id = "summonFelhunter", class = "WARLOCK", spell = 691 }, -- 30
-    { id = "felsteed", class = "WARLOCK", spell = 5784, picture = "horseshoe", big = true }, -- 40
-    { id = "inferno", class = "WARLOCK", spell = 1122 }, -- 50
-    { id = "ritualOfDoom", class = "WARLOCK", spell = 18540 }, -- 60
-    { id = "dreadsteed", class = "WARLOCK", spell = 23161, picture = "horseshoe", big = true }, -- 60
-    -- Druid; moonkin is a talent, not a quest
-    { id = "bearForm", class = "DRUID", spell = 5487 }, -- 10
-    { id = "curePoison", class = "DRUID", spell = 8946 }, -- 14
-    { id = "aquaticForm", class = "DRUID", spell = 1066 }, -- 16
-    { id = "catForm", class = "DRUID", spell = 768 }, -- 20
-    { id = "moonkinForm", class = "DRUID", spell = 24858 }, -- 40
-}
 
--- Items whose first arrival in the character's bags is an event, recognised
--- by their item ID. To add one: a line here; the sentence names the item as
--- the game does. Modules/Chronicle/OwnJourney.lua does the looking.
---   item     the game's item ID
---   class    optional: only this class gets it; others never ask for it
---   picture  optional name in UI.media for the book (default: a chest)
---   big      optional: a milestone of the book
-ChronicleService.items = {
-    { item = 211527 }, -- the sleeping bag
-    -- The shaman's totems, each from a class quest (level 4, 10, 20, 30)
-    { item = 5175, class = "SHAMAN" }, -- Earth Totem
-    { item = 5176, class = "SHAMAN" }, -- Fire Totem
-    { item = 5177, class = "SHAMAN" }, -- Water Totem
-    { item = 5178, class = "SHAMAN" }, -- Air Totem
-}
 
--- The last boss of each instance, by encounter ID (what BOSS_KILL names):
--- defeating it clears the instance. One row per wing where an instance has
--- several. IDs from the client's DungeonEncounter table (Forever build
--- 1.60.1.71139 on wago.tools, the same as Classic Era but for Sunken Temple);
--- many dungeons have newer IDs than warcraft.wiki.gg lists. Not checked in game.
-ChronicleService.finalBosses = {
-    -- Dungeons
-    [2735] = true, -- Ragefire Chasm: Bazzalan (no clear last boss)
-    [592] = true, -- Wailing Caverns: Mutanus the Devourer
-    [2747] = true, -- The Deadmines: Edwin VanCleef
-    [2755] = true, -- Shadowfang Keep: Archmage Arugal
-    [2910] = true, -- Blackfathom Deeps: Aku'mai
-    [2760] = true, -- The Stockade: Bazil Thredd (no clear last boss)
-    [2772] = true, -- Gnomeregan: Mekgineer Thermaplugg
-    [2778] = true, -- Razorfen Kraul: Charlga Razorflank
-    [2779] = true, -- Scarlet Monastery, Graveyard: Bloodmage Thalnos
-    [447] = true, -- Scarlet Monastery, Library: Arcanist Doan
-    [448] = true, -- Scarlet Monastery, Armory: Herod
-    [450] = true, -- Scarlet Monastery, Cathedral: High Inquisitor Whitemane
-    [2785] = true, -- Razorfen Downs: Amnennar the Coldbringer
-    [554] = true, -- Uldaman: Archaedas
-    [600] = true, -- Zul'Farrak: Chief Ukorz Sandscalp
-    [429] = true, -- Maraudon: Princess Theradras
-    [3584] = true, -- Sunken Temple: Shade of Eranikus (Forever's own row)
-    [493] = true, -- Sunken Temple: Shade of Eranikus (Classic Era's row)
-    [2790] = true, -- Blackrock Depths: Emperor Dagran Thaurissan
-    [275] = true, -- Lower Blackrock Spire: Overlord Wyrmthalak
-    [3069] = true, -- Upper Blackrock Spire: General Drakkisath
-    [346] = true, -- Dire Maul East: Alzzin the Wildshaper
-    [361] = true, -- Dire Maul West: Prince Tortheldrin
-    [368] = true, -- Dire Maul North: King Gordok
-    [2801] = true, -- Scholomance: Darkmaster Gandling
-    [478] = true, -- Stratholme, living side: Balnazzar
-    [484] = true, -- Stratholme, undead side: Baron Rivendare
-    -- Forever's own dungeons: the last boss is the one the client's table
-    -- orders last (OrderIndex), as the guides confirm
-    [3303] = true, -- City of Dalaran: Shade of the Archmage
-    [3479] = true, -- The Drowned City: Min'loth the Serpent
-    [3336] = true, -- Blackmaw Hold: Unbound Spirit
-    [3409] = true, -- Alcaz Prison: Blazeroar
-    [3482] = true, -- Excavation Site: Wetlands: Relic Guardian
-    [3354] = true, -- Ruins of Lordaeron: Rath'mael
-    [3502] = true, -- The Shaper's Terrace: Nanaya
-    [3451] = true, -- Krol'dok Stronghold: Overseer Mugg
-    [3496] = true, -- The Hall of Thanes: Durgen Dirgehammer
-    -- Raids
-    [672] = true, -- Molten Core: Ragnaros
-    [1084] = true, -- Onyxia's Lair: Onyxia
-    [617] = true, -- Blackwing Lair: Nefarian
-    [793] = true, -- Zul'Gurub: Hakkar
-    [723] = true, -- Ruins of Ahn'Qiraj: Ossirian the Unscarred
-    [717] = true, -- Temple of Ahn'Qiraj: C'Thun
-    [1114] = true, -- Naxxramas: Kel'Thuzad
-}
 
+-- The abilities, items and last bosses the chronicle knows are data:
+-- Modules/Chronicle/Data/ (Abilities.lua, Items.lua, FinalBosses.lua).
 function ChronicleService.Item(itemID)
     for _, item in ipairs(ChronicleService.items) do
         if item.item == itemID then
@@ -1276,37 +1146,17 @@ end
 -- They speak the addon's language, not the client's, so a German client set
 -- to English shows English samples; the companions are the same people as in
 -- the fellow travellers' samples (FellowService.Demo), in either language.
-local DEMO_ZONES = {
-    enUS = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
-    deDE = { "Ödland", "Uldaman", "Schlingendorntal", "Tanaris" },
-    esES = { "Tierras Inhóspitas", "Uldaman", "Vega de Tuercespina", "Tanaris" },
-    frFR = { "Terres ingrates", "Uldaman", "Vallée de Strangleronce", "Tanaris" },
-    itIT = { "Maleterre", "Uldaman", "Valle di Rovotorto", "Tanaris" },
-    plPL = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
-    ukUA = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
-}
-local DEMO_NAMES = {
-    enUS = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse", knight = "Knight" },
-    deDE = { tailoring = "Schneiderei", mining = "Bergbau", boss = "Archaedas", challenge = "Erkunder des Ödlands", bag = "Schlafsack", mount = "Braunes Pferd", knight = "Ritter" },
-    esES = { tailoring = "Sastrería", mining = "Minería", boss = "Archaedas", challenge = "Explorar las Tierras Inhóspitas", bag = "Saco de dormir", mount = "Caballo marrón", knight = "Caballero" },
-    frFR = { tailoring = "Couture", mining = "Minage", boss = "Archaedas", challenge = "Explorer les Terres ingrates", bag = "Sac de couchage", mount = "Cheval brun", knight = "Chevalier" },
-    itIT = { tailoring = "Sartoria", mining = "Estrazione", boss = "Archaedas", challenge = "Esplora Maleterre", bag = "Sacco a pelo", mount = "Cavallo marrone", knight = "Cavaliere" },
-    plPL = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse", knight = "Knight" },
-    ukUA = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse", knight = "Knight" },
-}
-local DEMO_PEOPLE = {
-    enUS = { "Mira Stormfeather", "Borin Ironbeard", "Lysa Morningdew" },
-    deDE = { "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau" },
-    esES = { "Mira Plumatormenta", "Borin Barbahierro", "Lysa Rocíoalba" },
-    frFR = { "Mira Plume-d'orage", "Borin Barbe-de-fer", "Lysa Rosée-du-matin" },
-    itIT = { "Mira Piumatempesta", "Borin Barbaferrea", "Lysa Rugiadalba" },
-    plPL = { "Mira Burzowe Pióro", "Borin Żelazna Broda", "Lysa Poranna Rosa" },
-    ukUA = { "Міра Бурепер", "Борін Залізнобород", "Ліса Ранкороса" },
-}
 
 -- The samples' three people (Mira, Borin, Lysa) in the addon's language.
 function ChronicleService.SamplePeople()
-    return unpack(DEMO_PEOPLE[ns:GetLocaleCode()] or DEMO_PEOPLE.enUS)
+    return unpack(ChronicleService.DEMO_PEOPLE[ns:GetLocaleCode()] or ChronicleService.DEMO_PEOPLE.enUS)
+end
+
+-- The samples' zones, names and people per language: Data/Samples.lua.
+-- The zones and names of the samples in a language, else in English.
+local function SampleTexts(locale)
+    local zones, names = ChronicleService.DEMO_ZONES, ChronicleService.DEMO_NAMES
+    return zones[locale] or zones.enUS, names[locale] or names.enUS
 end
 
 -- Their classes, as the fellow travellers' samples have them.
@@ -1314,7 +1164,7 @@ local DEMO_CLASSES = { "MAGE", "WARRIOR", "PRIEST" }
 
 -- The class of one of the samples' people, in any language, or nil.
 function ChronicleService.SampleClass(name)
-    for _, people in pairs(DEMO_PEOPLE) do
+    for _, people in pairs(ChronicleService.DEMO_PEOPLE) do
         for index, person in ipairs(people) do
             if person == name then
                 return DEMO_CLASSES[index]
@@ -1329,7 +1179,7 @@ end
 -- settings (UI/Previews.lua). nil for a kind without a sample.
 function ChronicleService.Sample(kind, own)
     local locale = ns:GetLocaleCode()
-    local zone, name = DEMO_ZONES[locale] or DEMO_ZONES.enUS, DEMO_NAMES[locale] or DEMO_NAMES.enUS
+    local zone, name = SampleTexts(locale)
     local mira, borin, lysa = ChronicleService.SamplePeople()
     local samples = {
         level = { level = 40, zone = zone[3], who = mira },
@@ -1388,8 +1238,8 @@ function ChronicleService.Demo()
     end
     ChronicleService.ClearDemo()
     local locale = ns:GetLocaleCode()
-    local zone, name = DEMO_ZONES[locale] or DEMO_ZONES.enUS, DEMO_NAMES[locale] or DEMO_NAMES.enUS
-    local mira, borin, lysa = unpack(DEMO_PEOPLE[locale] or DEMO_PEOPLE.enUS)
+    local zone, name = SampleTexts(locale)
+    local mira, borin, lysa = unpack(ChronicleService.DEMO_PEOPLE[locale] or ChronicleService.DEMO_PEOPLE.enUS)
     local hour, day = 3600, 86400
     -- { seconds before now, kind, values }
     local samples = {
