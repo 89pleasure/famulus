@@ -77,6 +77,8 @@ local PICTURES = {
     joined = { icon = "people", fill = "accentDeep", border = "accentLine", ink = "accent2" },
     -- A friend's reaction, in the live feed; story.icon names it ("cheer").
     reaction = { icon = "cheer", fill = "accentDeep", border = "accentLine", ink = "accent2" },
+    -- News after an update, in the live feed: the logo as its picture (Core/NewsService.lua).
+    news = { fill = "accentDeep", border = "accentLine", ink = "accent2" },
     -- The story of a fellow traveller: time together, and the bond's milestones.
     fellow = { icon = "people", fill = "control", border = "controlBorder", ink = "textDim" },
     bond = { icon = "people", fill = "accentDeep", border = "accentLine", ink = "accent2" },

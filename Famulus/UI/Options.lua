@@ -2676,6 +2676,7 @@ local function BuildPages()
         id = "about",
         icon = "info",
         bottom = true,
+        dot = ns.NewsService.Unread, -- until the news has been seen
         title = function()
             return L.cat_about
         end,
@@ -2689,6 +2690,8 @@ local function BuildPages()
                 blocks = function()
                     return { { items = about } }
                 end,
+                -- What is new in this release, as a card above the rest (UI/News.lua).
+                news = ns.NewsService.Model,
             },
         },
     })
@@ -3600,6 +3603,10 @@ end
 -- or the search while there is one.
 local function RefreshNav()
     local searching = searchText ~= ""
+    -- Whoever has the About page in front of them has seen the news.
+    if not searching and currentPage == "about" then
+        ns.NewsService.MarkRead()
+    end
     for _, id in ipairs(pageOrder) do
         local button, page = navButtons[id], pages[id]
         local selected = not searching and id == currentPage
@@ -3617,6 +3624,9 @@ local function RefreshNav()
             button.count:SetText(on and count and tostring(count()) or "")
             button.pill:SetShown(not on)
             button.pill:Set(L.ui_category_off, false)
+        end
+        if button.dot then
+            UI.SetDot(button.dot, nil, page.dot())
         end
     end
     window.tagline:SetText(L.ui_tagline)
@@ -3908,6 +3918,17 @@ function Render()
     elseif window.bookFilter then
         window.bookFilter:Hide()
     end
+    -- What is new, above the tab's cards (About).
+    local news = not searching and not off and tab.news and tab.news() or nil
+    if news then
+        window.news = window.news or UI.NewsCard(content)
+        window.news:ClearAllPoints()
+        window.news:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
+        y = y + window.news:SetModel(news, width) + BLOCK_GAP
+        window.news:Show()
+    elseif window.news then
+        window.news:Hide()
+    end
     for blockIndex, block in ipairs(blocks) do
         local card = cards[blockIndex]
         if not card then
@@ -4159,6 +4180,10 @@ local function CreateNavButton(parent, page)
         button.label = UI.Text(button, 13, "textDim", "medium")
         button.label:SetPoint("LEFT", button.icon, "RIGHT", 10, 0)
         button.label:SetJustifyV("MIDDLE")
+        if page.dot then
+            button.dot = UI.GlowDot(button, 6)
+            button.dot:SetPoint("RIGHT", -14, 0)
+        end
     end
 
     button:SetScript("OnEnter", function(self)
@@ -4523,6 +4548,25 @@ function ns:ToggleOptions()
         Build()
     end
     window:SetShown(not window:IsShown())
+end
+
+-- Opens the window on the About page, where the news stands
+-- (Core/NewsService.lua); asked for, it wins over the welcome page.
+function ns:ShowNews()
+    if not window then
+        Build()
+    end
+    holdWelcome = true
+    if not window:IsShown() then
+        window:Show()
+    end
+    holdWelcome = false
+    if welcoming then
+        welcoming = false
+        PlayEmbers()
+    end
+    SelectPage("about")
+    window.scroll:ScrollToTop()
 end
 
 -- Opens the aliases page with the character or BattleTag in the input row,

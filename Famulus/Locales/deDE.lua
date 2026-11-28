@@ -385,6 +385,20 @@ L.ui_preview_nearby_friends = "Nur Freunde"
 L.ui_minimap_hint_click = "Klicken öffnet die Einstellungen"
 L.ui_minimap_hint_drag = "Ziehen verschiebt das Symbol"
 
+-- Neuigkeiten (Core/NewsService.lua)
+L.ui_news_title = "Neu in %s"
+L.ui_news_heading = "Was sich geändert hat"
+L.ui_news_card = "%d Neuerungen"
+L.ui_news_card_one = "%d Neuerung"
+L.ui_news_card_detail = "Unter „%s“ im Fenster"
+L.ui_news_minimap = "Neu in %s: siehe „%s“"
+L.ui_news_1_t = "Mehr Momente in der Chronik"
+L.ui_news_1 = "Das erste Mal in einem Dungeon oder Schlachtzug, ein Boss zum ersten Mal besiegt, ein Dungeon abgeschlossen, ein neues Reittier und ein neuer PvP-Rang."
+L.ui_news_2_t = "Neu bei Famulus"
+L.ui_news_2 = "Wenn jemand aus deiner Freundesliste oder Gilde mit Famulus anfängt, erfährst du es einmal und kannst mit einer Reaktion Hallo sagen."
+L.ui_news_3_t = "Anflüstern aus „In der Nähe“"
+L.ui_news_3 = "Die Karten von Freunden in deiner Zone haben einen Knopf zum Anflüstern: ein Klick, und du schreibst ihnen."
+
 -- Fellowship
 L.area_fellows = "Gemeinschaft"
 L.area_fellows_desc = "Mit wem du spielst und wer gerade in deiner Nähe ist. Nur du siehst das."

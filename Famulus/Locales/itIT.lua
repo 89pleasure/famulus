@@ -392,6 +392,20 @@ L.ui_preview_nearby_friends = "Solo amici"
 L.ui_minimap_hint_click = "Fai clic per aprire le impostazioni"
 L.ui_minimap_hint_drag = "Trascina per spostare questo pulsante"
 
+-- Novità (Core/NewsService.lua)
+L.ui_news_title = "Novità della versione %s"
+L.ui_news_heading = "Cosa è cambiato"
+L.ui_news_card = "%d novità"
+L.ui_news_card_one = "%d novità"
+L.ui_news_card_detail = "In «%s», nella finestra"
+L.ui_news_minimap = "Novità della versione %s: vedi «%s»"
+L.ui_news_1_t = "Più momenti nella cronaca"
+L.ui_news_1 = "La prima volta in un dungeon o in un'incursione, un boss sconfitto per la prima volta, un dungeon completato, una nuova cavalcatura e un nuovo grado PvP."
+L.ui_news_2_t = "Arrivi su Famulus"
+L.ui_news_2 = "Quando un amico o un membro della gilda inizia a usare Famulus, lo saprai una volta e potrai dargli il benvenuto con una reazione."
+L.ui_news_3_t = "Sussurra da «Nei dintorni»"
+L.ui_news_3 = "Le schede degli amici nella tua zona hanno un pulsante per sussurrare: un clic per scrivergli."
+
 -- Fellowship
 L.area_fellows = "Compagnia"
 L.area_fellows_desc = "Con chi giochi e chi è nelle vicinanze. Lo vedi solo tu."

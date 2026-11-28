@@ -401,6 +401,21 @@ L.ui_preview_nearby_friends = "Tylko znajomi"
 L.ui_minimap_hint_click = "Kliknij, aby otworzyć ustawienia"
 L.ui_minimap_hint_drag = "Przeciągnij, aby przesunąć ten przycisk"
 
+-- Nowości (Core/NewsService.lua)
+L.ui_news_title = "Nowości w wersji %s"
+L.ui_news_heading = "Co się zmieniło"
+L.ui_news_card = "%d nowości"
+L.ui_news_card_one = "%d nowość"
+L.ui_news_card_few = "%d nowości"
+L.ui_news_card_detail = "W oknie, w zakładce „%s”"
+L.ui_news_minimap = "Nowości w wersji %s: zobacz „%s”"
+L.ui_news_1_t = "Więcej chwil w kronice"
+L.ui_news_1 = "Pierwszy raz w lochu lub rajdzie, boss pokonany po raz pierwszy, ukończony loch, nowy wierzchowiec i nowa ranga PvP."
+L.ui_news_2_t = "Nowi w Famulus"
+L.ui_news_2 = "Gdy ktoś ze znajomych lub z gildii zaczyna używać Famulus, dowiesz się o tym raz i możesz go powitać reakcją."
+L.ui_news_3_t = "Szept z „W pobliżu”"
+L.ui_news_3 = "Karty znajomych w twojej strefie mają przycisk szeptu: jedno kliknięcie, by do nich napisać."
+
 -- Fellowship
 L.area_fellows = "Drużyna"
 L.area_fellows_desc = "Z kim grasz i kto jest w pobliżu. Widzisz to tylko ty."

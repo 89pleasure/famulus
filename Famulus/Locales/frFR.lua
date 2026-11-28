@@ -388,6 +388,20 @@ L.ui_preview_nearby_friends = "Amis seulement"
 L.ui_minimap_hint_click = "Cliquez pour ouvrir les paramètres"
 L.ui_minimap_hint_drag = "Faites glisser pour déplacer ce bouton"
 
+-- Nouveautés (Core/NewsService.lua)
+L.ui_news_title = "Nouveautés de la version %s"
+L.ui_news_heading = "Ce qui a changé"
+L.ui_news_card = "%d nouveautés"
+L.ui_news_card_one = "%d nouveauté"
+L.ui_news_card_detail = "Sous « %s » dans la fenêtre"
+L.ui_news_minimap = "Nouveautés de la version %s : voir « %s »"
+L.ui_news_1_t = "Plus de moments dans la chronique"
+L.ui_news_1 = "Votre premier donjon ou raid, un boss vaincu pour la première fois, un donjon terminé, une nouvelle monture et un nouveau rang JcJ."
+L.ui_news_2_t = "Arrivées sur Famulus"
+L.ui_news_2 = "Quand un ami ou un membre de la guilde commence à utiliser Famulus, vous en êtes informé une fois et pouvez l'accueillir d'une réaction."
+L.ui_news_3_t = "Chuchoter depuis « À proximité »"
+L.ui_news_3 = "Les cartes des amis dans votre zone ont un bouton pour chuchoter : un clic pour leur écrire."
+
 -- Fellowship
 L.area_fellows = "Communauté"
 L.area_fellows_desc = "Avec qui vous jouez, et qui se trouve à proximité. Visible par vous uniquement."
