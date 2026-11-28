@@ -581,7 +581,8 @@ picture-book look are built and checked against the mock only.
     (`companions`) is running. A stored value of the old switch stays unused in the profile until
     "Reset" removes it. Checked against the mock only.
   - Switches per event kind (`level`, `death`, `boss`, `pvpRank`, `instance`, `achievement`,
-    `ability`, `mount`, `item`, `profession`, `skill`, `zone`); only `zone` is off by default (the
+    `ability`, `mount`, `item`, `profession`, `skill`, `joined`, `zone`; `joined`: see "A newcomer
+    is welcomed" in [sharing.md](sharing.md)); only `zone` is off by default (the
     owner's requirement: zones rather not, level-ups yes). Plus `own` (own events too, default off),
     `sound` (see below), `duration` (4, 7 or 12 seconds) and `keep` (the last three stay, see
     "Sliding in, waiting its turn, keeping the last three"). A kind without a switch (newer

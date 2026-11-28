@@ -55,6 +55,20 @@ guild channel), only known fields; `|` and control characters are removed.
     one minute, which nobody's play brings forth, some may be lost for good. Old entries are
     not counted: catching up brings hundreds.
 
+- **A newcomer is welcomed (the owner's request, 2026-11-28: "a guild member installs Famulus
+  for the first time, the message goes out and players can celebrate it. Nothing more."; checked
+  against the mock only):** the first login of Famulus on an account (no `FamulusDB.seen` yet)
+  sets `FamulusDB.newcomer` (`Core/Features.lua`). The first time sharing is switched on after
+  that, `Sharing.lua` clears it and writes an own entry of kind `joined` (`{ level }`, "Joined
+  Famulus"). It goes out like any own entry, so friends and guild members with Famulus get a card
+  in the book and, while it is fresh, in the live feed (switch `joined`, on by default), and
+  welcome the newcomer with a reaction (`cheer heart clap`). Whoever had Famulus before this
+  version has `seen` and is never announced. The assistant's decisions: once per account, not per
+  character; no switch of its own, it is part of sharing. Limits: whoever comes online more than
+  120 seconds later sees it in the book only; someone who switches sharing on weeks after
+  installing is still announced then, and the entry, sent last in the catching up, may reach
+  friends too late for the live feed; older versions drop the kind.
+
 - **Guild (2026-11-19):** Whoever comes online greets the guild once in the guild channel (`1~P`),
   as soon as the guild roster is there; whoever has Famulus answers by whisper with a greeting.
   Friends are still greeted one by one. That addon messages in the guild channel arrive in Forever

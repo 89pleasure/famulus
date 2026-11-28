@@ -342,6 +342,19 @@ local kinds = {
             return L.c_skill:format(e.name or L.c_a_craft, tonumber(e.rank) or 0)
         end,
     },
+    -- Famulus is new on this account; friends and guild can welcome them
+    -- (written once, when sharing is first on: Modules/Chronicle/Sharing.lua).
+    joined = {
+        title = function(e)
+            if e.who then
+                return L.c_their_joined:format(Label(e))
+            end
+            return L.c_joined
+        end,
+        detail = function(e)
+            return e.level and L.c_at_level:format(tonumber(e.level) or 0) or nil
+        end,
+    },
 }
 -- Seen on the friends list rather than told by the friend: a level-up.
 kinds.friendLevel = kinds.level
@@ -625,6 +638,7 @@ ChronicleService.REACTION_SETS = {
     death = { "sad", "strong", "heart" },
     skill = { "clap", "cheer" },
     profession = { "clap", "cheer" },
+    joined = { "cheer", "heart", "clap" },
 }
 
 -- Each kind's default: the first of its set.
@@ -1271,6 +1285,7 @@ function ChronicleService.Sample(kind, own)
         zone = { zone = zone[4], level = 39, who = lysa },
         instance = { instance = zone[2], level = 38, who = borin, with = { mira } },
         pvpRank = { rank = 6, name = name.knight, who = borin },
+        joined = { level = 12, who = lysa },
     }
     local entry = samples[kind]
     if not entry then

@@ -319,6 +319,8 @@ ns:RegisterEvent("PLAYER_LOGIN", loader, function()
     end
     if not ns.global.seen then
         ns.global.seen = true
+        -- Famulus is new on this account: sharing announces it once (Sharing.lua).
+        ns.global.newcomer = true
         ns:Print(L.msg_welcome)
     end
     ns:Fire("LOGIN")

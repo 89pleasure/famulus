@@ -729,7 +729,7 @@ end
 
 -- How much an event weighs in the chronicle's book: the size and look of
 -- its card. Other kinds are "medium"; what the tables mark as great is "high".
-local WEIGHT = { death = "low", zone = "low", skill = "medium", boss = "high", pvpRank = "high", instance = "high", mount = "high", level = "high" }
+local WEIGHT = { death = "low", zone = "low", skill = "medium", boss = "high", pvpRank = "high", instance = "high", mount = "high", level = "high", joined = "high" }
 
 -- An entry as the chronicle's book tells it: the place is not in the text,
 -- the foot of the card names it.

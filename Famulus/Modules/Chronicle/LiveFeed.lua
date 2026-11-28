@@ -17,7 +17,8 @@ local _, ns = ...
 -- The kinds of events with a switch, in the order of the window. An arrival
 -- in a zone is off from the start: it happens often and is rarely news.
 -- "reaction": a friend reacted to one of the player's events (Sharing.lua).
-local KINDS = { "level", "death", "boss", "pvpRank", "instance", "achievement", "ability", "mount", "item", "profession", "skill", "zone", "reaction" }
+-- "joined": someone is new on Famulus (Sharing.lua).
+local KINDS = { "level", "death", "boss", "pvpRank", "instance", "achievement", "ability", "mount", "item", "profession", "skill", "joined", "zone", "reaction" }
 local OFF_BY_DEFAULT = { zone = true }
 -- The window shows the kinds as a group of chips ("kinds"), each with the
 -- icon of its kind (a name from UI.media, as the chronicle's cards use).
@@ -33,6 +34,7 @@ local ICONS = {
     item = "chest",
     profession = "hammer",
     skill = "hammer",
+    joined = "people",
     zone = "peaks",
     reaction = "cheer",
 }

@@ -146,6 +146,7 @@ local FIELDS = {
     item = { item = "n", name = "s", level = "n", zone = "s" },
     mount = { mount = "n", name = "s", icon = "n", level = "n", zone = "s" },
     skill = { skill = "n", name = "s", rank = "n", icon = "n" },
+    joined = { level = "n" },
 }
 
 local friends = {} -- key -> name: friends who are online
@@ -1124,6 +1125,19 @@ function sharing:OnEnable()
     self:RegisterEvent("FRIENDLIST_UPDATE")
     self:RegisterEvent("GUILD_ROSTER_UPDATE")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
+    -- Famulus was installed on this account just now (Core/Features.lua): the
+    -- first time sharing is on, the chronicle says the player joined, and it
+    -- goes to friends and guild members like any own entry, so they can
+    -- welcome them. Once only; whoever had Famulus before is never announced.
+    -- A moment later: switched on at login, the chronicle does not know the
+    -- character yet, and an entry without it never goes out.
+    if ns.global and ns.global.newcomer then
+        self:After(1, function()
+            ns.global.newcomer = nil
+            Trace("new on this account: the chronicle says the player joined")
+            Chronicle.Add("joined", { level = UnitLevel and UnitLevel("player") or nil })
+        end)
+    end
     if C_FriendList.ShowFriends then
         C_FriendList.ShowFriends()
     end
