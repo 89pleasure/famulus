@@ -21,6 +21,7 @@ UI.gameIcons = {
     level = ICONS .. "Spell_Holy_GreaterBlessingofKings", -- the number stands on it
     death = ICONS .. "INV_Misc_Bone_HumanSkull_01",
     boss = ICONS .. "Ability_DualWield",
+    instance = ICONS .. "INV_Misc_Key_03",
     zone = ICONS .. "INV_Misc_Map_01",
     achievement = ICONS .. "Spell_Holy_ChampionsBond",
     profession = ICONS .. "Trade_BlackSmithing",
