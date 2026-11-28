@@ -535,15 +535,19 @@ local tweens = {}
 
 driver:SetScript("OnUpdate", function(_, elapsed)
     for i = #tweens, 1, -1 do
+        -- A tween that ends may cancel others (a feed card that goes takes
+        -- its slide and resize along); then the list is shorter than i.
         local tween = tweens[i]
-        tween.elapsed = tween.elapsed + elapsed
-        local progress = tween.elapsed / tween.duration
-        if progress >= 1 then
-            progress = 1
-            table.remove(tweens, i)
+        if tween then
+            tween.elapsed = tween.elapsed + elapsed
+            local progress = tween.elapsed / tween.duration
+            if progress >= 1 then
+                progress = 1
+                table.remove(tweens, i)
+            end
+            local rest = 1 - progress
+            tween.fn(1 - rest * rest * rest) -- ease out
         end
-        local rest = 1 - progress
-        tween.fn(1 - rest * rest * rest) -- ease out
     end
     if #tweens == 0 then
         driver:Hide()

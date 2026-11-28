@@ -781,6 +781,9 @@ local function LayPeople(part, people, width)
         plate.note:SetText(each.note or "")
         local noteWidth = each.note and 5 + plate.note:GetStringWidth() or 0
         local room = width - 3 - PERSON_ICON - 5 - noteWidth - 9
+        -- A reused plate still has its last name's width, and the client
+        -- measures a text no wider than its string is: free it first.
+        plate.name:SetWidth(0)
         plate.name:SetText(each.name or "")
         plate.name:SetWidth(math.max(1, math.min(plate.name:GetStringWidth() + 1, room)))
         local plateWidth = math.floor(3 + PERSON_ICON + 5 + plate.name:GetWidth() + noteWidth + 9 + 0.5)

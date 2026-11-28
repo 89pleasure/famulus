@@ -93,7 +93,7 @@ function AliasService.Key(name, surname)
     if full == "" then
         return nil
     end
-    return string.lower(full)
+    return ns.Lower(full)
 end
 
 -- The BattleTag in text ("Name#1234"), without surrounding blanks, or nil.
@@ -107,7 +107,7 @@ end
 
 local function AccountEntry(tag)
     tag = accountCount > 0 and AliasService.BattleTag(tag)
-    return tag and Accounts()[string.lower(tag)] or nil
+    return tag and Accounts()[ns.Lower(tag)] or nil
 end
 
 -- The alias set on exactly this character or BattleTag, or nil; what a
@@ -179,7 +179,7 @@ end
 local function SetAccount(tag, alias)
     alias = CleanAlias(alias)
     local accounts = Accounts(alias ~= nil)
-    local key = string.lower(tag)
+    local key = ns.Lower(tag)
     local entry = accounts and accounts[key]
     if alias then
         if entry and entry.alias == alias then
@@ -379,7 +379,7 @@ function AliasService.List()
             end
         end
         table.sort(list, function(a, b)
-            local left, right = string.lower(a.alias), string.lower(b.alias)
+            local left, right = ns.Lower(a.alias), ns.Lower(b.alias)
             if left ~= right then
                 return left < right
             end
@@ -419,7 +419,7 @@ ns:On("DATABASE_READY", function()
     if accounts then
         for key, entry in pairs(accounts) do
             local tag = type(entry) == "table" and type(entry.alias) == "string" and AliasService.BattleTag(entry.tag)
-            if type(key) == "string" and tag and string.lower(tag) == key then
+            if type(key) == "string" and tag and ns.Lower(tag) == key then
                 accountCount = accountCount + 1
                 if type(entry.chars) ~= "table" then
                     entry.chars = {}

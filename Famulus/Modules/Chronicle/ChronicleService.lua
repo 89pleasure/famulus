@@ -41,6 +41,11 @@ local MAX_ENTRIES = 2000
 local MAX_OTHERS = 1000 -- of them, news of others
 local CLOCK_SLACK = 300 -- seconds a companion's clock may run ahead of ours
 
+-- Seconds for which an entry counts as fresh: the live feed announces only
+-- such (older news was caught up on or passed on), and sharing takes only a
+-- few of them at once from one sender.
+ChronicleService.FRESH = 120
+
 local character -- "First Last" of the character that is playing
 local characterClass -- its class as the game names it in code ("MAGE")
 
@@ -387,6 +392,17 @@ local function Trim(entries)
     end
 end
 
+-- An entry that is there already arrived again; for Add, which returns what
+-- this does. If it was passed on before (`via`) and now comes from the
+-- companion themselves, it counts as theirs from here on: the mark for their
+-- next hello moves with it (NewestFrom), and it is not sent again each time.
+local function ToldAgain(old, entry)
+    if old.via and not entry.via then
+        old.via = nil
+    end
+    return false
+end
+
 -- Writes an event down. kind: see `kinds`; entry: its values. Strings that
 -- are secret or empty are dropped. An entry with `who` tells of a companion.
 -- Returns true if it was written, false if it is known already or its time
@@ -438,8 +454,10 @@ function ChronicleService.Add(kind, entry)
         for i = #entries, 1, -1 do
             local old = entries[i]
             if old.who == entry.who and old.level == entry.level and (old.k == "level" or old.k == "friendLevel") then
-                if kind == "friendLevel" or old.k == "level" then
+                if kind == "friendLevel" then
                     return false
+                elseif old.k == "level" then
+                    return ToldAgain(old, entry)
                 end
                 table.remove(entries, i)
                 replaced = true
@@ -461,7 +479,7 @@ function ChronicleService.Add(kind, entry)
         if old.k == kind and old.who == entry.who and old.c == entry.c and old.skill == entry.skill
             and old.rank == entry.rank and old.ability == entry.ability
             and old.item == entry.item then
-            return false
+            return ToldAgain(old, entry)
         end
     end
     table.insert(entries, index, entry)
@@ -492,6 +510,22 @@ function ChronicleService.OwnSince(since, limit)
         end
     end
     return found
+end
+
+-- Time of the playing character's own entry just before this one, in the
+-- order of OwnSince, or 0 if it is the first. Sharing sends it along: a
+-- companion who has nothing that new knows that something got lost.
+function ChronicleService.OwnBefore(entry)
+    local entries = ChronicleService.Entries()
+    local found = false
+    for i = #entries, 1, -1 do
+        local each = entries[i]
+        if found and each.who == nil and each.c == character and not each.demo then
+            return each.t
+        end
+        found = found or each == entry
+    end
+    return 0
 end
 
 -- Time of the newest entry a companion told, or 0. Entries another

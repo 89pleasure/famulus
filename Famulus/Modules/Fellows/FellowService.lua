@@ -383,6 +383,8 @@ end
 -- The GUID of the person with that character name, in any spelling
 -- ("First Last", "First-Last"), or nil. Of two with the same name, the one
 -- seen last. The chronicle links a friend to your story with them this way.
+local byKey -- name key -> GUID, made on the first Find and dropped when the list changes
+
 function FellowService.Find(name)
     local Key = ns.SocialService.Key
     local key = IsPlainText(name) and Key(name)
@@ -390,14 +392,24 @@ function FellowService.Find(name)
     if not key or not fellows then
         return nil
     end
-    local found, foundLast
-    for guid, person in pairs(fellows) do
-        if Key(person.name) == key and (not foundLast or person.last > foundLast) then
-            found, foundLast = guid, person.last
+    -- The window asks for everyone it lists (who is nearby, with up to 500
+    -- people here): one walk over the list for all of them.
+    if not byKey then
+        byKey = {}
+        local lastSeen = {}
+        for guid, person in pairs(fellows) do
+            local each = Key(person.name)
+            if not lastSeen[each] or person.last > lastSeen[each] then
+                byKey[each], lastSeen[each] = guid, person.last
+            end
         end
     end
-    return found
+    return byKey[key]
 end
+
+ns:On("FELLOWS_CHANGED", function()
+    byKey = nil
+end)
 
 -- Everyone on the list whom check (see SocialService.Circle) does not know:
 -- no friend and not in the guild, or not any more. As { guid, person }, by

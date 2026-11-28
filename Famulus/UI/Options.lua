@@ -72,6 +72,10 @@ local pages, pageOrder = {}, {}
 local currentPage, selectedTabs, searchText = nil, {}, ""
 local rows, cards, navButtons = {}, {}, {}
 local renderedKey -- page, tab or search the rows were last laid out for
+-- (window.drawn: what one drawing builds once. A tab's cards, its book and its
+-- rail ask for the same book or the same data; emptied when a drawing begins,
+-- see Render. A field of the window, not a local: this file's main chunk has
+-- the 200 local variables Lua allows, and one more would not load.)
 local listKey, detailKey -- settings tab and entry the list and the detail were last laid out for
 local railKey -- page and tab the chronicle's rail was last filled for
 local chronicleWho -- the companion the chronicle's book is narrowed to, or nil
@@ -1146,6 +1150,16 @@ function layouts.chronicle()
     -- the guild roster tell the classes of the people in the book, before
     -- the book and the rail are laid out (blocks come first).
     local function Tab(id, wanted, rail, people)
+        -- The book of this drawing: the cards ask whether there is one, then
+        -- it is laid out.
+        local function Book()
+            local built = window.drawn["chronicle:" .. id]
+            if not built then
+                built = { ChronicleBook(wanted) }
+                window.drawn["chronicle:" .. id] = built
+            end
+            return built[1], built[2]
+        end
         return {
             id = id,
             category = "chronicle",
@@ -1161,15 +1175,18 @@ function layouts.chronicle()
                 if people then
                     Chronicle.LearnClasses()
                 end
-                if ChronicleBook(wanted) then
+                if Book() then
                     return {}
                 end
                 return { { items = { chronicleWho and CHRONICLE_EMPTY_WHO_ITEM or CHRONICLE_EMPTY_ITEM } } }
             end,
-            book = function()
-                return ChronicleBook(wanted)
-            end,
+            book = Book,
             rail = rail,
+            -- The search finds nothing in a book; asked for its cards instead,
+            -- the tab would build one with every key.
+            search = function()
+                return {}
+            end,
         }
     end
     local record = CategoryTab("chronicle")
@@ -1714,8 +1731,14 @@ end
 
 -- What the book and the rail are made from: the groups, the people on the
 -- list, and per group its people and the set of them that came together
--- most often so far. nil without any group.
+-- most often so far. nil without any group. Made once per drawing (`window.drawn`):
+-- the tab's cards, its book and its rail all ask.
 local function TimelineData()
+    local drawn = window.drawn
+    if drawn.timelineData ~= nil then
+        return drawn.timelineData or nil
+    end
+    drawn.timelineData = false
     local Fellows = ns.FellowService
     local runs, open = Fellows.Runs()
     if #runs == 0 then
@@ -1753,7 +1776,8 @@ local function TimelineData()
             end
         end
     end
-    return { runs = runs, open = open, now = now, byGuid = byGuid, told = told, metIn = metIn }
+    drawn.timelineData = { runs = runs, open = open, now = now, byGuid = byGuid, told = told, metIn = metIn }
+    return drawn.timelineData
 end
 
 -- When each person reached a new bond tier, as far as the groups tell: the
@@ -1913,6 +1937,13 @@ end
 -- SESSION_GAP between the end of an event and the start of the chapter
 -- begins the next. Returns nil if there is nothing to tell.
 local function TimelineBook()
+    -- Once per drawing: the cards ask whether there is a book, then it is laid out.
+    local built = window.drawn.timelineBook
+    if built then
+        return built[1], built[2]
+    end
+    built = {}
+    window.drawn.timelineBook = built
     local data = TimelineData()
     if not data then
         return nil
@@ -1945,7 +1976,8 @@ local function TimelineBook()
         return a.title < b.title
     end)
     local chapters, more = SessionChapters(events, data.now, TIMELINE_ROWS)
-    return chapters, more and L.ui_run_more or nil
+    built[1], built[2] = chapters, more and L.ui_run_more or nil
+    return built[1], built[2]
 end
 
 -- The week beside the book: the time in groups and what came of it, the
@@ -2735,23 +2767,36 @@ local function SearchBlocks(query)
                     where = pageTitle .. "  ·  " .. tab.label()
                 end
                 local context = ns.Lower(where)
-                local hits = {}
+                local hits, people, more = {}, 0, 0
                 -- A tab that shows only part of a long list searches all of it.
                 for _, block in ipairs(tab.search and tab.search() or tab.blocks()) do
                     for _, item in ipairs(block.items) do
                         if item.kind ~= "info" and item.kind ~= "aliasEdit" then
                             -- An item whose help text changes (a list of names) says what to search in.
                             local text = item.find and item.find() or (item.label() .. " " .. item.desc())
-                            local haystack = ns.Lower(text) .. " " .. context
+                            -- A person is found by their own row, not by the name of the page:
+                            -- "o" would find every fellow traveller through "overview".
+                            local person = PERSON_ROWS[item.kind]
+                            local haystack = person and ns.Lower(text) or (ns.Lower(text) .. " " .. context)
                             if string.find(haystack, query, 1, true) then
-                                hits[#hits + 1] = item
+                                -- Rows are never freed: no more people than the list shows.
+                                if person and people >= FELLOW_ROWS then
+                                    more = more + 1
+                                else
+                                    hits[#hits + 1] = item
+                                    people = people + (person and 1 or 0)
+                                end
                             end
                         end
                     end
                 end
                 if #hits > 0 then
-                    blocks[#blocks + 1] = { title = where, items = hits }
-                    total = total + #hits
+                    blocks[#blocks + 1] = {
+                        title = where,
+                        items = hits,
+                        note = more > 0 and ns.Plural("ui_fellow_more", more):format(more) or nil,
+                    }
+                    total = total + #hits + more
                 end
             end
         end
@@ -3799,8 +3844,9 @@ function OpenWelcome()
 end
 
 function Render()
-    UI.CloseMenu()
+    window.drawn = {}
     if welcoming then
+        UI.CloseMenu()
         ShowWelcome()
         return
     end
@@ -3812,6 +3858,8 @@ function Render()
     local page = pages[currentPage]
     local tab = CurrentTab(page)
     local blocks, key
+    -- A switched-off main feature shows a notice instead of its content.
+    local off = not searching and tab.category ~= nil and not ns:IsCategoryEnabled(tab.category)
 
     if searching then
         local total
@@ -3824,14 +3872,8 @@ function Render()
         end
         key = "search:" .. searchText
     else
-        blocks = tab.blocks()
+        blocks = off and {} or tab.blocks()
         key = page.id .. ":" .. tab.id .. ":" .. (chronicleWho or "") .. ":" .. (fellowStory or "")
-    end
-
-    -- A switched-off main feature shows a notice instead of its content.
-    local off = not searching and tab.category ~= nil and not ns:IsCategoryEnabled(tab.category)
-    if off then
-        blocks = {}
     end
     window.offNotice:SetShown(off)
     window.offNotice.text:SetText(L.ui_off_notice:format(page.title()))
@@ -3844,6 +3886,12 @@ function Render()
         blocks = {}
     end
     window.scroll:SetShown(not split)
+    -- A menu stays open while the same settings tab is drawn again (news came
+    -- in while the player chooses): its entries do not move. Anywhere else
+    -- what it hangs on may have.
+    if not (split and key == renderedKey) then
+        UI.CloseMenu()
+    end
 
     -- A fellow traveller's story, if one is open and the person still there.
     local storyPerson, storyChapters
@@ -4613,19 +4661,16 @@ end)
 ns:On("LOCALE_CHANGED", function()
     RequestRefresh("layout")
 end)
-ns:On("CHRONICLE_CHANGED", function()
-    RequestRefresh("layout")
-end)
-ns:On("ALIASES_CHANGED", function()
-    RequestRefresh("layout")
-end)
-ns:On("FELLOWS_CHANGED", function()
-    RequestRefresh("layout")
-end)
--- The guild roster came: tidying up can count again.
-ns:On("SOCIAL_CHANGED", function()
-    RequestRefresh("layout")
-end)
+-- Data changed (an entry, an alias, a fellow traveller; the guild roster came,
+-- so tidying up can count again). Only what shows it is laid out anew: an
+-- area's page or the search. The addon's own pages only refresh their numbers
+-- and keep what is open on them.
+for _, message in ipairs({ "CHRONICLE_CHANGED", "ALIASES_CHANGED", "FELLOWS_CHANGED", "SOCIAL_CHANGED" }) do
+    ns:On(message, function()
+        local page = pages[currentPage or ""] -- (no page before the window is built)
+        RequestRefresh((searchText ~= "" or (page and page.area)) and "layout" or "state")
+    end)
+end
 -- Who is where changed: only the tab that shows it is drawn again.
 ns:On("NEARBY_CHANGED", function()
     if window and window:IsShown() and searchText == "" and currentPage == "fellows" and CurrentTab().id == "nearby" then

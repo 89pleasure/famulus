@@ -11,6 +11,15 @@ the index there says which file it is in.
   What it checks of the languages is in docs/languages.md ("Checks").
 - The mock proves our own logic, not the client's behaviour. For that there is the self-test
   in game, see "Testing in game".
+- **The mock runs LuaJIT, the client Lua 5.1.** Where the two differ, the mock cannot show a
+  bug. Known: the length of a table whose first slot is empty. `local t = {} t[2] = a t[3] = b`
+  has `#t == 3` in LuaJIT and `#t == 0` in Lua 5.1 (four or more such entries count again). A
+  loop `for i = 2, #t` over the arrows of a chapter's route never ran in the client and left
+  old arrows standing (found by reading, 2026-11-28). Never take `#` of a table that is not
+  filled from 1; walk it with `pairs`.
+- **What the client measures:** `FontString:GetStringWidth()` is the width of the text as
+  shown, so no wider than a width set before; the mock's is unbounded. Set the width to 0
+  before measuring a string that is used again (`Feed.lua`, `Fellows.lua`).
 - Secret values in the mock: `mock.SECRET` refuses indexing, arithmetic, comparison and
   concatenation. A true/false check (`not x`) cannot be intercepted in Lua; so the test checks in
   the source that `ns.IsSecret(x)` comes before every test of `x`.

@@ -16,7 +16,10 @@ Custom names for other players, modelled on the addon CustomNames
   outside the profiles; "Reset" and switching profiles leave the list alone. Access only
   via `ns.AliasService` (`Modules/Aliases/AliasService.lua`); changes announce themselves with the
   signal `ALIASES_CHANGED`.
-- **Key:** full character name, lower case, spaces and hyphens turned into "-". Forever
+- **Key:** full character name, lower case, spaces and hyphens turned into "-". Lower case
+  beyond A–Z as well (`ns.Lower`, since 2026-11-28; before, "émile dupont" typed by hand did not
+  match "Émile Dupont"); the same for BattleTags and `SocialService.Key`. Step 2 of `MIGRATIONS`
+  writes the saved keys anew. Forever
   has no realms but first and last names (`UnitName` returns `name, surname`); the client
   writes the same name with a space or a hyphen depending on the place. Which spelling the
   chat delivers is unconfirmed, hence the normalisation; the self-test (group `names`) records

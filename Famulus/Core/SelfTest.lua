@@ -56,6 +56,7 @@ local EXPECT_PRESENT = {
     "C_GuildInfo.GuildRoster",
     "C_FriendList.ShowFriends",
     "BNConnected",
+    "C_FriendList.IsIgnored", -- (sharing hears nobody the player ignores)
     -- What Modules/Fellows/NearbyService.lua uses to tell who is nearby:
     -- Battle.net friends in this game, who of them is out of reach, quiet
     -- places, and the whisper (to Battle.net friends by Battle.net).

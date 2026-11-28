@@ -596,6 +596,10 @@ C_FriendList = {
         end
         return false
     end,
+    -- mock.state.ignored = { ["<name>"] = true }: the player's ignore list
+    IsIgnored = function(name)
+        return mock.state.ignored ~= nil and mock.state.ignored[name] == true
+    end,
 }
 -- Battle.net friends:
 -- mock.state.bnFriends = { { battleTag = "Anna#1234", games = { { characterName = "Jaina Proudmoore",

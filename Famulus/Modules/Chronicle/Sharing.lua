@@ -5,12 +5,15 @@
 -- Transport: addon messages whispered to friends and guild members who are
 -- online; only the greeting to the guild goes to the guild channel. Someone
 -- without the addon never sees them. Nothing is accepted from anyone who is
--- neither on the friends list nor in the guild.
+-- neither on the friends list nor in the guild, nor from anyone the player
+-- ignores; and of fresh entries only a few a minute from one sender.
 --
 -- Messages (fields separated by "~", at most 255 bytes):
 --   1~P                   to the guild: "I am here"; answered with a hello
 --   1~H~<time>            hello: "I have your news up to <time>"
---   1~E~<time>~<kind>~k=v;k=v   one chronicle entry of the sender
+--   1~E~<time>~<kind>~k=v;k=v   one chronicle entry of the sender; among
+--                         the values p=<time of the sender's entry before
+--                         it>, by which the receiver sees that one got lost
 --   1~S~<level>~id=n;id=n~<class>   the sender's level, statistics and
 --                         class ("MAGE"); older versions leave the class out
 --                         and ignore it
@@ -115,6 +118,16 @@ local STATS_DELAY = 5
 -- Seconds from a click on a reaction to its message: on and off again in
 -- that time sends nothing.
 local REACT_DELAY = 2
+-- Fresh entries (ChronicleService.FRESH) taken from one sender within
+-- FRESH_SPAN seconds: a person brings forth a few a minute at most, and each
+-- is a card on screen. One left out is a gap the sender's next entry names,
+-- so it is asked for again (handlers.E); of ten and more in one minute, which
+-- nobody's play brings forth, some may be lost for good.
+local MAX_FRESH = 8
+local FRESH_SPAN = 60
+-- Seconds after which a gap that stayed is asked about a second and last time:
+-- the first hello may have reached the sender during a boss fight.
+local GAP_AGAIN = 60
 
 -- What may travel, per kind: field -> "n" (number) or "s" (text).
 local FIELDS = {
@@ -147,6 +160,8 @@ local statsPending = false -- the statistics will go out to the linked shortly
 local reactionsDue = {} -- entry -> true: clicked on, to be told after REACT_DELAY
 local reactionsPending = false -- that telling is on its way
 local reactionWaiting = {} -- entry -> true: a reaction to it waits in the queue
+local gapAsked = {} -- key -> { mark, at, twice }: when their news was asked for again (handlers.E)
+local freshFrom = {} -- key -> { at = GetTime() the span began, n = fresh entries taken in it }
 local tracedRoster, tracedFriends, tracedLockdown = nil, nil, false -- what the trace last said
 
 -- A name without the realm the client may add, and one spelling for it
@@ -250,14 +265,25 @@ local function EncodeFields(entry, fields)
     return table.concat(parts, ";")
 end
 
--- An entry as "1~E~..." or, with who, as "1~R~<who>~...".
-local function EncodeEntry(entry, who)
+-- An entry as "1~E~..." or, with who, as "1~R~<who>~...". before: for an
+-- own entry the time of the one before it (ChronicleService.OwnBefore), sent
+-- along as "p" (see handlers.E); left out where the message would grow too
+-- long. Older versions drop the value as one they do not know.
+local function EncodeEntry(entry, who, before)
     local fields = FIELDS[entry.k]
     if not fields then
         return nil
     end
     local head = who and (VERSION .. "~R~" .. Clean(who)) or (VERSION .. "~E")
-    return table.concat({ head, string.format("%d", entry.t), entry.k, EncodeFields(entry, fields) }, "~")
+    local values = EncodeFields(entry, fields)
+    local text = table.concat({ head, string.format("%d", entry.t), entry.k, values }, "~")
+    if before and before > 0 then
+        local longer = text .. (values ~= "" and ";" or "") .. string.format("p=%d", before)
+        if #longer <= 255 then
+            return longer
+        end
+    end
+    return text
 end
 
 -- The player's reaction to a companion's entry, as it is now, as "1~X~...".
@@ -551,8 +577,10 @@ function CatchUp(key, since)
         end
     end
     local entries, last = Chronicle.OwnSince(since, CATCH_UP), nil
+    local before = entries[1] and Chronicle.OwnBefore(entries[1])
     for _, entry in ipairs(entries) do
-        last = Send(key, EncodeEntry(entry), true, entry.t) or last
+        last = Send(key, EncodeEntry(entry, nil, before), true, entry.t) or last
+        before = entry.t
     end
     if last and #entries >= CATCH_UP then
         last.more = true
@@ -701,7 +729,7 @@ local function OnChronicleChanged(entry)
     if not sharing.enabled or not entry or entry.demo or entry.who or entry.c ~= Chronicle.Character() then
         return
     end
-    local text, count = EncodeEntry(entry), 0
+    local text, count = EncodeEntry(entry, nil, Chronicle.OwnBefore(entry)), 0
     for key in pairs(linked) do
         Send(key, text, true, entry.t)
         count = count + 1
@@ -716,8 +744,8 @@ end
 -- Receiving
 ---------------------------------------------------------------------------
 
--- Writes down an entry that came in.
-local function Take(kind, when, fields, who, via)
+-- Writes down an entry that came in. key: who sent it.
+local function Take(kind, when, fields, who, via, key)
     local allowed = FIELDS[kind]
     if not allowed then
         return
@@ -730,10 +758,27 @@ local function Take(kind, when, fields, who, via)
     end
     entry.who = who
     entry.via = via
+    -- Of fresh entries only MAX_FRESH from one sender in FRESH_SPAN.
+    local isFresh, clock = time() - entry.t <= Chronicle.FRESH, GetTime()
+    local span = isFresh and freshFrom[key]
+    if span and clock - span.at >= FRESH_SPAN then
+        span = nil -- (that one is over)
+    end
+    if span and span.n >= MAX_FRESH then
+        Trace("entry from %s not taken: too many fresh ones at once", Tag(key))
+        return
+    end
     -- Fresh news appears on screen through the live feed, which listens
     -- to the chronicle (Modules/Chronicle/LiveFeed.lua).
-    if Chronicle.Add(kind, entry) == false then
+    local added = Chronicle.Add(kind, entry)
+    if added == false then
         Trace("entry not taken: known already, or its time is ahead of this clock")
+    elseif added and isFresh then
+        if not span then
+            span = { at = clock, n = 0 }
+            freshFrom[key] = span
+        end
+        span.n = span.n + 1
     end
 end
 
@@ -774,8 +819,31 @@ function handlers.X(key, when, kind, reaction, marks)
         entry and "to an own entry" or "no such own entry, not taken")
 end
 
+-- An own entry names the time of the sender's entry before it ("p"). If that
+-- is newer than anything we have of them, something got lost on the way: the
+-- client drops what arrives during a boss fight, and a queue ends with a
+-- /reload. The entry is then not taken, or the mark in our next hello would
+-- pass over the gap for good; a hello asks for everything after the mark
+-- instead, this entry included. Twice per mark at most, the second time
+-- GAP_AGAIN later: if what comes then does not move the mark (a kind this
+-- version does not know), entries are taken as they come, and two clients
+-- never ask each other in a circle.
+local PREVIOUS = { p = "n" }
+
 function handlers.E(key, when, kind, fields)
-    Take(kind, when, fields, online[key])
+    local before = DecodeFields(fields, PREVIOUS).p
+    local mark = Chronicle.NewestFrom(online[key])
+    if before and before > mark then
+        local asked = gapAsked[key]
+        local again = asked ~= nil and asked.mark == mark
+        if not again or (not asked.twice and GetTime() - asked.at >= GAP_AGAIN) then
+            gapAsked[key] = { mark = mark, at = GetTime(), twice = again or nil }
+            Trace("gap in the news of %s: asking again from %s", Tag(key), When(mark))
+            SendHello(key, "a gap in their news")
+            return
+        end
+    end
+    Take(kind, when, fields, online[key], nil, key)
 end
 
 function handlers.S(key, level, fields, classFile)
@@ -851,7 +919,7 @@ function handlers.R(key, who, when, kind, fields)
             not name and "not vouched for" or "not asked of them")
         return
     end
-    Take(kind, when, fields, name, online[key])
+    Take(kind, when, fields, name, online[key], key)
 end
 
 function sharing:CHAT_MSG_ADDON(_, prefix, text, channel, sender)
@@ -890,6 +958,11 @@ function sharing:CHAT_MSG_ADDON(_, prefix, text, channel, sender)
     if not online[key] then
         -- Neither a friend nor in the guild: ignored.
         Trace("ignored %s from %s: neither a friend online nor in the guild", label, Tag(key))
+        return
+    end
+    -- Whoever the player ignores is not heard here either (a guild member, say).
+    if ns.SocialService.Ignored(sender) or (online[key] ~= sender and ns.SocialService.Ignored(online[key])) then
+        Trace("ignored %s from %s: on the player's ignore list", label, Tag(key))
         return
     end
     gone[key] = nil -- whoever speaks is online, whatever the client said before
@@ -1040,6 +1113,7 @@ function sharing:OnDisable()
     whispersCounted = false
     greetedGuild, statsPending = false, false -- a pending After lapses with the feature
     reactionsDue, reactionsPending, reactionWaiting = {}, false, {} -- what is untold waits for a hello
+    gapAsked, freshFrom = {}, {}
     nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)
 end
 

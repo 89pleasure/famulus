@@ -174,8 +174,9 @@ end
 function NearbyService.People(withGuild)
     local here, level = Own()
     local own = UnitGUID and Plain(UnitGUID("player")) or nil
-    local ownName = UnitName and UnitName("player")
-    local ownKey = IsPlainText(ownName) and Social.Key(ownName) or nil
+    -- The full name, as the lists write it: UnitName gives first name and surname apart.
+    local ownName = UnitName and ns.AliasService.FullName(UnitName("player"))
+    local ownKey = ownName and Social.Key(ownName) or nil
 
     local people, byKey = {}, {}
     -- Someone met again on another list fills what the first did not tell.
