@@ -397,6 +397,8 @@ do
     ns.MigrateSaved({ dataVersion = 1, aliases = "broken", accountAliases = { x = 1 }, chronicle = 5 }, "account")
 end
 mock.Fire("PLAYER_LOGIN")
+check(FamulusDB.newcomer == true, "Famulus new on the account is remembered at the first login")
+FamulusDB.newcomer = nil -- announced in a test of its own (sharing, "joined")
 
 do
     local active, total = ns:CountActiveFeatures()
@@ -2958,6 +2960,62 @@ do
     mock.Advance(3)
     check(#mock.sent == 0, "and nothing is sent: " .. sent())
     Feed.Clear()
+    mock.Advance(10)
+    mock.sent = {}
+end
+
+-- A newcomer: Famulus new on the account, the chronicle says the player
+-- joined the first time sharing is on, once, and it goes out like any own
+-- entry; a friend's is told of on screen and can be welcomed with a reaction.
+do
+    local chronicle = FamulusDB.chronicle
+    local entries = chronicle.entries
+    chronicle.entries = {}
+    enable("sharing", false)
+    jaina.connected = true
+    setState({ friends = { jaina }, zone = "Westfall", level = 13, units = { player = { name = "Boris", surname = "Bloom" } } })
+    enable("sharing")
+    mock.Advance(2)
+    check(#Chronicle.Entries() == 0, "whoever had Famulus before is never announced")
+    enable("sharing", false)
+    FamulusDB.newcomer = true
+    enable("sharing")
+    enable("sharing", false)
+    mock.Advance(2)
+    check(#Chronicle.Entries() == 0 and FamulusDB.newcomer == true, "switched off again at once, it waits for the next time")
+    enable("sharing")
+    mock.Advance(2)
+    check(#Chronicle.Entries() == 1 and Chronicle.Entries()[1].c == Chronicle.Character() and FamulusDB.newcomer == nil,
+        "new on the account: said a moment after sharing is on, as the character's")
+    mock.Advance(2)
+    mock.sent = {}
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~0", "WHISPER", "Jaina Proudmoore")
+    mock.Advance(2)
+    local joined = Chronicle.Entries()[1]
+    local told = 0
+    for _, message in ipairs(mock.sent) do
+        if joined and message.target == "Jaina Proudmoore" and message.text == "1~E~" .. joined.t .. "~joined~level=13" then
+            told = told + 1
+        end
+    end
+    check(#Chronicle.Entries() == 1 and joined.k == "joined" and joined.level == 13 and Chronicle.IsOwn(joined)
+        and Chronicle.Text(joined) == "Joined Famulus" and select(2, Chronicle.Text(joined)) == "at level 13",
+        "the chronicle says the player joined")
+    check(told == 1, "and the friend is told once, like any own entry (" .. told .. " times)")
+    enable("sharing", false)
+    enable("sharing")
+    mock.Advance(2)
+    check(#Chronicle.Entries() == 1, "switched on again, it is not said again")
+    ns.UI.Feed.Clear()
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. time() .. "~joined~level=7", "WHISPER", "Jaina Proudmoore")
+    local theirs = Chronicle.Entries()[2]
+    local card = ns.UI.Feed.Shown()[1]
+    check(theirs and theirs.k == "joined" and theirs.who == "Jaina Proudmoore" and Chronicle.Text(theirs) == "Jaina Proudmoore joins Famulus"
+        and Chronicle.Reaction(theirs) == "cheer", "a friend who joined is told of and can be welcomed with a reaction")
+    check(card and card.head:GetText() == "Jaina Proudmoore" and card.title:GetText() == "Joined Famulus"
+        and card.detail:GetText() == "at level 7" and card.react:IsShown(), "and appears on screen, with the button to react")
+    ns.UI.Feed.Clear()
+    chronicle.entries = entries
     mock.Advance(10)
     mock.sent = {}
 end

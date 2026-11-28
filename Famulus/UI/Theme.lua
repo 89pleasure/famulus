@@ -29,6 +29,7 @@ UI.gameIcons = {
     ability = ICONS .. "Spell_Nature_Swiftness",
     item = ICONS .. "INV_Misc_Bag_08",
     mount = ICONS .. "Ability_Mount_RidingHorse",
+    joined = ICONS .. "Spell_Fire_Fire", -- a campfire to gather round
 }
 
 UI.media = {
