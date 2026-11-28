@@ -283,19 +283,15 @@ end
 -- frame's edges; width, height: size of the frame.
 local GRAIN_TEXELS = 128
 
--- fade: the grain thins out towards the bottom of its area.
-function UI.Grain(frame, left, top, right, bottom, width, height, fade)
+-- The grain thins out towards the bottom of its area.
+function UI.Grain(frame, left, top, right, bottom, width, height)
     local grain = frame:CreateTexture(nil, "BACKGROUND", nil, 4)
     grain:SetTexture(UI.media.grain, "REPEAT", "REPEAT")
     grain:SetPoint("TOPLEFT", frame, "TOPLEFT", left, -top)
     grain:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -right, bottom)
     local tile = GRAIN_TEXELS * UI.Pixel(frame)
     grain:SetTexCoord(0, (width - left - right) / tile, 0, (height - top - bottom) / tile)
-    if fade then
-        UI.Shade(grain, "VERTICAL", "grain", "grainEnd", { textured = true })
-    else
-        UI.Tint(grain, "grain")
-    end
+    UI.Shade(grain, "VERTICAL", "grain", "grainEnd", { textured = true })
     return grain
 end
 
@@ -397,9 +393,9 @@ function UI.VLine(frame, token)
 end
 
 -- Sets one of the window's fonts. SetFont returns false when the client
--- cannot load the file or has not loaded it yet (see the LOGIN handler in
--- UI/Theme.lua); a font string without a font would raise errors on
--- SetText, so it then gets the game's font instead.
+-- cannot load the file or has not loaded it yet (see below); a font string
+-- without a font would raise errors on SetText, so it then gets the game's
+-- font instead.
 -- Fonts load lazily (as FlareUI found out): the client reads a font file
 -- only when visible text asks for it; until then SetFont returns false and
 -- the string keeps its old font (a new one has none, and SetText on it
@@ -491,6 +487,12 @@ function UI.Text(parent, size, token, weight)
     return text
 end
 
+-- Width a text would take on one line. GetStringWidth alone is the width as
+-- shown, so no wider than a width set before.
+function UI.TextWidth(text)
+    return (text.GetUnboundedStringWidth or text.GetStringWidth)(text) or 0
+end
+
 function UI.Icon(parent, media, size, token, layer)
     local icon = parent:CreateTexture(nil, layer or "ARTWORK")
     icon:SetTexture(UI.media[media])
@@ -517,8 +519,8 @@ local function HideTip(button)
     end
 end
 
--- For buttons built elsewhere (the window's tabs): the same tooltip.
-UI.ShowTip, UI.HideTip = ShowTip, HideTip
+-- For what shows the game's tooltip elsewhere (a reaction's button in the book).
+UI.HideTip = HideTip
 
 ---------------------------------------------------------------------------
 -- Button. variant: "primary" (accent), "secondary" (outlined) or "ghost"
@@ -671,9 +673,6 @@ function UI.IconButton(parent, media, onClick, size)
     local icon = UI.Icon(button, media, 14, "textMuted")
     icon:SetPoint("CENTER")
     button.icon = icon
-    function button:SetIcon(name)
-        icon:SetTexture(UI.media[name])
-    end
     button:SetScript("OnEnter", function(self)
         hover:Fade(true)
         UI.Tint(icon, "text")
@@ -858,11 +857,15 @@ end
 
 local function PickerOption(index, size, iconSize)
     local option = bar.options[index]
-    if option and option.size == size then
-        return option
-    end
     if option then
-        option:Hide()
+        -- Its owners come in three sizes (a card of the feed, a row of it, the
+        -- book): sized anew, never built anew, as frames are not freed.
+        if option.size ~= size then
+            option.size, option.iconSize = size, iconSize
+            option:SetSize(size, size)
+            option.icon:SetSize(iconSize, iconSize)
+        end
+        return option
     end
     option = UI.ReactionButton(bar, size, iconSize)
     option:SetFrameLevel(bar:GetFrameLevel() + 2)
@@ -941,7 +944,9 @@ function Picker.Attach(button, spec)
         self.pressTurn = self.pressTurn + 1
         local turn = self.pressTurn
         C_Timer.After(HOLD, function()
-            if self.pressTurn == turn and self:IsVisible() and Open(self) then
+            -- Still held on the button: dragged off it (the camera, say), the
+            -- bar would open with the mouse elsewhere and nothing would close it.
+            if self.pressTurn == turn and self:IsVisible() and self:IsMouseOver() and Open(self) then
                 self.pickerOpened = true
             end
         end)

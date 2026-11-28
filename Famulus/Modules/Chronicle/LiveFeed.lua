@@ -130,32 +130,19 @@ local function BundleKey(entry, kind)
     return nil
 end
 
--- A friend as a bundle names them: the alias, else the first name.
+-- A friend as a bundle names them: the alias (a sample may bring its own),
+-- else the first name.
 local function Short(entry)
-    local name, realName = ns.ChronicleService.Companion(entry)
-    if realName then
-        return name
-    end
-    return string.match(name, "^(%S+)") or name
+    return entry.sampleAlias or ns.AliasService.Short(entry.who or ns.L.c_someone)
 end
 
 local MAX_NAMES = 3 -- beyond that, "and 2 more"
 
 -- "Papa and Mira", "Papa, Mira and Tom", "Papa, Mira and 2 more"
 local function Names(list)
-    local L = ns.L
-    local names = {}
-    for index = 1, math.min(#list, MAX_NAMES) do
-        names[index] = list[index]
-    end
-    if #list > MAX_NAMES then
-        local more = #list - MAX_NAMES + 1
-        names[MAX_NAMES] = ns.Plural("c_feed_others", more):format(more)
-    end
-    if #names < 2 then
-        return names[1] or ""
-    end
-    return L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names])
+    return ns.NameList(list, MAX_NAMES, function(more)
+        return ns.Plural("c_feed_others", more):format(more)
+    end)
 end
 
 -- One more friend with the same event joins a card: all of them in its head
@@ -279,12 +266,11 @@ function feed.Test()
     local seconds = feed.SECONDS[feed:Get("duration")] or feed.SECONDS.normal
     local level = UnitLevel and tonumber(UnitLevel("player")) or 1
     local who = Chronicle.Character() or (UnitName and UnitName("player"))
-    local zone = GetRealZoneText and GetRealZoneText()
     Feed.Show({
         kind = "level",
         chip = IsPlainText(who) and { text = who } or nil,
         title = L.c_level:format(level),
-        detail = IsPlainText(zone) and zone or nil,
+        detail = ns.Zone(),
         number = level,
         big = true,
         reaction = SampleReaction({ k = "level", who = who or true }),

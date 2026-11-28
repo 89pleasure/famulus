@@ -53,6 +53,10 @@
 --   SocialService.Plain(name), SocialService.Key(name)
 --       A name as lists write it ("First Last-Realm") without the realm, and
 --       one spelling for it however the client writes it.
+--   SocialService.FullName(name, surname) -> "First Last" or nil
+--       What UnitName gives, as one name; nil for a secret or missing one.
+--   SocialService.ClassFile(value) -> "MAGE" or nil
+--       The game's name of a class in code, if value is one.
 --
 -- The client tells which character a Battle.net friend plays only while
 -- they are online. Whoever wants to know a Battle.net friend again later
@@ -81,6 +85,18 @@ end
 
 local Key = SocialService.Key
 
+-- First name and surname as one name. Without a surname, name is returned
+-- as it is, so a full name can be passed in one piece as well.
+function SocialService.FullName(name, surname)
+    if not IsPlainText(name) then
+        return nil
+    end
+    if IsPlainText(surname) then
+        return name .. " " .. surname
+    end
+    return name
+end
+
 local function Yes(value)
     if ns.IsSecret(value) then
         return false
@@ -95,6 +111,7 @@ local function ClassFile(value)
     end
     return value
 end
+SocialService.ClassFile = ClassFile
 
 function SocialService.ClassFromName(name)
     if not IsPlainText(name) then

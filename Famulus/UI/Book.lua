@@ -18,9 +18,7 @@
 --                                       -- is, see WIDTHS; without, as wide as can be
 --           big = true,                 -- a milestone: accent border and mark
 --           onClick = function() end,   -- optional: what a click on the card does
---           tooltip = function(tip) end, -- optional: fills the game's tooltip
---                                       -- while the mouse is over the card
---           ...                         -- whatever its content reads
+--           ...                       -- whatever its content reads
 --       } },
 --   } }
 --
@@ -49,12 +47,10 @@ local DOT_GAP = 34 -- between the dots of two events on the line
 -- narrower card keeps to the line.
 local WIDTHS = { low = 0.8, medium = 0.9, high = 1 }
 -- The room between a card's edge and what it holds, the same on every card:
--- UI.BookPad at the sides and below, UI.BookPadTop above. Measured from the
--- outer edge; the frame's hairline takes a pixel of it, and at the top the
--- line of light takes one more, so the top gets one more to look the same.
+-- UI.BookPad. Measured from the outer edge; the frame's hairline takes a
+-- pixel of it.
 local PAD = 14
 UI.BookPad = PAD
-UI.BookPadTop = PAD + 1
 local HEAD_TOP, HEAD_BOTTOM = 6, 16 -- room above and below a chapter's heading
 local HEAD_GAP = 16 -- between the place and the words beside it
 local CHAPTER_GAP = 16 -- below a chapter's last card
@@ -358,32 +354,19 @@ local function CreateEvent(book)
     local card = CreateFrame("Frame", nil, event)
     event.card = card
     -- A story with onClick can be clicked; its card lights up under the
-    -- mouse. One with a tooltip shows it there. The mouse is only caught
-    -- where there is something to do or to read.
-    card:SetScript("OnEnter", function(self)
+    -- mouse. The mouse is only caught where there is something to do.
+    card:SetScript("OnEnter", function()
         local story = event.story
         if story and story.onClick then
             event.hover:Fade(true)
         end
-        if story and story.tooltip then
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            story.tooltip(GameTooltip)
-            GameTooltip:Show()
-        end
     end)
-    card:SetScript("OnLeave", function(self)
+    card:SetScript("OnLeave", function()
         event.hover:Fade(false)
-        if GameTooltip.IsOwned and GameTooltip:IsOwned(self) then
-            GameTooltip:Hide()
-        end
     end)
-    card:SetScript("OnMouseUp", function(self, button)
+    card:SetScript("OnMouseUp", function(_, button)
         local story = event.story
         if button == "LeftButton" and story and story.onClick then
-            -- What the tooltip said may no longer hold after the click.
-            if GameTooltip.IsOwned and GameTooltip:IsOwned(self) then
-                GameTooltip:Hide()
-            end
             story.onClick()
         end
     end)
@@ -446,7 +429,7 @@ local function EventSet(event, story, onLeft, width)
     local big = story.big and true or false
     event.borderColor = big and "cardActive" or "cardBorder"
     event.shape.border:SetColor(event.borderColor)
-    card:EnableMouse(story.onClick ~= nil or story.tooltip ~= nil)
+    card:EnableMouse(story.onClick ~= nil)
     event.hover:Hide()
     event.bar:SetShown(big)
 

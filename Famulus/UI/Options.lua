@@ -409,9 +409,6 @@ local function CategoryTab(category)
         label = function()
             return L.ui_tab_display
         end,
-        desc = function()
-            return L["cat_" .. category .. "_desc"]
-        end,
         settings = items,
         blocks = function()
             return blocks
@@ -427,18 +424,12 @@ local layouts = {}
 function layouts.aliases()
     local display = CategoryTab("aliases")
     display.id = "display"
-    display.desc = function()
-        return L.ui_tab_display_desc
-    end
 
     local names = {
         id = "names",
         category = "aliases",
         label = function()
             return L.ui_tab_names
-        end,
-        desc = function()
-            return L.ui_tab_names_desc
         end,
         settings = {},
         blocks = function()
@@ -463,9 +454,6 @@ local function SimpleTab(id, items)
         split = true,
         label = function()
             return L["ui_tab_" .. id]
-        end,
-        desc = function()
-            return L["ui_tab_" .. id .. "_desc"]
         end,
         settings = items,
         blocks = function()
@@ -955,7 +943,7 @@ function UI.ChronicleChapter(entries)
     local chapter = { entries = entries, events = {} }
     for index, entry in ipairs(entries) do
         local story = ChronicleRun({ entry })
-        story.onClick, story.tooltip, story.item, story.spell = nil, nil, nil, nil
+        story.onClick, story.item, story.spell = nil, nil, nil
         if story.reaction then
             story.reaction.onClick, story.reaction.tooltip, story.reaction.pick = nil, nil, nil
         end
@@ -1166,9 +1154,6 @@ function layouts.chronicle()
             label = function()
                 return L["ui_tab_" .. id]
             end,
-            desc = function()
-                return L["ui_tab_" .. id .. "_desc"]
-            end,
             settings = {},
             -- The events are told as a book; cards only say that it is empty.
             blocks = function()
@@ -1193,9 +1178,6 @@ function layouts.chronicle()
     record.id = "record"
     record.label = function()
         return L.ui_tab_record
-    end
-    record.desc = function()
-        return L.ui_tab_record_desc
     end
     -- How the chronicle names people records nothing: an entry of its own
     -- below the features, under a heading.
@@ -1485,12 +1467,7 @@ end
 -- overview) and the chapters, or nil if they are gone.
 local function FellowStory(guid)
     local Fellows = ns.FellowService
-    local person
-    for _, each in ipairs(Fellows.List()) do
-        if each.guid == guid then
-            person = each.person
-        end
-    end
+    local person = Fellows.Person(guid)
     if not person then
         return nil
     end
@@ -1587,10 +1564,9 @@ FELLOW_ACTIONS = {
         Render()
     end,
     onAlias = function(guid)
-        for _, each in ipairs(ns.FellowService.List()) do
-            if each.guid == guid then
-                ns:EditAlias(each.person.name)
-            end
+        local person = ns.FellowService.Person(guid)
+        if person then
+            ns:EditAlias(person.name)
         end
     end,
     -- The chat box opens with a whisper to them; they may be offline, then
@@ -1633,18 +1609,8 @@ local TIMELINE_EMPTY_ITEM = {
     end,
 }
 
--- A person as the timeline names them: the alias, else the first name.
-local function ShortName(person)
-    return ns.AliasService.Get(person.name) or string.match(person.name, "^[^%s%-]+") or person.name
-end
-
--- "Mira", "Mira and Borin", "Mira, Borin and Lysa"
-local function JoinNames(names)
-    if #names < 2 then
-        return names[1] or ""
-    end
-    return L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names])
-end
+-- (The timeline names a person by AliasService.Short, the alias or else the
+-- first name, and lists names with ns.NameList.)
 
 -- From when to when someone was with a group; until now while it lasts.
 local function Presence(run, guid, seen, open, now)
@@ -1838,7 +1804,7 @@ local function RunEvent(each, data)
             zones[#zones + 1] = zone
         end
     end
-    local where = #zones > 0 and JoinNames(zones) or nil
+    local where = #zones > 0 and ns.NameList(zones) or nil
     local title
     if run.raid then
         title = where and L.ui_run_raid:format(where) or L.ui_run_raid_nowhere
@@ -1869,16 +1835,16 @@ local function RunEvent(each, data)
             elseif from > run.f + RUN_NOTE then
                 note = L.ui_run_from:format(ns.FormatTime(from))
             end
-            plates[#plates + 1] = { name = ShortName(member.person), class = member.person.class, note = note }
+            plates[#plates + 1] = { name = ns.AliasService.Short(member.person.name), class = member.person.class, note = note }
         end
     end
     local foot
     if each.again then
         local names = {}
         for index, guid in ipairs(ByTimeTogether(each.again.guids, data)) do
-            names[index] = ShortName(data.byGuid[guid])
+            names[index] = ns.AliasService.Short(data.byGuid[guid].name)
         end
-        foot = ns.Plural("ui_run_again", each.again.count):format(JoinNames(names), each.again.count)
+        foot = ns.Plural("ui_run_again", each.again.count):format(ns.NameList(names), each.again.count)
     end
     return {
         kind = "fellow",
@@ -1902,7 +1868,7 @@ local function MeetEvent(guid, person, data)
         or zone and L.c_in:format(zone) or level and L.ui_fellow_met_detail:format(level) or nil
     return {
         kind = "bond",
-        title = L.ui_run_met:format(ShortName(person)),
+        title = L.ui_run_met:format(ns.AliasService.Short(person.name)),
         detail = detail,
         when = ns.FormatTime(first),
         crest = CrestOf(guid, person, data.now),
@@ -1920,7 +1886,7 @@ local function TierEvent(moment, data)
     return {
         kind = "bond",
         big = moment.tier >= 3, -- like the badge: from Trusted on in the accent
-        title = L.ui_run_tier:format(ShortName(person), ns.Lower(L["ui_bond_" .. moment.tier])),
+        title = L.ui_run_tier:format(ns.AliasService.Short(person.name), ns.Lower(L["ui_bond_" .. moment.tier])),
         detail = L.ui_run_tier_detail:format(math.floor(ns.FellowService.TIERS[moment.tier] / 3600)),
         when = ns.FormatTime(moment.t),
         crest = CrestOf(moment.guid, person, data.now),
@@ -2056,14 +2022,14 @@ local function TimelineRail()
         for index, guid in ipairs(ByTimeTogether(best.guids, data)) do
             local person = data.byGuid[guid]
             crests[index] = CrestOf(guid, person, data.now)
-            names[index] = ShortName(person)
+            names[index] = ns.AliasService.Short(person.name)
         end
         cards[#cards + 1] = {
             kind = "group",
             title = L.ui_run_regular,
             note = L.ui_run_regular_count:format(best.count),
             people = crests,
-            names = JoinNames(names),
+            names = ns.NameList(names),
             line = L.ui_fellow_day_time:format(Duration(best.seconds) or L.ui_fellow_minutes:format(0)),
             text = L.ui_run_regular_desc,
         }
@@ -2349,9 +2315,6 @@ do
             label = function()
                 return L.ui_tab_nearby
             end,
-            desc = function()
-                return L.ui_tab_nearby_desc
-            end,
             settings = {},
             -- The list is drawn by UI.NearbyList; a card only says why it is empty.
             blocks = function()
@@ -2379,9 +2342,6 @@ local function FellowTimelineTab()
         category = "fellows",
         label = function()
             return L.ui_tab_timeline
-        end,
-        desc = function()
-            return L.ui_tab_timeline_desc
         end,
         settings = {},
         -- The groups are told as a book; a card only says that it is empty.
@@ -2455,9 +2415,6 @@ local function FellowOverviewTab()
         category = "fellows",
         label = function()
             return L.ui_tab_overview
-        end,
-        desc = function()
-            return L.ui_tab_overview_desc
         end,
         settings = {},
         overview = FellowModel,
@@ -2594,9 +2551,6 @@ function layouts.fellows()
     record.id = "record"
     record.label = function()
         return L.ui_tab_record
-    end
-    record.desc = function()
-        return L.ui_fellows_record_desc
     end
     -- Below the switches, an entry to tidy the list up. It works on what is
     -- stored, so it stays while remembering is switched off.
@@ -3020,7 +2974,7 @@ local function CreateCard(parent)
     local card = CreateFrame("Frame", nil, parent)
     card:SetWidth(CONTENT_W)
     card:SetFrameLevel(parent:GetFrameLevel() + 1)
-    card.shape = UI.Card(card, "card", "cardBorder", 10)
+    UI.Card(card, "card", "cardBorder", 10)
 
     -- A little light on the top edge.
     local pixel = UI.Pixel(card)
@@ -4023,7 +3977,7 @@ function Render()
         y = y + window.fellowBook:SetChapters(storyChapters)
         window.fellowBook:Show()
         local card = window.fellows.card
-        window.fellows:SetCard(storyPerson, true, FELLOW_ACTIONS)
+        window.fellows:SetCard(storyPerson, FELLOW_ACTIONS)
         card:ClearAllPoints()
         card:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR + PAD, -top)
         card:SetPoint("BOTTOMLEFT", window, "BOTTOMLEFT", SIDEBAR + PAD, 18)
@@ -4463,7 +4417,6 @@ local function BuildHead()
         window:Hide()
     end, 28)
     close:SetPoint("TOPRIGHT", -12, -(HEAD - 28) / 2)
-    window.closeButton = close
 end
 
 -- Shown instead of the content while the page's main feature is off.
@@ -4516,7 +4469,7 @@ local function Build()
     dusk:SetPoint("TOPLEFT", window, "TOPLEFT", SIDEBAR, -HEIGHT * 0.45)
     dusk:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -4, 4)
     UI.Shade(dusk, "VERTICAL", "clear", "dusk")
-    UI.Grain(window, 4, 4, 4, HEIGHT - GRAIN_BAND, WIDTH, HEIGHT, true)
+    UI.Grain(window, 4, 4, 4, HEIGHT - GRAIN_BAND, WIDTH, HEIGHT)
     embers[#embers + 1] = UI.Embers(window, 12, SIDEBAR, WIDTH - SIDEBAR, HEIGHT, 23)
 
     local saved = ns.global.window

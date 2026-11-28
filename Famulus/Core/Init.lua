@@ -138,6 +138,16 @@ function ns.IsSecret(value)
     return issecretvalue ~= nil and issecretvalue(value) or false
 end
 
+-- The zone the player is in, as the game names it, or nil while the client
+-- does not say or the name is secret.
+function ns.Zone()
+    local zone = GetRealZoneText and GetRealZoneText()
+    if ns.IsSecret(zone) or type(zone) ~= "string" or zone == "" then
+        return nil
+    end
+    return zone
+end
+
 local PREFIX = "|cffffb347Famulus|r: "
 
 function ns:Print(text)

@@ -31,10 +31,7 @@ local PAD = 12 -- room inside the picture for what is made smaller to fit
 local FAINT = 0.38 -- what is switched off
 local SCENES = {}
 
--- Width a text would take on one line.
-local function TextWidth(text)
-    return (text.GetUnboundedStringWidth or text.GetStringWidth)(text) or 0
-end
+local TextWidth = UI.TextWidth
 
 local function Animate(scene, playing)
     for _, group in ipairs(scene.animations) do

@@ -262,7 +262,7 @@ function Welcome.Build(window, size, actions)
     dusk:SetPoint("TOPLEFT", page, "TOPLEFT", 3, -math.floor(size.height * 0.45 - size.head))
     dusk:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -3, 3)
     UI.Shade(dusk, "VERTICAL", "clear", "dusk")
-    UI.Grain(page, 3, 0, 3, height - (size.grain - size.head), width, height, true)
+    UI.Grain(page, 3, 0, 3, height - (size.grain - size.head), width, height)
     page.embers = UI.Embers(page, 16, 0, width, height, 37)
 
     -- view: "start", "done" or the number of the step shown. switched: the
@@ -303,7 +303,7 @@ function Welcome.Build(window, size, actions)
     local title = Centered(start, 30, "text", "semibold", COLUMN)
     local lede = Centered(start, 14, "textDim", nil, 600)
     lede:SetSpacing(4)
-    page.eyebrow, page.title, page.lede = eyebrow, title, lede
+    page.eyebrow, page.title = eyebrow, title
 
     local tiles = {}
     for index = 1, #AREAS do
@@ -597,7 +597,6 @@ function Welcome.Build(window, size, actions)
     local doneTitle = Centered(done, 28, "text", "semibold", COLUMN)
     local doneLede = Centered(done, 14, "textDim", nil, 560)
     doneLede:SetSpacing(4)
-    page.doneTitle = doneTitle
 
     -- What runs now: the journey, the steps, and the aliases, on already.
     local list = CreateFrame("Frame", nil, done)

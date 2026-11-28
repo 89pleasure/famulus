@@ -46,9 +46,7 @@ local function Member(unit, own)
     if not IsPlainText(name) or name == UNKNOWNOBJECT then
         return nil
     end
-    if IsPlainText(surname) then
-        name = name .. " " .. surname
-    end
+    name = ns.SocialService.FullName(name, surname)
     local level = UnitLevel and UnitLevel(unit)
     if ns.IsSecret(level) or type(level) ~= "number" or level < 1 then
         level = nil

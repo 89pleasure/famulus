@@ -110,8 +110,11 @@ local MAX_OFFERS = 20 -- people whose news is offered on a hello
 -- Seconds in which a companion gets no offers again: the second hello of a
 -- first contact comes right after the first, a reload takes longer.
 local OFFER_GAP = 60
-local LINK_AGE = 30 * 86400 -- how long a direct answer vouches for someone
 local MAX_TEXT = 60 -- bytes of a name or place in a message
+-- Seconds for which the statistics written for one hello serve the next ones:
+-- reading them walks every statistic the game keeps, and a login brings a
+-- hello or two from everyone with the addon.
+local STATS_KEEP = 30
 -- Seconds from an own event to the statistics that follow it: the game counts
 -- a death a moment later, and events in a row share one message.
 local STATS_DELAY = 5
@@ -175,7 +178,7 @@ local function Vouched(key)
         return guild[key]
     end
     local link = Chronicle.Link(key)
-    if link and type(link.t) == "number" and time() - link.t <= LINK_AGE then
+    if link and type(link.t) == "number" and time() - link.t <= Chronicle.LINK_AGE then
         return link.name
     end
     return nil
@@ -183,11 +186,8 @@ end
 
 -- The playing character, as the guild channel echoes it back.
 local function OwnKey()
-    local name, surname = UnitName("player")
-    if not IsPlainText(name) then
-        return nil
-    end
-    return Key(IsPlainText(surname) and (name .. " " .. surname) or name)
+    local name = ns.SocialService.FullName(UnitName("player"))
+    return name and Key(name)
 end
 
 ---------------------------------------------------------------------------
@@ -342,7 +342,15 @@ local function OwnStatistics()
     return values
 end
 
-local function EncodeStatistics()
+local statsText, statsAt -- the statistics as last written, and GetTime() then
+
+-- fresh: read them anew, whatever was written a moment ago (after an own
+-- event, whose count must be in them).
+local function EncodeStatistics(fresh)
+    local clock = GetTime()
+    if not fresh and statsText and clock - statsAt < STATS_KEEP then
+        return statsText
+    end
     local parts = {}
     for id, value in pairs(OwnStatistics()) do
         parts[#parts + 1] = string.format("%d=%d", id, value)
@@ -350,11 +358,9 @@ local function EncodeStatistics()
     table.sort(parts)
     local level = UnitLevel and tonumber(UnitLevel("player")) or 0
     -- The class, for the picture beside the name on the other side.
-    local _, classFile = UnitClass("player")
-    if ns.IsSecret(classFile) or type(classFile) ~= "string" or not string.match(classFile, "^%u+$") then
-        classFile = ""
-    end
-    return table.concat({ VERSION, "S", string.format("%d", level), table.concat(parts, ";"), classFile }, "~")
+    local classFile = ns.SocialService.ClassFile((select(2, UnitClass("player")))) or ""
+    statsText, statsAt = table.concat({ VERSION, "S", string.format("%d", level), table.concat(parts, ";"), classFile }, "~"), clock
+    return statsText
 end
 
 ---------------------------------------------------------------------------
@@ -414,7 +420,7 @@ local function Unask(key)
     end
 end
 
-local CatchUp -- below; the last entry of a round calls for the next
+local CatchUp, Relay -- below; the last entry of a round calls for the next
 
 -- Tops up both budgets for the time since the last look.
 local function Refill(clock)
@@ -502,7 +508,7 @@ local function Flush()
                 Trace("gave up %s to %s: refused %d times", KindOf(text), Tag(item.key), item.refused)
             else
                 if item.more then
-                    continueFrom = item.t
+                    continueFrom = item.since or item.t
                 end
                 if result == nil or result == true or result == SUCCESS then
                     sent = true
@@ -523,7 +529,9 @@ local function Flush()
         end
         lane[lane.head] = nil
         lane.head = lane.head + 1
-        if continueFrom then
+        if continueFrom and item.relay then
+            Relay(item.key, item.relay, continueFrom)
+        elseif continueFrom then
             CatchUp(item.key, continueFrom)
         end
         -- Whoever queued it hears whether it went out.
@@ -658,7 +666,7 @@ local function SendStatisticsSoon()
     sharing:After(STATS_DELAY, function()
         statsPending = false
         if next(linked) then
-            local text = EncodeStatistics()
+            local text = EncodeStatistics(true)
             for key in pairs(linked) do
                 Send(key, text, true)
             end
@@ -885,25 +893,46 @@ function handlers.W(key, who, since)
     if not IsPlainText(who) then
         return
     end
-    local whoKey, found = Key(who), {}
+    local whoKey = Key(who)
     if whoKey == key then
         return -- their own news they have
     end
-    since = Int(since) or 0
-    local entries = Chronicle.Entries()
-    for i = #entries, 1, -1 do
+    Relay(key, whoKey, Int(since) or 0)
+end
+
+-- Passes on to key what this client has of someone (whoKey) after since: the
+-- oldest CATCH_UP entries and the rest of the last one's second, in order,
+-- as CatchUp does for the own ones; the last of a full round calls for the
+-- next once it has gone (Flush). Before, it was the newest CATCH_UP, and what
+-- lay before them never came this way.
+function Relay(key, whoKey, since)
+    local entries, found = Chronicle.Entries(), {}
+    local first = #entries + 1
+    while first > 1 and entries[first - 1].t > since do
+        first = first - 1
+    end
+    for i = first, #entries do
         local entry = entries[i]
-        if entry.t <= since or #found == CATCH_UP then
+        if #found >= CATCH_UP and entry.t > found[#found].t then
             break
         end
         if entry.who and FIELDS[entry.k] and not entry.demo and Key(entry.who) == whoKey then
-            table.insert(found, 1, entry)
+            found[#found + 1] = entry
         end
     end
+    -- The round goes on from the last entry that found room in the queue.
+    local last, lastTime
     for _, entry in ipairs(found) do
-        Send(key, EncodeEntry(entry, entry.who))
+        local item = Send(key, EncodeEntry(entry, entry.who))
+        if item then
+            last, lastTime = item, entry.t
+        end
     end
-    Trace("%s asks about %s: %d entries to pass on", Tag(key), Tag(whoKey), #found)
+    if last and #found >= CATCH_UP then
+        last.more, last.relay, last.since = true, whoKey, lastTime
+    end
+    Trace("%s asks about %s after %s: %d entries to pass on%s", Tag(key), Tag(whoKey), When(since), #found,
+        #found >= CATCH_UP and ", more follow" or "")
 end
 
 -- One entry of <who>, passed on: only as asked for, and only about someone
@@ -1112,6 +1141,7 @@ function sharing:OnDisable()
     tracedRoster, tracedFriends, tracedLockdown = nil, nil, false
     whispersCounted = false
     greetedGuild, statsPending = false, false -- a pending After lapses with the feature
+    statsText = nil
     reactionsDue, reactionsPending, reactionWaiting = {}, false, {} -- what is untold waits for a hello
     gapAsked, freshFrom = {}, {}
     nowLane, laterLane = NewLane(MAX_NOW), NewLane(MAX_LATER)

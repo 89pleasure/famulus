@@ -110,10 +110,6 @@ function Feature:Get(key)
     return ns:GetOption(self.id, key)
 end
 
-function Feature:Set(key, value)
-    ns:SetOption(self.id, key, value)
-end
-
 -- Runs fn the first time it is called with this key and never again. Used
 -- for one-time setup such as creating frames or installing hooks.
 function Feature:Once(key, fn)

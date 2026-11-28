@@ -78,11 +78,7 @@ local function Build(part)
     -- reacts, not the card.
     local react = UI.ReactionButton(part, REACT, REACT_ICON)
     part.react = react
-    local function HideTip(self)
-        if GameTooltip.IsOwned and GameTooltip:IsOwned(self) then
-            GameTooltip:Hide()
-        end
-    end
+    local HideTip = UI.HideTip
     react:SetScript("OnEnter", function(self)
         local reaction = self.reaction
         if not reaction then

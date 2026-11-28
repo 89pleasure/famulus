@@ -4,7 +4,7 @@
 --
 --   local overview = UI.FellowOverview(content, cardParent, cardWidth)
 --   local height = overview:SetModel(model, width)
---   overview:SetCard(person, inStory, actions) -- the card alone, beside a story
+--   overview:SetCard(person, actions) -- the card alone, beside a story
 --
 --   model = {
 --       top = { person, ... },     -- at most three, the most time together first
@@ -13,7 +13,7 @@
 --       sort = "last" | "time", sortValues = { { value, text }, ... },
 --       onChoose(guid), onSort(value),
 --       onWhisper(guid),           -- the speech bubble on tiles, rows and the card
---       onStory(guid), onAlias(guid), onForget(guid), -- the card's buttons
+--       onAlias(guid), onForget(guid), -- the card's buttons
 --       onChronicle(who),          -- beside a story: their events in the chronicle
 --   }
 --   person = { guid, name, realName, classFile, levelClass, tier, progress,
@@ -46,11 +46,6 @@ local function Card(parent)
     return frame
 end
 
--- Chosen: a fine accent border, like the card of a running feature.
-local function MarkChosen(frame, chosen)
-    frame.shape.border:SetColor(chosen and "cardActive" or "cardBorder")
-end
-
 local function Centered(parent, size, token, weight)
     local text = UI.Text(parent, size, token, weight)
     text:SetJustifyH("CENTER")
@@ -64,7 +59,6 @@ end
 local function CreateTile(overview)
     local tile = Card(overview)
     tile:SetHeight(TILE_H)
-    tile.rank = 0
     tile.numeral = UI.Text(tile, 18, "textMuted")
     UI.SetDisplayFont(tile.numeral, 18)
     tile.numeral:SetPoint("TOPLEFT", 16, -14)
@@ -110,8 +104,8 @@ local function CreateTile(overview)
     return tile
 end
 
-local function FillTile(tile, person, rank, chosen)
-    tile.guid, tile.rank = person.guid, rank
+local function FillTile(tile, person, rank)
+    tile.guid = person.guid
     for _, text in ipairs({ tile.name, tile.sub, tile.stats, tile.footText }) do
         text:SetWidth(tile:GetWidth() - 24)
     end
@@ -126,7 +120,6 @@ local function FillTile(tile, person, rank, chosen)
     UI.Ink(tile.footText, person.together and "accent" or "textMuted")
     tile.whisper:SetShown(person.whisper and true or false)
     tile.whisper.tip = L.ui_fellow_whisper
-    MarkChosen(tile, chosen)
     if not tile:IsMouseOver() then
         tile.hover:Hide()
     end
@@ -159,8 +152,6 @@ local function CreateRow(overview)
     row:SetHeight(ROW_H)
     row.hover = UI.Round(row, "hover", 8, { sublevel = 1 })
     row.hover:Hide()
-    row.chosen = UI.Round(row, "accentSoft", 8, { sublevel = 1 })
-    row.chosen:Hide()
     row.line = UI.Line(row, "divider")
     row.line:SetPoint("TOPLEFT", 12, 0)
     row.line:SetPoint("TOPRIGHT", -12, 0)
@@ -208,7 +199,7 @@ local function PlaceColumns(row, width)
     row.last:SetWidth(width * (1 - COLUMNS.last) - 48)
 end
 
-local function FillRow(row, person, first, chosen)
+local function FillRow(row, person, first)
     row.guid = person.guid
     row.crest:SetPerson(person.name, person.classFile)
     row.crest:SetProgress(person.progress)
@@ -221,7 +212,6 @@ local function FillRow(row, person, first, chosen)
     row.whisper:SetShown(person.whisper and true or false)
     row.whisper.tip = L.ui_fellow_whisper
     row.line:SetShown(not first)
-    row.chosen:SetShown(chosen)
 end
 
 ---------------------------------------------------------------------------
@@ -338,10 +328,7 @@ local function CreateProfile(overview, parent, width)
     card.firstLevel = Centered(card, 11, "textMuted")
     card.firstLevel:SetPoint("TOP", card.first, "BOTTOM", 0, -4)
 
-    card.storyButton = UI.Button(card, function()
-        overview.actions.onStory(card.guid)
-    end, "primary")
-    -- The buttons beside a story are icons in one row; the tooltip names them.
+    -- The buttons are icons in one row; the tooltip names them.
     card.whisper = UI.Button(card, function()
         overview.actions.onWhisper(card.guid)
     end, "primary", "chat")
@@ -389,7 +376,7 @@ local function PlaceButtons(card)
         ButtonLine(card, { card.forget }, half, 1)
         return
     end
-    local buttons, width = { card.storyButton, card.chronicle, card.alias, card.forget }, -BUTTON_GAP
+    local buttons, width = { card.chronicle, card.alias, card.forget }, -BUTTON_GAP
     for _, button in ipairs(buttons) do
         if button:IsShown() then
             width = width + button:GetWidth() + BUTTON_GAP
@@ -398,8 +385,7 @@ local function PlaceButtons(card)
     ButtonLine(card, buttons, -width / 2, 1)
 end
 
--- inStory: beside the person's own story, where "Your story" is not needed.
-local function FillProfile(card, person, inStory)
+local function FillProfile(card, person)
     card.guid = person.guid
     card.crest:SetPerson(person.name, person.classFile)
     card.crest:SetProgress(person.progress)
@@ -419,14 +405,12 @@ local function FillProfile(card, person, inStory)
     card.first:SetText(person.firstText or "")
     card.firstLevel:SetText(person.firstLevelText or "")
 
-    card.storyButton:SetLabel(L.ui_fellow_story)
     card.whisper:SetLabel(L.ui_fellow_whisper)
     card.alias:SetLabel(L.ui_fellow_alias)
     card.chronicle:SetLabel(L.ui_fellow_chronicle)
     card.forget:SetLabel(L.ui_fellow_forget)
-    card.storyButton:SetShown(not inStory)
-    card.whisper:SetShown(inStory and person.whisper and true or false)
-    card.chronicleWho = inStory and person.chronicle or nil
+    card.whisper:SetShown(person.whisper and true or false)
+    card.chronicleWho = person.chronicle or nil
     card.chronicle:SetShown(card.chronicleWho ~= nil)
     PlaceButtons(card)
 end
@@ -465,15 +449,14 @@ function UI.FellowOverview(parent, cardParent, cardWidth)
     overview.card:Hide()
 
     -- Lays everything out for the model; returns the height of the left column.
-    function overview:SetCard(person, inStory, actions)
+    function overview:SetCard(person, actions)
         self.actions = actions
-        FillProfile(self.card, person, inStory)
+        FillProfile(self.card, person)
     end
 
     function overview:SetModel(model, width)
         self.model, self.actions = model, model
         self:SetWidth(width)
-        local chosen = model.chosen and model.chosen.guid
 
         self.closest:SetText(L.ui_fellow_closest)
         local tileWidth = (width - GAP * 2) / 3
@@ -486,7 +469,7 @@ function UI.FellowOverview(parent, cardParent, cardWidth)
                 tile:SetWidth(tileWidth)
                 tile:ClearAllPoints()
                 tile:SetPoint("TOPLEFT", self, "TOPLEFT", (index - 1) * (tileWidth + GAP), -TITLE_H)
-                FillTile(tile, person, index, person.guid == chosen)
+                FillTile(tile, person, index)
                 tile:Show()
             elseif tile then
                 tile:Hide()
@@ -535,7 +518,7 @@ function UI.FellowOverview(parent, cardParent, cardWidth)
             PlaceColumns(row, width)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", list, "TOPLEFT", 0, -rowY)
-            FillRow(row, person, index == 1, person.guid == chosen)
+            FillRow(row, person, index == 1)
             row:Show()
             rowY = rowY + ROW_H
         end
@@ -785,7 +768,7 @@ local function LayPeople(part, people, width)
         -- measures a text no wider than its string is: free it first.
         plate.name:SetWidth(0)
         plate.name:SetText(each.name or "")
-        plate.name:SetWidth(math.max(1, math.min(plate.name:GetStringWidth() + 1, room)))
+        plate.name:SetWidth(math.max(1, math.min(UI.TextWidth(plate.name) + 1, room)))
         local plateWidth = math.floor(3 + PERSON_ICON + 5 + plate.name:GetWidth() + noteWidth + 9 + 0.5)
         plate:SetWidth(plateWidth)
         if x > 0 and x + plateWidth > width then

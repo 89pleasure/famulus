@@ -78,9 +78,7 @@ end
 
 -- The player's own zone and level.
 local function Own()
-    local zone = GetRealZoneText and Plain(GetRealZoneText()) or nil
-    local level = UnitLevel and Level(UnitLevel("player")) or nil
-    return zone, level
+    return ns.Zone(), UnitLevel and Level(UnitLevel("player")) or nil
 end
 NearbyService.Here = Own
 
@@ -175,7 +173,7 @@ function NearbyService.People(withGuild)
     local here, level = Own()
     local own = UnitGUID and Plain(UnitGUID("player")) or nil
     -- The full name, as the lists write it: UnitName gives first name and surname apart.
-    local ownName = UnitName and ns.AliasService.FullName(UnitName("player"))
+    local ownName = UnitName and Social.FullName(UnitName("player"))
     local ownKey = ownName and Social.Key(ownName) or nil
 
     local people, byKey = {}, {}
