@@ -541,6 +541,7 @@ L.msg_fellow_demo_added_one = "%d Beispielmitglied in deine Gemeinschaft eingetr
 L.msg_fellow_demo_cleared = "%d Beispielmitglieder aus deiner Gemeinschaft entfernt."
 L.msg_fellow_demo_cleared_one = "%d Beispielmitglied aus deiner Gemeinschaft entfernt."
 L.c_with = "mit %s"
+L.c_fell_with = "gemeinsam mit %s gefallen"
 L.c_and = "%s und %s"
 L.c_feed_others = "%d weitere"
 L.c_feed_others_one = "%d weitere Person"

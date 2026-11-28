@@ -565,6 +565,7 @@ L.msg_fellow_tidied = "Лад у братстві наведено. Прибра
 L.msg_fellow_demo_added = "Додано до братства зразкових учасників: %d. /fam fellows demo clear прибирає їх."
 L.msg_fellow_demo_cleared = "Прибрано з братства зразкових учасників: %d."
 L.c_with = "у групі: %s"
+L.c_fell_with = "спільна загибель: %s"
 L.c_and = "%s і %s"
 L.c_feed_others = "ще %d"
 L.c_with_others = "у групі ще %d"

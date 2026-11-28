@@ -16,6 +16,7 @@ local journey = ns:NewFeature({
 })
 
 local DEATH_PAUSE = 5 -- seconds; the client may report one death twice
+local FELL_WINDOW = 15 -- seconds; who dies this soon after the player fell with them
 local lastDeath = 0
 
 local function Zone()
@@ -197,15 +198,6 @@ function journey:PLAYER_LEVEL_UP(_, level)
     Chronicle.Add("level", { level = level, zone = Zone() })
 end
 
-function journey:PLAYER_DEAD()
-    local now = GetTime()
-    if now - lastDeath < DEATH_PAUSE then
-        return
-    end
-    lastDeath = now
-    Chronicle.Add("death", { zone = Zone(), level = UnitLevel("player") })
-end
-
 -- Who was there goes into an entry: the names in a party, in a raid only
 -- how many. Neither is shared with companions (Modules/Chronicle/Sharing.lua).
 local function WithGroup(entry)
@@ -219,6 +211,43 @@ local function WithGroup(entry)
         end
     end
     return entry
+end
+
+-- Who of the party lies dead beside the player goes into `fell` of the death.
+-- shortcut: a member who died long before and is still a ghost counts too; exact
+-- only with deaths of others as events, which addons do not get (combat log).
+local function MarkFallen(entry)
+    if not UnitIsDeadOrGhost then
+        return
+    end
+    local fell, known = entry.fell or {}, {}
+    for _, name in ipairs(fell) do
+        known[name] = true
+    end
+    for _, member in ipairs(ns.GroupService.Members(false)) do
+        local dead = UnitIsDeadOrGhost(member.unit)
+        if not ns.IsSecret(dead) and dead and not known[member.name] then
+            fell[#fell + 1] = member.name
+        end
+    end
+    entry.fell = #fell > 0 and fell or nil
+end
+
+function journey:PLAYER_DEAD()
+    local now = GetTime()
+    if now - lastDeath < DEATH_PAUSE then
+        return
+    end
+    lastDeath = now
+    local entry = WithGroup({ zone = Zone(), level = UnitLevel("player") })
+    Chronicle.Add("death", entry)
+    if entry.with then
+        -- Who died just before is dead now; who follows is dead a moment later.
+        MarkFallen(entry)
+        self:After(FELL_WINDOW, function()
+            MarkFallen(entry)
+        end)
+    end
 end
 
 -- The last boss of an instance clears it; another one defeated for the

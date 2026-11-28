@@ -294,7 +294,10 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
   stretch across midnight counts for the day on which it ends. Tier-up days are computed when
   building (`FellowService.Milestones`), from the time before the log (`seconds − Σ s`), so that
   earlier time does not invent milestones. Broken days drop out on load.
-- **In the chronicle:** If a boss falls in a group, the entry carries `with` (the names, in a
+- **In the chronicle:** If a boss falls or the player dies in a group (deaths since 2026-11-28,
+  also on a bundled wipe, there the newest death's group; who of a party lies dead at the
+  player's death or 15 seconds later goes into `fell` and the line reads "fell together with
+  Ori" instead, `UnitIsDeadOrGhost`, so a member long a ghost counts too), the entry carries `with` (the names, in a
   group up to four) or `others` (only the number, in a raid, so that 39 names per boss do not
   bloat the data). The line below reads "in Uldaman  ·  with Mira and Tom" (alias, otherwise
   first name) or "with 12 others". This applies as soon as "Record my journey" runs, regardless of

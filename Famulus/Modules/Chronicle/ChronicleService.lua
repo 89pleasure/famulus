@@ -50,22 +50,44 @@ local function Place(entry)
     return type(entry.zone) == "string" and entry.zone or nil
 end
 
--- Who was there, for a boss defeated in a group: "with Mira and Tom" (alias,
--- else first name), or "with 12 others" in a raid. Nil without a group.
+-- Two parts of a detail line, either may be missing.
+local function Join(a, b)
+    if a and b then
+        return a .. "  ·  " .. b
+    end
+    return a or b
+end
+
+-- Names for a sentence: "Mira and Tom" (alias, else first name), or nil.
+local function Names(list)
+    if type(list) ~= "table" then
+        return nil
+    end
+    local names = {}
+    for _, name in ipairs(list) do
+        if type(name) == "string" and name ~= "" then
+            local alias = ns.AliasService and ns.AliasService.Get(name)
+            names[#names + 1] = alias or string.match(name, "^(%S+)") or name
+        end
+    end
+    if #names == 1 then
+        return names[1]
+    elseif #names > 1 then
+        return L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names])
+    end
+end
+
+-- Who was there, for a boss or death in a group: "with Mira and Tom", for a
+-- death "fell together with Mira" when they died too, or "with 12 others" in a
+-- raid. Nil without a group.
 local function Party(entry)
-    if type(entry.with) == "table" then
-        local names = {}
-        for _, name in ipairs(entry.with) do
-            if type(name) == "string" and name ~= "" then
-                local alias = ns.AliasService and ns.AliasService.Get(name)
-                names[#names + 1] = alias or string.match(name, "^(%S+)") or name
-            end
-        end
-        if #names == 1 then
-            return L.c_with:format(names[1])
-        elseif #names > 1 then
-            return L.c_with:format(L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names]))
-        end
+    local fell = Names(entry.fell)
+    if fell then
+        return L.c_fell_with:format(fell)
+    end
+    local with = Names(entry.with)
+    if with then
+        return L.c_with:format(with)
     end
     local others = tonumber(entry.others)
     if others and others > 0 then
@@ -188,7 +210,7 @@ local kinds = {
             return Place(e) and L.c_death:format(Place(e)) or L.c_death_nowhere
         end,
         detail = function(e)
-            return e.level and L.c_at_level:format(tonumber(e.level) or 0) or nil
+            return Join(e.level and L.c_at_level:format(tonumber(e.level) or 0), Party(e))
         end,
     },
     -- The last boss of an instance clears it (`instance`, its name); else a
@@ -208,11 +230,7 @@ local kinds = {
             return L["c_boss" .. first]:format(e.name or L.c_a_foe)
         end,
         detail = function(e)
-            local place, party = Place(e) and L.c_in:format(Place(e)), Party(e)
-            if place and party then
-                return place .. "  ·  " .. party
-            end
-            return place or party
+            return Join(Place(e) and L.c_in:format(Place(e)), Party(e))
         end,
     },
     achievement = {
@@ -822,8 +840,7 @@ function ChronicleService.Text(entry, anonymous)
     -- Under an alias, the character's name stands in brackets wherever the
     -- companion is named (Label), not in the detail line.
     if entry.who and entry.via then
-        local via = L.c_via:format(entry.via)
-        detail = detail and (detail .. "  ·  " .. via) or via
+        detail = Join(detail, L.c_via:format(entry.via))
     end
     return spec.title(told), detail
 end
@@ -856,6 +873,8 @@ function ChronicleService.TextRun(run, anonymous)
         if low then
             detail = low == high and L.c_at_level:format(low) or L.c_at_levels:format(low, high)
         end
+        -- shortcut: the newest death's group stands for the run; fine while a wipe keeps one group
+        detail = Join(detail, Party(newest))
     else
         low, high = low or 0, high or 0
         title = name and L.c_their_levels:format(name, low, high) or L.c_levels:format(low, high)

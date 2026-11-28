@@ -569,6 +569,7 @@ L.msg_fellow_demo_added_one = "Dodano do drużyny przykładowe osoby: %d. /fam f
 L.msg_fellow_demo_cleared = "Usunięto z drużyny przykładowe osoby: %d."
 L.msg_fellow_demo_cleared_one = "Usunięto z drużyny przykładowe osoby: %d."
 L.c_with = "w grupie: %s"
+L.c_fell_with = "wspólna śmierć: %s"
 L.c_and = "%s i %s"
 L.c_feed_others = "jeszcze %d osób"
 L.c_feed_others_one = "jeszcze %d osoba"
