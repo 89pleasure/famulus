@@ -371,7 +371,10 @@ picture-book look are built and checked against the mock only.
     `ENCOUNTER_END`: `BOSS_KILL` already delivers the ID and the name, and whether
     `ENCOUNTER_END` fires in Forever's dungeons is not known. The encounter IDs come from the
     client's DungeonEncounter table (wago.tools, Forever build 1.60.1.71139), none checked in
-    game; whether `BOSS_KILL` fires in five-player dungeons in Forever is not checked either.
+    game. Forever's nine new dungeons are in it too (since 2026-11-28): their last boss is the one
+    the table orders last (`OrderIndex`), which the guides on Wowhead and Mobalytics confirm. A
+    tenth map with encounters (3002: Deathulus, Crushfist Bloodbreaker) has no name in the map
+    table and is left out; whether `BOSS_KILL` fires in five-player dungeons in Forever is not checked either.
   - **First time in a dungeon or a raid (the owner's request, 2026-11-28):** A zone the
     character discovers while `IsInInstance` says `party` or `raid` is kind `instance` instead of
     an arrival: `{ instance = <name>, level }`, with who came along as for a boss (`with` or

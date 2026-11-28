@@ -210,6 +210,17 @@ ChronicleService.finalBosses = {
     [2801] = true, -- Scholomance: Darkmaster Gandling
     [478] = true, -- Stratholme, living side: Balnazzar
     [484] = true, -- Stratholme, undead side: Baron Rivendare
+    -- Forever's own dungeons: the last boss is the one the client's table
+    -- orders last (OrderIndex), as the guides confirm
+    [3303] = true, -- City of Dalaran: Shade of the Archmage
+    [3479] = true, -- The Drowned City: Min'loth the Serpent
+    [3336] = true, -- Blackmaw Hold: Unbound Spirit
+    [3409] = true, -- Alcaz Prison: Blazeroar
+    [3482] = true, -- Excavation Site: Wetlands: Relic Guardian
+    [3354] = true, -- Ruins of Lordaeron: Rath'mael
+    [3502] = true, -- The Shaper's Terrace: Nanaya
+    [3451] = true, -- Krol'dok Stronghold: Overseer Mugg
+    [3496] = true, -- The Hall of Thanes: Durgen Dirgehammer
     -- Raids
     [672] = true, -- Molten Core: Ragnaros
     [1084] = true, -- Onyxia's Lair: Onyxia
