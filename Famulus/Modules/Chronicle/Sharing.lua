@@ -120,7 +120,7 @@ local REACT_DELAY = 2
 local FIELDS = {
     level = { level = "n", zone = "s" },
     death = { level = "n", zone = "s" },
-    boss = { id = "n", name = "s", zone = "s" },
+    boss = { id = "n", name = "s", zone = "s", first = "n", instance = "s" },
     achievement = { id = "n", name = "s", icon = "n" },
     zone = { level = "n", zone = "s" },
     profession = { skill = "n", name = "s", icon = "n" },

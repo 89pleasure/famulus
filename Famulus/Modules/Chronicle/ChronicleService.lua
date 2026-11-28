@@ -18,6 +18,7 @@
 --   FamulusCharDB.skills = { [<skill line>] = <last known rank>, ... }
 --   FamulusCharDB.abilities = { ["<ability id>"] = true, ... }   -- learned by this character
 --   FamulusCharDB.items = { [<item ID>] = true, ... }            -- owned once by this character
+--   FamulusCharDB.bosses = { [<encounter ID>] = true, ... }      -- defeated by this character
 --
 -- An entry about a companion carries `who` (their character name) instead
 -- of `c`, and `via` (who passed it on) when it did not come from them.
@@ -175,6 +176,12 @@ ChronicleService.items = {
     { item = 5178, class = "SHAMAN" }, -- Air Totem
 }
 
+-- The last boss of each instance, by encounter ID (what BOSS_KILL names):
+-- defeating it clears the instance. One row per wing where an instance has
+-- several.
+ChronicleService.finalBosses = {
+}
+
 function ChronicleService.Item(itemID)
     for _, item in ipairs(ChronicleService.items) do
         if item.item == itemID then
@@ -239,12 +246,21 @@ local kinds = {
             return e.level and L.c_at_level:format(tonumber(e.level) or 0) or nil
         end,
     },
+    -- The last boss of an instance clears it (`instance`, its name); else a
+    -- boss defeated for the first time by the character says so (`first`).
     boss = {
         title = function(e)
-            if e.who then
-                return L.c_their_boss:format(Label(e), e.name or L.c_a_foe)
+            if type(e.instance) == "string" then
+                if e.who then
+                    return L.c_their_cleared:format(Label(e), e.instance)
+                end
+                return L.c_cleared:format(e.instance)
             end
-            return L.c_boss:format(e.name or L.c_a_foe)
+            local first = e.first and "_first" or ""
+            if e.who then
+                return L["c_their_boss" .. first]:format(Label(e), e.name or L.c_a_foe)
+            end
+            return L["c_boss" .. first]:format(e.name or L.c_a_foe)
         end,
         detail = function(e)
             local place, party = Place(e) and L.c_in:format(Place(e)), Party(e)
@@ -1015,6 +1031,30 @@ function ChronicleService.SeeSkill(skillLine, rank)
     local before = FamulusCharDB.skills[skillLine]
     FamulusCharDB.skills[skillLine] = rank
     return before
+end
+
+-- Marks a boss (its encounter ID) as defeated by this character; true the
+-- first time. The first call takes the character's bosses in the chronicle
+-- as known, so that a kill from before this version is no first.
+function ChronicleService.SeeBoss(id)
+    if type(FamulusCharDB) ~= "table" or ns.IsSecret(id) or type(id) ~= "number" then
+        return false
+    end
+    local seen = FamulusCharDB.bosses
+    if type(seen) ~= "table" then
+        seen = {}
+        for _, entry in ipairs(ChronicleService.Entries()) do
+            if entry.k == "boss" and entry.c == character and not entry.demo and type(entry.id) == "number" then
+                seen[entry.id] = true
+            end
+        end
+        FamulusCharDB.bosses = seen
+    end
+    if seen[id] then
+        return false
+    end
+    seen[id] = true
+    return true
 end
 
 -- Marks an ability as learned by this character; true if it was new.
