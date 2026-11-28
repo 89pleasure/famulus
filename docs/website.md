@@ -383,8 +383,8 @@ owner.
     Screenshots, Help & FAQ), Community (GitHub, Discord, CurseForge, Report a bug) and Legal
     (Privacy, Copyright & trademarks, Licence = `LICENSE` on GitHub). Below a line the notice on Blizzard's
     trademarks (now also: the screenshots show game content © Blizzard) and "© 2026 89pleasure.
-    All rights reserved." **Discord is not a link yet** but muted with a pill "Soon"; once the
-    server exists, make it a link like GitHub. Below 980 px the columns go under the brand, below
+    All rights reserved." Discord links the server's permanent invite
+    (`discord.gg/JbrGAadyA4`, since 2026-11-28; before, a muted "Soon" pill). Below 980 px the columns go under the brand, below
     560 px two columns. Polestar has the links in one row and a creator line; Famulus has
     neither.
   - **Legal page `legal.html`** with `legal.js` (language as on the main page, `?lang=`,
