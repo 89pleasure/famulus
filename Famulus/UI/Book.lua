@@ -70,6 +70,7 @@ local PICTURES = {
     zone = { icon = "peaks", fill = "control", border = "controlBorder", ink = "textDim" },
     profession = { icon = "hammer", fill = "control", border = "controlBorder", ink = "textDim" },
     skill = { fill = "accentDeep", border = "accentLine", ink = "accent2" },
+    pvpRank = { fill = "accentDeep", border = "accentLine", ink = "accent2" },
     -- An item or an ability may name its own picture (story.icon).
     item = { icon = "chest", fill = "accentDeep", border = "accentLine", ink = "accent2" },
     mount = { icon = "horseshoe", fill = "accentDeep", border = "accentLine", ink = "accent2" },

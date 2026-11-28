@@ -256,8 +256,9 @@ picture-book look are built and checked against the mock only.
      from `GetProfessionInfo`, for challenges from `GetAchievementInfo`; it is shared;
   2. the icon of the item (`C_Item.GetItemIconByID`) or of the spell of an ability
      (`C_Spell.GetSpellTexture`);
-  3. the icon of the kind from `UI.gameIcons` (`UI/Theme.lua`): death, boss, dungeon or
-     raid (a key), zone, challenge, profession, ability, mount, item.
+  3. the icon of the kind from `UI.gameIcons` (`UI/Theme.lua`): death, boss, PvP rank (a
+     banner, the number stands on it), dungeon or raid (a key), zone, challenge, profession,
+     ability, mount, item.
   The names in `UI.gameIcons` are icons from Vanilla and not checked in game in the Forever
   client; `/fam test` reports per kind (group `media`, "icon …") whether the client has the file.
   The icons are not tinted and do not follow the colour scheme; the frame around them does.
@@ -391,6 +392,15 @@ picture-book look are built and checked against the mock only.
     (`AbilityBySpell`). Nothing is pre-marked: the event only comes for a mount just learned.
     Not checked in game: whether the event fires in Forever and whether a bought mount reaches
     the journal at once.
+  - **PvP ranks (the owner's request, 2026-11-28):** Forever keeps the honour ranks of old as
+    a renown track of its own, faction 2800 (`Blizzard_UIPanels_Game/Camelot/PVPRankFrame.lua`).
+    `MAJOR_FACTION_RENOWN_LEVEL_CHANGED` for that faction with a higher rank than before is
+    kind `pvpRank`: `{ rank, name }`, "PvP rank 6 reached", below it the title as Blizzard's
+    window builds it (`GetText("PVP_RANK_<Enum.PvPRanks.Rank_1 + rank - 1>_<1 Alliance, 0 Horde>",
+    UnitSex("player"))`). The title travels along as the one who reached it saw it (it depends
+    on their faction and sex). A rank lost (decay, a new season) is no news. The picture shows
+    the number, like a level; weight high; reactions `cheer strong fire`; a switch in the live
+    feed. Not checked in game: whether the event fires for the PvP track and the titles.
   - Two entries of the same kind in the same second count as a duplicate, unless they differ
     in `skill`, `rank`, `ability` or `item`.
 - **Sample entries (2026-11-19):** `/fam chronicle demo` writes 21 made-up entries over three
@@ -552,9 +562,9 @@ picture-book look are built and checked against the mock only.
     something only appears once "Share with friends" (`sharing`) or "Follow my friends"
     (`companions`) is running. A stored value of the old switch stays unused in the profile until
     "Reset" removes it. Checked against the mock only.
-  - Switches per event kind (`level`, `death`, `boss`, `instance`, `achievement`, `ability`, `mount`,
-    `item`, `profession`, `skill`, `zone`); only `zone` is off by default (the owner's requirement:
-    zones rather not, level-ups yes). Plus `own` (own events too, default off),
+  - Switches per event kind (`level`, `death`, `boss`, `pvpRank`, `instance`, `achievement`,
+    `ability`, `mount`, `item`, `profession`, `skill`, `zone`); only `zone` is off by default (the
+    owner's requirement: zones rather not, level-ups yes). Plus `own` (own events too, default off),
     `sound` (see below), `duration` (4, 7 or 12 seconds) and `keep` (the last three stay, see
     "Sliding in, waiting its turn, keeping the last three"). A kind without a switch (newer
     version at the companion's end) stays invisible. A new kind needs an entry in `KINDS` and its

@@ -124,6 +124,7 @@ local FIELDS = {
     achievement = { id = "n", name = "s", icon = "n" },
     zone = { level = "n", zone = "s" },
     instance = { instance = "s", level = "n" },
+    pvpRank = { rank = "n", name = "s" },
     profession = { skill = "n", name = "s", icon = "n" },
     ability = { ability = "s", name = "s", level = "n" },
     item = { item = "n", name = "s", level = "n", zone = "s" },
