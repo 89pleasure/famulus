@@ -8,6 +8,8 @@
 #   v1.2.3-alpha.1  Alpha, likewise
 # CHANGELOG.md needs a section "## 1.2.3" (the tag without the v); it becomes the file's changelog.
 # The packager writes the tag into the .toc (## Version) and maps Interface 16001 to WoW Forever.
+# It also creates a GitHub release with the same changelog and zip (alpha and beta as pre-release);
+# its webhook announces new versions on Discord.
 #
 # Run by hand (Actions > Release > Run workflow), it builds the zip without uploading and keeps it
 # with the run for a week, to look at what would be released.
@@ -63,6 +65,9 @@ jobs:
   release:
     needs: [check, tests]
     runs-on: ubuntu-latest
+    # The packager creates the GitHub release with this job's token.
+    permissions:
+      contents: write
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -85,6 +90,7 @@ jobs:
           pandoc: false
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package without uploading
         if: github.event_name == 'workflow_dispatch'

@@ -121,7 +121,13 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
     Communication" and "Guild". Still "Unlisted" then; `v0.1.0`, the first release file, was
     uploaded the same night, and the project appears in the app once CurseForge has approved it. CurseForge caches the
     page: right after a change a plain reload may still show the old summary.
-- **Open:** Wago, GitHub releases, an approval environment for the secrets (none set up).
+- **GitHub releases (since 2026-11-28):** the packager also creates a GitHub release per tag
+  (`GITHUB_OAUTH` from the job's `GITHUB_TOKEN`, job permission `contents: write`), with the
+  same changelog and zip; alpha and beta tags become pre-releases. Reason: the project's Discord
+  server announces new versions through a repository webhook (Discord's `/github` endpoint,
+  event "Releases" only), and a bare tag sends no release event. The webhook URL is a secret
+  and lives only in GitHub's webhook settings. Not yet seen on a real tag.
+- **Open:** Wago, an approval environment for the secrets (none set up).
 - Run on GitHub (2026-11-24): the test workflow, a trial run without upload and the upload
   of `v0.1.0-alpha.1` ("Uploading Famulus-v0.1.0-alpha.1-forever.zip (1.60.1 alpha) … Success!").
-  A tag without upload (approval, Wago, GitHub releases) is not set up.
+  A tag without upload (approval, Wago) is not set up.
