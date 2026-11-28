@@ -204,9 +204,17 @@ function journey:PLAYER_DEAD()
 end
 
 -- Who was there goes with it: the names in a party, in a raid only how many.
--- Neither is shared with companions (Modules/Chronicle/Sharing.lua).
+-- Neither is shared with companions (Modules/Chronicle/Sharing.lua). The
+-- last boss of an instance clears it; another one defeated for the first
+-- time says so.
 function journey:BOSS_KILL(_, encounterID, name)
     local entry = { id = encounterID, name = name, zone = Zone() }
+    if Chronicle.SeeBoss(encounterID) then
+        entry.first = 1
+    end
+    if not ns.IsSecret(encounterID) and encounterID and Chronicle.finalBosses[encounterID] then
+        entry.instance = Zone()
+    end
     local members = ns.GroupService.Members(true)
     if #members > 0 and ns.GroupService.InRaid() then
         entry.others = #members

@@ -18,6 +18,7 @@
 --   FamulusCharDB.skills = { [<skill line>] = <last known rank>, ... }
 --   FamulusCharDB.abilities = { ["<ability id>"] = true, ... }   -- learned by this character
 --   FamulusCharDB.items = { [<item ID>] = true, ... }            -- owned once by this character
+--   FamulusCharDB.bosses = { [<encounter ID>] = true, ... }      -- defeated by this character
 --
 -- An entry about a companion carries `who` (their character name) instead
 -- of `c`, and `via` (who passed it on) when it did not come from them.
@@ -175,6 +176,50 @@ ChronicleService.items = {
     { item = 5178, class = "SHAMAN" }, -- Air Totem
 }
 
+-- The last boss of each instance, by encounter ID (what BOSS_KILL names):
+-- defeating it clears the instance. One row per wing where an instance has
+-- several. IDs from the client's DungeonEncounter table (Forever build
+-- 1.60.1.71139 on wago.tools, the same as Classic Era but for Sunken Temple);
+-- many dungeons have newer IDs than warcraft.wiki.gg lists. Not checked in game.
+ChronicleService.finalBosses = {
+    -- Dungeons
+    [2735] = true, -- Ragefire Chasm: Bazzalan (no clear last boss)
+    [592] = true, -- Wailing Caverns: Mutanus the Devourer
+    [2747] = true, -- The Deadmines: Edwin VanCleef
+    [2755] = true, -- Shadowfang Keep: Archmage Arugal
+    [2910] = true, -- Blackfathom Deeps: Aku'mai
+    [2760] = true, -- The Stockade: Bazil Thredd (no clear last boss)
+    [2772] = true, -- Gnomeregan: Mekgineer Thermaplugg
+    [2778] = true, -- Razorfen Kraul: Charlga Razorflank
+    [2779] = true, -- Scarlet Monastery, Graveyard: Bloodmage Thalnos
+    [447] = true, -- Scarlet Monastery, Library: Arcanist Doan
+    [448] = true, -- Scarlet Monastery, Armory: Herod
+    [450] = true, -- Scarlet Monastery, Cathedral: High Inquisitor Whitemane
+    [2785] = true, -- Razorfen Downs: Amnennar the Coldbringer
+    [554] = true, -- Uldaman: Archaedas
+    [600] = true, -- Zul'Farrak: Chief Ukorz Sandscalp
+    [429] = true, -- Maraudon: Princess Theradras
+    [3584] = true, -- Sunken Temple: Shade of Eranikus (Forever's own row)
+    [493] = true, -- Sunken Temple: Shade of Eranikus (Classic Era's row)
+    [2790] = true, -- Blackrock Depths: Emperor Dagran Thaurissan
+    [275] = true, -- Lower Blackrock Spire: Overlord Wyrmthalak
+    [3069] = true, -- Upper Blackrock Spire: General Drakkisath
+    [346] = true, -- Dire Maul East: Alzzin the Wildshaper
+    [361] = true, -- Dire Maul West: Prince Tortheldrin
+    [368] = true, -- Dire Maul North: King Gordok
+    [2801] = true, -- Scholomance: Darkmaster Gandling
+    [478] = true, -- Stratholme, living side: Balnazzar
+    [484] = true, -- Stratholme, undead side: Baron Rivendare
+    -- Raids
+    [672] = true, -- Molten Core: Ragnaros
+    [1084] = true, -- Onyxia's Lair: Onyxia
+    [617] = true, -- Blackwing Lair: Nefarian
+    [793] = true, -- Zul'Gurub: Hakkar
+    [723] = true, -- Ruins of Ahn'Qiraj: Ossirian the Unscarred
+    [717] = true, -- Temple of Ahn'Qiraj: C'Thun
+    [1114] = true, -- Naxxramas: Kel'Thuzad
+}
+
 function ChronicleService.Item(itemID)
     for _, item in ipairs(ChronicleService.items) do
         if item.item == itemID then
@@ -239,12 +284,21 @@ local kinds = {
             return e.level and L.c_at_level:format(tonumber(e.level) or 0) or nil
         end,
     },
+    -- The last boss of an instance clears it (`instance`, its name); else a
+    -- boss defeated for the first time by the character says so (`first`).
     boss = {
         title = function(e)
-            if e.who then
-                return L.c_their_boss:format(Label(e), e.name or L.c_a_foe)
+            if type(e.instance) == "string" then
+                if e.who then
+                    return L.c_their_cleared:format(Label(e), e.instance)
+                end
+                return L.c_cleared:format(e.instance)
             end
-            return L.c_boss:format(e.name or L.c_a_foe)
+            local first = e.first and "_first" or ""
+            if e.who then
+                return L["c_their_boss" .. first]:format(Label(e), e.name or L.c_a_foe)
+            end
+            return L["c_boss" .. first]:format(e.name or L.c_a_foe)
         end,
         detail = function(e)
             local place, party = Place(e) and L.c_in:format(Place(e)), Party(e)
@@ -1015,6 +1069,30 @@ function ChronicleService.SeeSkill(skillLine, rank)
     local before = FamulusCharDB.skills[skillLine]
     FamulusCharDB.skills[skillLine] = rank
     return before
+end
+
+-- Marks a boss (its encounter ID) as defeated by this character; true the
+-- first time. The first call takes the character's bosses in the chronicle
+-- as known, so that a kill from before this version is no first.
+function ChronicleService.SeeBoss(id)
+    if type(FamulusCharDB) ~= "table" or ns.IsSecret(id) or type(id) ~= "number" then
+        return false
+    end
+    local seen = FamulusCharDB.bosses
+    if type(seen) ~= "table" then
+        seen = {}
+        for _, entry in ipairs(ChronicleService.Entries()) do
+            if entry.k == "boss" and entry.c == character and not entry.demo and type(entry.id) == "number" then
+                seen[entry.id] = true
+            end
+        end
+        FamulusCharDB.bosses = seen
+    end
+    if seen[id] then
+        return false
+    end
+    seen[id] = true
+    return true
 end
 
 -- Marks an ability as learned by this character; true if it was new.

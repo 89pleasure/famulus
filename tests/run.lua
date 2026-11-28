@@ -1633,8 +1633,33 @@ check(#Chronicle.Entries() == 3 and Chronicle.Text(Chronicle.Entries()[3]) == "F
 mock.Fire("BOSS_KILL", 77, "Edwin VanCleef")
 mock.Fire("ACHIEVEMENT_EARNED", 501, false)
 mock.Fire("ACHIEVEMENT_EARNED", 501, true)
-check(#Chronicle.Entries() == 5 and Chronicle.Text(Chronicle.Entries()[4]) == "Edwin VanCleef defeated"
+check(#Chronicle.Entries() == 5 and Chronicle.Text(Chronicle.Entries()[4]) == "Edwin VanCleef defeated for the first time"
     and Chronicle.Text(Chronicle.Entries()[5]) == "Challenge completed: Challenge 501", "bosses and challenges follow; one already earned does not")
+do -- a boss again is no first; the last boss of an instance clears it
+    local count, realTime = #Chronicle.Entries(), time
+    time = function()
+        return realTime() + 5
+    end
+    mock.Fire("BOSS_KILL", 77, "Edwin VanCleef")
+    local again = Chronicle.Entries()[count + 1]
+    check(again and again.first == nil and Chronicle.Text(again) == "Edwin VanCleef defeated", "a boss defeated before is no first")
+    Chronicle.finalBosses[77] = true
+    time = function()
+        return realTime() + 6
+    end
+    mock.Fire("BOSS_KILL", 77, "Edwin VanCleef")
+    local cleared = Chronicle.Entries()[count + 2]
+    check(cleared and cleared.instance == "Westfall" and Chronicle.Text(cleared) == "Westfall cleared"
+        and Chronicle.Text({ k = "boss", instance = "Westfall", who = "Jaina Proudmoore" }) == "Jaina Proudmoore clears Westfall"
+        and Chronicle.Text({ k = "boss", name = "Hogger", first = 1, who = "Jaina Proudmoore" }) == "Jaina Proudmoore defeats Hogger for the first time",
+        "the last boss clears the instance: " .. tostring(cleared and Chronicle.Text(cleared)))
+    Chronicle.finalBosses[77] = nil
+    FamulusCharDB.bosses = nil
+    check(Chronicle.SeeBoss(77) == false and Chronicle.SeeBoss(76) == true, "bosses already in the chronicle count as known")
+    time = realTime
+    table.remove(Chronicle.Entries(), count + 2)
+    table.remove(Chronicle.Entries(), count + 1)
+end
 do -- who was there when a boss fell
     local count, realTime = #Chronicle.Entries(), time
     local _, alone = Chronicle.Text(Chronicle.Entries()[4])

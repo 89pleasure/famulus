@@ -359,6 +359,18 @@ picture-book look are built and checked against the mock only.
     ability this version does not know has no tooltip (the spell ID does not travel along).
     Not checked in game; an item that is used up immediately on receipt
     or never reaches the bags is not detected this way.
+  - **First victory and instance cleared (the owner's request, 2026-11-28):** A boss the
+    character defeats for the first time carries `first = 1` ("Archaedas defeated for the first
+    time"); known bosses are in `FamulusCharDB.bosses` by encounter ID. The first call takes the
+    character's boss entries already in the chronicle as known, so a kill from before the
+    chronicle counts as a first. The last boss of an instance (`ChronicleService.finalBosses`,
+    one row per wing) makes the entry "Uldaman cleared" instead: `instance` carries the
+    instance's name (`GetRealZoneText` inside it), on every clear, not only the first. Both
+    fields are shared; older versions drop them and show the plain boss. Still `BOSS_KILL`, not
+    `ENCOUNTER_END`: `BOSS_KILL` already delivers the ID and the name, and whether
+    `ENCOUNTER_END` fires in Forever's dungeons is not known. The encounter IDs come from the
+    client's DungeonEncounter table (wago.tools, Forever build 1.60.1.71139), none checked in
+    game; whether `BOSS_KILL` fires in five-player dungeons in Forever is not checked either.
   - Two entries of the same kind in the same second count as a duplicate, unless they differ
     in `skill`, `rank`, `ability` or `item`.
 - **Sample entries (2026-11-19):** `/fam chronicle demo` writes 21 made-up entries over three
