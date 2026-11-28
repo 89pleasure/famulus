@@ -16,7 +16,7 @@
 --       icon = "cheer",            -- end that reacts to a friend's event
 --       given = function() return true end, -- whether the player has reacted
 --       give = function() end,     -- reacts
---   }
+--   }                              -- (who is nearby puts a whisper here, never given)
 --   story.bundle = "boss:123"      -- optional: the same event of someone else
 --   story.join = function(story, other) end -- within BUNDLE seconds is joined
 --                                     into this story instead of a card of its own

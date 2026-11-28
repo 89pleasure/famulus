@@ -5452,6 +5452,27 @@ do
         "whoever is here already comes on one card, not who is out of reach: " .. tostring(card and card.title:GetText()))
     check(card.pair and card.pair[1]:IsShown() and card.pair[2]:IsShown() and not card.crest:IsShown() and not (card.solo and card.solo:IsShown()),
         "two people, two crests instead of a picture")
+    do -- The button of a reaction opens a whisper; for two, a menu of their names.
+        local menu
+        MenuUtil = { CreateContextMenu = function(owner, generate)
+            menu = { owner = owner, titles = {}, names = {}, picks = {} }
+            generate(owner, {
+                CreateTitle = function(_, text) menu.titles[#menu.titles + 1] = text end,
+                CreateButton = function(_, text, pick)
+                    menu.names[#menu.names + 1] = text
+                    menu.picks[#menu.picks + 1] = pick
+                end,
+            })
+        end }
+        check(card.react:IsShown() and card.react.reactionIcon == "chat" and not card.react.lit, "a whisper button where a reaction's would be")
+        card.react.scripts.OnClick(card.react, "LeftButton")
+        check(menu and menu.owner == UIParent and menu.titles[1] == "Whisper" and table.concat(menu.names, ",") == "Kael Dornhain,Mira Sturmfeder"
+            and mock.count("ChatFrameUtil.SendTell") == 0, "two on the card: a menu of their names, nothing opened yet")
+        menu.picks[1]()
+        check(mock.count("ChatFrameUtil.SendTell") == 1 and mock.calls[#mock.calls][2] == "Kael Dornhain-Realm" and not card.closing,
+            "a name picked opens the whisper, realm and all; the card stays")
+        MenuUtil = nil
+    end
     check(mock.count("PlaySoundFile") == 1, "with the live feed's sound")
     mock.Advance(10)
     check(#Feed.Shown() == 0, "and it goes like the live feed's cards")
@@ -5467,6 +5488,9 @@ do
         and card.detail:GetText() == "Level 38  ·  " .. ns.UI.Colored("classPRIEST", "Priest") .. "  ·  Friends list"
         and card.solo:IsShown() and not card.pair[1]:IsShown() and not card.crest:IsShown(),
         "someone arrives: a card of their own with one crest: " .. tostring(card and card.title:GetText()))
+    card.react.scripts.OnClick(card.react, "LeftButton")
+    check(mock.count("ChatFrameUtil.SendTell") == 2 and mock.calls[#mock.calls][2] == "Lysa Morgentau", "one on the card: the button whispers them")
+    mock.reset() -- (the tab's whisper below is counted from here)
     Feed.Clear()
     mock.state.friends[2].area = "Feralas"
     mock.Fire("FRIENDLIST_UPDATE")

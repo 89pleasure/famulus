@@ -3,7 +3,7 @@
 -- them arrives where the player is, or comes online there. The window's tab
 -- "Nearby" lists everyone online. Works without the others' cooperation:
 -- the friends list, Battle.net and the guild roster tell where people are
--- (NearbyService). Nothing is sent to anyone.
+-- (NearbyService). Nothing is sent to anyone. A card's button opens a whisper.
 --
 -- No card in cities and inns (unless asked for), in instances and in
 -- flight; none for people in the player's group or out of reach (another
@@ -103,6 +103,30 @@ local function Levels(list)
     return L.ui_near_levels:format(low, high)
 end
 
+-- The card's button (the slot of a reaction, UI/Feed.lua) opens a whisper:
+-- to the one person, or to whoever the player picks from a menu of names.
+-- It is never "given", so the card stays after a click.
+local function NotGiven()
+    return false
+end
+
+local function WhisperOne(list)
+    if #list == 1 or not (MenuUtil and MenuUtil.CreateContextMenu) then
+        Nearby.Whisper(list[1])
+        return
+    end
+    -- UIParent owns the menu, so that it stays when the card fades meanwhile.
+    MenuUtil.CreateContextMenu(UIParent, function(_, root)
+        root:CreateTitle(ns.L.ui_near_whisper)
+        for _, person in ipairs(list) do
+            -- The full name: two of the same first name must tell apart here.
+            root:CreateButton(ns.AliasService.Get(person.name) or person.name, function()
+                Nearby.Whisper(person)
+            end)
+        end
+    end)
+end
+
 -- The card: who in its head (the crests of the first two show them), where in
 -- its title, and below their levels. The closest bond first.
 function nearby.Story(list, zone, came)
@@ -132,6 +156,11 @@ function nearby.Story(list, zone, came)
         story.detail = Detail(list[1])
     else
         story.detail = Levels(list)
+    end
+    if ns.ChatService.CanWhisper() then
+        story.reaction = { icon = "chat", given = NotGiven, give = function()
+            WhisperOne(list)
+        end }
     end
     return story
 end

@@ -411,6 +411,13 @@ without "Where your people are".
   (`story.people` in `UI/Feed.lua`). Place, duration and "Keep the last three" are the live
   feed's (its cards wait their turn and stay like the live feed's); the sound is the same file
   (`UI.Feed.Chime`), with an option of its own.
+- **Whisper from the card (2026-11-28, the owner's request):** a card has the button of a
+  reaction (`story.reaction` in `UI/Feed.lua`, icon `chat`, never "given", so the card stays
+  after a click). One person: it opens the whisper (`NearbyService.Whisper`). Several: Blizzard's
+  context menu (`MenuUtil.CreateContextMenu`, owned by `UIParent` so it stays when the card fades)
+  with "Whisper" and everyone on the card by alias or full name (two of the same first name
+  must tell apart there). The settings' picture shows the button too. Checked
+  against the mock only; open in game: the menu at the cursor, and opening it in combat.
 - **Fresh lists:** friends list and Battle.net report changes themselves (`FRIENDLIST_UPDATE`,
   `BN_FRIEND_INFO_CHANGED`); the guild roster only comes when asked. While the feature is on, a
   ticker asks for both every 60 seconds (`POLL`; `NearbyService.Ask`, at most every ten seconds),
