@@ -249,6 +249,32 @@ function ChronicleService.Ability(id)
     return nil
 end
 
+-- The ability one of whose spells this is, or nil.
+function ChronicleService.AbilityBySpell(spell)
+    for _, ability in ipairs(ChronicleService.abilities) do
+        if ability.spell == spell then
+            return ability
+        end
+        for _, other in ipairs(ability.also or {}) do
+            if other == spell then
+                return ability
+            end
+        end
+    end
+    return nil
+end
+
+-- The name of an entry's mount: as this client names it, else as the one
+-- who got it did.
+local function MountName(entry)
+    local id, journal = tonumber(entry.mount), C_MountJournal
+    local name = id and journal and journal.GetMountInfoByID and journal.GetMountInfoByID(id)
+    if IsPlainText(name) then
+        return name
+    end
+    return entry.name or L.c_a_mount
+end
+
 -- The name of an entry's ability: as this client names its spell, else as
 -- the one who learned it did.
 local function AbilityName(entry, known)
@@ -368,6 +394,17 @@ local kinds = {
                 return L.c_their_item:format(Label(e), ItemName(e))
             end
             return L.c_item:format(ItemName(e))
+        end,
+        detail = function(e)
+            return Place(e) and L.c_in:format(Place(e)) or nil
+        end,
+    },
+    mount = {
+        title = function(e)
+            if e.who then
+                return L.c_their_mount:format(Label(e), MountName(e))
+            end
+            return L.c_mount:format(MountName(e))
         end,
         detail = function(e)
             return Place(e) and L.c_in:format(Place(e)) or nil
@@ -605,6 +642,7 @@ ChronicleService.REACTION_SETS = {
     achievement = { "cheer", "clap", "fire" },
     ability = { "cheer", "clap", "fire" },
     item = { "cheer", "clap", "fire" },
+    mount = { "cheer", "clap", "fire" },
     boss = { "strong", "cheer", "clap", "fire" },
     instance = { "cheer", "strong", "fire" },
     death = { "sad", "strong", "heart" },
@@ -1223,13 +1261,13 @@ local DEMO_ZONES = {
     ukUA = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
 }
 local DEMO_NAMES = {
-    enUS = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag" },
-    deDE = { tailoring = "Schneiderei", mining = "Bergbau", boss = "Archaedas", challenge = "Erkunder des Ödlands", bag = "Schlafsack" },
-    esES = { tailoring = "Sastrería", mining = "Minería", boss = "Archaedas", challenge = "Explorar las Tierras Inhóspitas", bag = "Saco de dormir" },
-    frFR = { tailoring = "Couture", mining = "Minage", boss = "Archaedas", challenge = "Explorer les Terres ingrates", bag = "Sac de couchage" },
-    itIT = { tailoring = "Sartoria", mining = "Estrazione", boss = "Archaedas", challenge = "Esplora Maleterre", bag = "Sacco a pelo" },
-    plPL = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag" },
-    ukUA = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag" },
+    enUS = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse" },
+    deDE = { tailoring = "Schneiderei", mining = "Bergbau", boss = "Archaedas", challenge = "Erkunder des Ödlands", bag = "Schlafsack", mount = "Braunes Pferd" },
+    esES = { tailoring = "Sastrería", mining = "Minería", boss = "Archaedas", challenge = "Explorar las Tierras Inhóspitas", bag = "Saco de dormir", mount = "Caballo marrón" },
+    frFR = { tailoring = "Couture", mining = "Minage", boss = "Archaedas", challenge = "Explorer les Terres ingrates", bag = "Sac de couchage", mount = "Cheval brun" },
+    itIT = { tailoring = "Sartoria", mining = "Estrazione", boss = "Archaedas", challenge = "Esplora Maleterre", bag = "Sacco a pelo", mount = "Cavallo marrone" },
+    plPL = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse" },
+    ukUA = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse" },
 }
 local DEMO_PEOPLE = {
     enUS = { "Mira Stormfeather", "Borin Ironbeard", "Lysa Morningdew" },
@@ -1275,6 +1313,7 @@ function ChronicleService.Sample(kind, own)
         achievement = { id = 1, name = name.challenge, who = lysa },
         ability = { ability = "riding", level = 40, who = mira },
         item = { item = 211527, name = name.bag, zone = zone[4], who = mira },
+        mount = { mount = 6, name = name.mount, zone = zone[3], who = borin },
         profession = { skill = 186, name = name.mining, who = lysa },
         skill = { skill = 186, name = name.mining, rank = 225, who = lysa },
         zone = { zone = zone[4], level = 39, who = lysa },

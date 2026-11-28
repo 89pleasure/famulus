@@ -72,6 +72,7 @@ local PICTURES = {
     skill = { fill = "accentDeep", border = "accentLine", ink = "accent2" },
     -- An item or an ability may name its own picture (story.icon).
     item = { icon = "chest", fill = "accentDeep", border = "accentLine", ink = "accent2" },
+    mount = { icon = "horseshoe", fill = "accentDeep", border = "accentLine", ink = "accent2" },
     ability = { icon = "sparkle", fill = "accentDeep", border = "accentLine", ink = "accent2" },
     death = { icon = "skull", fill = "deathGround", border = "deathLine", ink = "deathInk", title = "deathInk" },
     boss = { icon = "swords", fill = "bossGround", border = "bossLine", ink = "bossInk" },

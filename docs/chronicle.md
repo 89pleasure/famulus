@@ -257,7 +257,7 @@ picture-book look are built and checked against the mock only.
   2. the icon of the item (`C_Item.GetItemIconByID`) or of the spell of an ability
      (`C_Spell.GetSpellTexture`);
   3. the icon of the kind from `UI.gameIcons` (`UI/Theme.lua`): death, boss, dungeon or
-     raid (a key), zone, challenge, profession, ability, item.
+     raid (a key), zone, challenge, profession, ability, mount, item.
   The names in `UI.gameIcons` are icons from Vanilla and not checked in game in the Forever
   client; `/fam test` reports per kind (group `media`, "icon …") whether the client has the file.
   The icons are not tinted and do not follow the colour scheme; the frame around them does.
@@ -381,6 +381,16 @@ picture-book look are built and checked against the mock only.
     a switch in the live feed, on by default. Not checked in game: whether
     `ZONE_CHANGED_NEW_AREA` fires on entering an instance in Forever, and whether
     `GetRealZoneText` names the instance there.
+  - **Mounts (the owner's request, 2026-11-28):** `NEW_MOUNT_ADDED` with
+    `C_MountJournal.GetMountInfoByID` (the collections with the mount journal load in Forever,
+    `Blizzard_Collections/Camelot`). Kind `mount`: `{ mount = <mount ID>, name, icon, level, zone }`;
+    the sentence names the mount as the reader's client does, otherwise with the name sent along.
+    The picture is the mount's icon (`icon`), else the horseshoe; weight high; reactions
+    `cheer clap fire`; a switch in the live feed. A mount whose spell is an ability of
+    `ChronicleService.abilities` (the paladin's and warlock's class mounts) is not told again
+    (`AbilityBySpell`). Nothing is pre-marked: the event only comes for a mount just learned.
+    Not checked in game: whether the event fires in Forever and whether a bought mount reaches
+    the journal at once.
   - Two entries of the same kind in the same second count as a duplicate, unless they differ
     in `skill`, `rank`, `ability` or `item`.
 - **Sample entries (2026-11-19):** `/fam chronicle demo` writes 21 made-up entries over three
@@ -542,7 +552,7 @@ picture-book look are built and checked against the mock only.
     something only appears once "Share with friends" (`sharing`) or "Follow my friends"
     (`companions`) is running. A stored value of the old switch stays unused in the profile until
     "Reset" removes it. Checked against the mock only.
-  - Switches per event kind (`level`, `death`, `boss`, `instance`, `achievement`, `ability`,
+  - Switches per event kind (`level`, `death`, `boss`, `instance`, `achievement`, `ability`, `mount`,
     `item`, `profession`, `skill`, `zone`); only `zone` is off by default (the owner's requirement:
     zones rather not, level-ups yes). Plus `own` (own events too, default off),
     `sound` (see below), `duration` (4, 7 or 12 seconds) and `keep` (the last three stay, see

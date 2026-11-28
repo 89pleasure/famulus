@@ -1,6 +1,6 @@
 -- Writes the milestones of the player's own character into the chronicle:
 -- levels, deaths, bosses, Legacy challenges, professions, abilities such as
--- riding, special items, zones discovered and the first time in a dungeon or
+-- riding, mounts, special items, zones discovered and the first time in a dungeon or
 -- a raid.
 
 local _, ns = ...
@@ -186,6 +186,7 @@ function journey:OnEnable()
     self:RegisterEvent("BOSS_KILL")
     self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
     self:RegisterEvent("PLAYER_CONTROL_GAINED")
+    self:RegisterEvent("NEW_MOUNT_ADDED")
     if GetAchievementInfo then
         self:RegisterEvent("ACHIEVEMENT_EARNED")
     end
@@ -242,6 +243,26 @@ local function Instance()
         return nil
     end
     return (kind == "party" or kind == "raid") and kind or nil
+end
+
+-- A new mount. The class mounts are abilities already (warhorse, felsteed,
+-- ChronicleService.abilities) and are not told twice.
+function journey:NEW_MOUNT_ADDED(_, mountID)
+    local journal = C_MountJournal
+    if ns.IsSecret(mountID) or type(mountID) ~= "number" or not (journal and journal.GetMountInfoByID) then
+        return
+    end
+    local name, spell, icon = journal.GetMountInfoByID(mountID)
+    if not ns.IsSecret(spell) and Chronicle.AbilityBySpell(spell) then
+        return
+    end
+    Chronicle.Add("mount", {
+        mount = mountID,
+        name = ns.ChatService.IsPlainText(name) and name or nil,
+        icon = not ns.IsSecret(icon) and type(icon) == "number" and icon or nil,
+        level = UnitLevel("player"),
+        zone = Zone(),
+    })
 end
 
 -- The Forever client shows achievements as "Legacy challenges".
