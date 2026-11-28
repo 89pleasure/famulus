@@ -391,6 +391,20 @@ L.ui_preview_nearby_friends = "Only friends"
 L.ui_minimap_hint_click = "Click to open the settings"
 L.ui_minimap_hint_drag = "Drag to move this button"
 
+-- What is new (Core/NewsService.lua): the texts are written anew for each release with news
+L.ui_news_title = "New in %s"
+L.ui_news_heading = "What changed"
+L.ui_news_card = "%d new things"
+L.ui_news_card_one = "%d new thing"
+L.ui_news_card_detail = "Under “%s” in the window"
+L.ui_news_minimap = "New in %s: see “%s”"
+L.ui_news_1_t = "More moments in the chronicle"
+L.ui_news_1 = "Your first time in a dungeon or raid, a boss beaten for the first time, a dungeon cleared, a new mount and a new PvP rank."
+L.ui_news_2_t = "New on Famulus"
+L.ui_news_2 = "When a friend or guild member starts using Famulus, you hear of it once and can welcome them with a reaction."
+L.ui_news_3_t = "Whisper from “Nearby”"
+L.ui_news_3 = "The cards of friends in your zone have a whisper button: one click to write to them."
+
 -- Fellowship
 L.area_fellows = "Fellowship"
 L.area_fellows_desc = "Who you play with, and who is nearby. Only you see this."

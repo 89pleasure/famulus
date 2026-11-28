@@ -339,6 +339,9 @@ SlashCmdList.FAMULUS = function(input)
         ns:RunSelfTest()
     elseif command == "dev" then
         ns:SetDevMode(not ns:IsDevMode())
+    elseif command == "news" then
+        -- The card that tells of news after an update (Core/NewsService.lua).
+        ns.NewsService.ShowCard()
     elseif command == "report" then
         -- What helps to find a bug, ready to copy into an issue (UI/Report.lua).
         ns:ShowBugReport()

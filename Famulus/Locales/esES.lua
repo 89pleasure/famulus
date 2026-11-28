@@ -390,6 +390,20 @@ L.ui_preview_nearby_friends = "Solo amigos"
 L.ui_minimap_hint_click = "Haz clic para abrir los ajustes"
 L.ui_minimap_hint_drag = "Arrastra para mover este botón"
 
+-- Novedades (Core/NewsService.lua)
+L.ui_news_title = "Novedades de la versión %s"
+L.ui_news_heading = "Qué ha cambiado"
+L.ui_news_card = "%d novedades"
+L.ui_news_card_one = "%d novedad"
+L.ui_news_card_detail = "En «%s», en la ventana"
+L.ui_news_minimap = "Novedades de la versión %s: mira en «%s»"
+L.ui_news_1_t = "Más momentos en la crónica"
+L.ui_news_1 = "Tu primera vez en una mazmorra o banda, un jefe derrotado por primera vez, una mazmorra completada, una nueva montura y un nuevo rango JcJ."
+L.ui_news_2_t = "Llegadas a Famulus"
+L.ui_news_2 = "Cuando un amigo o alguien de la hermandad empieza a usar Famulus, te enteras una vez y puedes darle la bienvenida con una reacción."
+L.ui_news_3_t = "Susurrar desde «Cerca»"
+L.ui_news_3 = "Las tarjetas de los amigos de tu zona tienen un botón para susurrar: un clic para escribirles."
+
 -- Fellowship
 L.area_fellows = "Comunidad"
 L.area_fellows_desc = "Con quién juegas y quién está cerca. Solo tú lo ves."

@@ -6205,6 +6205,61 @@ ns:SetUseCharacterProfile(false)
 FamulusCharDB.profile = nil
 
 ---------------------------------------------------------------------------
+section("What is new")
+---------------------------------------------------------------------------
+
+do
+    local News, Feed = ns.NewsService, ns.UI.Feed
+    check(not News.Unread() and FamulusDB.news.read == News.RELEASE and not FamulusMinimapButton.dot:IsShown(),
+        "a new install has seen the news: no card and no dot")
+    -- An update from a version whose news the player had seen.
+    FamulusDB.news = { read = "0.1.0", card = "0.1.0" }
+    ns:Fire("NEWS_READ") -- (only to draw the minimap button again)
+    check(News.Unread() and FamulusMinimapButton.dot:IsShown(), "after an update the minimap button has a dot")
+    enable("liveFeed")
+    Feed.Clear()
+    News.Check()
+    check(#Feed.Shown() == 0, "no card right at login")
+    mock.Advance(10)
+    local card = Feed.Shown()[1]
+    check(card and card.title:GetText() == ns.Plural("ui_news_card", News.COUNT):format(News.COUNT)
+        and card.head:GetText() == "Famulus " .. News.RELEASE and card.react:IsShown()
+        and FamulusDB.news.card == News.RELEASE, "a few seconds later a card in the live feed tells of the news")
+    Feed.Clear()
+    News.Check()
+    mock.Advance(10)
+    check(#Feed.Shown() == 0 and News.Unread(), "the card comes once; the news stays unread")
+    local window = FamulusOptionsFrame
+    window:Show()
+    local about = navButton(ns.L.cat_about)
+    local chronicle = navButton(ns.L.area_chronicle)
+    chronicle:GetScript("OnClick")()
+    FamulusDB.news.read = nil -- (the window may have opened on About, which reads the news)
+    chronicle:GetScript("OnClick")()
+    check(about.dot:IsShown() and News.Unread(), "the window marks About with a dot")
+    window:Hide()
+    FamulusDB.news.read = nil
+    ns:ShowNews()
+    check(window:IsShown() and not News.Unread() and not FamulusMinimapButton.dot:IsShown() and not about.dot:IsShown(),
+        "the card's button opens About, and the dots go")
+    local news = window.news
+    check(news and news:IsShown() and #news.rows == News.COUNT and news.rows[1].title:GetText() == ns.L.ui_news_1_t
+        and news.eyebrow:GetText() == ns.Upper(ns.L.ui_news_title:format(News.RELEASE))
+        and not news.rows[News.COUNT].line:IsShown() and news.rows[1].line:IsShown(),
+        "About shows the news as a card of its own, a row each with its icon")
+    check(news.rows[1].title:GetWidth() <= 600, "its lines stay short enough to read")
+    navButton(ns.L.area_chronicle):GetScript("OnClick")()
+    check(not news:IsShown(), "and only there")
+    window:Hide()
+    local version = ns.version
+    ns.version = "dev"
+    FamulusDB.news = nil
+    check(not News.Unread(), "a build by hand shows no news by itself")
+    ns.version = version
+    News.MarkRead()
+end
+
+---------------------------------------------------------------------------
 print("")
 if mock.errors then
     for _, message in ipairs(mock.errors) do

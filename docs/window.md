@@ -129,6 +129,32 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     scene centres itself in the height), whether the text column fits in French (the mock says the
     tallest step ends at 480 of 568), whether dragging the page moves the window. The screenshot
     `welcome` on the website and on CurseForge still shows the old page; take it again in game.
+- **What is new (`Core/NewsService.lua`, since 2026-11-28, the owner's request):** no window
+  after an update (most addons open one at login, and several updated at once pile up). Instead:
+  - **Once per account a card in the live feed**, eight seconds after login (not under the
+    loading screen): the logo as its crest (`news` in `UI.BookPictures`), "Famulus 0.2.0",
+    "3 new things", "Under "About" in the window", and in the slot of a reaction a button (`info`)
+    that opens the window on About (`ns:ShowNews`, wins over the welcome page). 12 seconds, the
+    feed's sound. Only while the live feed runs; with it off there is no card, only the dots.
+  - **Until the news is seen**, a glowing dot on the minimap button (with a line in its tooltip)
+    and on "About" in the sidebar (`page.dot`). Seen means: About was in front of the player
+    (`RefreshNav` calls `NewsService.MarkRead`, signal `NEWS_READ`).
+  - **The news** is a card of its own at the top of About (`UI.NewsCard` in `UI/News.lua`, the
+    tab's `news`; variant B of the owner's choice on the mockup "Famulus: Neuigkeiten auf
+    „Über“", claude.ai artifact `3nybWdTPGmUZpyvd9jANag`, 2026-11-28; first it was plain info rows
+    like those below, which the owner found plain after a look in game): an accent border
+    (`cardActive`), the logo with its glow, "NEW IN 0.2.0" in the accent and "What changed"
+    (`ui_news_heading`), then a row per piece of news with its icon on an accent tile
+    (`NewsService.ICONS`), title and text, at most 600 px wide. Rejected: A, three tiles side by
+    side (look best with exactly three, cramped with long texts). The texts (`ui_news_<n>_t`,
+    `ui_news_<n>`) and icons are written anew for a release that brings news (see "Course of a
+    release" in docs/release.md); `RELEASE` names the version they belong to, so a release without
+    news keeps the old ones and shows nothing new. The first texts tell 0.2.0's highlights.
+  - Saved in `FamulusDB.news = { card = release, read = release }`. A new install has seen it all
+    (the welcome page tells it); a build by hand (`dev`) shows nothing by itself. `/fam news`
+    shows the card anyway, to see it in game.
+  - The assistant's decisions: the delay, the wording, the dot's place. Checked against the mock
+    only, not yet seen in game.
 - **Bug report (`UI/Report.lua`, since 2026-11-26, issue #47):** a small window of its own above
   the main one (640 × 500, strata `DIALOG`, the window's card, shadow and scale), from
   `/fam report` or About › "Copy bug report". What it shows and why: see "Bug report" in

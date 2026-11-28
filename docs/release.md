@@ -26,7 +26,9 @@ assistant's decision. First file: `v0.1.0-alpha.1` as alpha, uploaded on 2026-11
   text, that the `.toc` carries a `## X-Curse-Project-ID` and that the secret `CF_API_KEY`
   is set. Only then do the tests run, and only if they are green does the packager build and upload.
 - **Course of a release:** write a section in `CHANGELOG.md` (English, becomes the changelog of the
-  file on CurseForge), bring it to `main` via pull request, then on the merged state of
+  file on CurseForge); if the release brings news worth telling in game, also set
+  `NewsService.RELEASE` and `ICONS` (one per piece of news) and write the texts `ui_news_<n>_t`, `ui_news_<n>` in every
+  locale (see "What is new" in docs/window.md); bring it to `main` via pull request, then on the merged state of
   `main` (`git switch main`, `git pull`) `git tag v0.1.0` and `git push origin v0.1.0`.
   Check beforehand: `bash tools/release_check.sh v0.1.0`.
   Pull requests are squash-merged, so the branch's own commit never reaches `main`.

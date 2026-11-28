@@ -50,6 +50,10 @@ local function Build()
     glow:SetAllPoints(icon)
     glow:Hide()
 
+    -- News not yet seen (Core/NewsService.lua).
+    button.dot = UI.GlowDot(button, 6, "OVERLAY")
+    button.dot:SetPoint("CENTER", button, "TOPRIGHT", -5, -5)
+
     button:SetScript("OnClick", function()
         ns:ToggleOptions()
     end)
@@ -57,6 +61,9 @@ local function Build()
         glow:Show()
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("Famulus", UI.Color("accent"))
+        if ns.NewsService.Unread() then
+            GameTooltip:AddLine(L.ui_news_minimap:format(ns.NewsService.RELEASE, L.cat_about), UI.Color("accent2"))
+        end
         GameTooltip:AddLine(L.ui_minimap_hint_click, 1, 1, 1)
         GameTooltip:AddLine(L.ui_minimap_hint_drag, UI.Color("textMuted"))
         GameTooltip:Show()
@@ -90,11 +97,13 @@ local function Update()
         if wanted then
             Place(ns:GetOption("general", "minimapAngle"))
         end
+        UI.SetDot(button.dot, nil, ns.NewsService.Unread())
     end
 end
 
 ns:On("LOGIN", Update)
 ns:On("PROFILE_CHANGED", Update)
+ns:On("NEWS_READ", Update)
 ns:On("OPTION_CHANGED", function(section, key)
     if section == "general" and (key == "minimapButton" or key == "minimapAngle") then
         Update()
