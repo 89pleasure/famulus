@@ -346,7 +346,6 @@ window.FAMULUS_I18N.fr = {
   ft_shots: "Captures d'écran",
   ft_help: 'Aide & FAQ',
   ft_h_community: 'Communauté',
-  ft_soon: 'Bientôt',
   ft_bug: 'Signaler un bug',
   ft_h_legal: 'Légal',
   ft_privacy: 'Confidentialité',
