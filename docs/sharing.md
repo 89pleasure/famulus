@@ -64,7 +64,9 @@ guild channel), only known fields; `|` and control characters are removed.
   comes through a connected companion who has it. A greeting is followed
   by up to 20 offers `1~O~<who>~<time>` (since 2026-11-25 only about people who are currently not
   online); whoever expects something new from them asks with `1~W~<who>~<since>` and gets
-  up to 20 entries as `1~R~<who>~<time>~<kind>~…`. Rule: asked about and accepted only for
+  the entries as `1~R~<who>~<time>~<kind>~…`, oldest first and in rounds of 20 like the own
+  ones (`Relay` in `Sharing.lua`, since 2026-11-28; before, the newest 20, and what lay before
+  them never came this way). Rule: asked about and accepted only for
   guild members and for people whose addon has answered directly in the last 30 days
   (`FamulusDB.chronicle.links`; a direct answer only comes from someone who has the player on
   the friends list or in the guild, which proves friendship on both sides). So nothing arrives
@@ -123,7 +125,16 @@ guild channel), only known fields; `|` and control characters are removed.
   entered. They appear as "Stats" per person in the rail of the tab "Friends"
   (`FamulusDB.chronicle.profiles`; in the code they are still called `profile`). Since
   2026-11-25 the list is in `ChronicleService.STATISTICS` (before that on the feature, and the
-  window reached into `ns.features.sharing` for it).
+  window reached into `ns.features.sharing` for it). Reading them walks every statistic the
+  game keeps, so the answers to hellos that come within 30 seconds share one reading
+  (`STATS_KEEP`, since 2026-11-28; a login brings a hello or two from everyone with the addon).
+  After an own event they are always read anew.
+- **What the saved data keeps (since 2026-11-28):** when it loads, links older than 30 days
+  (`ChronicleService.LINK_AGE`) go, and stats of people who have neither an entry in the
+  chronicle nor such a link. Until then both lists only grew, and whoever once shared stats
+  stayed under "Friends" for good. Someone who shares again brings their stats along with the
+  hello. The levels "Follow my friends" remembers per GUID (`chronicle.friends`) are still kept
+  for good; the friends list is not loaded yet at that point to tell who is still on it.
 - **Queue (since 2026-11-25, the owner's go-ahead after the analysis below; the
   assistant decided the implementation in detail):** Everything goes through a queue
   with a ticker (every 0.5 seconds, only while something is waiting). During the chat lockdown (boss

@@ -191,10 +191,7 @@ local function Slide(card, to)
     end)
 end
 
--- Width a text would take on one line.
-local function TextWidth(text)
-    return (text.GetUnboundedStringWidth or text.GetStringWidth)(text) or 0
-end
+local TextWidth = UI.TextWidth
 
 -- The stack behind the top card, made when something first waits: the
 -- edges of two cards looking out above it, and how many wait. They hang
@@ -406,7 +403,7 @@ local function NewCard(parent)
     dusk:SetPoint("TOPLEFT", card, "LEFT", GROUND_INSET, 0)
     dusk:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -GROUND_INSET, GROUND_INSET)
     UI.Shade(dusk, "VERTICAL", "clear", "dusk")
-    card.grain = UI.Grain(card, GROUND_INSET, GROUND_INSET, GROUND_INSET, GROUND_INSET, WIDTH, HEIGHT, true)
+    card.grain = UI.Grain(card, GROUND_INSET, GROUND_INSET, GROUND_INSET, GROUND_INSET, WIDTH, HEIGHT)
 
     -- What the band shows lies on a frame of its own, so that a resting card
     -- can grow faint while its band stays opaque.

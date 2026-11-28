@@ -219,8 +219,8 @@ picture-book look are built and checked against the mock only.
     LOW) the book sets the inner padding, `UI.BookPad` (14 px), the same on all sides, for every
     weight and below the name bar. Measured from the outer edge; because the hairline and the
     highlight edge at the top inside each take about one pixel and the name bar's line lies
-    inside the bar, the top gets one pixel more (`UI.BookPadTop`) and below the name bar
-    one less. Re-measured on the screenshot of 2026-11-25 (visible before: below the
+    inside the bar, there is one pixel less below the name bar (every card of the chronicle has
+    the bar at its top, so nothing needs the one pixel more at the top any longer). Re-measured on the screenshot of 2026-11-25 (visible before: below the
     bar 32, at the sides 30, at the top 27 screen pixels); the weight now only affects width,
     picture size, heading and accent. A light card with two lines of text can therefore be taller
     than a medium one with one. The fellow travellers have kept their own padding (12, for
@@ -479,7 +479,11 @@ picture-book look are built and checked against the mock only.
       bar and button for 0.5 s (`LEAVE`), or with its button. Always at the left: the button sits
       at the right of the book's foot and of the feed's band, so the bar stays on its own card.
       One bar for all, built on first use, strata `FULLSCREEN_DIALOG`, no catcher over the screen
-      (the feed lies over the game world); nothing runs while it is closed. Long-press is unusual
+      (the feed lies over the game world); nothing runs while it is closed. A hold opens it only
+      while the mouse is still on the button (pressed and dragged off, as when turning the
+      camera, it would open with the mouse elsewhere, and with no catcher nothing would close
+      it). Its buttons are sized for the button that opens it (32, 24 or 26 px) and never built
+      anew, as frames are not freed. Long-press is unusual
       with a mouse, so the right-click does the same and the book's tooltip says so
       (`c_react_more`).
     - **Given:** `entry.mine` holds the chosen reaction; another one replaces it

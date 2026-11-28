@@ -72,17 +72,8 @@ local function Changed()
     ns:Fire("ALIASES_CHANGED")
 end
 
--- First name and surname as one name. Without a surname, name is returned
--- as it is, so a full name can be passed in one piece as well.
-function AliasService.FullName(name, surname)
-    if not IsPlainText(name) then
-        return nil
-    end
-    if IsPlainText(surname) then
-        return name .. " " .. surname
-    end
-    return name
-end
+-- First name and surname as one name (SocialService.FullName).
+AliasService.FullName = ns.SocialService.FullName
 
 function AliasService.Key(name, surname)
     local full = AliasService.FullName(name, surname)
@@ -155,6 +146,13 @@ function AliasService.Get(name, surname)
     end
     local account = owners[key]
     return account and account.alias or nil
+end
+
+-- A person where room is short (a card's head, a list of names): the alias,
+-- else the first name, whichever way the client wrote the full one
+-- ("First Last", "First-Last").
+function AliasService.Short(name)
+    return AliasService.Get(name) or string.match(name, "^[^%s%-]+") or name
 end
 
 -- Escape sequences would let an alias carry colours, textures or links into
@@ -260,17 +258,6 @@ local function LinkQuietly(account, name)
     end
     account.chars[key] = string.gsub(Trim(name), "[%s%-]+", " ")
     owners[key] = account
-    return true
-end
-
--- Makes a character part of an account that has an alias. Returns true if
--- that was news.
-function AliasService.Link(tag, name)
-    local account = AccountEntry(tag)
-    if not account or not LinkQuietly(account, name) then
-        return false
-    end
-    Changed()
     return true
 end
 

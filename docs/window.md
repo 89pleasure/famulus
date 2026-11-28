@@ -41,8 +41,8 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
     pictures of their own, and theirs would repeat the sidebar's (2026-11-27; checked against
     the mock only, not yet seen in game). A page with only one
     sub-area ("About") shows no tabs; during a search there are none. Title and
-    description of the sub-area are no longer shown above the content (`ui_tab_*_desc` is
-    currently not displayed). The ground of header and sidebar lies on the window itself
+    description of the sub-area are no longer shown above the content (their texts,
+    `ui_tab_*_desc`, left the locale files on 2026-11-28; git has them). The ground of header and sidebar lies on the window itself
     (`Ground` in `UI/Options.lua`), so that the grain runs over it as one band.
     The assistant's decisions in detail, not yet seen in game.
   - In the code the areas are still called "pages" (`pages`, buttons `navButtons`) and the
@@ -153,11 +153,11 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   same settings tab is drawn again, so news that comes in does not take the menu away. What a
   tab's cards, book and rail all need is built once per drawing and kept in `window.drawn`
   (emptied when `Render` begins): the chronicle's book, the groups' data and book.
-- **200 local variables:** the main chunk of `UI/Options.lua` has, at its fullest point, exactly
-  the 200 local variables Lua allows a function. One more declared near the top and the file
-  does not load ("main function has more than 200 local variables"; the test then fails at
-  loading). Put new state on an existing table (`window.drawn` is one for that reason) or move
-  code out of the file.
+- **200 local variables:** the main chunk of `UI/Options.lua` has, at its fullest point, 198 of
+  the 200 local variables Lua allows a function (200 until two helpers moved out on
+  2026-11-28). A third one more declared near the top and the file does not load ("main
+  function has more than 200 local variables"; the test then fails at loading). Put new state
+  on an existing table (`window.drawn` is one for that reason) or move code out of the file.
 - **Time and date format (since 2026-11-26):** Settings › Language & time, below the language.
   The three have a tab of their own, so that General keeps the master switches and how the addon
   behaves, and resetting General no longer resets the language.

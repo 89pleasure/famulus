@@ -255,7 +255,7 @@ check(ns.Capital("вчора") == "Вчора" and ns.Capital("élan") == "Élan
     "the first letter in upper case")
 end
 for _, category in ipairs(ns.categories) do
-    check(en["cat_" .. category] and en["cat_" .. category .. "_desc"], "category strings for " .. category)
+    check(en["cat_" .. category], "category string for " .. category)
 end
 for _, feature in ipairs(ns.featureList) do
     check(en["f_" .. feature.id] and en["f_" .. feature.id .. "_desc"], "feature strings for " .. feature.id)
@@ -451,6 +451,21 @@ check(Aliases.Get("Jaina-Proudmoore") == "Anna" and Aliases.Get("jaina proudmoor
 check(Aliases.Get("Jaina") == nil and Aliases.Get(nil) == nil and Aliases.Get("") == nil, "other names have none")
 check(Aliases.Key("émile dupont") == Aliases.Key("Émile", "Dupont") and ns.SocialService.Key("ÉMILE-Dupont") == "émile-dupont",
     "a name's key is in lower case beyond A-Z as well, so one typed by hand matches whatever its capitals are")
+-- What several places share: a full name, a short one, a list of names, the zone.
+check(ns.SocialService.FullName("Jaina", "Proudmoore") == "Jaina Proudmoore" and ns.SocialService.FullName("Jaina") == "Jaina"
+    and ns.SocialService.FullName(mock.SECRET, "Proudmoore") == nil and Aliases.FullName == ns.SocialService.FullName,
+    "first name and surname are one name; a secret one is none")
+check(Aliases.Short("Jaina Proudmoore") == "Anna" and Aliases.Short("Mira Sturmfeder") == "Mira"
+    and Aliases.Short("Mira-Sturmfeder") == "Mira" and Aliases.Short("Mira") == "Mira",
+    "where room is short a person is their alias, else their first name, however the full name is written")
+check(ns.NameList({}) == "" and ns.NameList({ "A" }) == "A" and ns.NameList({ "A", "B" }) == "A and B"
+    and ns.NameList({ "A", "B", "C" }) == "A, B and C"
+    and ns.NameList({ "A", "B", "C", "D" }, 3, function(more)
+        return more .. " more"
+    end) == "A, B and 2 more",
+    "names are listed as a sentence does, the rest counted beyond the most it shows")
+check(ns.Zone() == GetRealZoneText() and ns.SocialService.ClassFile("MAGE") == "MAGE" and ns.SocialService.ClassFile("Mage") == nil,
+    "the zone as the game names it, and a class only as the game names it in code")
 
 check(mock.SenderName("CHAT_MSG_SAY", "|cff3fc7ebJaina-Proudmoore|r", "Jaina-Proudmoore") == "|cff3fc7ebAnna|r",
     "chat shows the alias inside the class colour")
@@ -2587,10 +2602,10 @@ do
     check(#ns.UI.Feed.Shown() == 2, "another friend's first reaction to it is news: " .. #ns.UI.Feed.Shown())
     react("1~X~" .. at .. "~level~~")
     Chronicle.Receive(at, "level", {}, "Mira Stormfeather", nil)
-    sharing:Set("reactions", false)
+    ns:SetOption("sharing", "reactions", false)
     react("1~X~" .. at .. "~level~cheer~")
     check(ownLevel.r == nil, "with reactions switched off, none is taken")
-    sharing:Set("reactions", true)
+    ns:SetOption("sharing", "reactions", true)
     -- Two own entries of one second: the reaction finds the one it names.
     local tailoring = { skill = 197, name = "Tailoring", rank = 75, t = at - 2 }
     local mining = { skill = 186, name = "Mining", rank = 75, t = at - 2 }
@@ -2919,8 +2934,14 @@ do
         button.scripts.OnMouseDown(button, "LeftButton")
         mock.Advance(0.5)
         button.scripts.OnMouseUp(button, "LeftButton")
+        check(not Picker.IsOpenFor(button), "pressed and dragged off the button, no bar opens with the mouse elsewhere")
+        button.mouseOver = true
+        button.scripts.OnMouseDown(button, "LeftButton")
+        mock.Advance(0.5)
+        button.scripts.OnMouseUp(button, "LeftButton")
         button.scripts.OnClick(button, "LeftButton")
         check(Picker.IsOpenFor(button) and find("level", at).mine == nil, "held, the bar opens and the click gives nothing")
+        button.mouseOver = nil
         button.scripts.OnLeave(button)
         mock.Advance(9)
         check(not Picker.IsOpenFor(button) and not card:IsShown() and find("level", at).mine == nil,
@@ -2932,11 +2953,11 @@ do
     -- death above, not one by the clock: one death of one person in one
     -- second counts as one, and time() - 1 is that second once a real
     -- second has passed since.)
-    sharing:Set("reactions", false)
+    ns:SetOption("sharing", "reactions", false)
     at = sharedNow - 1
     mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~E~" .. at .. "~death~level=21;zone=Duskwood", "WHISPER", "Jaina Proudmoore")
     check(#Feed.Shown() == 1 and not Feed.Shown()[1].react:IsShown(), "with reactions switched off, a friend's card has no button")
-    sharing:Set("reactions", true)
+    ns:SetOption("sharing", "reactions", true)
     Feed.Clear()
 
     -- The sample cards show the button too; it lights up and sends nothing.
@@ -3028,6 +3049,46 @@ mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~W~Thrall Hellscream~0", "WHISPER", "Th
 mock.Advance(2)
 check(#mock.sent == 1 and mock.sent[1].text == "1~R~Varian Wrynn~" .. relayedAt .. "~death~level=30;zone=Duskwood",
     "asked for someone's news, it passes on what it has; nobody gets their own back")
+do -- what is passed on goes oldest first and in rounds, as the own entries do
+    local entriesBefore = FamulusDB.chronicle.entries
+    FamulusDB.chronicle.entries = {}
+    local base = time() - 9000
+    for index = 1, 25 do
+        Chronicle.Add("zone", { who = "Varian Wrynn", t = base + index, zone = "Zone " .. index })
+    end
+    mock.Advance(2)
+    mock.sent = {}
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~W~Varian Wrynn~0", "WHISPER", "Thrall Hellscream")
+    mock.Advance(20)
+    local passed = {}
+    for _, message in ipairs(mock.sent) do
+        if message.text:find("^1~R~Varian Wrynn~") then
+            passed[#passed + 1] = message.text
+        end
+    end
+    check(#passed == 25 and passed[1]:find("zone=Zone 1$") ~= nil and passed[20]:find("zone=Zone 20$") ~= nil
+        and passed[21]:find("zone=Zone 21$") ~= nil and passed[25]:find("zone=Zone 25$") ~= nil,
+        "more than a round of someone's news is passed on in full, oldest first (got " .. #passed .. ")")
+
+    -- Hellos in a row share one reading of the statistics; an own event reads them anew.
+    FamulusDB.chronicle.entries = {}
+    mock.Advance(31)
+    local scans, list = 0, GetStatisticsCategoryList
+    GetStatisticsCategoryList = function(...)
+        scans = scans + 1
+        return list(...)
+    end
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~" .. time(), "WHISPER", "Thrall Hellscream")
+    mock.Fire("CHAT_MSG_ADDON", "Famulus", "1~H~" .. time(), "WHISPER", "Thrall Hellscream")
+    check(scans == 1, "two hellos in a row are answered from one reading of the statistics (got " .. scans .. ")")
+    Chronicle.Add("zone", { zone = "Somewhere New", level = 13 })
+    mock.Advance(6)
+    check(scans == 2, "after an own event they are read anew, so its count is in them (got " .. scans .. ")")
+    GetStatisticsCategoryList = list
+    mock.Advance(5)
+    mock.sent = {}
+    FamulusDB.chronicle.entries = entriesBefore
+end
 jaina.connected = true
 
 -- The queue keeps to the client's allowance, lets what happens now go first,
@@ -3379,7 +3440,8 @@ mock.addonThrottle = false
 enable("sharing", false)
 enable("ownJourney", false)
 check(ns:CountRegisteredEvents() == eventsBeforeSharing and sharing.ticker == nil, "switched off, it neither listens nor sends")
-Chronicle.Clear()
+FamulusDB.chronicle = nil
+ns:Fire("CHRONICLE_CHANGED")
 FamulusDB.chronicle = { entries = chronicleBeforeSharing, friends = {} }
 setState(stateBeforeChronicle)
 
@@ -3741,6 +3803,39 @@ do -- a pause of two hours begins a new chapter; a night past midnight stays one
         end)
         check(pcall(mock.Advance, 0.1), "a tween that ends and cancels an older one does not break the others")
     end
+    do -- the reaction bar's buttons are sized for the button that opens it, never built anew
+        local Picker = ns.UI.ReactionPicker
+        local function owner(size, iconSize)
+            local button = ns.UI.ReactionButton(UIParent, size, iconSize)
+            Picker.Attach(button, function()
+                return { choices = { "cheer", "clap", "fire" }, pick = function() end }
+            end)
+            return button
+        end
+        local function hold(button)
+            button.mouseOver = true
+            button.scripts.OnMouseDown(button, "LeftButton")
+            mock.Advance(0.5)
+            button.scripts.OnMouseUp(button, "LeftButton")
+            button.mouseOver = nil
+        end
+        local big, small = owner(32, 18), owner(24, 14)
+        hold(big)
+        hold(small)
+        local frames = #mock.frames
+        hold(big)
+        local options = Picker.Shown()
+        local bigOpen = Picker.IsOpenFor(big) and options[1]:GetHeight() == 32 and options[1].icon:GetHeight() == 18
+        hold(small)
+        options = Picker.Shown()
+        check(bigOpen and Picker.IsOpenFor(small) and options[1]:GetHeight() == 24 and options[1].icon:GetHeight() == 14
+            and #mock.frames == frames,
+            "opened from buttons of different sizes, the bar's own are sized anew and no frame is made (made "
+            .. (#mock.frames - frames) .. ")")
+        Picker.Close()
+        big:Hide()
+        small:Hide()
+    end
 end
 do -- my journey: the week and the professions
     mock.state.professions = { { name = "Tailoring", rank = 92, id = 197 } }
@@ -3979,6 +4074,7 @@ do -- an item is shown with the game's icon of it, in its own colours
     mock.Advance(0.1)
     -- Held: the bar opens after a moment, and the click that ends the hold does nothing else.
     theirs = theirSkill()
+    theirs.react.mouseOver = true
     theirs.react.scripts.OnMouseDown(theirs.react, "LeftButton")
     mock.Advance(0.1)
     check(not Picker.IsOpenFor(theirs.react), "not at once")
@@ -3988,6 +4084,7 @@ do -- an item is shown with the game's icon of it, in its own colours
     mock.Click(theirs.react)
     check(theirEntry.mine == nil and Picker.IsOpenFor(theirs.react), "letting go gives nothing, the bar stays")
     options = Picker.Shown()
+    theirs.react.mouseOver = nil
     theirs.react.scripts.OnLeave(theirs.react)
     mock.Advance(0.6)
     check(not Picker.IsOpenFor(theirs.react), "away from bar and button for a moment, it closes")
@@ -3998,8 +4095,10 @@ do -- an item is shown with the game's icon of it, in its own colours
     mock.Advance(0.5)
     check(theirEntry.mine == "clap" and not Picker.IsOpenFor(theirSkill().react), "a short click gives the default, no bar follows")
     theirs = theirSkill()
+    theirs.react.mouseOver = true
     theirs.react.scripts.OnMouseDown(theirs.react, "LeftButton")
     mock.Advance(0.5)
+    theirs.react.mouseOver = nil
     Picker.Shown()[2].mouseOver = true
     theirs.react.scripts.OnMouseUp(theirs.react, "LeftButton")
     Picker.Shown() -- (closed by then)
@@ -4020,13 +4119,13 @@ do -- an item is shown with the game's icon of it, in its own colours
         and lines[2]:find("Borin Ironhand", 1, true), "the tooltip names them by reaction, the most given first")
     Chronicle.Receive(ownLevel.t, "level", {}, "Borin Ironhand", nil)
     mock.Advance(0.1)
-    sharing:Set("reactions", false)
+    ns:SetOption("sharing", "reactions", false)
     mock.Advance(0.1)
     check(not theirSkill().react:IsShown() and theirSkill().picture.mouseEnabled == false
         and not myLevel().react:IsShown() and myLevel().card.mouseEnabled == false,
         "with reactions switched off, the cards are as before")
     GameTooltip.SetText, GameTooltip.AddLine = setText, addLine
-    sharing:Set("reactions", true)
+    ns:SetOption("sharing", "reactions", true)
     enable("sharing", false)
     check(not Chronicle.HasBook(182) and Chronicle.BookLink("Jaina Proudmoore", 182) == nil, "a gathering profession has no book")
     mock.state.friends, mock.state.guild = friendsBefore, guildBefore
@@ -4148,7 +4247,8 @@ do
     mock.Click(recording[1])
     check(detail.stage:IsShown() and detail.stage.current == "book", "every entry has one, though")
 end
-Chronicle.Clear()
+FamulusDB.chronicle = nil
+ns:Fire("CHRONICLE_CHANGED")
 mock.Advance(0.1)
 mock.Click(tabButton("Everyone"))
 mock.Advance(0.1)
@@ -4791,7 +4891,7 @@ mock.Advance(0.1)
 check(overview.tiles[1].guid == "Player-1-STORY", "the one with the most time together is first")
 mock.Click(overview.tiles[1])
 mock.Advance(0.1)
-check(overview.card:IsShown() and overview.card.name:GetText() == "Lysa Morgentau" and not overview.card.storyButton:IsShown()
+check(overview.card:IsShown() and overview.card.name:GetText() == "Lysa Morgentau"
     and overview.card.alias:IsShown() and window.tabs.back:IsShown() and not pageTab("Overview") and not overview:IsShown(),
     "the story keeps the person's card on the left and a way back instead of the tabs")
 check(window.fellowBook:IsShown() and window.fellowBook.width == 1180 - 224 - 2 * 28 - 320 - 20,
@@ -4946,7 +5046,8 @@ check(#stretches == 1 and stretches[1].detail == date("%H:%M", midnight - 3600) 
     "a session over midnight is one stretch: " .. tostring(stretches[1] and stretches[1].detail))
 mock.Click(window.tabs.back)
 FamulusDB.fellows["Player-1-STORY"], FamulusDB.fellows["Player-1-OLD"] = nil, nil
-Chronicle.Clear()
+FamulusDB.chronicle = nil
+ns:Fire("CHRONICLE_CHANGED")
 
 -- Nobody at all: the empty hint instead of the overview.
 local kept = FamulusDB.fellows
@@ -5020,7 +5121,30 @@ table.insert(FamulusDB.fellowRuns, { f = 5, l = 3 })
 table.insert(FamulusDB.fellowRuns, { f = 1, l = 2, z = { "Ok", 5 }, b = "3" })
 table.insert(FamulusDB.fellowRuns, "no run")
 table.insert(FamulusDB.fellowRuns, { f = 1, l = 2, z = { "Ok", 5 }, who = { ["Player-1-G"] = { f = 1, l = 2 }, ["Player-1-H"] = "bad" } })
+-- (the same loading tidies the chronicle's links and stats, checked below)
+mock.chronicleBeforeLoad = FamulusDB.chronicle
+FamulusDB.chronicle = {
+    entries = { { t = time() - 50, k = "level", who = "Mira Stormfeather", level = 30 } },
+    friends = {},
+    links = {
+        ["old-friend"] = { name = "Old Friend", t = time() - 31 * 86400 },
+        ["new-friend"] = { name = "New Friend", t = time() - 86400 },
+        broken = "x",
+    },
+    profiles = {
+        ["Old Friend"] = { level = 20, stats = {} },
+        ["New Friend"] = { level = 21, stats = {} },
+        ["Mira Stormfeather"] = { level = 30, stats = {} },
+    },
+}
 ns:Fire("DATABASE_READY")
+check(FamulusDB.chronicle.links["old-friend"] == nil and FamulusDB.chronicle.links.broken == nil
+    and FamulusDB.chronicle.links["new-friend"] ~= nil,
+    "a link older than thirty days, or a broken one, is dropped when the saved data loads")
+check(FamulusDB.chronicle.profiles["Old Friend"] == nil and FamulusDB.chronicle.profiles["New Friend"] ~= nil
+    and FamulusDB.chronicle.profiles["Mira Stormfeather"] ~= nil,
+    "stats are kept of the people the chronicle tells of or still hears from, and of nobody else")
+FamulusDB.chronicle, mock.chronicleBeforeLoad = mock.chronicleBeforeLoad, nil
 check(#FamulusDB.fellowRuns == runsBefore + 1 and FamulusDB.fellowRuns[1].f == 1 and FamulusDB.fellowRuns[1].b == 0
     and table.concat(FamulusDB.fellowRuns[1].z, ",") == "Ok" and FamulusDB.fellowRuns[1].who["Player-1-G"]
     and FamulusDB.fellowRuns[1].who["Player-1-H"] == nil, "broken runs are dropped, the good one keeps what is good in it, oldest first")

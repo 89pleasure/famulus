@@ -47,11 +47,6 @@ local hushUntil -- GetTime() until which nothing is told
 local lookPlanned, cardPlanned = false, false
 local flying = false -- a look found the player in flight; landing is arriving
 
--- How the card names someone: the alias, else the first name.
-local function Short(person)
-    return ns.AliasService.Get(person.name) or string.match(person.name, "^[^%s%-]+") or person.name
-end
-
 -- The class in the client's language and its colour.
 local function ClassName(file)
     local names = LOCALIZED_CLASS_NAMES_MALE
@@ -59,21 +54,16 @@ local function ClassName(file)
     return type(name) == "string" and ns.UI.Colored("class" .. file, name) or nil
 end
 
--- "Mira", "Mira and Borin", "Mira, Borin and Lysa", "Mira, Borin and 2 more"
+-- "Mira", "Mira and Borin", "Mira, Borin and Lysa", "Mira, Borin and 2 more":
+-- each by their alias, else the first name.
 local function Names(list)
-    local L = ns.L
     local names = {}
-    for index = 1, math.min(#list, MAX_NAMES) do
-        names[index] = Short(list[index])
+    for index, person in ipairs(list) do
+        names[index] = ns.AliasService.Short(person.name)
     end
-    if #list > MAX_NAMES then
-        local more = #list - MAX_NAMES + 1
-        names[MAX_NAMES] = ns.Plural("ui_near_others", more):format(more)
-    end
-    if #names < 2 then
-        return names[1] or ""
-    end
-    return L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names])
+    return ns.NameList(names, MAX_NAMES, function(more)
+        return ns.Plural("ui_near_others", more):format(more)
+    end)
 end
 
 -- One person: level, class, and the bond, or how the player knows them.

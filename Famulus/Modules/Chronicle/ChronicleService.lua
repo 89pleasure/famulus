@@ -46,6 +46,11 @@ local CLOCK_SLACK = 300 -- seconds a companion's clock may run ahead of ours
 -- few of them at once from one sender.
 ChronicleService.FRESH = 120
 
+-- Seconds for which a direct answer vouches for a companion (links, see
+-- Link): sharing takes passed-on news only about someone vouched for, and
+-- older links are dropped when the saved data loads.
+ChronicleService.LINK_AGE = 30 * 86400
+
 local character -- "First Last" of the character that is playing
 local characterClass -- its class as the game names it in code ("MAGE")
 
@@ -70,15 +75,10 @@ local function Names(list)
     local names = {}
     for _, name in ipairs(list) do
         if type(name) == "string" and name ~= "" then
-            local alias = ns.AliasService and ns.AliasService.Get(name)
-            names[#names + 1] = alias or string.match(name, "^(%S+)") or name
+            names[#names + 1] = ns.AliasService.Short(name)
         end
     end
-    if #names == 1 then
-        return names[1]
-    elseif #names > 1 then
-        return L.c_and:format(table.concat(names, ", ", 1, #names - 1), names[#names])
-    end
+    return #names > 0 and ns.NameList(names) or nil
 end
 
 -- Who was there, for a boss or death in a group: "with Mira and Tom", for a
@@ -952,13 +952,7 @@ ChronicleService.Companion = Companion
 -- And as the chronicle shows them: the alias with the name in brackets.
 ChronicleService.Label = Label
 
--- The game's name of a class in code ("MAGE"), or nil for anything else.
-local function ClassFile(value)
-    if ns.IsSecret(value) or type(value) ~= "string" or #value > 20 or not string.match(value, "^%u+$") then
-        return nil
-    end
-    return value
-end
+local ClassFile = ns.SocialService.ClassFile
 
 -- The class of a companion or of one of the player's characters, by the
 -- name their entries carry: as the game names it in code ("MAGE"), or nil
@@ -1396,13 +1390,6 @@ function ChronicleService.Demo()
     return #samples
 end
 
-function ChronicleService.Clear()
-    if ns.global then
-        ns.global.chronicle = nil
-    end
-    ns:Fire("CHRONICLE_CHANGED")
-end
-
 ns:On("DATABASE_READY", function()
     local chronicle = Store()
     if not chronicle then
@@ -1424,14 +1411,34 @@ ns:On("DATABASE_READY", function()
     end
     Trim(kept)
     chronicle.entries = kept
+    -- Neither list was ever tidied: a link too old vouches for nobody, and
+    -- stats are kept only of people the chronicle tells of or still hears
+    -- from. Whoever shares again brings theirs along with the hello.
+    local now, heardFrom = time(), {}
+    if type(chronicle.links) == "table" then
+        for key, link in pairs(chronicle.links) do
+            if type(link) ~= "table" or type(link.t) ~= "number" or now - link.t > ChronicleService.LINK_AGE then
+                chronicle.links[key] = nil
+            else
+                heardFrom[link.name or false] = true
+            end
+        end
+    end
+    if type(chronicle.profiles) == "table" then
+        for _, entry in ipairs(kept) do
+            heardFrom[entry.who or false] = true
+        end
+        for who in pairs(chronicle.profiles) do
+            if not heardFrom[who] then
+                chronicle.profiles[who] = nil
+            end
+        end
+    end
     PruneClasses(chronicle)
 end)
 
 ns:On("LOGIN", function()
-    local name, surname = UnitName("player")
-    if IsPlainText(name) then
-        character = IsPlainText(surname) and (name .. " " .. surname) or name
-    end
+    character = ns.SocialService.FullName(UnitName("player")) or character
     local _, classFile = UnitClass("player")
     characterClass = ClassFile(classFile)
     -- Only where the chronicle has begun: logging in writes nothing new.

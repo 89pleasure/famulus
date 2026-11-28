@@ -189,6 +189,24 @@ function ns.Plural(key, n)
     return text
 end
 
+-- Names as a sentence lists them: "Mira", "Mira and Borin", "Mira, Borin and
+-- Lysa". With `most`, no more than that many parts: the last then counts the
+-- rest, in the words of more(count) ("Mira, Borin and 2 more"). The caller
+-- writes that text, so its ns.Plural names its key where the test looks.
+function ns.NameList(names, most, more)
+    local shown = {}
+    for index = 1, most and math.min(#names, most) or #names do
+        shown[index] = names[index]
+    end
+    if most and #names > most then
+        shown[most] = more(#names - most + 1)
+    end
+    if #shown < 2 then
+        return shown[1] or ""
+    end
+    return ns.L.c_and:format(table.concat(shown, ", ", 1, #shown - 1), shown[#shown])
+end
+
 ---------------------------------------------------------------------------
 -- Upper and lower case
 ---------------------------------------------------------------------------

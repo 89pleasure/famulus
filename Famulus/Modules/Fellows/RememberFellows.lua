@@ -22,13 +22,7 @@ local rememberFellows = ns:NewFeature({
     },
 })
 
-local function Zone()
-    local zone = GetRealZoneText and GetRealZoneText()
-    if ns.ChatService.IsPlainText(zone) then
-        return zone
-    end
-    return nil
-end
+local Zone = ns.Zone
 
 function rememberFellows:Scan()
     local friendsOnly = self:Get("friendsOnly")

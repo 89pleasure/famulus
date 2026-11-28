@@ -19,13 +19,7 @@ local DEATH_PAUSE = 5 -- seconds; the client may report one death twice
 local FELL_WINDOW = 15 -- seconds; who dies this soon after the player fell with them
 local lastDeath = 0
 
-local function Zone()
-    local zone = GetRealZoneText()
-    if ns.ChatService.IsPlainText(zone) then
-        return zone
-    end
-    return nil
-end
+local Zone = ns.Zone
 
 -- Marks the zones this character has explored before as seen, so that only
 -- a zone discovered from now on is an arrival. Reads the world map: every
