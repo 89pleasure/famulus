@@ -1712,6 +1712,22 @@ do -- the first time in a dungeon or a raid
     FamulusCharDB.zones["The Deadmines"] = nil
     table.remove(Chronicle.Entries(), count + 1)
 end
+do -- a new mount; a class mount is an ability already
+    local count = #Chronicle.Entries()
+    local mounts = { [6] = { "Brown Horse", 458, 132261 }, [41] = { "Warhorse", 13819, 132261 } }
+    C_MountJournal = { GetMountInfoByID = function(id)
+        return unpack(mounts[id] or {})
+    end }
+    mock.Fire("NEW_MOUNT_ADDED", 6)
+    local horse = Chronicle.Entries()[count + 1]
+    check(horse and horse.k == "mount" and horse.mount == 6 and horse.icon == 132261 and Chronicle.Text(horse) == "New mount: Brown Horse"
+        and Chronicle.Text({ k = "mount", mount = 99, name = "Pinto", who = "Jaina Proudmoore" }) == "Jaina Proudmoore gets a new mount: Pinto",
+        "a new mount, named as this client names it: " .. tostring(horse and Chronicle.Text(horse)))
+    mock.Fire("NEW_MOUNT_ADDED", 41)
+    check(#Chronicle.Entries() == count + 1, "a class mount is not told again as a mount")
+    C_MountJournal = nil
+    table.remove(Chronicle.Entries(), count + 1)
+end
 do -- professions
     local count = #Chronicle.Entries()
     mock.state.professions = { { name = "Mining", rank = 140, id = 186 } }

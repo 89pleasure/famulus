@@ -127,6 +127,7 @@ local FIELDS = {
     profession = { skill = "n", name = "s", icon = "n" },
     ability = { ability = "s", name = "s", level = "n" },
     item = { item = "n", name = "s", level = "n", zone = "s" },
+    mount = { mount = "n", name = "s", icon = "n", level = "n", zone = "s" },
     skill = { skill = "n", name = "s", rank = "n", icon = "n" },
 }
 

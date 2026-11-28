@@ -27,6 +27,7 @@ UI.gameIcons = {
     profession = ICONS .. "Trade_BlackSmithing",
     ability = ICONS .. "Spell_Nature_Swiftness",
     item = ICONS .. "INV_Misc_Bag_08",
+    mount = ICONS .. "Ability_Mount_RidingHorse",
 }
 
 UI.media = {
