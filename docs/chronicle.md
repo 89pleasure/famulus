@@ -369,7 +369,8 @@ picture-book look are built and checked against the mock only.
     fields are shared; older versions drop them and show the plain boss. Still `BOSS_KILL`, not
     `ENCOUNTER_END`: `BOSS_KILL` already delivers the ID and the name, and whether
     `ENCOUNTER_END` fires in Forever's dungeons is not known. The encounter IDs come from the
-    research in this pull request, none checked in game.
+    client's DungeonEncounter table (wago.tools, Forever build 1.60.1.71139), none checked in
+    game; whether `BOSS_KILL` fires in five-player dungeons in Forever is not checked either.
   - Two entries of the same kind in the same second count as a duplicate, unless they differ
     in `skill`, `rank`, `ability` or `item`.
 - **Sample entries (2026-11-19):** `/fam chronicle demo` writes 21 made-up entries over three
