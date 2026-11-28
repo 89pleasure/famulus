@@ -333,6 +333,7 @@ window.FAMULUS_I18N.es = {
   hp_idea_t: 'Proponer una idea',
   hp_list_t: 'Incidencias abiertas',
   hp_ask_t: 'Hacer una pregunta',
+  hp_discord_t: 'Charlar en Discord',
   hp_panel_t: '¿Algo no funciona?',
   hp_panel_s1: 'Escribe <code>/fam report</code> en el juego.',
   hp_panel_s2: 'Copia el texto con Ctrl+C (Cmd+C en Mac).',
