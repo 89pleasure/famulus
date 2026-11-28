@@ -407,7 +407,8 @@ picture-book look are built and checked against the mock only.
     the number, like a level; weight high; reactions `cheer strong fire`; a switch in the live
     feed. Not checked in game: whether the event fires for the PvP track and the titles.
   - Two entries of the same kind in the same second count as a duplicate, unless they differ
-    in `skill`, `rank`, `ability` or `item`.
+    in `skill`, `rank`, `ability` or `item`. A friend's entry keeps the time the friend wrote
+    (see "Numbers and times that come in" in [sharing.md](sharing.md)).
 - **Sample entries (2026-11-19):** `/fam chronicle demo` writes 21 made-up entries over three
   days (own ones and from two made-up companions, every kind at least once; since 2026-11-23 also
   three deaths in a row and two levels of a companion, so that the bundling can be seen; since
@@ -433,6 +434,14 @@ picture-book look are built and checked against the mock only.
   language on a German client (see "Samples" in docs/languages.md). Checked against the mock only.
 - **`companions`:** on `FRIENDLIST_UPDATE` compares the levels in the friends list with the last
   remembered state (by GUID). Shows companions under their alias.
+  - **Together with `sharing` (since 2026-11-28; checked against the mock only):** a friend with
+    Famulus tells of a level-up themselves (`level`) and the friends list shows it too
+    (`friendLevel`), at different times. `ChronicleService.Add` writes one person's level once:
+    a `friendLevel` is dropped if either is there already, and the friend's own `level` takes
+    the place of a `friendLevel` (it has the time it happened and can be reacted to), without a
+    second card in the live feed. `NewestFrom` leaves `friendLevel` out: its time is this
+    client's, and with it the mark in a hello said "I have your news up to now", so what the
+    friend did while the player was offline was never asked for.
 - **`sharing` (the owner's decision, 2026-11-19):** Famulus talks to Famulus via
   whispered addon messages to friends and guild; protocol, relaying, statistics and
   queue are in [sharing.md](sharing.md).

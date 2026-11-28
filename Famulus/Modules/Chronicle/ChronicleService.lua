@@ -40,7 +40,6 @@ local IsPlainText = ns.ChatService.IsPlainText
 local MAX_ENTRIES = 2000
 local MAX_OTHERS = 1000 -- of them, news of others
 local CLOCK_SLACK = 300 -- seconds a companion's clock may run ahead of ours
-local MAX_AGE = 90 * 86400 -- older news is filed under "now"
 
 local character -- "First Last" of the character that is playing
 local characterClass -- its class as the game names it in code ("MAGE")
@@ -372,6 +371,8 @@ end
 
 -- Writes an event down. kind: see `kinds`; entry: its values. Strings that
 -- are secret or empty are dropped. An entry with `who` tells of a companion.
+-- Returns true if it was written, false if it is known already or its time
+-- cannot be (see below).
 function ChronicleService.Add(kind, entry)
     if not kinds[kind] then
         return
@@ -387,11 +388,18 @@ function ChronicleService.Add(kind, entry)
         end
     end
     entry.k = kind
-    -- An entry a companion sent brings its own time; it must be plausible.
+    -- An entry a companion sent brings its own time and keeps it, however old:
+    -- by it the same entry is known when it arrives again, and old news is
+    -- not told as new. One from the future is not taken; it comes again with
+    -- a later hello, once its time has come. Filed under "now" instead, it
+    -- would be written anew with every hello.
     local now = time()
-    local when = tonumber(entry.t)
-    if not when or when > now + CLOCK_SLACK or when < now - MAX_AGE then
-        when = now
+    local when = now
+    if entry.t ~= nil then
+        when = tonumber(entry.t)
+        if not when or when ~= when or when <= 0 or when > now + CLOCK_SLACK then
+            return false
+        end
     end
     entry.t = when
     if not entry.who then
@@ -402,8 +410,26 @@ function ChronicleService.Add(kind, entry)
         end
     end
 
-    -- Entries stay sorted by time; one that arrives late finds its place.
+    -- A friend's level-up can be told twice: by the friend ("level") and by
+    -- the friends list ("friendLevel"), at different times. One person
+    -- reaches a level once. The friend's own account stays: it has the time
+    -- it happened and can be reacted to.
     local entries = chronicle.entries
+    local replaced = false
+    if entry.who and entry.level ~= nil and (kind == "level" or kind == "friendLevel") then
+        for i = #entries, 1, -1 do
+            local old = entries[i]
+            if old.who == entry.who and old.level == entry.level and (old.k == "level" or old.k == "friendLevel") then
+                if kind == "friendLevel" or old.k == "level" then
+                    return false
+                end
+                table.remove(entries, i)
+                replaced = true
+            end
+        end
+    end
+
+    -- Entries stay sorted by time; one that arrives late finds its place.
     local index = #entries + 1
     while index > 1 and entries[index - 1].t > when do
         index = index - 1
@@ -422,7 +448,9 @@ function ChronicleService.Add(kind, entry)
     end
     table.insert(entries, index, entry)
     Trim(entries)
-    ns:Fire("CHRONICLE_CHANGED", entry)
+    -- What took the place of a level seen on the friends list is no news:
+    -- the live feed, which listens for the entry, showed that one.
+    ns:Fire("CHRONICLE_CHANGED", not replaced and entry or nil)
     return true
 end
 
@@ -448,14 +476,16 @@ function ChronicleService.OwnSince(since, limit)
     return found
 end
 
--- Time of the newest entry about a companion, or 0. Entries another
+-- Time of the newest entry a companion told, or 0. Entries another
 -- companion passed on (`via`) count only with withRelayed: the relay may
 -- have missed some, so they must not move the mark the companion answers to.
+-- A level seen on the friends list never counts: its time is this client's,
+-- and the mark would pass over what the companion did before it.
 function ChronicleService.NewestFrom(who, withRelayed)
     local entries = ChronicleService.Entries()
     for i = #entries, 1, -1 do
         local entry = entries[i]
-        if entry.who == who and (withRelayed or not entry.via) then
+        if entry.who == who and entry.k ~= "friendLevel" and (withRelayed or not entry.via) then
             return entry.t
         end
     end
