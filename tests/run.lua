@@ -296,7 +296,9 @@ for _, feature in ipairs(ns.featureList) do
         "feature " .. feature.id .. " lives in " .. file)
 end
 -- Every other Lua file is a service: named <Name>Service.lua, it declares no
--- feature and publishes exactly the table ns.<Name>Service.
+-- feature and publishes exactly the table ns.<Name>Service. Files under
+-- Modules/<Category>/Data/ are data of that category's service: no feature, no
+-- service of their own, and nothing but tables on it.
 for _, file in ipairs(files) do
     local source = readFile("Famulus/" .. file)
     local _, declared = source:gsub("ns:NewFeature%(", "")
@@ -304,6 +306,8 @@ for _, file in ipairs(files) do
     if service then
         check(declared == 0, "service declares no feature: " .. file)
         check(type(ns[service]) == "table", "service publishes ns." .. service)
+    elseif file:match("^Modules/%u%a*/Data/") then
+        check(declared == 0 and not source:find("function%s*[%w_.:]*%s*%("), "a data file holds tables only: " .. file)
     elseif file:match("^Modules/") then
         check(declared == 1, "a module file is exactly one feature or a *Service.lua: " .. file .. " (declares " .. declared .. ")")
     end

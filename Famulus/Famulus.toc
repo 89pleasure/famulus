@@ -44,11 +44,16 @@ Modules\Aliases\AliasMenu.lua
 Modules\Aliases\AccountAliases.lua
 Modules\Aliases\GuildyAliases.lua
 Modules\Chronicle\ChronicleService.lua
+Modules\Chronicle\Data\Abilities.lua
+Modules\Chronicle\Data\Items.lua
+Modules\Chronicle\Data\FinalBosses.lua
+Modules\Chronicle\Data\Samples.lua
 Modules\Chronicle\OwnJourney.lua
 Modules\Chronicle\Companions.lua
 Modules\Chronicle\Sharing.lua
 Modules\Chronicle\LiveFeed.lua
 Modules\Fellows\FellowService.lua
+Modules\Fellows\Data\Samples.lua
 Modules\Fellows\RememberFellows.lua
 Modules\Fellows\NearbyService.lua
 Modules\Fellows\NearbyFriends.lua

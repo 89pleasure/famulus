@@ -71,9 +71,10 @@ the index there says which file it is in.
   - The game texts in the pictures (`ui_preview_chat_*`, the tooltip line, the menu) as the client
     of that language shows them; in Polish and Ukrainian translated, so that a picture reads in
     one language.
-- **Samples:** `DEMO_ZONES`, `DEMO_NAMES`, `DEMO_PEOPLE` (`ChronicleService`) and `DEMO_ZONES`,
-  `DEMO_BOSSES`, `DEMO_PEOPLE` (`FellowService`) have a row per language: zones, professions and
-  bosses as the client of that language names them, Polish and Ukrainian with the English names.
+- **Samples:** `DEMO_ZONES`, `DEMO_NAMES`, `DEMO_PEOPLE` (`ChronicleService`, in
+  `Modules/Chronicle/Data/Samples.lua`) and `DEMO_ZONES`, `DEMO_BOSSES`, `DEMO_PEOPLE`
+  (`FellowService`, in `Modules/Fellows/Data/Samples.lua`) have a row per language: zones,
+  professions and bosses as the client of that language names them, Polish and Ukrainian with the English names.
   The people keep their first names and get surnames in the language (Ukrainian in Cyrillic).
 - **Checks** (`tests/run.lua`): every language has every key of enUS and no other, with the same
   placeholders; plural forms only for keys passed to `ns.Plural`; the rules of English, German,

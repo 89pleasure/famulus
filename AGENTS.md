@@ -179,6 +179,12 @@ These points are design decisions; `tests/run.lua` checks most of them.
   file per feature** under `Modules/<Category>/<Id>.lua` (both capitalised, e.g.
   `Modules/Aliases/ChatAliases.lua`); the test checks this. What the self-test needs to read
   (lists, CVar names) hangs on the feature object.
+- **Data files:** Tables someone maintains by hand (IDs of spells, items, bosses, the samples'
+  texts) live in `Modules/<Category>/Data/<Name>.lua`, one file per kind of data, and put a
+  table on the category's service (`ns.ChronicleService.finalBosses = { ... }`). They hold
+  tables only, no functions (the test checks this), and come right after the service in the
+  `.toc`; the service reads them at run time, never at load time. A new row changes only that
+  file. JSON is no option: the client loads only the Lua and XML files the `.toc` names.
 - **Life cycle via the feature class** (`Core/Features.lua`); the registry cleans up when a
   feature is switched off: events via `feature:RegisterEvent`, recurring timers via
   `feature:StartTicker`, delayed single calls via `feature:After` (they lapse when switched off).
