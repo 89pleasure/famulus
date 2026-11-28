@@ -3,6 +3,39 @@
 Every release has a section `## <version>` (the tag without the `v`, for example `## 0.2.0-beta.1`).
 That section becomes the changelog of the file on CurseForge.
 
+## 0.2.0
+
+Still a beta. Thanks to everyone who tried 0.1.0 and told me what they saw; much of what follows
+comes from that. Famulus now has a Discord server too, linked in the help panel, on the website
+and on CurseForge.
+
+### Chronicle
+- New moments in your journey: the first time in a dungeon or raid, a boss defeated for the first
+  time, a dungeon or raid cleared (including Forever's own dungeons), a new mount and a new PvP
+  rank.
+- A death in a party or raid names who was with you, and who fell too.
+- When someone starts using Famulus, their friends and guild members with Famulus are told once,
+  and can welcome them with a reaction. You can switch this off under "New on Famulus".
+- A friend's old history no longer shows up as just happened when you first share with them, and
+  a friend's level-up is written once instead of twice.
+
+### Sharing
+- Entries lost during a boss fight or a `/reload` are asked for again instead of missing for good.
+- What friends pass on arrives oldest first and in full, not only the newest twenty.
+- Nobody on your ignore list is heard, and a single sender can no longer flood you with entries.
+- Old saved links and stats of people you no longer hear from are cleaned up, so the saved data
+  stops growing.
+
+### Fellowship
+- The cards under "Nearby" have a whisper button: one click to write to the friend in your zone,
+  or a menu when several are there.
+
+### Fixes
+- Names with letters beyond A–Z (like "Émile") match however you type them.
+- The search and the window react faster, dropdowns stay open while the page updates, and a few
+  drawing glitches in the chronicle's book are gone.
+- The reaction bar opens on a hold only while the mouse is still on the button.
+
 ## 0.1.0
 
 The first beta, and the first version of Famulus you can find in the CurseForge app. If you are
