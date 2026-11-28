@@ -266,13 +266,24 @@ local function EncodeReaction(entry)
         EncodeFields(entry, Chronicle.MARKS) }, "~")
 end
 
+-- A whole number as a message writes it: digits only, and no more of them
+-- than a time or an ID has. tonumber alone also reads "1e999" (infinite),
+-- "nan" and "0x10"; a time that is no number would break the order of the
+-- chronicle's entries.
+local function Int(text)
+    if type(text) ~= "string" or #text > 10 or not string.match(text, "^%d+$") then
+        return nil
+    end
+    return tonumber(text)
+end
+
 -- "k=v;k=v" -> table, keeping only the fields that kind allows.
 local function DecodeFields(text, fields)
     local values = {}
     for field, value in string.gmatch(text or "", "([%a]+)=([^;]*)") do
         local kind = fields[field]
         if kind == "n" then
-            values[field] = tonumber(value)
+            values[field] = Int(value)
         elseif kind == "s" and value ~= "" then
             values[field] = Clean(value)
         end
@@ -712,12 +723,18 @@ local function Take(kind, when, fields, who, via)
         return
     end
     local entry = DecodeFields(fields, allowed)
-    entry.t = tonumber(when)
+    entry.t = Int(when)
+    if not entry.t then
+        Trace("entry not taken: its time is no number")
+        return
+    end
     entry.who = who
     entry.via = via
     -- Fresh news appears on screen through the live feed, which listens
     -- to the chronicle (Modules/Chronicle/LiveFeed.lua).
-    Chronicle.Add(kind, entry)
+    if Chronicle.Add(kind, entry) == false then
+        Trace("entry not taken: known already, or its time is ahead of this clock")
+    end
 end
 
 local handlers = {}
@@ -732,7 +749,7 @@ end
 -- "I have your news up to <time>": send what is newer, the statistics and
 -- what we know of others, and the reactions to their news they missed.
 function handlers.H(key, since)
-    CatchUp(key, tonumber(since) or 0)
+    CatchUp(key, Int(since) or 0)
     Send(key, EncodeStatistics())
     SendOffers(key)
     TellReactions(key)
@@ -752,7 +769,7 @@ function handlers.X(key, when, kind, reaction, marks)
     elseif not Chronicle.IsReaction(reaction, kind) then
         reaction = own
     end
-    local entry = Chronicle.Receive(tonumber(when), kind, DecodeFields(marks, Chronicle.MARKS), online[key], reaction)
+    local entry = Chronicle.Receive(Int(when), kind, DecodeFields(marks, Chronicle.MARKS), online[key], reaction)
     Trace("reaction from %s %s: %s", Tag(key), reaction and "given" or "taken back",
         entry and "to an own entry" or "no such own entry, not taken")
 end
@@ -764,10 +781,13 @@ end
 function handlers.S(key, level, fields, classFile)
     local stats = {}
     for id, value in string.gmatch(fields or "", "(%d+)=(%d+)") do
-        stats[tonumber(id)] = tonumber(value)
+        id, value = Int(id), Int(value)
+        if id and value then
+            stats[id] = value
+        end
     end
     Chronicle.Class(online[key], classFile) -- checked there; nil from older versions
-    Chronicle.Profile(online[key], { level = tonumber(level) or 0, stats = stats })
+    Chronicle.Profile(online[key], { level = Int(level) or 0, stats = stats })
 end
 
 -- "I have news of <who> up to <time>": ask for it if it is news to us,
@@ -785,7 +805,7 @@ function handlers.O(key, who, newest)
         return
     end
     local since = Chronicle.NewestFrom(name, true)
-    if (tonumber(newest) or 0) <= since then
+    if (Int(newest) or 0) <= since then
         Trace("offer from %s about %s not taken: nothing new", Tag(key), Tag(whoKey))
     elseif Send(key, table.concat({ VERSION, "W", Clean(name), string.format("%d", since) }, "~"), true) then
         asked[whoKey] = key
@@ -801,7 +821,7 @@ function handlers.W(key, who, since)
     if whoKey == key then
         return -- their own news they have
     end
-    since = tonumber(since) or 0
+    since = Int(since) or 0
     local entries = Chronicle.Entries()
     for i = #entries, 1, -1 do
         local entry = entries[i]

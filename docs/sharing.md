@@ -11,6 +11,22 @@ friends on the friends list and guild members who are online. Accepted only from
 on the friends list or in the guild, only via WHISPER (exception: the greeting `1~P` in the
 guild channel), only known fields; `|` and control characters are removed.
 
+- **Numbers and times that come in (since 2026-11-28; checked against the mock only):**
+  - A number is plain digits, ten at most (`Int` in `Sharing.lua`). `tonumber` alone also reads
+    `1e999` (infinite), `nan` and `0x10`; a time that is no number sat unsorted among the entries,
+    and `OwnSince` stopped at it, so own entries before it went to nobody. An entry whose time is
+    no such number is not taken, a field that is none is left out.
+  - An entry keeps the time its sender wrote, however old (`ChronicleService.Add`). The time is
+    what tells the same entry apart when it arrives again, and the mark in a hello is in the
+    sender's clock. Until then a time older than 90 days or more than five minutes ahead was
+    replaced by "now": a new friend's old history appeared as just happened, one card on screen
+    each, and what shared a second was dropped as a duplicate.
+  - An entry more than five minutes ahead of this clock (`CLOCK_SLACK`) is not taken. The mark
+    does not move, so it comes again with a later hello, once its time has come. Known limit: a
+    friend whose clock runs that far ahead is not heard live, only at the next hello after their
+    time has passed. Written under "now" instead, the entry came again with every hello and was
+    written anew each time.
+
 - **Guild (2026-11-19):** Whoever comes online greets the guild once in the guild channel (`1~P`),
   as soon as the guild roster is there; whoever has Famulus answers by whisper with a greeting.
   Friends are still greeted one by one. That addon messages in the guild channel arrive in Forever

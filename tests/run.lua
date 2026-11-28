@@ -2502,6 +2502,91 @@ do
 end
 jaina.connected = true
 
+-- What comes in is checked: an entry keeps the time its friend wrote, one from
+-- the future is not taken, a number is digits only, and a level-up is told once.
+do
+    local Feed = ns.UI.Feed
+    local entriesBefore, profileBefore = FamulusDB.chronicle.entries, Chronicle.Profile("Jaina Proudmoore")
+    FamulusDB.chronicle.entries = {}
+    Feed.Clear()
+    local function tell(text)
+        mock.Fire("CHAT_MSG_ADDON", "Famulus", text, "WHISPER", "Jaina Proudmoore")
+    end
+    local function cards()
+        return #Feed.Shown() + #Feed.Waiting()
+    end
+
+    -- A new friend's history: older than any limit, and not news.
+    local now = time()
+    local old = now - 100 * 86400
+    tell("1~E~" .. old .. "~level~level=5;zone=Elwynn Forest")
+    tell("1~E~" .. (old + 3600) .. "~level~level=6;zone=Elwynn Forest")
+    local entries = Chronicle.Entries()
+    check(#entries == 2 and entries[1].t == old and entries[1].level == 5 and entries[2].t == old + 3600 and entries[2].level == 6,
+        "old news of a friend keeps its own time, every entry of it")
+    check(cards() == 0, "and is not announced as new")
+    tell("1~E~" .. old .. "~level~level=5;zone=Elwynn Forest")
+    check(#Chronicle.Entries() == 2, "arriving again, it is known")
+
+    -- Her clock runs an hour ahead of this one.
+    local ahead = now + 3600
+    tell("1~E~" .. ahead .. "~death~level=20;zone=Duskwood")
+    check(#Chronicle.Entries() == 2 and Chronicle.NewestFrom("Jaina Proudmoore") == old + 3600,
+        "an entry from the future is not taken, and the mark her next hello answers to stays")
+    local realTime = time
+    time = function(when)
+        return when and realTime(when) or ahead
+    end
+    tell("1~E~" .. ahead .. "~death~level=20;zone=Duskwood")
+    tell("1~E~" .. ahead .. "~death~level=20;zone=Duskwood")
+    time = realTime
+    entries = Chronicle.Entries()
+    check(#entries == 3 and entries[3].t == ahead, "once its time has come it is taken, once, with its own time")
+
+    -- Numbers are digits only: tonumber would read these as well.
+    for _, bad in ipairs({ "nan", "inf", "1e9", "0x6B0D3D00", "-5", "12345678901", "" }) do
+        tell("1~E~" .. bad .. "~death~level=20;zone=Westfall")
+    end
+    check(#Chronicle.Entries() == 3, "an entry whose time is not plain digits is not taken")
+    tell("1~E~" .. (now - 60) .. "~zone~level=1e999;zone=Westfall")
+    entries = Chronicle.Entries()
+    check(#entries == 4 and entries[3].t == now - 60 and entries[3].zone == "Westfall" and entries[3].level == nil,
+        "a field that is not plain digits is left out")
+    tell("1~S~1e999~60=12;107=99999999999")
+    local profile = Chronicle.Profile("Jaina Proudmoore")
+    check(profile.level == 0 and profile.stats[60] == 12 and profile.stats[107] == nil, "and so it is in the statistics")
+    FamulusDB.chronicle.profiles["Jaina Proudmoore"] = profileBefore
+
+    -- "Follow my friends" and sharing both on: the friends list shows the
+    -- level-up she tells of herself.
+    FamulusDB.chronicle.entries = {}
+    enable("companions")
+    local at = time() - 30
+    tell("1~E~" .. at .. "~level~level=21;zone=Duskwood")
+    jaina.level = 21
+    mock.Fire("FRIENDLIST_UPDATE")
+    entries = Chronicle.Entries()
+    check(#entries == 1 and entries[1].k == "level" and Chronicle.FriendLevel("Player-1-FRIEND") == 21,
+        "a level-up a friend told of is not written again when the friends list shows it")
+    jaina.level = 22
+    mock.Fire("FRIENDLIST_UPDATE")
+    entries = Chronicle.Entries()
+    check(#entries == 2 and entries[2].k == "friendLevel" and entries[2].level == 22
+        and Chronicle.NewestFrom("Jaina Proudmoore") == at,
+        "one only the friends list shows is written, and does not move the mark her hello answers to")
+    Feed.Clear()
+    tell("1~E~" .. (at + 10) .. "~level~level=22;zone=Duskwood")
+    entries = Chronicle.Entries()
+    check(#entries == 2 and entries[2].k == "level" and entries[2].t == at + 10 and cards() == 0,
+        "her own account of it then takes its place, and is no news a second time")
+    enable("companions", false)
+    jaina.level = 20
+    Chronicle.FriendLevel("Player-1-FRIEND", 20)
+
+    FamulusDB.chronicle.entries = entriesBefore
+    Feed.Clear()
+end
+
 -- The live feed: a friend's card on screen has a button that reacts to it
 -- right there, as a click on their card in the chronicle does.
 do
