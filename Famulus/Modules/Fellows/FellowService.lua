@@ -532,34 +532,8 @@ end
 -- Returns how many people were written or removed. They speak the addon's
 -- language, not the client's; Mira, Borin and Lysa are the companions of
 -- ChronicleService.Demo.
-local DEMO_ZONES = {
-    enUS = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris", "Westfall", "The Deadmines" },
-    deDE = { "Ödland", "Uldaman", "Schlingendorntal", "Tanaris", "Westfall", "Die Todesminen" },
-    esES = { "Tierras Inhóspitas", "Uldaman", "Vega de Tuercespina", "Tanaris", "Páramos de Poniente", "Minas de la Muerte" },
-    frFR = { "Terres ingrates", "Uldaman", "Vallée de Strangleronce", "Tanaris", "Marche de l'Ouest", "Les Mortemines" },
-    itIT = { "Maleterre", "Uldaman", "Valle di Rovotorto", "Tanaris", "Marche Occidentali", "Miniere della Morte" },
-    plPL = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris", "Westfall", "The Deadmines" },
-    ukUA = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris", "Westfall", "The Deadmines" },
-}
--- Bosses of the two dungeons above (zones 2 and 6); bosses elsewhere stay unnamed, as in a raid.
-local DEMO_BOSSES = {
-    enUS = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin VanCleef" } },
-    deDE = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin van Cleef" } },
-    esES = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin VanCleef" } },
-    frFR = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin VanCleef" } },
-    itIT = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin VanCleef" } },
-    plPL = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin VanCleef" } },
-    ukUA = { [2] = { "Revelosh", "Ironaya", "Archaedas" }, [6] = { "Rhahk'Zor", "Edwin VanCleef" } },
-}
-local DEMO_PEOPLE = {
-    enUS = { "Mira Stormfeather", "Borin Ironbeard", "Lysa Morningdew", "Kael Thornwood", "Tomas Greywind", "Ena Silverbrook" },
-    deDE = { "Mira Sturmfeder", "Borin Eisenbart", "Lysa Morgentau", "Kael Dornhain", "Tomas Grauwind", "Ena Silberquell" },
-    esES = { "Mira Plumatormenta", "Borin Barbahierro", "Lysa Rocíoalba", "Kael Bosquespina", "Tomas Vientogrís", "Ena Arroyoplata" },
-    frFR = { "Mira Plume-d'orage", "Borin Barbe-de-fer", "Lysa Rosée-du-matin", "Kael Bois-d'épine", "Tomas Vent-gris", "Ena Source-d'argent" },
-    itIT = { "Mira Piumatempesta", "Borin Barbaferrea", "Lysa Rugiadalba", "Kael Boscospino", "Tomas Ventogrigio", "Ena Rivargento" },
-    plPL = { "Mira Burzowe Pióro", "Borin Żelazna Broda", "Lysa Poranna Rosa", "Kael Ciernisty Bór", "Tomas Szary Wicher", "Ena Srebrny Potok" },
-    ukUA = { "Міра Бурепер", "Борін Залізнобород", "Ліса Ранкороса", "Каель Терногай", "Томас Сивовій", "Ена Срібнострум" },
-}
+-- Their zones, the bosses of two of them and the people per language:
+-- Data/Samples.lua.
 
 local DEMO_CLASSES = { { "MAGE", 40 }, { "WARRIOR", 38 }, { "PRIEST", 39 }, { "HUNTER", 34 }, { "ROGUE", 41 }, { "DRUID", 37 } }
 
@@ -573,7 +547,8 @@ local SAMPLE_TIMES = { -- { hours together, groups, bosses, last seen (hours ago
 
 function FellowService.SamplePerson(index)
     local locale = ns:GetLocaleCode()
-    local people, zones = DEMO_PEOPLE[locale] or DEMO_PEOPLE.enUS, DEMO_ZONES[locale] or DEMO_ZONES.enUS
+    local people = FellowService.DEMO_PEOPLE[locale] or FellowService.DEMO_PEOPLE.enUS
+    local zones = FellowService.DEMO_ZONES[locale] or FellowService.DEMO_ZONES.enUS
     local class, times = DEMO_CLASSES[index], SAMPLE_TIMES[index]
     if not (class and times) then
         return nil
@@ -589,8 +564,8 @@ function FellowService.SamplePerson(index)
 end
 -- Their evenings, from which their days are told: the day (0 the latest
 -- evening, -1 the one before ...), from and to ("HH:MM"; past midnight it
--- ends the next day), the zones (DEMO_ZONES) and who was there
--- (DEMO_PEOPLE), the whole time or as long as `part` says. Bosses fall in
+-- ends the next day), the zones (DEMO_ZONES) and who was there (DEMO_PEOPLE,
+-- both in Data/Samples.lua), the whole time or as long as `part` says. Bosses fall in
 -- the first zone, with names in the two dungeons.
 local DEMO_RUNS = {
     { -21, "19:00", "23:00", { 5 }, { 1 } },
@@ -642,9 +617,9 @@ function FellowService.Demo()
     end
     FellowService.ClearDemo()
     local locale = ns:GetLocaleCode()
-    local zones = DEMO_ZONES[locale] or DEMO_ZONES.enUS
-    local bossesIn = DEMO_BOSSES[locale] or DEMO_BOSSES.enUS
-    local names = DEMO_PEOPLE[locale] or DEMO_PEOPLE.enUS
+    local zones = FellowService.DEMO_ZONES[locale] or FellowService.DEMO_ZONES.enUS
+    local bossesIn = FellowService.DEMO_BOSSES[locale] or FellowService.DEMO_BOSSES.enUS
+    local names = FellowService.DEMO_PEOPLE[locale] or FellowService.DEMO_PEOPLE.enUS
     -- The latest evening is today's once it is over, else yesterday's.
     local now = time()
     local clock = date("*t", now)

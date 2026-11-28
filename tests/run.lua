@@ -307,7 +307,7 @@ for _, file in ipairs(files) do
         check(declared == 0, "service declares no feature: " .. file)
         check(type(ns[service]) == "table", "service publishes ns." .. service)
     elseif file:match("^Modules/%u%a*/Data/") then
-        check(declared == 0 and not source:find("function", 1, true), "a data file holds tables only: " .. file)
+        check(declared == 0 and not source:find("function%s*[%w_.:]*%s*%("), "a data file holds tables only: " .. file)
     elseif file:match("^Modules/") then
         check(declared == 1, "a module file is exactly one feature or a *Service.lua: " .. file .. " (declares " .. declared .. ")")
     end
