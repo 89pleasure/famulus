@@ -110,13 +110,16 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
       (`stage.lit`): it shows the feature as if it were on. At the foot "Back", "Skip" and "Switch
       on and continue" (on the last "Switch on and finish"). A step that is on already says
       "Continue" and "Switch off and continue" instead (the owner found no way to skip sharing
-      when it was on): skipping always leaves the feature off.
+      when it was on): skipping always leaves the feature off. "On" is whether it runs
+      (`feature.enabled`), as the buttons act on: with its own switch on but its area's off it is
+      offered to be switched on.
     - **End:** "All done.", what runs now in two columns (the journey "From the start", the steps,
       skipped ones marked, the aliases "Already running"), "Open the chronicle", "Back".
   - **Switching:** a step switches its feature and the master switch of its area on at once
     (`Welcome.Enable`); "Switch everything on" switches on the four the client can run
-    (`Welcome.SwitchOn`). Either way one chat line (`msg_welcome_on`) says how many, and the end
-    opens Chronicle › Everyone. An empty book says "Your chronicle is running" (`c_empty_on`).
+    (`Welcome.SwitchOn`). Either way one chat line (`msg_welcome_on`) says how many (what a step
+    switched on and a later one off again is not counted, and closing the page starts the count
+    anew), and the end opens Chronicle › Everyone. An empty book says "Your chronicle is running" (`c_empty_on`).
   - Rejected on the first mockup ("Famulus-Willkommensseite", claude.ai artifact
     `4QWBiRsCVYusMxfEbDAmn8`): the three areas as cards with every switch, and one question "with
     friends / only for me / decide myself". Replaced on 2026-11-27: the one big button with a list
@@ -138,7 +141,23 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
 - **Search:** in the header, across all pages and tabs, hits grouped per tab in cards ("Aliases ·
   Settings"); no tabs in the results view. It leaves out the content of a switched-off feature,
   but finds its master switch. On a page without a sidebar the
-  hits take the full width.
+  hits take the full width. A person (an alias, a fellow traveller) is found by what their own
+  row says, not by the name of the page or tab ("o" found all 500 fellow travellers through
+  "overview"), and a tab shows at most 60 of them (`FELLOW_ROWS`), the rest as "N more" at the
+  card's right: rows are never freed. A tab whose content is a book has a `search` that returns
+  nothing; without one the search asks for its cards and built the book with every key.
+- **Drawing again (since 2026-11-28; checked against the mock only):** data signals
+  (`CHRONICLE_CHANGED`, `ALIASES_CHANGED`, `FELLOWS_CHANGED`, `SOCIAL_CHANGED`) lay the window
+  out anew only on an area's page or during a search; on "Settings" and "About" they refresh
+  numbers and switches (`RequestRefresh("state")`). `Render` closes an open dropdown unless the
+  same settings tab is drawn again, so news that comes in does not take the menu away. What a
+  tab's cards, book and rail all need is built once per drawing and kept in `window.drawn`
+  (emptied when `Render` begins): the chronicle's book, the groups' data and book.
+- **200 local variables:** the main chunk of `UI/Options.lua` has, at its fullest point, exactly
+  the 200 local variables Lua allows a function. One more declared near the top and the file
+  does not load ("main function has more than 200 local variables"; the test then fails at
+  loading). Put new state on an existing table (`window.drawn` is one for that reason) or move
+  code out of the file.
 - **Time and date format (since 2026-11-26):** Settings › Language & time, below the language.
   The three have a tab of their own, so that General keeps the master switches and how the addon
   behaves, and resetting General no longer resets the language.
@@ -382,8 +401,8 @@ layout, colours and font are the assistant's decisions and not yet confirmed.
   it that way: nothing per texture that can be shared. Building every page makes about 3 MB of
   garbage, every picture of the settings another 4.7; the game's memory figure counts it until
   the collector runs. The tab "Groups" makes most per click (about 3.5 MB at 100 groups, 10 MB at
-  400), because `TimelineData` runs twice per drawing and builds every subset of a group's people as
-  a table. Further levers, not done: one texture per rounded shape (`SetTextureSliceMargins`;
+  400), because `TimelineData` builds every subset of a group's people as a table (measured when
+  it still ran three times per drawing; once since 2026-11-28, see "Drawing again"). Further levers, not done: one texture per rounded shape (`SetTextureSliceMargins`;
   unchecked in Forever), building the rarely seen parts of a book card only when needed.
 - **Font:** Inter (SIL Open Font License 1.1) in Regular, Medium and SemiBold, cut down with
   `tools/make_fonts.py` to Latin, Greek, Cyrillic and punctuation (~100 KB each).

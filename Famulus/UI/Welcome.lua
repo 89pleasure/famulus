@@ -128,7 +128,8 @@ local AREAS = {
         return ns.features.ownJourney and ns.features.ownJourney.enabled
     end },
     { key = "fellows", icon = "people", on = function()
-        return false
+        local fellows, nearby = ns.features.rememberFellows, ns.features.nearbyFriends
+        return (fellows and fellows.enabled) or (nearby and nearby.enabled) or false
     end },
     { key = "feed", icon = "bell", name = "f_liveFeed", on = function()
         return ns.features.liveFeed and ns.features.liveFeed.enabled
@@ -264,10 +265,11 @@ function Welcome.Build(window, size, actions)
     UI.Grain(page, 3, 0, 3, height - (size.grain - size.head), width, height, true)
     page.embers = UI.Embers(page, 16, 0, width, height, 37)
 
-    -- view: "start", "done" or the number of the step shown. switched: how
-    -- many the steps switched on, for the one line at the end. via: where
-    -- the end goes back to.
-    page.view, page.switched, page.via = "start", 0, "start"
+    -- view: "start", "done" or the number of the step shown. switched: the
+    -- features the steps switched on (id -> true), counted for the one line
+    -- at the end; one switched off again is taken out. via: where the end
+    -- goes back to.
+    page.view, page.switched, page.via = "start", {}, "start"
     local function Go(view)
         page.view = view
         page:Refresh()
@@ -275,10 +277,14 @@ function Welcome.Build(window, size, actions)
 
     local function Finish()
         Welcome.Decide()
-        if page.switched > 0 then
-            ns:Notify(ns.Plural("msg_welcome_on", page.switched):format(page.switched))
+        local count = 0
+        for _ in pairs(page.switched) do
+            count = count + 1
         end
-        page.switched = 0
+        if count > 0 then
+            ns:Notify(ns.Plural("msg_welcome_on", count):format(count))
+        end
+        page.switched = {}
         actions.finish()
     end
 
@@ -325,7 +331,7 @@ function Welcome.Build(window, size, actions)
     end, "primary")
     page.setup:SetPoint("LEFT")
     page.all = BigButton(buttons, function()
-        page.switched = 0
+        page.switched = {}
         Welcome.SwitchOn()
         page.via = "start"
         Go("done")
@@ -494,7 +500,7 @@ function Welcome.Build(window, size, actions)
         local feature = ns.features[page.current.id]
         if not feature.enabled then
             Welcome.Enable(feature)
-            page.switched = page.switched + 1
+            page.switched[feature.id] = true
         end
         page.via = page.view
         Next()
@@ -508,6 +514,7 @@ function Welcome.Build(window, size, actions)
         if feature.enabled then
             ns:SetOption(feature.id, "enabled", false)
         end
+        page.switched[feature.id] = nil
         page.via = page.view
         Next()
     end, "ghost")
@@ -520,7 +527,9 @@ function Welcome.Build(window, size, actions)
         local current = steps[index]
         page.current = current
         local feature = ns.features[current.id]
-        local on = ns:GetOption(current.id, "enabled") and true or false
+        -- Whether it runs, as the buttons act on: its own switch may be on
+        -- while its area's is off.
+        local on = feature.enabled
 
         count:SetText(L.ui_welcome_step:format(index, #steps))
         local left = SIDE + count:GetStringWidth() + 16
@@ -705,7 +714,7 @@ function Welcome.Build(window, size, actions)
 
     -- It starts again from the beginning when the page or the window closes.
     local function Reset()
-        page.view, page.via = "start", "start"
+        page.view, page.via, page.switched = "start", "start", {}
     end
     page:SetScript("OnHide", Reset)
     window:HookScript("OnHide", Reset)

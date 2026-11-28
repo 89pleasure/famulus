@@ -26,6 +26,34 @@ guild channel), only known fields; `|` and control characters are removed.
     friend whose clock runs that far ahead is not heard live, only at the next hello after their
     time has passed. Written under "now" instead, the entry came again with every hello and was
     written anew each time.
+- **A lost entry is asked for again (since 2026-11-28; checked against the mock only):** an own
+  entry (`1~E~…`) carries among its values `p=<time of the sender's own entry before it>`
+  (`ChronicleService.OwnBefore`; left out where the message would pass 255 bytes; older
+  versions drop it as a value they do not know). If that time is newer than the receiver's mark
+  for the sender, something got lost on the way: the client drops what arrives during a boss
+  fight, and a queue ends with a `/reload`. The entry is then not taken (`handlers.E`), or the
+  mark in the next hello would pass over the gap for good; a hello goes out instead and the
+  sender catches up from the mark, this entry included. Asked twice per mark at most
+  (`gapAsked`), the second time a minute later (`GAP_AGAIN`: the first hello may have reached
+  the sender during a boss fight): if what comes does not move the mark (a kind this version
+  does not know, an entry from the future), entries are taken as they come, so two clients
+  never ask each other in a circle. An entry that was passed on first (`via`) and then arrives
+  from the companion themselves counts as theirs from then on (`ToldAgain` in
+  `ChronicleService.lua` drops the `via`): the mark moves with it. Before, it stayed behind
+  every passed-on entry, so each hello brought them all again, and the gap check asked for them
+  once more on top.
+- **Who is not heard, and how much at once (since 2026-11-28; checked against the mock only):**
+  - Nothing is taken from someone on the player's ignore list (`SocialService.Ignored`,
+    `C_FriendList.IsIgnored`): a guild member the player ignores would otherwise still put cards
+    on screen. Not checked in game whether the function exists in Forever and which spelling of
+    a name it wants; it is asked for the sender as the message names them and as the lists do.
+  - Of fresh entries (at most `ChronicleService.FRESH`, 120 seconds, old: the ones the live
+    feed announces) only eight are taken from one sender within a minute (`MAX_FRESH`,
+    `FRESH_SPAN`). A person brings forth a few a minute at most; a changed addon could send any
+    number, each a card with a sound. An entry left out is a gap the sender's next entry
+    names, so it is asked for again and taken once the minute is over; of ten and more within
+    one minute, which nobody's play brings forth, some may be lost for good. Old entries are
+    not counted: catching up brings hundreds.
 
 - **Guild (2026-11-19):** Whoever comes online greets the guild once in the guild channel (`1~P`),
   as soon as the guild roster is there; whoever has Famulus answers by whisper with a greeting.

@@ -147,9 +147,43 @@ end
 -- a character that has not logged in for a while catches up only when it does.
 -- Only add steps at the end, and never change one that has been released: players' files have
 -- already run it. A step must cope with any field missing.
+
+-- For step 2: gives every key of a map its lower-case form (ns.Lower). Of two keys that
+-- become the same, the one already in lower case stays.
+local function LowerKeys(map)
+    if type(map) ~= "table" then
+        return
+    end
+    local moved = {}
+    for key in pairs(map) do
+        if type(key) == "string" and ns.Lower(key) ~= key then
+            moved[#moved + 1] = key
+        end
+    end
+    for _, key in ipairs(moved) do
+        local lower = ns.Lower(key)
+        if map[lower] == nil then
+            map[lower] = map[key]
+        end
+        map[key] = nil
+    end
+end
+
 local MIGRATIONS = {
     -- 1: the journal left with the quality-of-life features (2026-11-23).
     { account = function(db) db.journal = nil end },
+    -- 2: the keys of names and BattleTags are in lower case beyond A-Z as well ("Émile" as
+    -- "émile"), so that a name typed by hand matches whatever its capitals are (2026-11-28).
+    { account = function(db)
+        LowerKeys(db.aliases)
+        LowerKeys(db.accountAliases)
+        if type(db.accountAliases) == "table" then
+            for _, account in pairs(db.accountAliases) do
+                LowerKeys(type(account) == "table" and account.chars or nil)
+            end
+        end
+        LowerKeys(type(db.chronicle) == "table" and db.chronicle.links or nil)
+    end },
 }
 ns.MIGRATIONS = MIGRATIONS
 ns.DATA_VERSION = #MIGRATIONS

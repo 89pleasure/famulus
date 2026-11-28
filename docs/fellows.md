@@ -212,7 +212,8 @@ Allies, see "WoW Forever: what you need to know" in AGENTS.md), and the feature 
     "First Last" without a realm, unlike "Nearby", which whispers the name as the friends list or
     guild roster writes it, realm and all. **Open in game:** whether a whisper to "First Last"
     reaches someone the lists write as "First Last-Realm".
-  - The search still finds every person as a simple person row (`FellowItem`, `tab.search`).
+  - The search still finds every person as a simple person row (`FellowItem`, `tab.search`),
+    60 at most with the rest counted (see "Search" in `docs/window.md`).
     Under an alias the name stands in the second line. The class comes from
     `LOCALIZED_CLASS_NAMES_MALE`, so in the client's language.
 - **Groups (the owner's decision, 2026-11-24, on the canvas "Fellow travellers – timeline",

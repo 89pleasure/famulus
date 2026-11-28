@@ -48,6 +48,8 @@
 --       only the one at index. games: the client's game accounts they are
 --       online with right now (empty while offline). accountName: what a
 --       Battle.net whisper needs. visit may return true to stop.
+--   SocialService.Ignored(name) -> true or false
+--       Whether the character of that name is on the player's ignore list.
 --   SocialService.Plain(name), SocialService.Key(name)
 --       A name as lists write it ("First Last-Realm") without the realm, and
 --       one spelling for it however the client writes it.
@@ -74,7 +76,7 @@ function SocialService.Plain(name)
 end
 
 function SocialService.Key(name)
-    return (string.lower((string.gsub(SocialService.Plain(name), "[%s%-]+", "-"))))
+    return ns.Lower((string.gsub(SocialService.Plain(name), "[%s%-]+", "-")))
 end
 
 local Key = SocialService.Key
@@ -254,6 +256,14 @@ function SocialService.Unit(unit, guid)
     return false, nil
 end
 
+function SocialService.Ignored(name)
+    if not IsPlainText(name) or not (C_FriendList and C_FriendList.IsIgnored) then
+        return false
+    end
+    local ok, ignored = pcall(C_FriendList.IsIgnored, name)
+    return ok and Yes(ignored)
+end
+
 ---------------------------------------------------------------------------
 -- Everyone at one look
 ---------------------------------------------------------------------------
@@ -347,7 +357,7 @@ function SocialService.Circle()
     -- Battle.net friends by BattleTag, online or not; and the characters
     -- they play right now.
     SocialService.EachBattleNetFriend(function(battleTag, games)
-        tags[string.lower(battleTag)] = true
+        tags[ns.Lower(battleTag)] = true
         for _, game in ipairs(games) do
             Note(game.playerGuid)
         end
@@ -355,7 +365,7 @@ function SocialService.Circle()
 
     local function Check(guid, name, tag)
         return (IsPlainText(guid) and guids[guid]) or (IsPlainText(name) and keys[Key(name)])
-            or (IsPlainText(tag) and tags[string.lower(tag)]) or false
+            or (IsPlainText(tag) and tags[ns.Lower(tag)]) or false
     end
     return function(guid, name, tag)
         return Check(guid, name, tag) and true or false

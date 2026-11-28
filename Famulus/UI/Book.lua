@@ -167,9 +167,11 @@ local function LayRoute(head, names, top)
     for index = #names + 1, #head.plates do
         head.plates[index]:Hide()
     end
-    for index = math.max(2, #names + 1), #head.arrows do
-        if head.arrows[index] then
-            head.arrows[index]:Hide()
+    -- The arrows start at index 2, so their table has no length to count on:
+    -- with the first slot empty, Lua 5.1 says 0 for two or three of them.
+    for index, arrow in pairs(head.arrows) do
+        if index > #names then
+            arrow:Hide()
         end
     end
     return width

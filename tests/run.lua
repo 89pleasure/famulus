@@ -371,6 +371,30 @@ do
     ns.MigrateSaved(character, "character")
     check(character.dataVersion == ns.DATA_VERSION and character.zones[1] == "Elwynn Forest",
         "a character's file carries its own version and keeps its journey")
+
+    -- Step 2: the keys of names and BattleTags, in lower case beyond A-Z as well.
+    local named = {
+        dataVersion = 1,
+        aliases = {
+            ["Émile-dupont"] = { name = "Émile Dupont", alias = "Emil" },
+            ["jaina-proudmoore"] = { name = "Jaina Proudmoore", alias = "Anna" },
+            ["Örn-berg"] = { name = "Örn Berg", alias = "old" },
+            ["örn-berg"] = { name = "Örn Berg", alias = "new" },
+        },
+        accountAliases = { ["Élise#1234"] = { tag = "Élise#1234", alias = "Lise", chars = { ["Östen-berg"] = "Östen Berg" } } },
+        chronicle = { links = { ["Émile-dupont"] = { name = "Émile Dupont", t = 1 } } },
+    }
+    ns.MigrateSaved(named, "account")
+    check(named.dataVersion == ns.DATA_VERSION and named.aliases["Émile-dupont"] == nil
+        and named.aliases["émile-dupont"].alias == "Emil" and named.aliases["jaina-proudmoore"].alias == "Anna",
+        "step 2 writes the keys of aliases in lower case beyond A-Z")
+    check(named.aliases["örn-berg"].alias == "new" and named.aliases["Örn-berg"] == nil,
+        "of two keys that become the same, the one in lower case stays")
+    check(named.accountAliases["Élise#1234"] == nil and named.accountAliases["élise#1234"].alias == "Lise"
+        and named.accountAliases["élise#1234"].chars["östen-berg"] == "Östen Berg"
+        and named.chronicle.links["émile-dupont"].t == 1 and named.chronicle.links["Émile-dupont"] == nil,
+        "and those of BattleTags, their characters and the chronicle's links")
+    ns.MigrateSaved({ dataVersion = 1, aliases = "broken", accountAliases = { x = 1 }, chronicle = 5 }, "account")
 end
 mock.Fire("PLAYER_LOGIN")
 
@@ -425,6 +449,8 @@ check(not Aliases.Set("Jaina Proudmoore", "Anna") and aliasEvents == 1, "setting
 check(Aliases.Get("Jaina", "Proudmoore") == "Anna", "found by first name and surname")
 check(Aliases.Get("Jaina-Proudmoore") == "Anna" and Aliases.Get("jaina proudmoore") == "Anna", "and by the full name in any spelling")
 check(Aliases.Get("Jaina") == nil and Aliases.Get(nil) == nil and Aliases.Get("") == nil, "other names have none")
+check(Aliases.Key("émile dupont") == Aliases.Key("Émile", "Dupont") and ns.SocialService.Key("ÉMILE-Dupont") == "émile-dupont",
+    "a name's key is in lower case beyond A-Z as well, so one typed by hand matches whatever its capitals are")
 
 check(mock.SenderName("CHAT_MSG_SAY", "|cff3fc7ebJaina-Proudmoore|r", "Jaina-Proudmoore") == "|cff3fc7ebAnna|r",
     "chat shows the alias inside the class colour")
@@ -1279,6 +1305,29 @@ do
     mock.Click(visibleEntries()[3])
     check(detail.title:GetText() == "Date format" and detail.pills[1].text:GetText() == "Default: " .. ns.L.g_dateFormat_auto,
         "the date format names its default")
+    do -- what changes while the player chooses does not close the menu
+        local function menuOpen()
+            for _, frame in ipairs(mock.frames) do
+                if frame.value == "{m}/{d}/{y}" and frame.check and frame:IsVisible() then
+                    return true
+                end
+            end
+            return false
+        end
+        mock.Click(detail.dropdown.open)
+        mock.Advance(0.05)
+        local opened = menuOpen()
+        ns:Fire("CHRONICLE_CHANGED")
+        ns:Fire("FELLOWS_CHANGED")
+        mock.Advance(0.1)
+        check(opened and menuOpen(), "news that comes in leaves an open dropdown of the settings open")
+        ns:Fire("LOCALE_CHANGED")
+        mock.Advance(0.1)
+        check(menuOpen(), "and so does the same settings tab drawn again")
+        mock.Click(detail.dropdown.open)
+        mock.Advance(0.05)
+        check(not menuOpen(), "(a second click closes it)")
+    end
     ns:SetOption("general", "language", "deDE")
     check(ns.FormatDate("2026", "11", "19") == "19.11.2026" and at(21, 40) == "9:40 PM",
         "as the language, the date follows it; the clock stays as chosen")
@@ -1531,6 +1580,58 @@ do
         and ns.features.liveFeed.enabled and not ns.features.sharing.enabled and not ns.features.nearbyFriends.enabled
         and mock.chat[#mock.chat]:find("3 features switched on", 1, true) ~= nil and not page:IsShown(),
         "finished: what was switched on runs, what was skipped does not, one line in the chat")
+
+    -- The fellowship's tile says that it runs, as the others do.
+    openAgain()
+    check(page.start:IsShown() and page.tiles[2].pill:IsShown(), "the fellowship's tile says so once one of its features runs")
+
+    -- The line at the end counts what the steps left switched on.
+    local function toTheEnd() -- (from sharing on: skip what is off, keep what is on)
+        mock.Click(page.skip)
+        mock.Click(page.on)
+        mock.Click(page.on)
+        mock.Click(page.skip)
+    end
+    enable("companions", false)
+    mock.Click(page.setup)
+    mock.Click(page.on)
+    mock.Click(page.back)
+    mock.Click(page.skip)
+    check(not ns.features.companions.enabled and page.name:GetText() == ns.L.f_sharing, "switched on in a step, then off again")
+    toTheEnd()
+    local lines = #mock.chat
+    mock.Click(page.open)
+    check(page.switched and next(page.switched) == nil and #mock.chat == lines and not page:IsShown(),
+        "what was switched off again is not counted: no line in the chat")
+    openAgain()
+    mock.Click(page.setup)
+    mock.Click(page.on)
+    window:Hide()
+    SlashCmdList.FAMULUS("")
+    openAgain()
+    mock.Click(page.setup)
+    check(ns.features.companions.enabled and page.on.label:GetText() == "Continue", "closed half-way, the feature stays on")
+    mock.Click(page.on)
+    toTheEnd()
+    lines = #mock.chat
+    mock.Click(page.open)
+    check(#mock.chat == lines, "and the count starts anew with the page: nothing switched on this time, no line")
+
+    -- A feature whose own switch is on but whose area is off does not run:
+    -- its step says what its buttons do.
+    ns:SetOption("categories", "chronicle", false)
+    openAgain()
+    mock.Click(page.setup)
+    mock.Click(page.skip)
+    mock.Click(page.skip)
+    check(page.name:GetText() == ns.L.f_liveFeed and ns:GetOption("liveFeed", "enabled") == true and not ns.features.liveFeed.enabled
+        and page.on.label:GetText() == "Switch on and continue" and page.skip.label:GetText() == "Skip",
+        "a feature whose area is switched off is offered to be switched on, not to be switched off")
+    mock.Click(page.skip)
+    check(ns:GetOption("liveFeed", "enabled") == true and not ns:IsCategoryEnabled("chronicle"), "skipped, both switches stay as they were")
+    ns:SetOption("categories", "chronicle", true)
+    window:Hide()
+    SlashCmdList.FAMULUS("")
 
     -- In every language the page has its words, and every view fits.
     local PAGE_H = page:GetHeight()
@@ -2587,6 +2688,116 @@ do
     Feed.Clear()
 end
 
+-- A lost entry is asked for again (an entry names the time of the one before
+-- it), someone the player ignores is not heard, and of fresh entries only a
+-- few at once are taken from one sender.
+do
+    local entriesBefore = FamulusDB.chronicle.entries
+    FamulusDB.chronicle.entries = {}
+    mock.Advance(10)
+    mock.sent = {}
+    local function tell(text)
+        mock.Fire("CHAT_MSG_ADDON", "Famulus", text, "WHISPER", "Jaina Proudmoore")
+    end
+    local at = time() - 600
+    tell("1~E~" .. at .. "~level~level=30;zone=Duskwood")
+    tell("1~E~" .. (at + 60) .. "~death~level=30;zone=Duskwood;p=" .. at)
+    check(#Chronicle.Entries() == 2, "an entry that names the one before it is taken while we have that one")
+    tell("1~E~" .. (at + 180) .. "~zone~level=30;zone=Westfall;p=" .. (at + 120))
+    mock.Advance(1)
+    check(#Chronicle.Entries() == 2 and #mock.sent == 1 and mock.sent[1].text == "1~H~" .. (at + 60),
+        "one that names an entry we lack is not taken, and a hello asks again from where we are: "
+        .. tostring(mock.sent[1] and mock.sent[1].text))
+    tell("1~E~" .. (at + 120) .. "~level~level=31;zone=Duskwood;p=" .. (at + 60))
+    tell("1~E~" .. (at + 180) .. "~zone~level=31;zone=Westfall;p=" .. (at + 120))
+    check(#Chronicle.Entries() == 4 and Chronicle.NewestFrom("Jaina Proudmoore") == at + 180,
+        "what she sends then closes the gap")
+    -- What she names may be something this version cannot keep: asked once.
+    mock.sent = {}
+    tell("1~E~" .. (at + 300) .. "~zone~level=31;zone=Tanaris;p=" .. (at + 240))
+    check(#Chronicle.Entries() == 4, "a gap that stays is asked about")
+    tell("1~E~" .. (at + 300) .. "~zone~level=31;zone=Tanaris;p=" .. (at + 240))
+    mock.Advance(1)
+    check(#Chronicle.Entries() == 5 and #mock.sent == 1, "once: the second time the entry is taken as it comes")
+    -- The hello may have reached her during a boss fight: a minute later it goes once more.
+    mock.sent = {}
+    local lost = "1~E~" .. (at + 500) .. "~zone~level=31;zone=Feralas;p=" .. (at + 400)
+    tell(lost)
+    mock.Advance(61)
+    tell(lost)
+    mock.Advance(1)
+    check(#Chronicle.Entries() == 5 and #mock.sent == 2, "a gap still there a minute later is asked about a second time (sent " .. #mock.sent .. ")")
+    tell(lost)
+    mock.Advance(1)
+    check(#Chronicle.Entries() == 6 and #mock.sent == 2, "and no third time: then the entry is taken")
+
+    -- What was passed on first and then comes from her counts as hers.
+    FamulusDB.chronicle.entries = {}
+    tell("1~E~" .. at .. "~level~level=30;zone=Duskwood")
+    Chronicle.Add("death", { who = "Jaina Proudmoore", via = "Thrall Hellscream", t = at + 60, level = 30, zone = "Duskwood" })
+    Chronicle.Add("level", { who = "Jaina Proudmoore", via = "Thrall Hellscream", t = at + 120, level = 31 })
+    mock.Advance(1)
+    mock.sent = {}
+    tell("1~E~" .. (at + 60) .. "~death~level=30;zone=Duskwood;p=" .. at)
+    tell("1~E~" .. (at + 120) .. "~level~level=31;p=" .. (at + 60))
+    mock.Advance(1)
+    do
+        local entries = Chronicle.Entries()
+        check(#entries == 3 and entries[2].via == nil and entries[3].via == nil
+            and Chronicle.NewestFrom("Jaina Proudmoore") == at + 120 and #mock.sent == 0,
+            "an entry passed on before and now told by her is hers: the mark moves with it, and nothing is asked again")
+        Chronicle.Add("zone", { who = "Jaina Proudmoore", via = "Thrall Hellscream", t = at + 120, zone = "Tanaris" })
+        Chronicle.Add("friendLevel", { who = "Jaina Proudmoore", level = 31 })
+        check(Chronicle.Entries()[3].via == nil and Chronicle.Entries()[4].via == "Thrall Hellscream",
+            "what is only passed on, or only seen on the friends list, makes nothing hers")
+    end
+
+    -- The player's own entries say what came before them.
+    FamulusDB.chronicle.entries = {}
+    mock.sent = {}
+    Chronicle.Add("skill", { skill = 186, name = "Mining", rank = 75 })
+    Chronicle.Add("skill", { skill = 186, name = "Mining", rank = 150 })
+    mock.Advance(1)
+    local own = Chronicle.Entries()
+    check(#mock.sent == 2 and not mock.sent[1].text:find("p=", 1, true)
+        and mock.sent[2].text == "1~E~" .. own[2].t .. "~skill~name=Mining;rank=150;skill=186;p=" .. own[1].t,
+        "an own entry goes out with the time of the one before it, the first without: " .. tostring(mock.sent[2] and mock.sent[2].text))
+    check(sharing.EncodeEntry({ k = "boss", t = 1, name = string.rep("n", 60), zone = string.rep("z", 60),
+        instance = string.rep("i", 60), id = 12345, first = 1 }, nil, 1795000000):find("p=", 1, true) ~= nil
+        and #sharing.EncodeEntry({ k = "boss", t = 1795000000, name = string.rep("n", 60), zone = string.rep("z", 60),
+            instance = string.rep("i", 60), id = 1234567890, first = 1234567890 }, nil, 1795000000) <= 255,
+        "and never grows past what a message holds")
+    mock.Advance(10)
+    mock.sent = {}
+
+    -- Someone the player ignores is not heard.
+    FamulusDB.chronicle.entries = {}
+    mock.state.ignored = { ["Jaina Proudmoore"] = true }
+    tell("1~E~" .. at .. "~level~level=30;zone=Duskwood")
+    check(#Chronicle.Entries() == 0, "nothing is taken from someone on the player's ignore list")
+    mock.state.ignored = nil
+
+    -- Fresh entries: a few at once from one sender, old ones however many.
+    mock.Advance(61) -- (past what she sent before)
+    local fresh = time() - 20
+    for index = 1, 12 do
+        tell("1~E~" .. (fresh + index) .. "~zone~level=30;zone=Fresh " .. index)
+    end
+    check(#Chronicle.Entries() == 8, "of fresh entries only eight at once are taken from one sender (got " .. #Chronicle.Entries() .. ")")
+    for index = 1, 12 do
+        tell("1~E~" .. (at + index) .. "~zone~level=30;zone=Old " .. index)
+    end
+    check(#Chronicle.Entries() == 20, "what is not fresh is taken, however much")
+    mock.Advance(61)
+    tell("1~E~" .. (fresh + 12) .. "~zone~level=30;zone=Fresh 12")
+    check(#Chronicle.Entries() == 21, "a minute later fresh ones are taken again")
+    mock.Advance(61)
+
+    FamulusDB.chronicle.entries = entriesBefore
+    ns.UI.Feed.Clear()
+    mock.sent = {}
+end
+
 -- The live feed: a friend's card on screen has a button that reacts to it
 -- right there, as a click on their card in the chronicle does.
 do
@@ -3512,6 +3723,24 @@ do -- a pause of two hours begins a new chapter; a night past midnight stays one
     mock.Click(tabButton("My journey"))
     mock.Click(tabButton("Everyone"))
     check(#bookFrames("chapter") == 1 and not chapters[2]:IsVisible(), "the chapters no longer needed are hidden")
+    do -- (the arrows start at index 2: the client's Lua counts no length for two or three of them)
+        local stale = false
+        for _, head in ipairs(chapters) do
+            for index, arrow in pairs(head.arrows) do
+                stale = stale or (head:IsVisible() and arrow:IsShown() and index > head.routeShown)
+            end
+        end
+        check(not stale, "a chapter heading used again shows no arrows of its last route")
+    end
+    do -- a tween that ends may cancel one that began before it
+        ns.UI.Tween("test-slide", 10, function() end)
+        ns.UI.Tween("test-fade", 0.01, function(progress)
+            if progress >= 1 then
+                ns.UI.CancelTween("test-slide")
+            end
+        end)
+        check(pcall(mock.Advance, 0.1), "a tween that ends and cancels an older one does not break the others")
+    end
 end
 do -- my journey: the week and the professions
     mock.state.professions = { { name = "Tailoring", rank = 92, id = 197 } }
@@ -4839,11 +5068,55 @@ do -- the samples' days are told from their evenings, so both agree
     check(demoRuns == 11 and miraTime == demoMira.seconds and miraTime == demoSum, "the samples have their evenings, and the days add up to them")
 end
 
+do -- the search: a person by their own row, no more rows of people than the list shows, and no books
+    for index = 1, 70 do
+        FamulusDB.fellows["Player-9-PROBE" .. index] = { name = "Probe Person" .. index, last = time() - index,
+            first = time() - 86400, times = 1, seconds = 60, bosses = 0 }
+    end
+    ns:Fire("FELLOWS_CHANGED")
+    mock.Advance(0.1)
+    local function people()
+        local count = 0
+        for _, row in ipairs(visibleRows()) do
+            count = count + (row.item.kind == "fellow" and 1 or 0)
+        end
+        return count
+    end
+    window.search.edit:SetText("probe person")
+    check(people() == 60 and window.area.desc:GetText():find("70", 1, true) ~= nil,
+        "the search shows as many people as the list does and counts the rest: " .. people() .. " / " .. window.area.desc:GetText())
+    window.search.edit:SetText("fellowship")
+    check(people() == 0, "a person is found by their own row, not by the name of the page (got " .. people() .. ")")
+    local learned, learn = 0, ns.ChronicleService.LearnClasses
+    ns.ChronicleService.LearnClasses = function(...)
+        learned = learned + 1
+        return learn(...)
+    end
+    window.search.edit:SetText("zzzz")
+    ns.ChronicleService.LearnClasses = learn
+    check(ns:IsCategoryEnabled("chronicle") and learned == 0, "the search builds none of the chronicle's books (got " .. learned .. ")")
+    window.search.edit:SetText("")
+    for index = 1, 70 do
+        FamulusDB.fellows["Player-9-PROBE" .. index] = nil
+    end
+    ns:Fire("FELLOWS_CHANGED")
+    mock.Advance(0.1)
+end
+
 -- The timeline: every group as a book, the week beside it.
 mock.Click(navButton("Fellowship"))
 mock.Advance(0.1)
 check(pageTab("Overview") and pageTab("Groups") and pageTab("Settings"), "fellow travellers: overview, groups and settings")
-mock.Click(pageTab("Groups"))
+do -- (the cards, the book and the rail of one drawing share what they read)
+    local read, readRuns = 0, Fellows.Runs
+    Fellows.Runs = function(...)
+        read = read + 1
+        return readRuns(...)
+    end
+    mock.Click(pageTab("Groups"))
+    Fellows.Runs = readRuns
+    check(read == 1, "one drawing of the groups reads them once (got " .. read .. ")")
+end
 mock.Advance(0.1)
 do
     local found = {}
@@ -5008,6 +5281,14 @@ do
     check(borin.from == "battlenet" and borin.zone == "Desolace" and borin.class == "WARRIOR" and borin.level == 39,
         "a Battle.net friend in this game: zone, level and class from Battle.net")
     check(#Nearby.People(false) == 5 and not find(Nearby.People(false), "Kael Dornhain"), "without the guild only friends count")
+    do -- (the roster may name no GUID; UnitName gives first name and surname apart)
+        local own = mock.state.guild[3]
+        own.guid = nil
+        mock.state.units = { player = { name = "Me", surname = "Myself" } }
+        check(own.name == "Me Myself" and #Nearby.People(true) == 8 and not find(Nearby.People(true), "Me Myself"),
+            "the player is left out by their full name too, where the roster names no GUID")
+        own.guid, mock.state.units = "Player-1-SELF", nil
+    end
     check(find(people, "Rhea Dunkelhain").out == "Realm PvP" and find(people, "Rhea Dunkelhain").bnet == "|Kq4|k"
         and find(people, "Grosh Steinhauer").out == "Horde" and not mira.out and not borin.out and not kael.out,
         "a Battle.net friend in another mode or of the other faction is out of reach")
@@ -5620,7 +5901,7 @@ do
     local text = edit:GetText()
     check(Report.IsShown() and dialog.title:GetText() == "Bug report", "/fam report opens the bug report")
     check(#mock.chat == 0 and type(FamulusDB.selfTest) == "table", "it runs the self-test quietly, without a line in the chat")
-    check(text:find("Famulus " .. ns.version .. ", client 1.60.1", 1, true) ~= nil and text:find("Data version 1,", 1, true) ~= nil
+    check(text:find("Famulus " .. ns.version .. ", client 1.60.1", 1, true) ~= nil and text:find("Data version " .. ns.DATA_VERSION .. ",", 1, true) ~= nil
         and text:find("\nOn: ", 1, true) ~= nil and text:find("\nSelf-test: ", 1, true) ~= nil
         and text:find("\nRunning: ", 1, true) ~= nil, "it names version, client, data version, features and self-test:\n" .. text)
     check(text:find("Developer mode is off: no log, no trace.", 1, true) ~= nil

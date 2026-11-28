@@ -59,7 +59,6 @@ local feed = ns:NewFeature({
 feed.KINDS = KINDS
 feed.SECONDS = { short = 4, normal = 7, long = 12 }
 
-local FRESH = 120 -- seconds; older news (caught up on, passed on) is not announced
 local listening = false
 
 -- A soft double click comes with a card (UI.Feed.Chime), unless switched off.
@@ -212,7 +211,8 @@ local function OnChronicleChanged(entry)
     if not feed.enabled or type(entry) ~= "table" or entry.demo then
         return
     end
-    if time() - (tonumber(entry.t) or 0) > FRESH then
+    -- Older news (caught up on, passed on) is not announced.
+    if time() - (tonumber(entry.t) or 0) > ns.ChronicleService.FRESH then
         return
     end
     local kind = entry.k == "friendLevel" and "level" or entry.k
