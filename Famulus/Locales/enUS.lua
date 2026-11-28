@@ -546,6 +546,7 @@ L.msg_fellow_demo_added_one = "Added %d sample member to your fellowship. /fam f
 L.msg_fellow_demo_cleared = "Removed %d sample members from your fellowship."
 L.msg_fellow_demo_cleared_one = "Removed %d sample member from your fellowship."
 L.c_with = "with %s"
+L.c_fell_with = "fell together with %s"
 L.c_and = "%s and %s"
 L.c_feed_others = "%d more"
 L.c_with_others = "with %d others"

@@ -953,6 +953,10 @@ function UnitIsConnected(unit)
     local member = GroupMember(unit)
     return not (member and member.offline)
 end
+function UnitIsDeadOrGhost(unit)
+    local member = GroupMember(unit)
+    return member and member.dead or false
+end
 UNKNOWNOBJECT = "Unknown"
 CLASS_ICON_TCOORDS = {
     WARRIOR = { 0, 0.25, 0, 0.25 }, MAGE = { 0.25, 0.49609375, 0, 0.25 }, ROGUE = { 0.49609375, 0.7421875, 0, 0.25 },

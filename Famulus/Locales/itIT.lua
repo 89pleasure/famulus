@@ -552,6 +552,7 @@ L.msg_fellow_demo_added_one = "Aggiunto %d membro di esempio alla tua compagnia.
 L.msg_fellow_demo_cleared = "Rimossi %d membri di esempio dalla tua compagnia."
 L.msg_fellow_demo_cleared_one = "Rimosso %d membro di esempio dalla tua compagnia."
 L.c_with = "con %s"
+L.c_fell_with = "morte insieme a %s"
 L.c_and = "%s e %s"
 L.c_feed_others = "altre %d persone"
 L.c_feed_others_one = "%d altra persona"

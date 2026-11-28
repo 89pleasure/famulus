@@ -1699,6 +1699,41 @@ do -- who was there when a boss fell
     table.remove(Chronicle.Entries(), count + 2)
     table.remove(Chronicle.Entries(), count + 1)
 end
+do -- who was there when the player died
+    local count, realTime = #Chronicle.Entries(), time
+    mock.state.group = { members = { { name = "Ori", surname = "Nachtwind", guid = "Player-1-ORI", level = 20, class = "ROGUE" } } }
+    -- Two entries of a kind in one second are one event; the first death lies apart.
+    time = function()
+        return realTime() + 30
+    end
+    mock.Advance(10)
+    mock.Fire("PLAYER_DEAD")
+    local death = Chronicle.Entries()[count + 1]
+    local _, detail = Chronicle.Text(death or {})
+    check(death and death.k == "death" and death.with[1] == "Ori Nachtwind" and detail and detail:find("  ·  with Ori$"),
+        "a death in a party names who was there: " .. tostring(detail))
+    local _, runDetail = Chronicle.TextRun({ death, { k = "death", zone = death.zone, level = death.level } })
+    check(runDetail and runDetail:find("  ·  with Ori$"), "a wipe names who was there: " .. tostring(runDetail))
+    mock.state.group.members[1].dead = true
+    mock.Advance(15)
+    _, detail = Chronicle.Text(death)
+    check(death.fell and death.fell[1] == "Ori Nachtwind" and detail:find("  ·  fell together with Ori$"),
+        "who dies a moment later fell together with the player: " .. tostring(detail))
+    table.remove(Chronicle.Entries(), count + 1)
+    -- Who already lies dead when the player falls counts at once, once.
+    mock.Advance(10)
+    time = function()
+        return realTime() + 60
+    end
+    mock.Fire("PLAYER_DEAD")
+    death = Chronicle.Entries()[count + 1]
+    check(death and death.fell and #death.fell == 1, "who lies dead already fell together with the player")
+    mock.Advance(15)
+    check(#death.fell == 1, "and is named once")
+    time = realTime
+    mock.state.group = nil
+    table.remove(Chronicle.Entries(), count + 1)
+end
 do -- the first time in a dungeon or a raid
     local count, zone = #Chronicle.Entries(), mock.state.zone
     mock.state.zone, mock.state.instanceType = "The Deadmines", "party"

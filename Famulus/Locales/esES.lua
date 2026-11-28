@@ -548,6 +548,7 @@ L.msg_fellow_demo_added_one = "Se ha añadido %d persona de ejemplo a tu comunid
 L.msg_fellow_demo_cleared = "Se han quitado %d personas de ejemplo de tu comunidad."
 L.msg_fellow_demo_cleared_one = "Se ha quitado %d persona de ejemplo de tu comunidad."
 L.c_with = "con %s"
+L.c_fell_with = "muerte junto a %s"
 L.c_and = "%s y %s"
 L.c_feed_others = "%d más"
 L.c_with_others = "con %d personas más"
