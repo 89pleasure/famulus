@@ -75,6 +75,7 @@ local PICTURES = {
     ability = { icon = "sparkle", fill = "accentDeep", border = "accentLine", ink = "accent2" },
     death = { icon = "skull", fill = "deathGround", border = "deathLine", ink = "deathInk", title = "deathInk" },
     boss = { icon = "swords", fill = "bossGround", border = "bossLine", ink = "bossInk" },
+    instance = { icon = "shield", fill = "bossGround", border = "bossLine", ink = "bossInk" },
     -- A friend's reaction, in the live feed; story.icon names it ("cheer").
     reaction = { icon = "cheer", fill = "accentDeep", border = "accentLine", ink = "accent2" },
     -- The story of a fellow traveller: time together, and the bond's milestones.

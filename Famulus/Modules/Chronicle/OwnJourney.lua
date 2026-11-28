@@ -1,6 +1,7 @@
 -- Writes the milestones of the player's own character into the chronicle:
 -- levels, deaths, bosses, Legacy challenges, professions, abilities such as
--- riding, special items, and zones discovered.
+-- riding, special items, zones discovered and the first time in a dungeon or
+-- a raid.
 
 local _, ns = ...
 local Chronicle = ns.ChronicleService
@@ -203,18 +204,9 @@ function journey:PLAYER_DEAD()
     Chronicle.Add("death", { zone = Zone(), level = UnitLevel("player") })
 end
 
--- Who was there goes with it: the names in a party, in a raid only how many.
--- Neither is shared with companions (Modules/Chronicle/Sharing.lua). The
--- last boss of an instance clears it; another one defeated for the first
--- time says so.
-function journey:BOSS_KILL(_, encounterID, name)
-    local entry = { id = encounterID, name = name, zone = Zone() }
-    if Chronicle.SeeBoss(encounterID) then
-        entry.first = 1
-    end
-    if not ns.IsSecret(encounterID) and encounterID and Chronicle.finalBosses[encounterID] then
-        entry.instance = Zone()
-    end
+-- Who was there goes into an entry: the names in a party, in a raid only
+-- how many. Neither is shared with companions (Modules/Chronicle/Sharing.lua).
+local function WithGroup(entry)
     local members = ns.GroupService.Members(true)
     if #members > 0 and ns.GroupService.InRaid() then
         entry.others = #members
@@ -224,7 +216,32 @@ function journey:BOSS_KILL(_, encounterID, name)
             entry.with[index] = member.name
         end
     end
-    Chronicle.Add("boss", entry)
+    return entry
+end
+
+-- The last boss of an instance clears it; another one defeated for the
+-- first time says so.
+function journey:BOSS_KILL(_, encounterID, name)
+    local entry = { id = encounterID, name = name, zone = Zone() }
+    if Chronicle.SeeBoss(encounterID) then
+        entry.first = 1
+    end
+    if not ns.IsSecret(encounterID) and encounterID and Chronicle.finalBosses[encounterID] then
+        entry.instance = Zone()
+    end
+    Chronicle.Add("boss", WithGroup(entry))
+end
+
+-- "party" or "raid" inside a dungeon or a raid, else nil.
+local function Instance()
+    if not IsInInstance then
+        return nil
+    end
+    local inside, kind = IsInInstance()
+    if ns.IsSecret(inside) or not inside or not ns.ChatService.IsPlainText(kind) then
+        return nil
+    end
+    return (kind == "party" or kind == "raid") and kind or nil
 end
 
 -- The Forever client shows achievements as "Legacy challenges".
@@ -239,7 +256,8 @@ end
 
 -- A zone is an arrival once per character: the first time it is entered on
 -- the ground. Zones passed on a flight path are neither written down nor
--- marked as seen.
+-- marked as seen. A dungeon or a raid is such a zone too; the first time in
+-- one is an event of its own, with who came along.
 function journey:ZONE_CHANGED_NEW_AREA()
     if UnitOnTaxi and UnitOnTaxi("player") then
         return
@@ -249,7 +267,11 @@ function journey:ZONE_CHANGED_NEW_AREA()
     end
     local zone = Zone()
     if zone and Chronicle.SeeZone(zone) then
-        Chronicle.Add("zone", { zone = zone, level = UnitLevel("player") })
+        if Instance() then
+            Chronicle.Add("instance", WithGroup({ instance = zone, level = UnitLevel("player") }))
+        else
+            Chronicle.Add("zone", { zone = zone, level = UnitLevel("player") })
+        end
     end
 end
 

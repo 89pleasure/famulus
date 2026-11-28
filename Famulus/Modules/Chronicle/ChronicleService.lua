@@ -316,6 +316,20 @@ local kinds = {
             return L.c_achievement:format(e.name or L.c_a_challenge)
         end,
     },
+    -- The first time in a dungeon or a raid: its name in `instance`, so that
+    -- the book, which leaves out the place, still names it.
+    instance = {
+        title = function(e)
+            local name = type(e.instance) == "string" and e.instance or "?"
+            if e.who then
+                return L.c_their_instance:format(Label(e), name)
+            end
+            return L.c_instance:format(name)
+        end,
+        detail = function(e)
+            return Party(e) or e.level and L.c_at_level:format(tonumber(e.level) or 0) or nil
+        end,
+    },
     zone = {
         title = function(e)
             if e.who then
@@ -592,6 +606,7 @@ ChronicleService.REACTION_SETS = {
     ability = { "cheer", "clap", "fire" },
     item = { "cheer", "clap", "fire" },
     boss = { "strong", "cheer", "clap", "fire" },
+    instance = { "cheer", "strong", "fire" },
     death = { "sad", "strong", "heart" },
     skill = { "clap", "cheer" },
     profession = { "clap", "cheer" },
@@ -1263,6 +1278,7 @@ function ChronicleService.Sample(kind, own)
         profession = { skill = 186, name = name.mining, who = lysa },
         skill = { skill = 186, name = name.mining, rank = 225, who = lysa },
         zone = { zone = zone[4], level = 39, who = lysa },
+        instance = { instance = zone[2], level = 38, who = borin, with = { mira } },
     }
     local entry = samples[kind]
     if not entry then

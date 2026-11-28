@@ -256,8 +256,8 @@ picture-book look are built and checked against the mock only.
      from `GetProfessionInfo`, for challenges from `GetAchievementInfo`; it is shared;
   2. the icon of the item (`C_Item.GetItemIconByID`) or of the spell of an ability
      (`C_Spell.GetSpellTexture`);
-  3. the icon of the kind from `UI.gameIcons` (`UI/Theme.lua`): death, boss, zone, challenge,
-     profession, ability, item.
+  3. the icon of the kind from `UI.gameIcons` (`UI/Theme.lua`): death, boss, dungeon or
+     raid (a key), zone, challenge, profession, ability, item.
   The names in `UI.gameIcons` are icons from Vanilla and not checked in game in the Forever
   client; `/fam test` reports per kind (group `media`, "icon …") whether the client has the file.
   The icons are not tinted and do not follow the colour scheme; the frame around them does.
@@ -371,6 +371,16 @@ picture-book look are built and checked against the mock only.
     `ENCOUNTER_END` fires in Forever's dungeons is not known. The encounter IDs come from the
     client's DungeonEncounter table (wago.tools, Forever build 1.60.1.71139), none checked in
     game; whether `BOSS_KILL` fires in five-player dungeons in Forever is not checked either.
+  - **First time in a dungeon or a raid (the owner's request, 2026-11-28):** A zone the
+    character discovers while `IsInInstance` says `party` or `raid` is kind `instance` instead of
+    an arrival: `{ instance = <name>, level }`, with who came along as for a boss (`with` or
+    `others`, not shared). The name stands in `instance`, not `zone`, so the book, which leaves
+    the place out of the sentence, still names it ("First time in The Deadmines"). It uses the
+    same list as the zones (`FamulusCharDB.zones`), so a dungeon visited before this version is no
+    news. Picture: shield, in the colours of a boss; weight high; reactions `cheer strong fire`;
+    a switch in the live feed, on by default. Not checked in game: whether
+    `ZONE_CHANGED_NEW_AREA` fires on entering an instance in Forever, and whether
+    `GetRealZoneText` names the instance there.
   - Two entries of the same kind in the same second count as a duplicate, unless they differ
     in `skill`, `rank`, `ability` or `item`.
 - **Sample entries (2026-11-19):** `/fam chronicle demo` writes 21 made-up entries over three
@@ -532,8 +542,8 @@ picture-book look are built and checked against the mock only.
     something only appears once "Share with friends" (`sharing`) or "Follow my friends"
     (`companions`) is running. A stored value of the old switch stays unused in the profile until
     "Reset" removes it. Checked against the mock only.
-  - Switches per event kind (`level`, `death`, `boss`, `achievement`, `ability`, `item`,
-    `profession`, `skill`, `zone`); only `zone` is off by default (the owner's requirement:
+  - Switches per event kind (`level`, `death`, `boss`, `instance`, `achievement`, `ability`,
+    `item`, `profession`, `skill`, `zone`); only `zone` is off by default (the owner's requirement:
     zones rather not, level-ups yes). Plus `own` (own events too, default off),
     `sound` (see below), `duration` (4, 7 or 12 seconds) and `keep` (the last three stay, see
     "Sliding in, waiting its turn, keeping the last three"). A kind without a switch (newer

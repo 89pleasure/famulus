@@ -1695,6 +1695,23 @@ do -- who was there when a boss fell
     table.remove(Chronicle.Entries(), count + 2)
     table.remove(Chronicle.Entries(), count + 1)
 end
+do -- the first time in a dungeon or a raid
+    local count, zone = #Chronicle.Entries(), mock.state.zone
+    mock.state.zone, mock.state.instanceType = "The Deadmines", "party"
+    mock.state.group = { members = { { name = "Mira", surname = "Sturmfeder", guid = "Player-1-MIRA", level = 20, class = "MAGE" } } }
+    mock.Fire("ZONE_CHANGED_NEW_AREA")
+    local first = Chronicle.Entries()[count + 1]
+    local title, detail = Chronicle.Text(first or {})
+    check(first and first.k == "instance" and #Chronicle.Entries() == count + 1 and title == "First time in The Deadmines"
+        and detail == "with Mira", "the first time in a dungeon, with who came along: " .. tostring(title) .. " / " .. tostring(detail))
+    check(Chronicle.Text({ k = "instance", instance = "Molten Core", who = "Jaina Proudmoore" }) == "Jaina Proudmoore enters Molten Core for the first time",
+        "a friend's first time in a raid")
+    mock.Fire("ZONE_CHANGED_NEW_AREA")
+    check(#Chronicle.Entries() == count + 1, "the second time is no news")
+    mock.state.zone, mock.state.instanceType, mock.state.group = zone, nil, nil
+    FamulusCharDB.zones["The Deadmines"] = nil
+    table.remove(Chronicle.Entries(), count + 1)
+end
 do -- professions
     local count = #Chronicle.Entries()
     mock.state.professions = { { name = "Mining", rank = 140, id = 186 } }
@@ -3660,11 +3677,13 @@ do
         return list
     end
     local kinds = chips()
-    check(recording[4].sub:GetText() == "On  ·  14 options" and #visibleRows() == 4 and #kinds == 10
-        and detail.chipsTitle:GetText() == "Kinds of events" and detail.chipsCount:GetText() == "9 of 10 on",
-        "the live feed: duration, keeping the last three, sound and own events as rows, ten kinds as chips, nine of them on")
+    -- Every kind is a chip; all are on but the zones, the last two are the zones and the reactions.
+    local n = #ns.features.liveFeed.KINDS
+    check(recording[4].sub:GetText() == "On  ·  " .. (n + 4) .. " options" and #visibleRows() == 4 and #kinds == n
+        and detail.chipsTitle:GetText() == "Kinds of events" and detail.chipsCount:GetText() == (n - 1) .. " of " .. n .. " on",
+        "the live feed: duration, keeping the last three, sound and own events as rows, every kind as a chip, all but one on")
     check(kinds[2].label:GetText() == "Deaths" and kinds[2].on and kinds[2].option.icon == "skull" and ns.UI.media.skull
-        and kinds[9].label:GetText() == "New zones" and not kinds[9].on and not kinds[9].lit.parts[1]:IsShown() and kinds[10].label:GetText() == "Reactions" and kinds[10].option.icon == "cheer",
+        and kinds[n - 1].label:GetText() == "New zones" and not kinds[n - 1].on and not kinds[n - 1].lit.parts[1]:IsShown() and kinds[n].label:GetText() == "Reactions" and kinds[n].option.icon == "cheer",
         "each chip with its kind's icon, lit while on")
     check(detail.hint:GetText() == ns.L.o_liveFeed_kinds_desc, "below the chips what they are for")
     kinds[2].scripts.OnEnter(kinds[2])
@@ -3673,7 +3692,7 @@ do
     check(detail.hint:GetText() == ns.L.o_liveFeed_kinds_desc, "and the explanation goes again")
     mock.Click(kinds[2])
     mock.Advance(0.1)
-    check(ns:GetOption("liveFeed", "death") == false and not kinds[2].on and detail.chipsCount:GetText() == "8 of 10 on",
+    check(ns:GetOption("liveFeed", "death") == false and not kinds[2].on and detail.chipsCount:GetText() == (n - 2) .. " of " .. n .. " on",
         "a click on a chip switches its kind")
     mock.Click(kinds[2])
     mock.Advance(0.1)
@@ -3719,9 +3738,9 @@ do
     mock.Click(kinds[2])
     mock.Advance(0.1)
     kinds[2].scripts.OnLeave(kinds[2])
-    kinds[10].scripts.OnEnter(kinds[10])
+    kinds[n].scripts.OnEnter(kinds[n])
     check(cards[1].title:GetText() == ns.L.c_reacted_cheer:format("Mira Stormfeather"), "a reaction as the feed shows it")
-    kinds[10].scripts.OnLeave(kinds[10])
+    kinds[n].scripts.OnLeave(kinds[n])
     check(cards[2]:IsShown() and feed.caption.text:GetText() == "Visible for 7 seconds", "and back to the two cards")
     mock.Click(detail.switch)
     mock.Advance(0.1)
