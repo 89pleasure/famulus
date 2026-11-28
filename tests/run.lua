@@ -1728,6 +1728,26 @@ do -- a new mount; a class mount is an ability already
     C_MountJournal = nil
     table.remove(Chronicle.Entries(), count + 1)
 end
+do -- a new PvP rank, the renown track 2800, with its title
+    local count = #Chronicle.Entries()
+    Enum.PvPRanks, UnitSex = { Rank_1 = 5 }, function()
+        return 2
+    end
+    GetText = function(key)
+        return key == "PVP_RANK_10_1" and "Knight" or nil
+    end
+    mock.Fire("MAJOR_FACTION_RENOWN_LEVEL_CHANGED", 2600, 7, 6)
+    mock.Fire("MAJOR_FACTION_RENOWN_LEVEL_CHANGED", 2800, 5, 6)
+    check(#Chronicle.Entries() == count, "another renown track, or a rank lost, is no news")
+    mock.Fire("MAJOR_FACTION_RENOWN_LEVEL_CHANGED", 2800, 6, 5)
+    local rank = Chronicle.Entries()[count + 1]
+    local title, detail = Chronicle.Text(rank or {})
+    check(rank and rank.k == "pvpRank" and rank.rank == 6 and title == "PvP rank 6 reached" and detail == "Knight"
+        and Chronicle.Text({ k = "pvpRank", rank = 9, who = "Jaina Proudmoore" }) == "Jaina Proudmoore reaches PvP rank 9",
+        "a new PvP rank with its title: " .. tostring(title) .. " / " .. tostring(detail))
+    Enum.PvPRanks, UnitSex, GetText = nil, nil, nil
+    table.remove(Chronicle.Entries(), count + 1)
+end
 do -- professions
     local count = #Chronicle.Entries()
     mock.state.professions = { { name = "Mining", rank = 140, id = 186 } }

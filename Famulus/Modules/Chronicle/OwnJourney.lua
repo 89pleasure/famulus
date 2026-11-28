@@ -1,5 +1,5 @@
 -- Writes the milestones of the player's own character into the chronicle:
--- levels, deaths, bosses, Legacy challenges, professions, abilities such as
+-- levels, deaths, bosses, PvP ranks, Legacy challenges, professions, abilities such as
 -- riding, mounts, special items, zones discovered and the first time in a dungeon or
 -- a raid.
 
@@ -187,6 +187,7 @@ function journey:OnEnable()
     self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
     self:RegisterEvent("PLAYER_CONTROL_GAINED")
     self:RegisterEvent("NEW_MOUNT_ADDED")
+    self:RegisterEvent("MAJOR_FACTION_RENOWN_LEVEL_CHANGED")
     if GetAchievementInfo then
         self:RegisterEvent("ACHIEVEMENT_EARNED")
     end
@@ -263,6 +264,29 @@ function journey:NEW_MOUNT_ADDED(_, mountID)
         level = UnitLevel("player"),
         zone = Zone(),
     })
+end
+
+-- Forever keeps the PvP ranks of old as a renown track of its own, faction
+-- 2800 (Blizzard_UIPanels_Game/Camelot/PVPRankFrame.lua); a rank up is an
+-- event, with its title as that window names it ("Knight").
+local PVP_RANKS = 2800
+
+local function RankTitle(rank)
+    local first = Enum and Enum.PvPRanks and Enum.PvPRanks.Rank_1
+    if not (first and GetText and UnitSex and UnitFactionGroup) then
+        return nil
+    end
+    local alliance = UnitFactionGroup("player") == "Alliance" and 1 or 0
+    local title = GetText("PVP_RANK_" .. (first + rank - 1) .. "_" .. alliance, UnitSex("player"))
+    return ns.ChatService.IsPlainText(title) and title or nil
+end
+
+function journey:MAJOR_FACTION_RENOWN_LEVEL_CHANGED(_, factionID, rank, before)
+    if ns.IsSecret(factionID) or ns.IsSecret(rank) or ns.IsSecret(before) or factionID ~= PVP_RANKS
+        or type(rank) ~= "number" or rank <= (tonumber(before) or 0) then
+        return
+    end
+    Chronicle.Add("pvpRank", { rank = rank, name = RankTitle(rank) })
 end
 
 -- The Forever client shows achievements as "Legacy challenges".

@@ -356,6 +356,19 @@ local kinds = {
             return Party(e) or e.level and L.c_at_level:format(tonumber(e.level) or 0) or nil
         end,
     },
+    -- A PvP rank: its number, and below it its title as the one who reached
+    -- it saw it (it depends on their faction).
+    pvpRank = {
+        title = function(e)
+            if e.who then
+                return L.c_their_pvp_rank:format(Label(e), tonumber(e.rank) or 0)
+            end
+            return L.c_pvp_rank:format(tonumber(e.rank) or 0)
+        end,
+        detail = function(e)
+            return type(e.name) == "string" and e.name or nil
+        end,
+    },
     zone = {
         title = function(e)
             if e.who then
@@ -645,6 +658,7 @@ ChronicleService.REACTION_SETS = {
     mount = { "cheer", "clap", "fire" },
     boss = { "strong", "cheer", "clap", "fire" },
     instance = { "cheer", "strong", "fire" },
+    pvpRank = { "cheer", "strong", "fire" },
     death = { "sad", "strong", "heart" },
     skill = { "clap", "cheer" },
     profession = { "clap", "cheer" },
@@ -1261,13 +1275,13 @@ local DEMO_ZONES = {
     ukUA = { "Badlands", "Uldaman", "Stranglethorn Vale", "Tanaris" },
 }
 local DEMO_NAMES = {
-    enUS = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse" },
-    deDE = { tailoring = "Schneiderei", mining = "Bergbau", boss = "Archaedas", challenge = "Erkunder des Ödlands", bag = "Schlafsack", mount = "Braunes Pferd" },
-    esES = { tailoring = "Sastrería", mining = "Minería", boss = "Archaedas", challenge = "Explorar las Tierras Inhóspitas", bag = "Saco de dormir", mount = "Caballo marrón" },
-    frFR = { tailoring = "Couture", mining = "Minage", boss = "Archaedas", challenge = "Explorer les Terres ingrates", bag = "Sac de couchage", mount = "Cheval brun" },
-    itIT = { tailoring = "Sartoria", mining = "Estrazione", boss = "Archaedas", challenge = "Esplora Maleterre", bag = "Sacco a pelo", mount = "Cavallo marrone" },
-    plPL = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse" },
-    ukUA = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse" },
+    enUS = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse", knight = "Knight" },
+    deDE = { tailoring = "Schneiderei", mining = "Bergbau", boss = "Archaedas", challenge = "Erkunder des Ödlands", bag = "Schlafsack", mount = "Braunes Pferd", knight = "Ritter" },
+    esES = { tailoring = "Sastrería", mining = "Minería", boss = "Archaedas", challenge = "Explorar las Tierras Inhóspitas", bag = "Saco de dormir", mount = "Caballo marrón", knight = "Caballero" },
+    frFR = { tailoring = "Couture", mining = "Minage", boss = "Archaedas", challenge = "Explorer les Terres ingrates", bag = "Sac de couchage", mount = "Cheval brun", knight = "Chevalier" },
+    itIT = { tailoring = "Sartoria", mining = "Estrazione", boss = "Archaedas", challenge = "Esplora Maleterre", bag = "Sacco a pelo", mount = "Cavallo marrone", knight = "Cavaliere" },
+    plPL = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse", knight = "Knight" },
+    ukUA = { tailoring = "Tailoring", mining = "Mining", boss = "Archaedas", challenge = "Explorer of the Badlands", bag = "Sleeping Bag", mount = "Brown Horse", knight = "Knight" },
 }
 local DEMO_PEOPLE = {
     enUS = { "Mira Stormfeather", "Borin Ironbeard", "Lysa Morningdew" },
@@ -1318,6 +1332,7 @@ function ChronicleService.Sample(kind, own)
         skill = { skill = 186, name = name.mining, rank = 225, who = lysa },
         zone = { zone = zone[4], level = 39, who = lysa },
         instance = { instance = zone[2], level = 38, who = borin, with = { mira } },
+        pvpRank = { rank = 6, name = name.knight, who = borin },
     }
     local entry = samples[kind]
     if not entry then

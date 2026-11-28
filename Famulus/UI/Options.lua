@@ -703,7 +703,7 @@ local function ChronicleEvent(entry)
         title = title,
         detail = detail,
         when = ns.FormatTime(entry.t),
-        number = kind == "level" and tonumber(entry.level) or kind == "skill" and tonumber(entry.rank) or nil,
+        number = kind == "level" and tonumber(entry.level) or (kind == "skill" or kind == "pvpRank") and tonumber(entry.rank) or nil,
         -- The player's own level-ups and what the tables mark as great are the milestones of the book.
         icon = special and special.picture or nil,
         -- The picture is an icon of the game.
@@ -737,7 +737,7 @@ end
 
 -- How much an event weighs in the chronicle's book: the size and look of
 -- its card. Other kinds are "medium"; what the tables mark as great is "high".
-local WEIGHT = { death = "low", zone = "low", skill = "medium", boss = "high", instance = "high", mount = "high", level = "high" }
+local WEIGHT = { death = "low", zone = "low", skill = "medium", boss = "high", pvpRank = "high", instance = "high", mount = "high", level = "high" }
 
 -- An entry as the chronicle's book tells it: the place is not in the text,
 -- the foot of the card names it.
